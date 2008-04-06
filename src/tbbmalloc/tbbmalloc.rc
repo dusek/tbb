@@ -41,7 +41,7 @@
 //
 // Generated from the TEXTINCLUDE 2 resource.
 //
-#include "afxres.h"
+#include <winresrc.h>
 #define ENDL "\r\n"
 #include "tbb/tbb_version.h"
 

@@ -51,8 +51,8 @@ public:
     blocked_range() : my_begin(), my_end() {}
 
     //! Construct range over half-open interval [begin,end), with the given grainsize.
-    blocked_range( Value begin, Value end, size_type grainsize=1 ) : 
-        my_end(end), my_begin(begin), my_grainsize(grainsize) 
+    blocked_range( Value begin_, Value end_, size_type grainsize_=1 ) : 
+        my_end(end_), my_begin(begin_), my_grainsize(grainsize_) 
     {
         __TBB_ASSERT( my_grainsize>0, "grainsize must be positive" );
     }

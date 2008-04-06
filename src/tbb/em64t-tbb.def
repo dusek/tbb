@@ -129,9 +129,11 @@ __TBB_machine_pause
 ; ConcurrentVector.cpp
 ?internal_assign@concurrent_vector_base@internal@tbb@@IEAAXAEBV123@_KP6AXPEAX1@ZP6AX2PEBX1@Z5@Z
 ?internal_capacity@concurrent_vector_base@internal@tbb@@IEBA_KXZ
-?internal_clear@concurrent_vector_base@internal@tbb@@IEAAXP6AXPEAX_K@Z_N@Z
+?internal_clear@concurrent_vector_base@internal@tbb@@IEAA_KP6AXPEAX_K@Z@Z
 ?internal_copy@concurrent_vector_base@internal@tbb@@IEAAXAEBV123@_KP6AXPEAXPEBX1@Z@Z
 ?internal_grow_by@concurrent_vector_base@internal@tbb@@IEAA_K_K0P6AXPEAX0@Z@Z
 ?internal_grow_to_at_least@concurrent_vector_base@internal@tbb@@IEAAX_K0P6AXPEAX0@Z@Z
 ?internal_push_back@concurrent_vector_base@internal@tbb@@IEAAPEAX_KAEA_K@Z
 ?internal_reserve@concurrent_vector_base@internal@tbb@@IEAAX_K00@Z
+??1concurrent_vector_base@internal@tbb@@IEAA@XZ
+

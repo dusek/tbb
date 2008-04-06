@@ -176,7 +176,7 @@ void TestFetchAndAdd( T i ) {
     TestFetchAndAddAcquireRelease<T,tbb::release>(i);
 }
 
-void TestFetchAndAdd( void* i ) {
+void TestFetchAndAdd( void* ) {
     // There are no fetch-and-add operations on a void*.
 }
 
@@ -326,7 +326,7 @@ class HammerLoadAndStoreFence {
     const char* name;
     mutable T accum;
 public:
-    HammerLoadAndStoreFence( FlagAndMessage<T>* fam_, int n_, int p_, const char* name_, int trial_ ) : fam(fam_), n(n_), p(p_), name(name_), trial(trial_) {}
+    HammerLoadAndStoreFence( FlagAndMessage<T>* fam_, int n_, int p_, const char* name_, int trial_ ) : fam(fam_), n(n_), p(p_), trial(trial_), name(name_) {}
     void operator()( const tbb::blocked_range<int>& range ) const {
         int one = One;
         int k = range.begin();
@@ -386,8 +386,6 @@ public:
     where p goes from MinThread to MaxThread. */
 template<typename T>
 void TestLoadAndStoreFences( const char* name ) {
-    const int m = 128;
-    T array[m+1];
     for( int p=MinThread<2 ? 2 : MinThread; p<=MaxThread; ++p ) {
         FlagAndMessage<T>* fam = new FlagAndMessage<T>[p];
         // Each of four trials excercise slightly different expresion pattern within the test.

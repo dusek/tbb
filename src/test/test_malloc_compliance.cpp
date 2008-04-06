@@ -599,7 +599,6 @@ void CMemTest::NULLReturn(UINT MinSize, UINT MaxSize)
   if (FullLog) printf("realloc end\n");
   if (CountErrors) printf("%s\n",strError);
   else if (FullLog) printf("%s\n",strOk);
-  int CountE=PointerList.size();
   for (UINT i=0; i<PointerList.size(); i++)
   {
     Tfree(PointerList[i].Pointer);

@@ -132,9 +132,10 @@ __TBB_machine_trylockbyte
 ?internal_set_capacity@concurrent_queue_base@internal@tbb@@IAEXHI@Z
 
 ; ConcurrentVector.cpp
+??1concurrent_vector_base@internal@tbb@@IAE@XZ
 ?internal_assign@concurrent_vector_base@internal@tbb@@IAEXABV123@IP6AXPAXI@ZP6AX1PBXI@Z4@Z
 ?internal_capacity@concurrent_vector_base@internal@tbb@@IBEIXZ
-?internal_clear@concurrent_vector_base@internal@tbb@@IAEXP6AXPAXI@Z_N@Z
+?internal_clear@concurrent_vector_base@internal@tbb@@IAEIP6AXPAXI@Z@Z
 ?internal_copy@concurrent_vector_base@internal@tbb@@IAEXABV123@IP6AXPAXPBXI@Z@Z
 ?internal_grow_by@concurrent_vector_base@internal@tbb@@IAEIIIP6AXPAXI@Z@Z
 ?internal_grow_to_at_least@concurrent_vector_base@internal@tbb@@IAEXIIP6AXPAXI@Z@Z

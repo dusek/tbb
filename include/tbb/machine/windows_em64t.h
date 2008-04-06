@@ -34,20 +34,17 @@
 
 #if defined(__INTEL_COMPILER)
 #define _ReadWriteBarrier() __asm { __asm nop }
-#else
-#if _MSC_VER >= 1400
-#include <intrin.h>
-#pragma intrinsic(_ReadWriteBarrier)
-#else
+#elif _MSC_VER >= 1300
 extern "C" void _ReadWriteBarrier();
 #pragma intrinsic(_ReadWriteBarrier)
-#endif
 #endif
 
 #define __TBB_OFFSET_OF_NEXT -8
 #define __TBB_WORDSIZE 8
 #define __TBB_BIG_ENDIAN 0
 
+// ATTENTION: if you ever change argument types in machine-specific primitives,
+// please take care of atomic_word<> specializations in tbb/atomic.h
 extern "C" {
     __int8 __TBB_machine_cmpswp1 (volatile void *ptr, __int8 value, __int8 comparand );
     __int8 __TBB_machine_fetchadd1 (volatile void *ptr, __int8 addend );
@@ -98,7 +95,6 @@ inline __int64 __TBB_machine_lg( unsigned __int64 i ) {
 inline void __TBB_machine_OR( volatile void *operand, uintptr_t addend ) {
     InterlockedOr64((LONGLONG *)operand, addend); 
 }
-
 
 #define __TBB_CompareAndSwap1(P,V,C) __TBB_machine_cmpswp1(P,V,C)
 #define __TBB_CompareAndSwap2(P,V,C) __TBB_machine_cmpswp2(P,V,C)

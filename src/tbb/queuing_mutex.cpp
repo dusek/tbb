@@ -55,13 +55,14 @@ void queuing_mutex::scoped_lock::acquire( queuing_mutex& m )
     if( pred ) {
         __TBB_ASSERT( !pred->next, "the predecessor has another successor!");
         pred->next = this;
-        SpinwaitWhileEq( going, 0 );
+        SpinwaitWhileEq( going, 0ul );
     }
     ITT_NOTIFY(sync_acquired, mutex);
 
     // Force acquire so that user's critical section receives correct values
     // from processor that was previously in the user's critical section.
     unsigned dummy = __TBB_load_with_acquire(going);
+	(void)dummy;	// suppress "unused variable" warning"
 }
 
 //! A method to acquire queuing_mutex if it is free
@@ -83,6 +84,7 @@ bool queuing_mutex::scoped_lock::try_acquire( queuing_mutex& m )
     // from processor that was previously in the user's critical section.
     // try_acquire should always have acquire semantic, even if failed.
     unsigned dummy = __TBB_load_with_acquire(going);
+	(void)dummy;	// suppress "unused variable" warning"
     if( !pred ) {
         mutex = &m;
         ITT_NOTIFY(sync_acquired, mutex);

@@ -91,6 +91,9 @@ examples_debug: tbb_debug tbbmalloc_debug
 
 .PHONY: clean_release clean_debug clean_examples
 
+clean_%:
+	$(MAKE) -C "$(work_dir)_debug"  -r -f $(tbb_root)/build/Makefile.test cfg=debug tbb_root=$(tbb_root) $@
+	
 clean_release:
 	$(shell $(RM) $(work_dir)_release$(SLASH)*.* $(NUL))
 	$(shell $(RD) $(work_dir)_release $(NUL))

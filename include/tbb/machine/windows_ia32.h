@@ -33,11 +33,8 @@
 #include <windows.h>
 
 #if !defined(__INTEL_COMPILER)
-#if _MSC_VER >= 1300 && _MSC_VER < 1400
+#if _MSC_VER >= 1300
 extern "C" void _ReadWriteBarrier();
-#pragma intrinsic(_ReadWriteBarrier)
-#elif _MSC_VER >= 1400
-#include <intrin.h>
 #pragma intrinsic(_ReadWriteBarrier)
 #endif
 #endif

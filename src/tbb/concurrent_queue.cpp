@@ -63,7 +63,7 @@ struct micro_queue {
         micro_queue& my_queue;
     public:
         push_finalizer( micro_queue& queue, ticket k ) :
-            my_queue(queue), my_ticket(k)
+            my_ticket(k), my_queue(queue)
         {}
         ~push_finalizer() {
             my_queue.tail_counter = my_ticket;
@@ -78,7 +78,7 @@ struct micro_queue {
         page* my_page; 
     public:
         pop_finalizer( micro_queue& queue, ticket k, page* p ) :
-            my_queue(queue), my_ticket(k), my_page(p)
+            my_ticket(k), my_queue(queue), my_page(p)
         {}
         ~pop_finalizer() {
             page* p = my_page;
@@ -216,7 +216,7 @@ void concurrent_queue_base::internal_push( const void* src ) {
     concurrent_queue_rep& r = *(concurrent_queue_rep*)rep;
     concurrent_queue_rep::ticket k  = r.tail_counter++;
     ptrdiff_t e = my_capacity;
-    if( e<concurrent_queue_rep::infinite_capacity ) {
+    if( e<(ptrdiff_t)concurrent_queue_rep::infinite_capacity ) {
         ExponentialBackoff backoff;
         for(;;) {
             if( (ptrdiff_t)(k-r.head_counter)<e ) break;

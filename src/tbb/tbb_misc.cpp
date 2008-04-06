@@ -94,18 +94,18 @@ bool GetBoolEnvironmentVariable( const char * name ) {
 }
 
 bool FillDynamicLinks( const char* library, const DynamicLinkDescriptor list[], size_t n ) {
-    const int max_n = 5;
+    const size_t max_n = 5;
     __TBB_ASSERT( 0<n && n<=max_n, NULL );
 #if _WIN32||_WIN64
     HMODULE module = LoadLibrary( library );
 #else
     void* module = dlopen( library, RTLD_LAZY ); 
 #endif /* _WIN32||_WIN64 */
-    int count = 0;
+    size_t count = 0;
     if( module ) {
         // The library is there, so get the entry points.
         PointerToHandler h[max_n];
-        for( int k=0; k<n; ++k ) {
+        for( size_t k=0; k<n; ++k ) {
 #if _WIN32||_WIN64
             h[k] = (PointerToHandler) GetProcAddress( module, list[k].name );
 #else
@@ -116,7 +116,7 @@ bool FillDynamicLinks( const char* library, const DynamicLinkDescriptor list[], 
         // Commit the entry points if they are all present.
         if( count==n ) {
             // Cannot use memset here, because the writes must be atomic.
-            for( int k=0; k<n; ++k )
+            for( size_t k=0; k<n; ++k )
                 *list[k].handler = h[k];
         }
     }

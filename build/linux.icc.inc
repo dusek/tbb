@@ -31,6 +31,7 @@ DEFINE_KEY = -D
 OUTPUT_KEY = -o #
 OUTPUTOBJ_KEY = -o #
 PIC_KEY = -fPIC
+WARNING_KEY = -w1 -Werror
 DYLIB_KEY = -shared
 LIBDL = -ldl
 export COMPILER_VERSION := ICC: $(shell icc -V </dev/null 2>&1 | grep 'Version')
@@ -43,6 +44,10 @@ ifeq (release,$(cfg))
 CPLUS_FLAGS = -DDO_ITT_NOTIFY -O2 -strict_ansi -DUSE_PTHREAD
 else
 CPLUS_FLAGS = -DTBB_DO_ASSERT -DDO_ITT_NOTIFY -O0 -g -strict_ansi -DUSE_PTHREAD
+endif
+
+ifeq (true,$(codecov))
+    CPLUS_FLAGS += -prof-genx
 endif
 
 OPENMP_FLAG = -openmp

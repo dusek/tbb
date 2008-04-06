@@ -86,6 +86,24 @@ struct atomic_word<8> {          // Specialization
     typedef int64_t word;
 };
 
+#if _WIN32 && __TBB_x86_64
+// ATTENTION: On 64-bit Windows, we currently have to specialize atomic_word
+// for every size to avoid type conversion warnings
+// See declarations of atomic primitives in machine/windows_em64t.h
+template<>
+struct atomic_word<1> {          // Specialization
+    typedef int8_t word;
+};
+template<>
+struct atomic_word<2> {          // Specialization
+    typedef int16_t word;
+};
+template<>
+struct atomic_word<4> {          // Specialization
+    typedef int32_t word;
+};
+#endif
+
 template<>
 struct atomic_base<uint64_t> {   // Specialization
     __TBB_DECL_ATOMIC_FIELD(volatile uint64_t,my_value,8)

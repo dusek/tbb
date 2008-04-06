@@ -67,6 +67,7 @@ INCLUDE_KEY = /I
 DEFINE_KEY = /D
 OUTPUT_KEY = /Fe
 OUTPUTOBJ_KEY = /Fo
+WARNING_KEY = /W3 /WX
 DYLIB_KEY = /DLL
 
 ifeq (em64t,$(arch))
@@ -74,7 +75,9 @@ ifeq (em64t,$(arch))
         CPLUS_FLAGS += /GS-
 endif
 
-
+ifeq (true,$(codecov))
+    CPLUS_FLAGS += /Qprof-genx
+endif
 
 TARGET_VERSION = 0x0400
 OPENMP_FLAG = /Qopenmp

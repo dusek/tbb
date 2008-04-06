@@ -33,8 +33,6 @@ tbb_root ?= "$(TBB20_INSTALL_DIR)"
 BUILDING_PHASE=1
 include $(tbb_root)/build/common.inc
 
-CPLUS_FLAGS_NOSTRICT:=$(subst -strict_ansi,-ansi,$(CPLUS_FLAGS))
-
 default: test_tbb_plain # test_tbb_alt test_tbb_cross 
 
 #------------------------------------------------------------
@@ -43,38 +41,7 @@ default: test_tbb_plain # test_tbb_alt test_tbb_cross
 
 VPATH = $(tbb_root)/src/tbb/$(ASSEMBLY_SOURCE) $(tbb_root)/src/tbb $(tbb_root)/src/test
 
-.PRECIOUS: %.$(OBJ) %.$(DLL).$(OBJ)
-
-%.$(OBJ): %.cpp
-	$(CPLUS) $(COMPILE_ONLY) $(CPLUS_FLAGS) $(INCLUDES) $<
-
-%.$(OBJ): %.c
-	$(CPLUS) $(COMPILE_ONLY) $(C_FLAGS) $(INCLUDES) $<
-
-%.$(OBJ): %.asm
-	$(ASM) $(ASM_FLAGS) $<
-
-tbb_misc.$(OBJ): tbb_misc.cpp version_string.tmp
-	$(CPLUS) $(COMPILE_ONLY) $(CPLUS_FLAGS_NOSTRICT) $(INCLUDE_KEY). $(INCLUDES) $<
-
-tbb_misc.E: tbb_misc.cpp version_string.tmp
-	$(CPLUS) $(PREPROC_ONLY) $(CPLUS_FLAGS_NOSTRICT) $(INCLUDE_KEY). $(INCLUDES) $< >$@
-
-# Rule for generating .E file if needed for visual inspection
-%.E: %.cpp
-	$(CPLUS) $(PREPROC_ONLY) $(CPLUS_FLAGS) $(INCLUDES) $< >$@
-
-# TODO Rule for generating .asm file if needed for visual inspection
-%.asm: %.cpp
-	$(CPLUS) /c /Fa $(CPLUS_FLAGS) $(INCLUDES) $<
-
-# TODO Rule for generating .s file if needed for visual inspection
-%.s: %.cpp
-	$(CPLUS) -S $(CPLUS_FLAGS) $(INCLUDES) $<
-
-# Rule for generating executable test
-%.exe: %.$(OBJ) $(TBB.LIB)
-	$(CPLUS) $(OUTPUT_KEY)$@ $(CPLUS_FLAGS) $< $(TBB.LIB) $(LIBS) $(LINK_FLAGS)
+CPLUS_FLAGS += $(WARNING_KEY)
 
 ifeq (1,$(TBB_NOSTRICT))
 # GNU 3.2.3 headers have a ISO syntax that is rejected by Intel compiler in -strict_ansi mode.
@@ -90,12 +57,18 @@ KNOWN_NOSTRICT += \
 	test_model_plugin.o	\
 	test_parallel_sort.o
 
-$(KNOWN_NOSTRICT): %.o: %.cpp
-	$(CPLUS) $(COMPILE_ONLY) $(CPLUS_FLAGS_NOSTRICT) $(INCLUDES) $<
 endif
 
-version_string.tmp:
-	$(MAKE_VERSIONS)
+include $(tbb_root)/build/common_rules.inc
+
+KNOWN_WARNINGS += test_assembly.$(OBJ) test_task_leaks.$(OBJ)
+
+$(KNOWN_WARNINGS): %.$(OBJ): %.cpp
+	$(CPLUS) $(COMPILE_ONLY) $(subst $(WARNING_KEY),,$(CPLUS_FLAGS)) $(INCLUDES) $<
+
+# Rule for generating executable test
+%.exe: %.$(OBJ) $(TBB.LIB)
+	$(CPLUS) $(OUTPUT_KEY)$@ $(CPLUS_FLAGS) $< $(TBB.LIB) $(LIBS) $(LINK_FLAGS)
 
 # Rule for generating test using Windows compiler with different flags
 #%-cross.exe: %.cpp
@@ -107,7 +80,7 @@ version_string.tmp:
 %.$(DLL): %.$(DLL).$(OBJ) $(TBB.LIB)
 	$(CPLUS) $(OUTPUT_KEY)$@ $(CPLUS_FLAGS) $< $(TBB.LIB) $(LIBS) $(LINK_FLAGS) $(PIC_KEY) $(DYLIB_KEY)
 
-# Rule for the test that uses TBB in a dynamically loadable library
+# Rules for the tests, which use TBB in a dynamically loadable library
 test_model_plugin.exe: test_model_plugin.$(OBJ) test_model_plugin.$(DLL)
 	$(CPLUS) $(OUTPUT_KEY)$@ $(CPLUS_FLAGS) $< $(LIBS) $(LINK_FLAGS) $(LIBDL)
 
@@ -119,6 +92,12 @@ test_task_leaks.exe: test_task_leaks.$(OBJ) $(TBB_ASM.OBJ) cache_aligned_allocat
 
 test_handle_perror.exe: test_handle_perror.$(OBJ) tbb_misc.$(OBJ) $(TBB_ASM.OBJ)
 	$(CPLUS) $(OUTPUT_KEY)$@ $(CPLUS_FLAGS) $^ $(LIBS) $(TBB.LIB)
+
+
+# Rules for the tests, which depend on tbbmalloc
+test_concurrent_hash_map_string.exe: test_concurrent_hash_map_string.$(OBJ)
+	$(CPLUS) $(OUTPUT_KEY)$@ $(CPLUS_FLAGS) $< $(LIBS) $(LINK_FLAGS) $(TBB.LIB) $(MALLOC.LIB)
+
 
 # These are in alphabetical order
 TEST_TBB_PLAIN.EXE = test_assembly.exe 	\
@@ -199,9 +178,16 @@ test_tbb_plain: $(TEST_TBB_PLAIN.EXE)
 	./test_concurrent_vector.exe 1:4
 	./test_concurrent_hash_map.exe 1:4
 	./test_model_plugin.exe 4
+ifeq (true,$(codecov))
+	profmerge
+	codecov -demang -comp $(tbb_root)/build/codecov.txt
+endif
 
 debug_%: test_%.exe
 	$(debugger) ./$^ $(debug_args)
+
+clean_%: 
+	$(RM) test_$*.$(OBJ) test_$*.exe test_$*.$(DLL) test_$*.$(LIBEXT) test_$*.res test_$*.map test_$*.ilk test_$*.pdb test_$*.exp test_$*.*manifest test_$*.tmp test_$*.d
 
 clean:
 	$(RM) *.$(OBJ) *.exe *.$(DLL) *.$(LIBEXT) *.res *.map *.ilk *.pdb *.exp *.manifest *.tmp *.d core core.*[0-9][0-9]

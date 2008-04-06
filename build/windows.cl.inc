@@ -67,6 +67,7 @@ INCLUDE_KEY = /I
 DEFINE_KEY = /D
 OUTPUT_KEY = /Fe
 OUTPUTOBJ_KEY = /Fo
+WARNING_KEY = /W3 /WX
 DYLIB_KEY = /DLL
 ifeq ($(runtime),vc8)
         OPENMP_FLAG = /openmp

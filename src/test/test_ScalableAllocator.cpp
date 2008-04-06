@@ -32,6 +32,7 @@
 
 //namespace TBB = ThreadingBuildingBlocks;
 
+#define HARNESS_NO_PARSE_COMMAND_LINE 1
 // the real body of the test is there:
 #include "test/test_allocator.h"
 

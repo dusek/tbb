@@ -42,9 +42,9 @@
 int main(void)
 {
     size_t i, j;
+    void *p1=NULL, *p2=NULL;
     for( i=0; i<=1<<16; ++i)
         scalable_free(scalable_malloc(i));
-    void *p1=NULL, *p2=NULL;
     for( i=1024*1024; ; i/=2 )
     {
         scalable_free(p1);

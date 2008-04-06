@@ -41,7 +41,7 @@
 //
 // Generated from the TEXTINCLUDE 2 resource.
 //
-#include "afxres.h"
+#include <winresrc.h>
 #define ENDL "\r\n"
 #include "tbb_version.h"
 
@@ -51,7 +51,7 @@
 /////////////////////////////////////////////////////////////////////////////
 // Neutral resources
 
-#if !defined(AFX_RESOURCE_DLL) || defined(AFX_TARG_NEU)
+//#if !defined(AFX_RESOURCE_DLL) || defined(AFX_TARG_NEU)
 #ifdef _WIN32
 LANGUAGE LANG_NEUTRAL, SUBLANG_NEUTRAL
 #pragma code_page(1252)
@@ -103,7 +103,7 @@ BEGIN
     END
 END
 
-#endif    // Neutral resources
+//#endif    // Neutral resources
 /////////////////////////////////////////////////////////////////////////////
 
 

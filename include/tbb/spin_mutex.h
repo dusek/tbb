@@ -51,7 +51,7 @@ public:
     spin_mutex() : flag(0) {}
 
     //! Represents acquisition of a mutex.
-    class scoped_lock {
+    class scoped_lock : private internal::no_copy {
     private:
         //! Points to currently held mutex, or NULL if no lock is held.
         spin_mutex* my_mutex; 

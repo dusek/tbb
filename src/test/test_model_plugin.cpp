@@ -35,8 +35,6 @@
 #include <stdlib.h>
 #include <stdio.h>
 #include <stdexcept>
-#include "harness.h"
-
 
 #ifdef _USRDLL
 #include "tbb/task_scheduler_init.h"
@@ -94,6 +92,8 @@ void plugin_call(int maxthread)
 }
 
 #else /* _USRDLL undefined */
+
+#include "harness.h"
 
 extern "C" void plugin_call(int);
 

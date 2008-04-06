@@ -187,6 +187,7 @@ void queuing_rw_mutex::scoped_lock::acquire( queuing_rw_mutex& m, bool write )
     // Force acquire so that user's critical section receives correct values
     // from processor that was previously in the user's critical section.
     unsigned dummy = __TBB_load_with_acquire(going);
+	(void)dummy;	// suppress "unused variable" warning"
 }
 
 //! A method to try-acquire queuing_rw_mutex lock
@@ -211,6 +212,7 @@ bool queuing_rw_mutex::scoped_lock::try_acquire( queuing_rw_mutex& m, bool write
     // from processor that was previously in the user's critical section.
     // try_acquire should always have acquire semantic, even if failed.
     unsigned dummy = __TBB_load_with_acquire(going);
+	(void)dummy;	// suppress "unused variable" warning"
 
     if( !pred ) {
         mutex = &m;
@@ -426,7 +428,8 @@ waiting:
     pred = tricky_pointer::fetch_and_add<tbb::acquire>(&(this->prev), FLAG);
     if( pred ) {
         bool success = pred->try_acquire_internal_lock();
-        unsigned short pred_state = pred->state.compare_and_swap<tbb::release>(STATE_UPGRADE_WAITING, STATE_UPGRADE_REQUESTED);
+        //unsigned short pred_state = 
+		pred->state.compare_and_swap<tbb::release>(STATE_UPGRADE_WAITING, STATE_UPGRADE_REQUESTED);
         if( !success ) {
             tmp = tricky_pointer::compare_and_swap<tbb::release>(&(this->prev), pred, tricky_pointer(pred)|FLAG );
             if( tricky_pointer(tmp)&FLAG ) {

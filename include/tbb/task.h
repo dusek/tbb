@@ -236,17 +236,17 @@ public:
         prefix().state = recycle;
     }
 
-    //! Change this to be a child of parent.
-    void recycle_as_child_of( task& parent ) {
+    //! Change this to be a child of new_parent.
+    void recycle_as_child_of( task& new_parent ) {
         internal::task_prefix& p = prefix();
         __TBB_ASSERT( prefix().state==executing||prefix().state==allocated, "execute not running, or already recycled" );
         __TBB_ASSERT( prefix().ref_count==0, "no child tasks allowed when recycled as a child" );
         __TBB_ASSERT( p.parent==NULL, "parent must be null" );
-        __TBB_ASSERT( parent.prefix().state<=recycle, "corrupt parent's state" );
-        __TBB_ASSERT( parent.prefix().state!=freed, "parent already freed" );
+        __TBB_ASSERT( new_parent.prefix().state<=recycle, "corrupt parent's state" );
+        __TBB_ASSERT( new_parent.prefix().state!=freed, "parent already freed" );
         p.state = allocated;
-        p.parent = &parent;
-        p.depth = parent.prefix().depth+1;
+        p.parent = &new_parent;
+        p.depth = new_parent.prefix().depth+1;
     }
 
     //! Schedule this for reexecution after current execute() returns.

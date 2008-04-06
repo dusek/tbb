@@ -32,6 +32,7 @@ DEFINE_KEY = -D
 OUTPUT_KEY = -o #
 OUTPUTOBJ_KEY = -o #
 PIC_KEY = -fPIC
+WARNING_KEY = -w1 -Werror
 DYLIB_KEY = -dynamiclib
 LIBDL = -ldl
 export COMPILER_VERSION := $(shell icc -V </dev/null 2>&1 | grep 'Version')
@@ -50,6 +51,10 @@ else
 endif
 
 CPLUS_FLAGS += -DUSE_PTHREAD
+
+ifeq (true,$(codecov))
+    CPLUS_FLAGS += -prof-genx
+endif
 
 ifeq (em64t,$(arch))
 #    LINK_FLAGS += -m64

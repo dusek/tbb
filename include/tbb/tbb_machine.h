@@ -105,7 +105,7 @@ typedef unsigned __int64 uint64_t;
 #endif
 
 #ifndef __TBB_Pause
-    inline void __TBB_Pause(intptr_t delay) {
+    inline void __TBB_Pause(int32_t) {
         __TBB_Yield();
     }
 #endif
@@ -119,8 +119,8 @@ class AtomicBackoff {
     //! Time delay, in units of "pause" instructions. 
     /** Should be equal to approximately the number of "pause" instructions
         that take the same time as an context switch. */
-    static const uintptr_t LOOPS_BEFORE_YIELD = 16;
-    uintptr_t count;
+    static const int32_t LOOPS_BEFORE_YIELD = 16;
+    int32_t count;
 public:
     AtomicBackoff() : count(1) {}
 
@@ -482,7 +482,6 @@ inline bool __TBB_TryLockByte( volatile unsigned char &flag ) {
 
 #ifndef __TBB_LockByte
 inline uintptr_t __TBB_LockByte( volatile unsigned char& flag ) {
-    uintptr_t count = 1;
     if ( !__TBB_TryLockByte(flag) ) {
         tbb::internal::AtomicBackoff b;
         do {

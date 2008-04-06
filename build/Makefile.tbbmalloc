@@ -30,15 +30,25 @@
 
 default_malloc: malloc malloc_test
 
-KNOWN_NOSTRICT = test_malloc_compliance.$(OBJ) test_ScalableAllocator_STL.$(OBJ)
-
 tbb_root ?= $(TBB20_INSTALL_DIR)
-include $(tbb_root)/build/Makefile.test
+BUILDING_PHASE=1
+include $(tbb_root)/build/common.inc
 
 MALLOC_ROOT ?= $(tbb_root)/src/tbbmalloc
 MALLOC_SOURCE_ROOT ?= $(MALLOC_ROOT)
 
+VPATH = $(tbb_root)/src/tbb/$(ASSEMBLY_SOURCE) $(tbb_root)/src/tbb $(tbb_root)/src/test
 VPATH += $(MALLOC_ROOT) $(MALLOC_SOURCE_ROOT)
+
+# the test lists defined here because they are first used right after
+MALLOC_MAIN_TESTS = test_ScalableAllocator.exe test_ScalableAllocator_STL.exe test_malloc_compliance.exe
+MALLOC_C_TESTS = test_malloc_pure_c.exe
+
+$(MALLOC_MAIN_TESTS) $(MALLOC_C_TESTS): CPLUS_FLAGS += $(WARNING_KEY)
+
+KNOWN_NOSTRICT = test_malloc_compliance.$(OBJ) test_ScalableAllocator_STL.$(OBJ)
+
+include $(tbb_root)/build/common_rules.inc
 
 # Object files that gmake up TBBMalloc
 MALLOC_CPLUS.OBJ = tbbmalloc.$(OBJ)

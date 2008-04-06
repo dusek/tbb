@@ -92,7 +92,7 @@ public:
     //! The scoped locking pattern
     /** It helps to avoid the common problem of forgetting to release lock.
         It also nicely provides the "node" for queuing locks. */
-    class scoped_lock {
+    class scoped_lock : private internal::no_copy {
     public:
         //! Construct lock that has not acquired a mutex. 
         scoped_lock() : my_mutex(NULL) {};

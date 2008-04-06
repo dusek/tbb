@@ -28,6 +28,7 @@
 
 // Test whether scalable_allocator works with some of the host's STL containers.
 
+#define HARNESS_NO_PARSE_COMMAND_LINE 1
 #include "tbb/scalable_allocator.h"
 #include "test/test_allocator.h"
 

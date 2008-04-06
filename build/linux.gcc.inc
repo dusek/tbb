@@ -31,6 +31,7 @@ DEFINE_KEY = -D
 OUTPUT_KEY = -o #
 OUTPUTOBJ_KEY = -o #
 PIC_KEY = -fPIC
+WARNING_KEY = -Wall -Werror
 DYLIB_KEY = -shared
 LIBDL = -ldl
 

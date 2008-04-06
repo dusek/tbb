@@ -86,7 +86,7 @@ public:
                 // Trying to put token that is beyond low_token.
                 // Need to wait until low_token catches up before dispatching.
                 result = NULL;
-                if( token-low_token>=array_size ) 
+                if( token-low_token>=(Token)array_size ) 
                     grow( token-low_token+1 );
                 ITT_NOTIFY( sync_releasing, this );
                 array[token&array_size-1] = &putter;
@@ -101,7 +101,7 @@ public:
         task* wakee=NULL;
         {
             spin_mutex::scoped_lock lock( array_mutex );
-            if( token==low_token ) {
+            if( (Token)token==low_token ) {
                 // Wake the next task
                 task*& item = array[++low_token & array_size-1];
                 ITT_NOTIFY( sync_acquired, this );
@@ -122,10 +122,10 @@ void ordered_buffer::grow( long minimum_size ) {
         new_size*=2;
     task** new_array = cache_aligned_allocator<task*>().allocate(new_size);
     task** old_array = array;
-    for( size_t i=0; i<new_size; ++i )
+    for( long i=0; i<new_size; ++i )
         new_array[i] = NULL;
     long t=low_token;
-    for( size_t i=0; i<old_size; ++i, ++t )
+    for( long i=0; i<old_size; ++i, ++t )
         new_array[t&new_size-1] = old_array[t&old_size-1];
     array = new_array;
     array_size = new_size;
@@ -143,8 +143,8 @@ private:
 public:
     stage_task( pipeline& pipeline, Token token, filter* filter_list ) : 
         my_pipeline(pipeline), 
-        my_token(token), 
-        my_filter(filter_list) 
+        my_filter(filter_list),
+        my_token(token)
     {}
     task* execute();
 };

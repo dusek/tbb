@@ -134,7 +134,7 @@ class TaskPoolPrefix {
 
 //! Pool of tasks, organized as a deque.
 class TaskPool {
-    static const long min_array_size = (NFS_MaxLineSize-sizeof(TaskPoolPrefix))/sizeof(task*);
+    static const size_t min_array_size = (NFS_MaxLineSize-sizeof(TaskPoolPrefix))/sizeof(task*);
 
     /** Must be last field, because it is really array of indeterminate length. */
     task* array[min_array_size];
@@ -219,7 +219,7 @@ class UnpaddedArenaPrefix {
     const unsigned number_of_slots;
 
     //! One more than number of workers that belong to this arena
-    const int number_of_workers;
+    const unsigned number_of_workers;
 
     //! Array of workers.
     WorkerDescriptor* worker_list;
@@ -235,8 +235,8 @@ class UnpaddedArenaPrefix {
  
 protected:
     UnpaddedArenaPrefix( size_t number_of_slots_, size_t number_of_workers_ ) :
-        number_of_slots(number_of_slots_),
         number_of_masters(1),
+        number_of_slots(number_of_slots_),
         number_of_workers(number_of_workers_)
     {
 #if COUNT_TASK_NODES
@@ -1027,7 +1027,7 @@ void Arena::terminate_workers() {
 #if COUNT_TASK_NODES
 intptr Arena::workers_task_node_count() {
     intptr result = 0;
-    for(int i=0; i<prefix().number_of_workers; ++i) {
+    for(unsigned i=0; i<prefix().number_of_workers; ++i) {
         GenericScheduler* s = prefix().worker_list[i].scheduler;
         if( s )
             result += s->task_node_count;
@@ -1051,15 +1051,15 @@ GenericScheduler::GenericScheduler( Arena* arena_ ) :
     implicit_steal_count(0),
     execute_count(0),
 #endif /* STATISTICS */
+    deepest(-1),
     array_size(0),
-    random( this-(GenericScheduler*)NULL ),
     arena_slot(&dummy_slot),
     arena(arena_),
+    random( this-(GenericScheduler*)NULL ),
     free_list(NULL),
     innermost_running_task(NULL),
-    ref_count(1),
-    deepest(-1),
-    dummy_task(NULL)
+    dummy_task(NULL),
+    ref_count(1)
 #if !IMPROVED_GATING
    ,open_gate(NULL)
 #endif /* !IMPROVE_GATING */
@@ -1199,13 +1199,13 @@ inline void GenericScheduler::acquire_task_pool() const {
         }
     }
     __TBB_ASSERT( arena_slot->steal_end>>1 <= intptr(array_size), NULL );
-    __TBB_ASSERT( uintptr(dummy_slot.task_pool->prefix().steal_begin)<=uintptr(array_size), NULL );
+    __TBB_ASSERT( dummy_slot.task_pool->prefix().steal_begin<=intptr(array_size), NULL );
     __TBB_ASSERT( deepest<=intptr(array_size), NULL );
 }
 
 inline void GenericScheduler::release_task_pool() const {
     __TBB_ASSERT( arena_slot->steal_end>>1 <= intptr(array_size), NULL );
-    __TBB_ASSERT( dummy_slot.task_pool->prefix().steal_begin<=array_size, NULL );
+    __TBB_ASSERT( dummy_slot.task_pool->prefix().steal_begin<=intptr(array_size), NULL );
     __TBB_ASSERT( deepest<=intptr(array_size), NULL );
     ITT_NOTIFY(sync_releasing, arena_slot);
     arena_slot->steal_end = 2*deepest;
@@ -1325,7 +1325,7 @@ inline task* GenericScheduler::get_task( depth_type d ) {
         task** a = dummy_slot.task_pool->array;
         depth_type i = deepest;
         do {
-            if( result = a[i] ) {
+            if( (result = a[i]) ) {
                 if( !(a[i] = result->prefix().next) )
                     --i;
                 break;
@@ -1385,7 +1385,7 @@ task* GenericScheduler::steal_task( UnpaddedArenaSlot& arena_slot, depth_type d 
     if( i<d )
         i = d;
     for(; i<=steal_end>>1; ++i ) {
-        if( result = tp->array[i] ) {
+        if( (result = tp->array[i]) ) {
             // Unlike get_task, we do not adjust i if the next pointer is NULL.
             // The reason is that it is a waste of time, because steal_task
             // is relatively infrequent compared to insert_task, and the
@@ -1446,10 +1446,10 @@ void CustomScheduler<SchedulerTraits>::wait_for_all( task& parent, task* child )
             // Inner loop evaluates tasks that are handed directly to us by other tasks.
             while(t) {
                 task_prefix& pref = t->prefix();
-                __TBB_ASSERT( t->prefix().owner==this, NULL );
-                __TBB_ASSERT( t->prefix().depth>=d, NULL );
+                __TBB_ASSERT( pref.owner==this, NULL );
+                __TBB_ASSERT( pref.depth>=d, NULL );
                 __TBB_ASSERT( 1L<<t->state() & (1L<<task::allocated|1L<<task::ready|1L<<task::reexecute), NULL );
-                t->prefix().state = task::executing;
+                pref.state = task::executing;
                 innermost_running_task = t;
                 __TBB_ASSERT(assert_okay(),NULL);
                 TBB_TRACE(("%p.wait_for_all: %p.execute\n",this,t));
@@ -1462,7 +1462,7 @@ void CustomScheduler<SchedulerTraits>::wait_for_all( task& parent, task* child )
                     t_next->prefix().owner = this;
                 }
                 __TBB_ASSERT(assert_okay(),NULL);
-                switch( task::state_type state = (task::state_type)t->prefix().state ) {
+                switch( (task::state_type)t->prefix().state ) {
                     case task::executing:
                         // this block was copied below to case task::recycle
                         // when making changes, check it too
@@ -1599,8 +1599,8 @@ void CustomScheduler<SchedulerTraits>::wait_for_all( task& parent, task* child )
             }
             // Pause, even if we are going to yield, because the yield might return immediately.
             __TBB_Pause(PauseTime);
-            if( failure_count>=n ) {
-                if( failure_count>=2*n ) {
+            if( failure_count>=int(n) ) {
+                if( failure_count>=2*int(n) ) {
                     __TBB_Yield();
 #if IMPROVED_GATING
                     // Note: if d!=0 or !is_worker(), it is not safe to wait for a non-empty pool,
@@ -1611,7 +1611,7 @@ void CustomScheduler<SchedulerTraits>::wait_for_all( task& parent, task* child )
                     arena->prefix().gate.wait();
 #endif /* IMPROVED_GATING */
                     failure_count = 0;
-                } else if( failure_count==n ) {
+                } else if( failure_count==int(n) ) {
                     // We have paused n times since last yield.
                     // Odds are that there is no other work to do.
                     __TBB_Yield();
@@ -1684,7 +1684,6 @@ void GenericScheduler::leave_arena( bool compress ) {
     size_t new_limit = arena->prefix().limit;
     if( compress && new_limit==k+1 ) {
         // Garbage collect some slots
-        TaskPool* t;
         for(;;) {
             new_limit = arena->prefix().limit.compare_and_swap( k, k+1 );
             ITT_NOTIFY(sync_releasing, &arena->slot[k]);
@@ -1707,8 +1706,9 @@ GenericScheduler* GenericScheduler::create_worker( WorkerDescriptor& w ) {
     __TBB_ASSERT( !w.scheduler, NULL );
     size_t n = w.arena->prefix().number_of_workers;
     WorkerDescriptor* worker_list = w.arena->prefix().worker_list;
-    ptrdiff_t i = &w - worker_list;
-    __TBB_ASSERT( 0<=i && i<n, NULL );
+    __TBB_ASSERT( &w >= worker_list, NULL );
+    size_t i = &w - worker_list;
+    __TBB_ASSERT( i<n, NULL );
 
     // Start my children
     if( 2*i+1<n ) {
@@ -1796,7 +1796,7 @@ void GenericScheduler::cleanup_worker_thread( void* arg ) {
     TBB_TRACE(("%p.cleanup_worker_thread enter\n",arg));
     GenericScheduler& s = *(GenericScheduler*)arg;
     __TBB_ASSERT( s.dummy_slot.task_pool, "cleaning up worker with missing TaskPool" );
-    Arena* a = s.arena;
+    //Arena* a = s.arena;
     __TBB_ASSERT( s.arena_slot!=&s.dummy_slot, "worker not in arena?" );
     s.free_scheduler();
 }
