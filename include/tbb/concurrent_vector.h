@@ -414,6 +414,24 @@ public: // workaround for MSVC
     may increase element access time. Internal layout can be optimized by method compact() that
     merges several smaller arrays into one solid.
 
+@par Changes in since TBB 2.0
+    - Implemented exception-safety guaranties
+    - Added template argument for allocator
+    - Added allocator argument in constructors
+    - Faster index calculation
+    - First growth call specifies a number of segments to be merged in the first allocation.
+    - Fixed memory blow up for swarm of vector's instances of small size
+    - Added grow_by(size_type n, const_reference t) growth using copying constructor to init new items. 
+    - Added STL-like constructors.
+    - Added operators ==, < and derivatives
+    - Added at() method, approved for using after an exception was thrown inside the vector
+    - Added get_allocator() method.
+    - Added assign() methods
+    - Added compact() method to defragment first segments
+    - Added swap() method
+    - range() defaults on grainsize = 1 supporting auto grainsize algorithms. 
+    - clear() behavior changed to freeing segments memory 
+
     @ingroup containers */
 template<typename T, class A>
 class concurrent_vector: protected internal::allocator_base<T, A>,
@@ -911,29 +929,4 @@ inline void swap(concurrent_vector<T, A> &a, concurrent_vector<T, A> &b)
     #pragma warning (pop)
 #endif /* _MSC_VER && _Wp64 */
 
-/*******************************************************
-Changes in tbb::concurrent_vector since 2.0 version:
-* custom allocator support through template argument 
-  - defaulting to cache_aligned_allocator for now
-* segment sizes start from 2 (then 2, 4, 8...) 
-  - faster index calculation 
-  - fixes memory blow up for swarm of vector's instances of small size 
-* first segments block solid allocation 
-  - first growth call specifies a number of segments to be merged in the first allocation. 
-  - introduces additional size_t field in data structure but doesn't require additional mask on segment pointer
-    - potentially faster then "any solid segment" technique. 
-  - in conjunction with faster index calculation gives about 5-10% performance grow for test set of standard sequential algorithms. 
-* introduced new methods:
-  - grow_by(size_type n, const_reference t) growth using copying constructor to init new items. 
-  - STL-like constructors.
-  - operators ==, < and derivatives
-  - at() method, approved for using after an exception was thrown inside the vector
-  - get_allocator() method.
-  - assign() methods
-  - compact() method to defragment first segments increasing items access time. 
-  - swap() method
-* range() defaults on grainsize = 1 supporting auto grainsize algorithms. 
-* clear() behavior changed to freeing segments memory 
-* exception safety guaranties
-********************************************************/
 #endif /* __TBB_concurrent_vector_H */

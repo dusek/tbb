@@ -110,7 +110,8 @@ __TBB_machine_trylockbyte
 ?upgrade_to_writer@scoped_lock@queuing_rw_mutex@tbb@@QAE_NXZ
 ?try_acquire@scoped_lock@queuing_rw_mutex@tbb@@QAE_NAAV23@_N@Z
 
-; spin_rw_mutex.cpp
+#if !TBB_NO_LEGACY
+; spin_rw_mutex.cpp v2
 ?internal_acquire_reader@spin_rw_mutex@tbb@@CAXPAV12@@Z
 ?internal_acquire_writer@spin_rw_mutex@tbb@@CA_NPAV12@@Z
 ?internal_downgrade@spin_rw_mutex@tbb@@CAXPAV12@@Z
@@ -120,6 +121,18 @@ __TBB_machine_trylockbyte
 ?internal_upgrade@spin_rw_mutex@tbb@@CA_NPAV12@@Z
 ?internal_try_acquire_writer@spin_rw_mutex@tbb@@CA_NPAV12@@Z
 ?internal_try_acquire_reader@spin_rw_mutex@tbb@@CA_NPAV12@@Z
+#endif
+
+; spin_rw_mutex v3
+?internal_upgrade@spin_rw_mutex_v3@tbb@@AAE_NXZ
+?internal_downgrade@spin_rw_mutex_v3@tbb@@AAEXXZ
+?internal_itt_releasing@spin_rw_mutex_v3@tbb@@AAEXXZ
+?internal_acquire_reader@spin_rw_mutex_v3@tbb@@AAEXXZ
+?internal_acquire_writer@spin_rw_mutex_v3@tbb@@AAE_NXZ
+?internal_release_reader@spin_rw_mutex_v3@tbb@@AAEXXZ
+?internal_release_writer@spin_rw_mutex_v3@tbb@@AAEXXZ
+?internal_try_acquire_reader@spin_rw_mutex_v3@tbb@@AAE_NXZ
+?internal_try_acquire_writer@spin_rw_mutex_v3@tbb@@AAE_NXZ
 
 ; spin_mutex.cpp
 ?internal_acquire@scoped_lock@spin_mutex@tbb@@AAEXAAV23@@Z

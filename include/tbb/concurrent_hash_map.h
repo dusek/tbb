@@ -275,23 +275,23 @@ namespace internal {
     The class meets all Container Requirements from C++ Standard (See ISO/IEC 14882:2003(E), clause 23.1).
 
 @par Exception Safety
-    * Hash function is not permitted to throw an exception. User-defined types Key and T are forbidden from throwing an exception in destructors.
-    * If exception happens during insert() operations, it has no effect (unless exception raised by HashCompare::hash() function during grow_segment).
-    * If exception happens during operator=() operation, the container can have a part of source items, and methods size() and empty() can return wrong results.
+    - Hash function is not permitted to throw an exception. User-defined types Key and T are forbidden from throwing an exception in destructors.
+    - If exception happens during insert() operations, it has no effect (unless exception raised by HashCompare::hash() function during grow_segment).
+    - If exception happens during operator=() operation, the container can have a part of source items, and methods size() and empty() can return wrong results.
 
 @par Changes since TBB 2.0
-    * Fixed exception-safety
-    * Added template argument for allocator
-    * Added allocator argument in constructors
-    * Added constructor from a range of iterators
-    * Added insert(I i, I j) for the range [i; j)
-    * Added get_allocator()
-    * Added swap()
-    * Added count()
-    * Added overloaded erase(accessor &) and erase(const_accessor&)
-    * Added equal_range() [const]
-    * Added [const_]pointer, [const_]reference, and allocator_type types
-    * Added global functions: operator==(), operator!=(), and swap() 
+    - Fixed exception-safety
+    - Added template argument for allocator
+    - Added allocator argument in constructors
+    - Added constructor from a range of iterators
+    - Added insert(I i, I j) for the range [i; j)
+    - Added get_allocator()
+    - Added swap()
+    - Added count()
+    - Added overloaded erase(accessor &) and erase(const_accessor&)
+    - Added equal_range() [const]
+    - Added [const_]pointer, [const_]reference, and allocator_type types
+    - Added global functions: operator==(), operator!=(), and swap() 
 
     @ingroup containers */
 template<typename Key, typename T, typename HashCompare, typename A>
@@ -312,8 +312,11 @@ class concurrent_hash_map {
     struct node;
     friend struct node;
 #if defined(_WIN64) && !defined(_CPPLIB_VER)
+#   pragma message ("Workaround for MS PSDK for Win64: allocator::rebind doesn't work")
+#   define __TBB_INIT_ALLOCATOR(a)
     typedef tbb_allocator<node> node_allocator_type; // it doesn't support rebinding
 #else
+#   define __TBB_INIT_ALLOCATOR(a) : my_allocator(a)
     typedef typename A::template rebind<node>::other node_allocator_type;
 #endif
 
@@ -401,14 +404,14 @@ public:
 
     //! Construct empty table.
     concurrent_hash_map(const allocator_type &a = allocator_type())
-        : my_allocator(a)
+        __TBB_INIT_ALLOCATOR(a)
     {
         initialize();
     }
 
     //! Copy constructor
     concurrent_hash_map( const concurrent_hash_map& table, const allocator_type &a = allocator_type())
-        : my_allocator(a)
+        __TBB_INIT_ALLOCATOR(a)
     {
         initialize();
         internal_copy(table);
@@ -417,11 +420,13 @@ public:
     //! Construction with copying iteration range and given allocator instance
     template<class I>
     concurrent_hash_map(I first, I last, const allocator_type &a = allocator_type())
-        : my_allocator(a)
+        __TBB_INIT_ALLOCATOR(a)
     {
         initialize();
         internal_copy(first, last);
     }
+
+#undef __TBB_INIT_ALLOCATOR
 
     //! Assignment
     concurrent_hash_map& operator=( const concurrent_hash_map& table ) {
@@ -471,7 +476,11 @@ public:
     size_type max_size() const {return (~size_type(0))/sizeof(node);}
 
     //! return allocator object
+#if defined(_WIN64) && !defined(_CPPLIB_VER)
+    allocator_type get_allocator() const { return allocator_type(); }
+#else
     allocator_type get_allocator() const { return this->my_allocator; }
+#endif
 
     //! swap two instances
     void swap(concurrent_hash_map &table);
@@ -762,8 +771,8 @@ std::pair<I, I> concurrent_hash_map<Key,T,HashCompare,A>::internal_equal_range( 
     node* b = search_list( key, c );
     if( !b )
         return std::make_pair(end, end);
-    iterator l(*this, segment_index, chain_index, b), u(l);
-    return std::make_pair(l, ++u);
+    iterator lower(*this, segment_index, chain_index, b), upper(lower);
+    return std::make_pair(lower, ++upper);
 }
 
 template<typename Key, typename T, typename HashCompare, typename A>

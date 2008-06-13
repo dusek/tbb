@@ -1,4 +1,17 @@
 ------------------------------------------------------------------------
+20080408 open-source release
+
+Changes:
+
+- count_strings example reworked: new word generator implemented, hash 
+    function replaced, and tbb_allocator is used with std::string class.
+- Static methods of spin_rw_mutex were replaced by normal member 
+    functions, and the class name was versioned.
+- tacheon example was renamed to tachyon.
+- Improved support for Intel(R) Thread Checker.
+- A few more minor improvements.
+
+------------------------------------------------------------------------
 20080402 open-source release
 
 Changes:

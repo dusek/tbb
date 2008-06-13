@@ -89,9 +89,9 @@ public:
 
     pointer allocate(const size_type n)
     {
-        if(verbose) std::printf("\t+%d|", int(n));
+        if(verbose) printf("\t+%d|", int(n));
         if(max_items && items_allocated + n >= max_items) {
-            if(verbose) std::printf("items limit hits!");
+            if(verbose) printf("items limit hits!");
             if(throwing) throw std::bad_alloc();
             return NULL;
         }
@@ -105,7 +105,7 @@ public:
 
     void deallocate(const pointer ptr, const size_type n)
     {
-        if(verbose) std::printf("\t-%d|", int(n));
+        if(verbose) printf("\t-%d|", int(n));
         frees++;
         items_freed += n;
         base_alloc_t::deallocate(ptr, n);
@@ -113,7 +113,7 @@ public:
 
     static void init_counters(bool v = false) {
         verbose = v;
-        if(verbose) std::printf("\n------------------------------------------- Allocations:\n");
+        if(verbose) printf("\n------------------------------------------- Allocations:\n");
         items_allocated = 0;
         items_freed = 0;
         allocations = 0;

@@ -209,7 +209,7 @@ test_tbb_plain:
 	./test_eh_algorithms.exe 2:4
 endif # norun
 
-TEST_TBB_OLD.OBJ = test_concurrent_vector_v2.$(OBJ) test_concurrent_queue_v2.$(OBJ)
+TEST_TBB_OLD.OBJ = test_concurrent_vector_v2.$(OBJ) test_concurrent_queue_v2.$(OBJ) test_mutex_v2.$(OBJ)
 
 # For old files, we don't mind warnings etc., thus compilation rules are most relaxed
 $(TEST_TBB_OLD.OBJ): %.$(OBJ): %.cpp
@@ -223,6 +223,9 @@ ifndef norun
 test_tbb_old:
 	./test_concurrent_vector_v2.exe 1:4
 	./test_concurrent_queue_v2.exe 1:4
+	./test_mutex_v2.exe 1
+	./test_mutex_v2.exe 2
+	./test_mutex_v2.exe 4
 endif # norun
 
 debug_%: test_%.exe

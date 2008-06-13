@@ -30,8 +30,6 @@
 #include "tbb/atomic.h"
 #include "tbb/tick_count.h"
 #include "tbb/blocked_range.h"
-#include <cstdlib>
-#include <stdexcept>
 #include "harness.h"
 #include "harness_allocator.h"
 
@@ -221,6 +219,7 @@ void TestPushPop( int prefill, ptrdiff_t capacity, int nthread ) {
         if( sum!=expected )
             printf("sum=%d expected=%d\n",sum,expected);
         ASSERT( FooConstructed==FooDestroyed, NULL );
+        // TODO: checks by counting allocators
 
         success = true;
         if( nthread>1 && prefill==0 ) {
@@ -405,12 +404,20 @@ void TestExceptions() {
             for( int k=0; k<N; k++ )
                 queue_clear.push( T() );
         } catch (...) {
+            // TODO: some assert here?
         }
     }
 
     try {
         int n_pushed=0, n_popped=0;
-        for(int t = 0; t <= 1; t++) {// exception type -- 0 : from allocator(), 1 : from Foo's constructor
+#if defined(_WIN64) && !defined(_CPPLIB_VER)
+        if(Verbose)
+            printf("skipping exceptions testing for allocators\n");
+        int t = 1;
+#else
+        for(int t = 0; t <= 1; t++)// exception type -- 0 : from allocator(), 1 : from Foo's constructor
+#endif
+        {
             concur_queue_t queue_test;
             for( int m=m_push; m<=m_pop; m++ ) {
                 // concurrent_queue internally rebinds the allocator to one with 'char'

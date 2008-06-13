@@ -74,9 +74,12 @@ __MACHINE_DECL_ATOMICS(4,int32_t,"l")
 
 static int64_t __TBB_machine_cmpswp8 (volatile void *ptr, int64_t value, int64_t comparand )
 {
-    const int32_t comparand_lo = (int32_t)comparand;
-    const int32_t comparand_hi = *(int32_t*)((intptr_t)&comparand+sizeof(int32_t));
     int64_t result;
+    union {
+      int64_t comparand_local;
+      int32_t comparand_parts[2];
+    };
+    comparand_local = comparand;
     // EBX register saved for compliancy with position-independent code (PIC) rules on IA32
     __asm__ __volatile__ (
              "pushl %%ebx\n\t"
@@ -86,8 +89,8 @@ static int64_t __TBB_machine_cmpswp8 (volatile void *ptr, int64_t value, int64_t
              "popl  %%ebx"
                     : "=A"(result), "=m"(*(int64_t *)ptr)
                     : "S"(ptr),
-                      "a"(comparand_lo),
-                      "d"(comparand_hi),
+                      "a"(comparand_parts[0]),
+                      "d"(comparand_parts[1]),
                       "c"(&value)
                     : "memory", "esp");
     return result;

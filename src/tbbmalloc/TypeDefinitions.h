@@ -49,7 +49,7 @@
 #   elif __i386__ || __i386
 #       define __ARCH_x86_32 1
 #   else
-#       define __ARCH_unknown 1
+#       define __ARCH_other 1
 #   endif
 #   define USE_PTHREAD 1
 #endif

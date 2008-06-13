@@ -153,6 +153,10 @@ typedef tbb::concurrent_hash_map<MyKey,MyData2,MyHashCompare> MyTable2;
 
 template<typename MyTable>
 inline void CheckAllocator(MyTable &table, size_t expected_allocs, size_t expected_frees, bool exact = true) {
+#if defined(_WIN64) && !defined(_CPPLIB_VER)
+    if(Verbose)
+        printf("skipping of checking allocators due to known problem of Platform SDK\n");
+#else
     size_t items_allocated = table.get_allocator().items_allocated, items_freed = table.get_allocator().items_freed;
     size_t allocations = table.get_allocator().allocations, frees = table.get_allocator().frees;
     if(Verbose)
@@ -165,6 +169,7 @@ inline void CheckAllocator(MyTable &table, size_t expected_allocs, size_t expect
         ASSERT( allocations >= expected_allocs, NULL); ASSERT( frees >= expected_frees, NULL);
         ASSERT( allocations == frees, NULL );
     }
+#endif
 }
 
 inline bool UseKey( size_t i ) {
@@ -692,7 +697,13 @@ void TestExceptions() {
     ASSERT( MyDataCount==1000, NULL );
 
     try {
+#if defined(_WIN64) && !defined(_CPPLIB_VER)
+        if(Verbose)
+            printf("skipping exceptions testing for allocators\n");
+        int t = 1;
+#else
         for(int t = 0; t < 2; t++) // exception type
+#endif
         for(int m = zero_method+1; m < all_methods; m++)
         {
             allocator_t a;

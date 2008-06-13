@@ -32,11 +32,14 @@
 
 #include <windows.h>
 
-#if !defined(__INTEL_COMPILER)
-#if _MSC_VER >= 1300
+#if defined(__INTEL_COMPILER)
+#define __TBB_fence_for_acquire() __asm { __asm nop }
+#define __TBB_fence_for_release() __asm { __asm nop }
+#elif _MSC_VER >= 1300
 extern "C" void _ReadWriteBarrier();
 #pragma intrinsic(_ReadWriteBarrier)
-#endif
+#define __TBB_fence_for_acquire() _ReadWriteBarrier()
+#define __TBB_fence_for_release() _ReadWriteBarrier()
 #endif
 
 #define __TBB_WORDSIZE 4
@@ -60,20 +63,18 @@ extern "C" {
 template <typename T, size_t S>
 struct __TBB_machine_load_store {
     static inline T load_with_acquire(const volatile T& location) {
-#if !defined(__INTEL_COMPILER) && _MSC_VER >= 1300
         T to_return = location;
-        _ReadWriteBarrier();
+#ifdef __TBB_fence_for_acquire 
+        __TBB_fence_for_acquire();
+#endif /* __TBB_fence_for_acquire */
         return to_return;
-#else
-        return location;
-#endif
     }
 
-    static inline void store_with_release(T &location, T value) {
-#if !defined(__INTEL_COMPILER) && _MSC_VER >= 1300
-        _ReadWriteBarrier();
-#endif
-        const_cast<T volatile&>(location) = value;
+    static inline void store_with_release(volatile T &location, T value) {
+#ifdef __TBB_fence_for_release
+        __TBB_fence_for_release();
+#endif /* __TBB_fence_for_release */
+        location = value;
     }
 };
 

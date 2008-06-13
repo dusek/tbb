@@ -26,7 +26,9 @@
     the GNU General Public License.
 */
 
+#if !defined(INSTANTIATE_ITT_NOTIFY)
 #define INSTANTIATE_ITT_NOTIFY 1
+#endif
 #include "itt_notify.h"
 #include "tbb_misc.h"
 #include <stdlib.h>

@@ -2899,7 +2899,7 @@ const stack_size_type ThreadStackSize = 4*MByte;
 #endif
 
 void task_scheduler_init::initialize( int number_of_threads ) {
-    initialize( number_of_threads, ThreadStackSize );
+    initialize( number_of_threads, 0 );
 }
 
 void task_scheduler_init::initialize( int number_of_threads, stack_size_type thread_stack_size ) {

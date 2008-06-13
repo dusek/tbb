@@ -219,5 +219,8 @@ void initialize_strings_vector(std::vector <std::string>* vector)
 #endif
     vector->push_back("TBB: ALLOCATOR");
     vector->push_back("TBB: SCHEDULER");
+#if !(__APPLE__)
+    vector->push_back("TBB: ITT");
+#endif
     return;
 }

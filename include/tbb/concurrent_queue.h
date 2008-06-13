@@ -296,7 +296,12 @@ public:
 
     //! Construct empty queue
     concurrent_queue(const allocator_type  &a = allocator_type()) : 
-        concurrent_queue_base_v3( sizeof(T) ), my_allocator( a )
+        concurrent_queue_base_v3( sizeof(T) )
+#if defined(_WIN64) && !defined(_CPPLIB_VER)
+#   pragma message ("Workaround for MS PSDK for Win64: allocator::rebind doesn't work")
+#else
+            , my_allocator( a )
+#endif
     {
     }
 
@@ -350,7 +355,11 @@ public:
     }
 
     //! return allocator object
+#if defined(_WIN64) && !defined(_CPPLIB_VER)
+    allocator_type get_allocator() const { return allocator_type(); }
+#else
     allocator_type get_allocator() const { return this->my_allocator; }
+#endif
 
     //! clear the queue and release all resources (i.e., pages)
     void clear() ;

@@ -26,9 +26,10 @@
     the GNU General Public License.
 */
 
-//#define INSTANTIATE_ITT_NOTIFY 1
-//#include "tbb/itt_notify.h"
+#define INSTANTIATE_ITT_NOTIFY 1
 #include "Customize.h"
+
+#include "tbb/itt_notify.cpp"
 
 #ifdef _WIN32
 #include <windows.h>
@@ -46,3 +47,10 @@ BOOL WINAPI DllMain( HINSTANCE hInst, DWORD callReason, LPVOID )
     return TRUE;
 }
 #endif //_WIN32
+
+namespace tbb {
+namespace internal {
+
+void DoOneTimeInitializations() {}
+
+} } // namespaces

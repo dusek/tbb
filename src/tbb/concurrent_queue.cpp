@@ -189,7 +189,7 @@ public:
 #else /* !__TBB_NO_BUSY_WAIT_IN_CONCURRENT_QUEUE */
 
     atomic<ticket> head_counter;
-    char pad1[NFS_MaxLineSize-sizeof(atomic<ticket)>];
+    char pad1[NFS_MaxLineSize-sizeof(atomic<ticket>)];
 
     atomic<ticket> tail_counter;
     char pad2[NFS_MaxLineSize-sizeof(atomic<ticket>)];
@@ -767,7 +767,7 @@ bool concurrent_queue_base_v3::internal_push_if_not_full( const void* src ) {
         // Queue had empty slot with ticket k when we looked.  Attempt to claim that slot.
         concurrent_queue_rep::ticket tk=k;
         k = r.tail_counter.compare_and_swap( tk+1, tk );
-        if( k==tk ) 
+        if( k==tk )
             break;
         // Another thread claimed the slot, so retry. 
     }
