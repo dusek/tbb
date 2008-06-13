@@ -166,7 +166,13 @@ static void TestCompareExchange() {
     for( intptr a=-10; a<10; ++a )
         for( intptr b=-10; b<10; ++b )
             for( intptr c=-10; c<10; ++c ) {
+// Workaround for a bug in GCC 4.3.0; and one more is below.
+#if __GNUC__==4&&__GNUC_MINOR__==3&&__GNUC_PATCHLEVEL__==0
+                intptr x;
+		        __TBB_store_with_release( x, a );
+#else
                 intptr x = a;
+#endif
                 intptr y = __TBB_CompareAndSwapW(&x,b,c);
                 ASSERT( y==a, NULL ); 
                 if( a==c ) 
@@ -213,7 +219,11 @@ static void TestTinyLock() {
     unsigned char flags[16];
     for( int i=0; i<16; ++i )
         flags[i] = i;
+#if __GNUC__==4&&__GNUC_MINOR__==3&&__GNUC_PATCHLEVEL__==0
+    __TBB_store_with_release( flags[8], 0 );
+#else
     flags[8] = 0;
+#endif
     __TBB_LockByte(flags[8]);
     for( int i=0; i<16; ++i )
         ASSERT( flags[i]==(i==8?1:i), NULL );

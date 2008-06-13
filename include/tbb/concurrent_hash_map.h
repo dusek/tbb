@@ -354,7 +354,7 @@ private:
     };
 
     segment& get_segment( hashcode_t hashcode ) {
-        return my_segment[hashcode&n_segment-1];
+        return my_segment[hashcode&(n_segment-1)];
     }
 
     HashCompare my_hash_compare;
@@ -621,7 +621,7 @@ bool concurrent_hash_map<Key,T,HashCompare>::lookup( const_accessor* result, con
                 __TBB_ASSERT( op!=op_insert, NULL ); 
                 goto done;
             }
-            __TBB_ASSERT( (s.my_physical_size&s.my_physical_size-1)==0, NULL );
+            __TBB_ASSERT( (s.my_physical_size&(s.my_physical_size-1))==0, NULL );
             chain& c = s.get_chain(h,n_segment_bits);
             chain_mutex_t::scoped_lock chain_lock( c.mutex, /*write=*/false );
             b = search_list(key,c);

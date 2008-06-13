@@ -177,7 +177,7 @@ public:
 };
 
 template<typename Op>
-void DoConcurrentOperations( MyTable& table, int n, char* what, int nthread ) {
+void DoConcurrentOperations( MyTable& table, int n, const char* what, int nthread ) {
     if( Verbose ) 
         printf("testing %s with %d threads\n",what,nthread);
     tbb::tick_count t0 = tbb::tick_count::now();

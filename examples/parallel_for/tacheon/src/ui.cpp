@@ -70,11 +70,11 @@
 #include "util.h"
 #include "ui.h"
 
-static void (* rt_static_ui_message) (int, char *) = NULL;
+static void (* rt_static_ui_message) (int, const char *) = NULL;
 static void (* rt_static_ui_progress) (int) = NULL;
 static int (* rt_static_ui_checkaction) (void) = NULL;
 
-void set_rt_ui_message(void (* func) (int, char *)) {
+void set_rt_ui_message(void (* func) (int, const char *)) {
   rt_static_ui_message = func;
 }
 
@@ -82,7 +82,7 @@ void set_rt_ui_progress(void (* func) (int)) {
   rt_static_ui_progress = func;
 }
 
-void rt_ui_message(int level, char * msg) {
+void rt_ui_message(int level, const char * msg) {
   if (rt_static_ui_message == NULL) {
     fprintf(stderr, "%s\n", msg);
     fflush (stderr);

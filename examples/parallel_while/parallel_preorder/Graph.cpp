@@ -27,6 +27,7 @@
 */
 
 #include <cstdio>
+#include <cstdlib>
 #include "Graph.h"
 
 void Graph::create_random_dag( size_t number_of_nodes ) {

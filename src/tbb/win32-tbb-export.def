@@ -186,3 +186,14 @@ __TBB_machine_trylockbyte
 ?internal_compact@concurrent_vector_base_v3@internal@tbb@@IAEPAXIPAXP6AX0I@ZP6AX0PBXI@Z@Z
 ?internal_swap@concurrent_vector_base_v3@internal@tbb@@IAEXAAV123@@Z
 ?internal_throw_exception@concurrent_vector_base_v3@internal@tbb@@IBEXI@Z
+
+; tbb_thread
+?join@tbb_thread_v3@internal@tbb@@QAEXXZ
+?detach@tbb_thread_v3@internal@tbb@@QAEXXZ
+?internal_start@tbb_thread_v3@internal@tbb@@AAEXP6GIPAX@Z0@Z
+?allocate_closure_v3@internal@tbb@@YAPAXI@Z
+?free_closure_v3@internal@tbb@@YAXPAX@Z
+?thread_yield_v3@internal@tbb@@YAXXZ
+?thread_sleep_v3@internal@tbb@@YAXABVinterval_t@tick_count@2@@Z
+?move_v3@internal@tbb@@YAXAAVtbb_thread_v3@12@0@Z
+?thread_get_id_v3@internal@tbb@@YA?AVid@tbb_thread_v3@12@XZ

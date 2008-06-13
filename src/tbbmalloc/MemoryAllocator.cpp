@@ -32,7 +32,7 @@
 #ifdef MALLOC_TRACE
 #define TRACEF printf
 #else
-static inline int TRACEF(char *arg, ...)
+static inline int TRACEF(const char *arg, ...)
 {
     return 0;
 }

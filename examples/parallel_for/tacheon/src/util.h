@@ -71,5 +71,5 @@ void rt_sleep(int);
 int rt_meminuse(void);
 void * rt_getmem(unsigned int);
 unsigned int rt_freemem(void *); 
-void rtbomb(char *);
-void rtmesg(char *);
+void rtbomb(const char *);
+void rtmesg(const char *);

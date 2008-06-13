@@ -180,3 +180,14 @@ __TBB_machine_pause
 ?internal_compact@concurrent_vector_base_v3@internal@tbb@@IEAAPEAX_KPEAXP6AX10@ZP6AX1PEBX0@Z@Z
 ?internal_swap@concurrent_vector_base_v3@internal@tbb@@IEAAXAEAV123@@Z
 ?internal_throw_exception@concurrent_vector_base_v3@internal@tbb@@IEBAX_K@Z
+
+; tbb_task
+?allocate_closure_v3@internal@tbb@@YAPEAX_K@Z
+?detach@tbb_thread_v3@internal@tbb@@QEAAXXZ
+?free_closure_v3@internal@tbb@@YAXPEAX@Z
+?internal_start@tbb_thread_v3@internal@tbb@@AEAAXP6AIPEAX@Z0@Z
+?join@tbb_thread_v3@internal@tbb@@QEAAXXZ
+?move_v3@internal@tbb@@YAXAEAVtbb_thread_v3@12@0@Z
+?thread_get_id_v3@internal@tbb@@YA?AVid@tbb_thread_v3@12@XZ
+?thread_sleep_v3@internal@tbb@@YAXAEBVinterval_t@tick_count@2@@Z
+?thread_yield_v3@internal@tbb@@YAXXZ

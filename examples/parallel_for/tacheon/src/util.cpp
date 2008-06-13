@@ -191,7 +191,7 @@ unsigned int rt_freemem(void * addr) {
   return bytes;
 }
 
-void rtbomb(char * msg) {
+void rtbomb(const char * msg) {
     rt_ui_message(MSG_ERR, msg);
     rt_ui_message(MSG_ABORT, "Rendering Aborted.");
 
@@ -199,6 +199,6 @@ void rtbomb(char * msg) {
   exit(1);
 }
 
-void rtmesg(char * msg) {
+void rtmesg(const char * msg) {
     rt_ui_message(MSG_0, msg);
 }

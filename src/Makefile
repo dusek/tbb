@@ -67,11 +67,18 @@ native_examples: tbb tbbmalloc
 	$(MAKE) -C $(examples_root) -r -f Makefile tbb_root=.. compiler=$(native_compiler) tbb_build_prefix=$(tbb_build_prefix) debug test
 	$(MAKE) -C $(examples_root) -r -f Makefile tbb_root=.. compiler=$(native_compiler) tbb_build_prefix=$(tbb_build_prefix) clean release test
 
-debug_% clean_%:: cfg?=debug
+debug_%:: cfg?=debug
 test_% stress_% time_%:: cfg?=release
-debug_% test_% clean_% stress_% time_%::
+debug_% test_% stress_% time_%::
 	$(MAKE) -C "$(work_dir)_$(cfg)"  -r -f $(tbb_root)/build/Makefile.test cfg=$(cfg) tbb_root=$(tbb_root) $@
 
+clean_%::
+ifeq ($(cfg),)
+	@$(MAKE) -C "$(work_dir)_release"  -r -f $(tbb_root)/build/Makefile.test cfg=release tbb_root=$(tbb_root) $@
+	@$(MAKE) -C "$(work_dir)_debug"  -r -f $(tbb_root)/build/Makefile.test cfg=debug tbb_root=$(tbb_root) $@
+else
+	@$(MAKE) -C "$(work_dir)_$(cfg)"  -r -f $(tbb_root)/build/Makefile.test cfg=$(cfg) tbb_root=$(tbb_root) $@
+endif
 
 .PHONY: tbb_release tbb_debug test_release test_debug
 

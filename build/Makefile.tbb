@@ -57,8 +57,6 @@ KNOWN_NOSTRICT = concurrent_hash_map.o \
 
 endif
 
-include $(tbb_root)/build/common_rules.inc
-
 # Object files (that were compiled from C++ code) that gmake up TBB
 TBB_CPLUS.OBJ = concurrent_hash_map.$(OBJ) \
 		concurrent_queue.$(OBJ) \
@@ -73,7 +71,8 @@ TBB_CPLUS.OBJ = concurrent_hash_map.$(OBJ) \
 		task.$(OBJ) \
 		tbb_misc.$(OBJ) \
 		mutex.$(OBJ) \
-		recursive_mutex.$(OBJ) 
+		recursive_mutex.$(OBJ) \
+		tbb_thread.$(OBJ)
 
 # OLD/Legacy object files for backward binary compatibility
 ifeq (,$(findstring $(DEFINE_KEY)TBB_NO_LEGACY,$(CPLUS_FLAGS)))
@@ -83,6 +82,11 @@ endif
 
 # Object files that gmake up TBB (TBB_ASM.OBJ is platform-specific)
 TBB.OBJ = $(TBB_CPLUS.OBJ) $(TBB_CPLUS_OLD.OBJ) $(TBB_ASM.OBJ)
+
+# Suppress superfluous warnings for TBB compilation
+WARNING_KEY += $(WARNING_SUPPRESS)
+
+include $(tbb_root)/build/common_rules.inc
 
 ifneq (,$(TBB.DEF))
 tbb.def: $(TBB.DEF)

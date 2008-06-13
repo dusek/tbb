@@ -156,8 +156,8 @@ void TestTrivialPipeline( size_t nthread, int number_of_filters ) {
     for( int bitmask=0; bitmask<1<<number_of_filters; ++bitmask ) {
         // Build pipeline
         tbb::pipeline pipeline;
-        // a private member of pipeline is hacked there for sake of testing wrap-around immunity
-        reinterpret_cast<hacked_pipeline*>(&pipeline)->token_counter = ~(tbb::internal::Token)0xF;
+        // A private member of pipeline is hacked there for sake of testing wrap-around immunity.
+        ((hacked_pipeline*)(void*)&pipeline)->token_counter = ~(tbb::internal::Token)0xF;
         tbb::filter* filter[MaxFilters];
         bool first_stage_is_ordered = false;
         for( int i=0; i<number_of_filters; ++i ) {

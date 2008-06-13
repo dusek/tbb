@@ -155,7 +155,7 @@ class affinity_partition_type: public no_copy {
     size_t num_chunks;
 public:
     affinity_partition_type( affinity_partitioner& ap ) {
-        __TBB_ASSERT( (factor&factor-1)==0, "factor must be power of two" ); 
+        __TBB_ASSERT( (factor&(factor-1))==0, "factor must be power of two" ); 
         ap.resize(factor);
         my_array = ap.my_array;
         map_begin = 0;
@@ -200,7 +200,7 @@ public:
     }
     bool decide_whether_to_delay() {
         // The possible underflow caused by "-1u" is deliberate
-        return (map_begin&factor-1)==0 && map_end-map_begin-1u<factor;
+        return (map_begin&(factor-1))==0 && map_end-map_begin-1u<factor;
     }
     void spawn_or_delay( bool delay, task& a, task& b ) {
         if( delay )  

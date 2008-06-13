@@ -32,7 +32,9 @@
 #include "tbb/tick_count.h"
 #include "tbb/task_scheduler_init.h"
 #include <string>
+#include <cstring>
 #include <cctype>
+#include <cstdlib>
 
 using namespace tbb;
 using namespace std;

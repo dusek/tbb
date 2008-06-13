@@ -97,7 +97,7 @@ void plugin_call(int maxthread)
 
 extern "C" void plugin_call(int);
 
-void report_error_in(char* function_name)
+void report_error_in(const char* function_name)
 {
 #if _WIN32 || _WIN64
     char* message;
@@ -146,9 +146,9 @@ int main(int argc, char* argv[])
   }
 #else
 #if __APPLE__
-  char *dllname = "test_model_plugin.dylib";
+  const char *dllname = "test_model_plugin.dylib";
 #else
-  char *dllname = "test_model_plugin.so";
+  const char *dllname = "test_model_plugin.so";
 #endif
   void* hLib = dlopen( dllname, RTLD_LAZY ); 
   if (hLib==NULL){

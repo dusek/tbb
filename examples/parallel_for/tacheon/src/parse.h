@@ -94,7 +94,7 @@ typedef struct {
 typedef unsigned int errcode;
 
 static errcode add_texture(void * tex, char name[TEXNAMELEN]);
-static errcode GetString(FILE *, char *);
+static errcode GetString(FILE *, const char *);
 static errcode GetScenedefs(FILE *, SceneHandle);
 static errcode GetColor(FILE *, color *);
 static errcode GetVector(FILE *, vector *);

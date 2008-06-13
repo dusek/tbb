@@ -63,7 +63,7 @@ class SubStringFinder {
   str(s), max_array(m), pos_array(p) { }										
 };				
 
-int main(size_t argc, char *argv[]) {
+int main(int argc, char *argv[]) {
  task_scheduler_init init;
 
  std::string str[N] = { std::string("a"), std::string("b") };

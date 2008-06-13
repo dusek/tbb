@@ -267,7 +267,7 @@ namespace internal {
             is_final = false;
         }
         task* next_task = NULL;
-        if( is_right_child && !treat_as_stolen || !range.is_divisible() || partition.should_execute_range(*this) ) {
+        if( (is_right_child && !treat_as_stolen) || !range.is_divisible() || partition.should_execute_range(*this) ) {
             if( is_final )
                 (body->body)( range, final_scan_tag() );
             else if( sum )

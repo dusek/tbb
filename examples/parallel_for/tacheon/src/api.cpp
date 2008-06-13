@@ -164,7 +164,7 @@ void rt_camerasetup(SceneHandle voidscene, apiflt zoom, apiflt aspectratio,
   scene->camupvec=newupvec;
 }
 
-void rt_outputfile(SceneHandle voidscene, char * outname) {
+void rt_outputfile(SceneHandle voidscene, const char * outname) {
   scenedef * scene = (scenedef *) voidscene;
   strcpy((char *) &scene->outfilename, outname);
 }

@@ -30,8 +30,10 @@
 
 union char2bool {
     unsigned char c;
-    bool b;
+    volatile bool b;
 } u;
+
+#include "harness.h"
 
 // The function proves the compiler uses 0 or 1 to store a bool. It
 // inspects what a compiler does when it loads a bool.  A compiler that
@@ -43,14 +45,20 @@ int test_bool_representation() {
     for( unsigned i=0; i<256; ++i ) {
         u.c = (unsigned char)i;
         unsigned char x = (unsigned char)u.b;
-		if( x != i )
+        if( x != i ) {
+            if( Verbose )
+                fprintf(stderr, "Test failed at %d iteration\n",i);
             return 1;
+        }
     }
-	return 0;
+    return 0;
 }
-int main() {
+
+int main( int argc, char* argv[] ) {
+    ParseCommandLine(argc, argv);
     if( test_bool_representation()!=0 )
-		fprintf(stderr, "ERROR: bool representation test failed\n");
-	printf("done\n");
+        fprintf(stderr, "ERROR: bool representation test failed\n");
+    else
+        printf("done\n");
     return 0;
 }

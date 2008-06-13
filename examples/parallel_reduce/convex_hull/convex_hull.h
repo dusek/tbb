@@ -30,12 +30,13 @@
 #define __CONVEX_HULL_H__
 
 #define _SCL_SECURE_NO_DEPRECATE
-#include <stdlib.h>
+#include <cstdlib>
 #include <iostream>
 #include <iomanip>
 #include <sstream>
 #include <vector>
 #include <string>
+#include <cstring>
 #include <algorithm>
 #include <functional>
 #include <assert.h>

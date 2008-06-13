@@ -74,6 +74,6 @@
 #define MSG_ERR    200
 #define MSG_ABORT  300
 
-void rt_ui_message(int, char *);
+void rt_ui_message(int, const char *);
 void rt_ui_progress(int);
 int  rt_ui_checkaction(void);

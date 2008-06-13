@@ -54,7 +54,6 @@ ifeq (1,$(TBB_NOSTRICT))
 KNOWN_NOSTRICT += \
 	test_concurrent_hash_map.o	\
 	test_concurrent_vector.o	\
-	test_concurrent_vector_v2.o     \
 	test_handle_perror.o		\
 	test_cache_aligned_allocator_STL.o	\
 	test_task_scheduler_init.o	\
@@ -97,6 +96,8 @@ TASK_CPP_DIRECTLY_INCLUDED = test_eh_algorithms.exe \
  test_task_assertions.exe \
  test_assembly.exe
 
+$(TASK_CPP_DIRECTLY_INCLUDED): WARNING_KEY += $(WARNING_SUPPRESS)
+
 $(TASK_CPP_DIRECTLY_INCLUDED): %.exe : %.$(OBJ) $(TASK_CPP_DEPENDENCIES)
 	$(CPLUS) $(OUTPUT_KEY)$@ $(CPLUS_FLAGS) $^ $(LIBS) $(LINK_FLAGS)
 
@@ -117,6 +118,7 @@ TEST_TBB_PLAIN.EXE = test_assembly.exe 	\
 	test_blocked_range.exe 		\
 	test_blocked_range2d.exe 	\
 	test_blocked_range3d.exe 	\
+	test_compiler.exe       	\
 	test_concurrent_queue.exe	\
 	test_concurrent_vector.exe	\
 	test_concurrent_hash_map.exe	\
@@ -139,6 +141,7 @@ TEST_TBB_PLAIN.EXE = test_assembly.exe 	\
 	test_task_scheduler_observer.exe	\
 	test_task.exe			\
 	test_task_leaks.exe		\
+	test_tbb_thread.exe		\
 	test_tick_count.exe		\
 	test_inits_loop.exe      	\
 	test_yield.exe           	\
@@ -164,7 +167,7 @@ test_tbb_plain: $(TEST_TBB_PLAIN.EXE)
 ifndef norun
 test_tbb_plain:
 	./test_assembly.exe 
-        #./test_compiler.exe 
+	./test_compiler.exe 
         # Yes, 4:8 is intended on the next line. 
 	./test_yield.exe 4:8
 	./test_handle_perror.exe 
@@ -207,7 +210,13 @@ test_tbb_plain:
 	./test_eh_algorithms.exe 2:4
 endif # norun
 
-TEST_TBB_OLD.EXE = test_concurrent_vector_v2.exe
+TEST_TBB_OLD.OBJ = test_concurrent_vector_v2.$(OBJ)
+
+# For old files, we don't mind warnings etc., thus compilation rules are most relaxed
+$(TEST_TBB_OLD.OBJ): %.$(OBJ): %.cpp
+	$(CPLUS) $(COMPILE_ONLY) $(subst $(WARNING_KEY),,$(CPLUS_FLAGS_NOSTRICT)) $(WARNING_SUPPRESS) $(INCLUDES) $<
+
+TEST_TBB_OLD.EXE = $(subst .$(OBJ),.exe,$(TEST_TBB_OLD.OBJ))
 
 test_tbb_old: $(TEST_TBB_OLD.EXE)
 
@@ -230,7 +239,7 @@ time_%: time_%.exe
 	./$^ $(args)
 
 clean_%: 
-	$(RM) test_$*.$(OBJ) test_$*.exe test_$*.$(DLL) test_$*.$(LIBEXT) test_$*.res test_$*.map test_$*.ilk test_$*.pdb test_$*.exp test_$*.*manifest test_$*.tmp test_$*.d
+	$(RM) $*.$(OBJ) $*.exe $*.$(DLL) $*.$(LIBEXT) $*.res $*.map $*.ilk $*.pdb $*.exp $*.*manifest $*.tmp $*.d
 
 clean:
 	$(RM) *.$(OBJ) *.exe *.$(DLL) *.$(LIBEXT) *.res *.map *.ilk *.pdb *.exp *.manifest *.tmp *.d core core.*[0-9][0-9]

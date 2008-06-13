@@ -54,6 +54,9 @@ public:
         //! Construct a time interval representing zero time duration
         interval_t() : value(0) {};
 
+        //! Construct a time interval representing sec seconds time  duration
+        explicit interval_t( double sec );
+
         //! Return the length of a time interval in seconds
         double seconds() const;
 
@@ -113,6 +116,19 @@ inline tick_count tick_count::now() {
     result.my_count = static_cast<long long>(1000000)*static_cast<long long>(tv.tv_sec) + static_cast<long long>(tv.tv_usec);
 #endif /*(choice of OS) */
     return result;
+}
+
+inline tick_count::interval_t::interval_t( double sec )
+{
+#if _WIN32||_WIN64
+    LARGE_INTEGER qpfreq;
+    QueryPerformanceFrequency(&qpfreq);
+    value = static_cast<long long>(sec*qpfreq.QuadPart);
+#elif __linux__
+    value = static_cast<long long>(sec*1E9);
+#else /* generic Unix */
+    value = static_cast<long long>(sec*1E6);
+#endif /* (choice of OS) */
 }
 
 inline tick_count::interval_t operator-( const tick_count& t1, const tick_count& t0 ) {

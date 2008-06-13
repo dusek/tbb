@@ -109,7 +109,7 @@ int main(int argc, char **argv)
 
         //Setting TBB_VERSION in case it is not set
         if ( !getenv("TBB_VERSION") ){
-            putenv("TBB_VERSION=1");
+            putenv(const_cast<char*>("TBB_VERSION=1"));
         }
 
         if( ( system(TEST_SYSTEM_COMMAND) ) != 0 ){

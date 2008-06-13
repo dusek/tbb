@@ -128,7 +128,7 @@ public:
         else
             printf("%d computing %s [%ld..%ld) [%ld..%ld)\n",id,tag.is_final_scan()?"final":"lookahead",my_range.begin(),my_range.end(),r.begin(),r.end());
 #endif /* PRINT_DEBUG */
-        ASSERT( !tag.is_final_scan() || my_range.begin()==0 && my_range.end()==r.begin() || my_range.empty() && r.begin()==0, NULL );
+        ASSERT( !tag.is_final_scan() || (my_range.begin()==0 && my_range.end()==r.begin()) || (my_range.empty() && r.begin()==0), NULL );
         for( long i=r.begin(); i<r.end(); ++i ) {
             my_total += my_array[i];
             if( tag.is_final_scan() ) {

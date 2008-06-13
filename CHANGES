@@ -1,4 +1,17 @@
 ------------------------------------------------------------------------
+20080319 open-source release
+
+Changes:
+
+- Support for gcc version 4.3 was added.
+- tbb_thread class, near compatible with std::thread expected in C++0x, 
+    was added.
+
+Bugs fixed:
+- 116 - fix for compilation issues with gcc version 4.2.1.
+- 120 - fix for compilation issues with gcc version 4.3.
+ 
+------------------------------------------------------------------------
 20080311 open-source release
 
 Changes:

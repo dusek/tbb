@@ -83,7 +83,7 @@ static int numtextures;         /* number of TEXDEF textures               */
 static int numobjectsparsed;    /* total number of objects parsed so far   */
 static color scenebackcol;   /* scene background color                  */
 
-static int stringcmp(char * a, char * b) {
+static int stringcmp(const char * a, const char * b) {
   int i, s, l;
 
   s=strlen(a);
@@ -192,7 +192,7 @@ static void Trans3d(vector * trans, vector * vec) {
   vec->z+=trans->z;
 }
 
-static errcode GetString(FILE * dfile, char * string) {
+static errcode GetString(FILE * dfile, const char * string) {
   char data[255];
 
   fscanf(dfile,"%s",data);

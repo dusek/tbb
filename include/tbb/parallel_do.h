@@ -161,7 +161,7 @@ namespace internal {
 
             iteration_type& t = *new (task::self().allocate_additional_child_of(*my_barrier)) iteration_type(item, *this);
 
-            task::self().spawn( t );
+            t.spawn( t );
         }
     public:
         const Body* my_body;

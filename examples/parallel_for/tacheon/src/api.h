@@ -131,7 +131,7 @@ void rt_finalize(void); /* close down for good.. */
 SceneHandle rt_newscene(void);        /* allocate new scene */
 void rt_deletescene(SceneHandle); /* delete a scene */
 void rt_renderscene(SceneHandle); /* raytrace the current scene */  
-void rt_outputfile(SceneHandle, char * outname); 
+void rt_outputfile(SceneHandle, const char * outname); 
 void rt_resolution(SceneHandle, int hres, int vres);
 void rt_verbose(SceneHandle, int v);
 void rt_rawimage(SceneHandle, unsigned char *rawimage);

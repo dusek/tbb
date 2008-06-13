@@ -33,6 +33,7 @@
 #include "tbb/atomic.h"
 #include <vector>
 #include <algorithm>
+#include <cstring>
 #include "Graph.h"
 
 //! Number of trials. Can be changed from command line

@@ -36,6 +36,7 @@
 #include <memory>
 #include <limits>
 #include <new>
+#include <cstring>
 #include "atomic.h"
 #include "cache_aligned_allocator.h"
 #include "blocked_range.h"
@@ -260,7 +261,7 @@ public: // workaround for MSVC
             size_t k = ++my_index;
             if( my_item ) {
                 // Following test uses 2's-complement wizardry
-                if( (k& k-2)==0 ) {
+                if( (k& (k-2))==0 ) {
                     // k is a power of two that is at least k-2
                     my_item= NULL;
                 } else {
@@ -276,7 +277,7 @@ public: // workaround for MSVC
             size_t k = my_index--;
             if( my_item ) {
                 // Following test uses 2's-complement wizardry
-                if( (k& k-2)==0 ) {
+                if( (k& (k-2))==0 ) {
                     // k is a power of two that is at least k-2  
                     my_item= NULL;
                 } else {
