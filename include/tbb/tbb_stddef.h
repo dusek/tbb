@@ -29,12 +29,20 @@
 #ifndef __TBB_tbb_stddef_H
 #define __TBB_tbb_stddef_H
 
-// Please define version number here:
+// Marketing-driven product version
 #define TBB_VERSION_MAJOR 2
-#define TBB_VERSION_MINOR 0
+#define TBB_VERSION_MINOR 1
 
-#define TBB_INTERFACE_VERSION 3010
+// Engineering-focused interface version
+#define TBB_INTERFACE_VERSION 3011
 #define TBB_INTERFACE_VERSION_MAJOR TBB_INTERFACE_VERSION/1000
+
+// The oldest major interface version still supported
+// To be used in SONAME, manifests, etc.
+#define TBB_COMPATIBLE_INTERFACE_VERSION 2
+
+#define __TBB_STRING_AUX(x) #x
+#define __TBB_STRING(x) __TBB_STRING_AUX(x)
 
 // We do not need defines below for resource processing on windows
 #if !defined RC_INVOKED
@@ -171,6 +179,31 @@ namespace tbb {
 
 #endif /* TBB_DO_ASSERT */
 
+// Debug builds compile inline functions defined in headers as out-of-line. 
+// As the result both TBB library and the executable using it have public 
+// symbols with same name. On Linux this may lead to the situation when the 
+// loader resolves TBB symbol reference to the instance from the executable. 
+// When the executable is instrumented by Intel(R) Thread Checker, calling 
+// the instrumented version of a function from TBB internals leads to 
+// numerous false positives reported by the tool. To prevent such situations 
+// we have to ensure that inline functions instantiated in TBB and user 
+// executables have different names.
+#if __TBB_BUILD && __linux__
+
+#if (defined(__INTEL_COMPILER) && (__INTEL_COMPILER==910 || __INTEL_COMPILER==1000 || __INTEL_COMPILER==1010))
+#define __TBB_ALIAS_TEMPLATE_FUNC 1
+#define __TBB_static
+#define poison_pointer __TBB_internal_poison_pointer
+#else  /* (defined(__INTEL_COMPILER) && (__INTEL_COMPILER==910 ... */
+#define __TBB_static static
+#endif /* (defined(__INTEL_COMPILER) && (__INTEL_COMPILER==910 ... */
+
+#else
+
+#define __TBB_static
+
+#endif /* __TBB_BUILD && __linux__ */
+
 //! The namespace tbb contains all components of the library.
 namespace tbb {
 
@@ -200,10 +233,13 @@ typedef size_t uintptr;
     but it happens to be for all platforms of interest. */
 typedef std::ptrdiff_t intptr;
 
+//! Report a runtime warning.
+void runtime_warning( const char* location, const char* comment );
+
 #if TBB_DO_ASSERT
 //! Set p to invalid pointer value.
 template<typename T>
-inline void poison_pointer( T* & p ) {
+__TBB_static inline void poison_pointer( T* & p ) {
     p = reinterpret_cast<T*>(-1);
 }
 #else
@@ -222,6 +258,13 @@ public:
     //! Allow default construction
     no_copy() {}
 };
+
+// Struct to be used as a version tag for inline functions.
+/** Version tag can be necessary to prevent loader on Linux from using the wrong 
+    symbol in debug builds (when inline functions are compiled as out-of-line). **/
+struct version_tag_v3 {};
+
+typedef version_tag_v3 version_tag;
 
 } // internal
 //! @endcond
@@ -250,6 +293,10 @@ public:
 #ifndef __TBB_SCHEDULER_OBSERVER
 #define __TBB_SCHEDULER_OBSERVER 1
 #endif /* __TBB_SCHEDULER_OBSERVER */
+
+#ifndef TBB_PERFORMANCE_WARNINGS
+#define TBB_PERFORMANCE_WARNINGS TBB_DO_ASSERT
+#endif /* TBB_PERFORMANCE_WARNINGS */
 
 #endif /* RC_INVOKED */
 #endif /* __TBB_tbb_stddef_H */

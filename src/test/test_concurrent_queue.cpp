@@ -410,13 +410,7 @@ void TestExceptions() {
 
     try {
         int n_pushed=0, n_popped=0;
-#if defined(_WIN64) && !defined(_CPPLIB_VER)
-        if(Verbose)
-            printf("skipping exceptions testing for allocators\n");
-        int t = 1;
-#else
         for(int t = 0; t <= 1; t++)// exception type -- 0 : from allocator(), 1 : from Foo's constructor
-#endif
         {
             concur_queue_t queue_test;
             for( int m=m_push; m<=m_pop; m++ ) {

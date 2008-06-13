@@ -96,27 +96,37 @@
 #endif
 
 #ifndef __TBB_load_with_acquire
+
+#if __TBB_ALIAS_TEMPLATE_FUNC
+#define __TBB_load_with_acquire __TBB_internal_load_with_acquire
+#endif
+
     //! Load with acquire semantics; i.e., no following memory operation can move above the load.
     template<typename T>
-    inline T __TBB_load_with_acquire(const volatile T& location) {
+    __TBB_static inline T __TBB_load_with_acquire(const volatile T& location) {
         T temp = location;
 #ifdef __TBB_fence_for_acquire 
         __TBB_fence_for_acquire();
 #endif /* __TBB_fence_for_acquire */
         return temp;
     }
-#endif
+#endif /* __TBB_load_with_acquire */
 
 #ifndef __TBB_store_with_release
+
+#if __TBB_ALIAS_TEMPLATE_FUNC
+#define __TBB_store_with_release __TBB_internal_store_with_release
+#endif
+
     //! Store with release semantics; i.e., no prior memory operation can move below the store.
     template<typename T, typename V>
-    inline void __TBB_store_with_release(volatile T& location, V value) {
+    __TBB_static inline void __TBB_store_with_release(volatile T& location, V value) {
 #ifdef __TBB_fence_for_release
         __TBB_fence_for_release();
 #endif /* __TBB_fence_for_release */
         location = value; 
     }
-#endif
+#endif /* __TBB_store_with_release */
 
 #ifndef __TBB_Pause
     inline void __TBB_Pause(int32_t) {

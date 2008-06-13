@@ -1,3 +1,25 @@
+20080512 open-source release
+
+Changes:
+
+- Fixed problem with backward binary compatibility of debug Linux builds
+- Sun* Studio* support added
+- soname support added on Linux via linker script. To restore backward 
+    binary compatibility *.so -> *.so.2 softlinks should be created
+- concurrent_hash_map improvements - added few new forms of insert() 
+    method and fixed precondition and guarantees of erase() methods.   
+    Added runtime warning reporting about bad hash function used for 
+    the container. Various improvements for performance and concurrency.
+- Cancellation mechanism reimplemented so that it does not hurt scalability
+- Algorithm parallel_do reworked. Requirement for Body::argument_type 
+    definition removed, and work item argument type can be arbitrarily 
+    cv-qualified.
+- polygon_overlay example added.
+- A few more improvements to code, tests, examples and Makefiles.
+
+Bugs fixed:
+- 112 - fix for soname support.
+
 ------------------------------------------------------------------------
 20080408 open-source release
 

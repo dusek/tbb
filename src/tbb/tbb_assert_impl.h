@@ -72,4 +72,13 @@ namespace tbb {
             }
         }
     }
+
+    namespace internal {
+        //! Report a runtime warning.
+        void runtime_warning( const char* location, const char* comment )
+        {
+            fprintf( stderr, "TBB Warning: %s: %s\n", location, comment );
+        }
+    } // namespace internal
+
 } /* namespace tbb */

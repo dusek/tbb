@@ -305,6 +305,7 @@ struct atomic {
 #define __TBB_DECL_ATOMIC(T) \
     template<> struct atomic<T>: internal::atomic_impl<T,T,1> {  \
         T operator=( T rhs ) {return store_with_release(rhs);}  \
+        atomic<T>& operator=( const atomic<T>& rhs ) {store_with_release(rhs); return *this;}  \
     };
 
 #if defined(__INTEL_COMPILER)||!defined(_MSC_VER)||_MSC_VER>=1400
@@ -332,6 +333,7 @@ template<typename T> struct atomic<T*>: internal::atomic_impl<T*,ptrdiff_t,sizeo
         // "this" required here in strict ISO C++ because store_with_release is a dependent name
         return this->store_with_release(rhs);
     }
+    atomic<T*>& operator=( const atomic<T*> rhs ) {this->store_with_release(rhs); return *this;}
     T* operator->() const {
         return (*this);
     }
@@ -371,6 +373,11 @@ public:
         __TBB_store_with_release(my_value,rhs);
         return rhs;
     }
+
+    atomic<void*>& operator=( const atomic<void*>& rhs ) {
+        __TBB_store_with_release(my_value,rhs);
+        return *this;
+    }
 };
 
 template<>
@@ -405,6 +412,11 @@ public:
     value_type operator=( value_type rhs ) {
         __TBB_store_with_release(my_value,rhs);
         return rhs;
+    }
+
+    atomic<bool>& operator=( const atomic<bool>& rhs ) {
+        __TBB_store_with_release(my_value,rhs);
+        return *this;
     }
 };
 

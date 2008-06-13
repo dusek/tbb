@@ -175,7 +175,7 @@ value SharedSerialFib(int n)
     return SharedB;
 }
 
-// *** Serial shared by concurrent hash *** //
+// *** Serial shared by concurrent hash map *** //
 
 //! Hash comparer
 struct IntHashCompare {
@@ -202,11 +202,9 @@ public:
                 assert(0);
             }
             value sum = f1->second + f2->second;
-            NumbersTable::accessor fsum;
-            if(Fib.insert(fsum, i)) // inserting. is new element?
-                fsum->second = sum; // new, assign value
-            else
-                assert( fsum->second == sum ); // no, check value
+            NumbersTable::const_accessor fsum;
+            Fib.insert(fsum, make_pair(i, sum)); // inserting
+            assert( fsum->second == sum ); // check value
         }
         return 0;
     }
@@ -216,20 +214,17 @@ public:
 value ConcurrentHashSerialFib(int n)
 {
     NumbersTable Fib; 
-    {   // We need to declare the accessor in a local block before using its values outside the block.
-        NumbersTable::accessor fref;
-        bool okay;
-        okay = Fib.insert(fref, 0); assert(okay); fref->second = 0; // assign initial values
-        okay = Fib.insert(fref, 1); assert(okay); fref->second = 1;
-        // Lifetime of fref ends here, which implicitly releases the write lock on what it points to.
-    }
+    bool okay;
+    okay = Fib.insert( make_pair(0, 0) ); assert(okay); // assign initial values
+    okay = Fib.insert( make_pair(1, 1) ); assert(okay);
+
     task_list list;
     // allocate tasks
     list.push_back(*new(task::allocate_root()) ConcurrentHashSerialFibTask(Fib, n));
     list.push_back(*new(task::allocate_root()) ConcurrentHashSerialFibTask(Fib, n));
     task::spawn_root_and_wait(list);
     NumbersTable::const_accessor fresult;
-    bool okay = Fib.find( fresult, n );
+    okay = Fib.find( fresult, n );
     assert(okay);
     return fresult->second;
 }

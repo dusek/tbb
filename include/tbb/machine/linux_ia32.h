@@ -157,18 +157,24 @@ struct __TBB_machine_load_store<T,8> {
     }
 };
 
+
+#if __TBB_ALIAS_TEMPLATE_FUNC
+#define __TBB_machine_load_with_acquire __TBB_internal_machine_load_with_acquire
+#define __TBB_machine_store_with_release __TBB_internal_machine_store_with_release
+#else /* __TBB_ALIAS_TEMPLATE_FUNC */
+#define __TBB_load_with_acquire(L) __TBB_machine_load_with_acquire((L))
+#define __TBB_store_with_release(L,V) __TBB_machine_store_with_release((L),(V))
+#endif /* __TBB_ALIAS_TEMPLATE_FUNC */
+
 template<typename T>
-inline T __TBB_machine_load_with_acquire(const volatile T &location) {
+__TBB_static inline T __TBB_machine_load_with_acquire(const volatile T &location) {
     return __TBB_machine_load_store<T,sizeof(T)>::load_with_acquire(location);
 }
 
 template<typename T, typename V>
-inline void __TBB_machine_store_with_release(volatile T &location, V value) {
+__TBB_static inline void __TBB_machine_store_with_release(volatile T &location, V value) {
     __TBB_machine_load_store<T,sizeof(T)>::store_with_release(location,value);
 }
-
-#define __TBB_load_with_acquire(L) __TBB_machine_load_with_acquire((L))
-#define __TBB_store_with_release(L,V) __TBB_machine_store_with_release((L),(V))
 
 // Machine specific atomic operations
 

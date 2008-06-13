@@ -97,7 +97,7 @@ bool FillDynamicLinks( void* module, const DynamicLinkDescriptor descriptors[], 
     for ( ; k < n; ++k ) {
 #if _WIN32||_WIN64
         h[k] = (PointerToHandler) GetProcAddress( (HMODULE)module, descriptors[k].name );
-#elif !_STATIC
+#else
         h[k] = (PointerToHandler) dlsym( module, descriptors[k].name );
 #endif /* _WIN32||_WIN64 */
         if ( !h[k] )

@@ -28,6 +28,7 @@
 
 #include "stddef.h"
 #include "tbb/task_scheduler_init.h"
+#include "tbb/tbb_exception.h"
 #include "tbb/task.h"
 #include "tbb/atomic.h"
 #include "tbb/parallel_for.h"
@@ -46,7 +47,6 @@
 // Utility definitions
 //------------------------------------------------------------------------
 
-
 #define ITER_RANGE  100000
 #define ITER_GRAIN  1000
 #define NESTING_RANGE  100
@@ -64,21 +64,15 @@ namespace util {
 
     typedef DWORD tid_t;
 
-    tid_t get_my_tid () {
-        return GetCurrentThreadId();
-    }
+    tid_t get_my_tid () { return GetCurrentThreadId(); }
 
-    void sleep ( int ms ) {
-        ::Sleep(ms);
-    }
+    void sleep ( int ms ) { ::Sleep(ms); }
 
 #else /* !WIN */
 
     typedef pthread_t tid_t;
 
-    tid_t get_my_tid () {
-        return pthread_self();
-    }
+    tid_t get_my_tid () { return pthread_self(); }
 
     void sleep ( int ms ) {
         timespec  requested = { ms / 1000, (ms % 1000)*1000000 };
@@ -88,11 +82,9 @@ namespace util {
 
 #endif /* !WIN */
 
-
 inline intptr num_subranges ( intptr length, intptr grain ) {
     return (intptr)std::pow(2., std::ceil(std::log((double)length / grain) / std::log(2.)));
 }
-
 
 } // namespace util
 
@@ -244,8 +236,9 @@ public:
         for( count_type i=r.begin(); i<end; ++i )
             x = 0;
         ++g_cur_executed;
-        if ( g_exception_in_master  ^  (util::get_my_tid() == g_master) )
+        if ( g_exception_in_master ^ (util::get_my_tid() == g_master) )
         {
+            //while ( g_no_exception ) __TBB_Yield();
             // Make absolutely sure that worker threads on multicore machines had a chance to steal something
             util::sleep(10);
         }
@@ -303,7 +296,8 @@ public:
     void operator()( const range_type& ) const {
         tbb::task_group_context ctx(tbb::task_group_context::isolated);
         ++g_cur_executed;
-        util::sleep(1); // Give other threads a chance to steal their first tasks
+//        util::sleep(1); // Give other threads a chance to steal their first tasks
+        __TBB_Yield();
         tbb::parallel_for( tbb::blocked_range<size_t>(0, NESTED_RANGE, NESTED_GRAIN), simple_pfor_body(), ctx );
     }
 };
@@ -370,25 +364,23 @@ void Test4 () {
     else if ( !g_exception_in_master ) {
         // Each nesting body + at least 1 of its nested body invocations
         min_num_calls = 2 * nesting_body_calls;
-        TRACE ("g_exceptions %d, nesting_body_calls %d, g_exception_in_master %d", (intptr)g_exceptions, nesting_body_calls, g_exception_in_master);
         ASSERT (g_exceptions > 1 && g_exceptions <= nesting_body_calls, "Unexpected actual number of exceptions");
-        //ASSERT (g_exceptions == (g_exception_in_master ? 1 : (nesting_body_calls - 1)), "Unexpected actual number of exceptions");
         ASSERT (g_cur_executed >= min_num_calls + (nesting_body_calls - g_exceptions) * nested_body_calls, "Too few tasks survived exception");
         ASSERT (g_cur_executed <= g_catch_executed + g_num_threads, "Too many tasks survived multiple exceptions");
         // Additional nested_body_calls accounts for the minimal amount of tasks spawned 
         // by not throwing threads. In the minimal case it is either the master thread or the only worker.
-        TRACE ("g_cur_executed %d", (intptr)g_cur_executed);
         ASSERT (g_cur_executed <= min_num_calls + (nesting_body_calls - g_exceptions + 1) * nested_body_calls + g_exceptions + g_num_threads, "Too many tasks survived exception");
     }
 } // void Test4 ()
 
 
-class my_cancellation_root_task : public tbb::task
+class my_cancellator_task : public tbb::task
 {
     tbb::task_group_context &my_ctx_to_cancel;
-    intptr              my_cancel_threshold;
+    intptr my_cancel_threshold;
 
-    task* execute () {
+    tbb::task* execute () {
+        s_cancellator_ready = true;
         while ( g_cur_executed < my_cancel_threshold )
             yield_if_singlecore();
         my_ctx_to_cancel.cancel_group_execution();
@@ -396,30 +388,36 @@ class my_cancellation_root_task : public tbb::task
         return NULL;
     }
 public:
-    my_cancellation_root_task ( tbb::task_group_context& ctx, intptr threshold ) 
+    my_cancellator_task ( tbb::task_group_context& ctx, intptr threshold ) 
         : my_ctx_to_cancel(ctx), my_cancel_threshold(threshold)
     {}
+
+    static volatile bool s_cancellator_ready;
 };
+
+volatile bool my_cancellator_task::s_cancellator_ready = false;
 
 class pfor_body_to_cancel {
 public:
     void operator()( const range_type& r ) const {
         ++g_cur_executed;
-        util::sleep(20);
-//        yield_if_singlecore();
+        do {
+            __TBB_Yield();
+        } while( !my_cancellator_task::s_cancellator_ready );
     }
 };
 
-class my_calculation_root_task : public tbb::task
+template<class B>
+class my_worker_task : public tbb::task
 {
     tbb::task_group_context &my_ctx;
 
-    task* execute () {
-        tbb::parallel_for( range_type(0, ITER_RANGE, ITER_GRAIN), pfor_body_to_cancel(), my_ctx );
+    tbb::task* execute () {
+        tbb::parallel_for( range_type(0, ITER_RANGE, ITER_GRAIN), B(), my_ctx );
         return NULL;
     }
 public:
-    my_calculation_root_task ( tbb::task_group_context& ctx ) : my_ctx(ctx) {}
+    my_worker_task ( tbb::task_group_context& ctx ) : my_ctx(ctx) {}
 };
 
 
@@ -429,19 +427,65 @@ void Test5 () {
     reset_globals();
     g_throw_exception = false;
     intptr  threshold = util::num_subranges(ITER_RANGE, ITER_GRAIN) / 4;
-    TRACE ("Threshold %d", threshold);
     tbb::task_group_context  ctx;
     ctx.reset();
-    tbb::task_list  tl;
-    tl.push_back( *new( tbb::task::allocate_root() ) my_calculation_root_task(ctx) );
-    tl.push_back( *new( tbb::task::allocate_root() ) my_cancellation_root_task(ctx, threshold) );
+    my_cancellator_task::s_cancellator_ready = false;
+    tbb::empty_task &r = *new( tbb::task::allocate_root() ) tbb::empty_task;
+    r.set_ref_count(3);
+    r.spawn( *new( r.allocate_child() ) my_cancellator_task(ctx, threshold) );
+    __TBB_Yield();
+    r.spawn( *new( r.allocate_child() ) my_worker_task<pfor_body_to_cancel>(ctx) );
     TRY();
-        tbb::task::spawn_root_and_wait(tl);
+        r.wait_for_all();
     CATCH();
+    r.destroy(r);
     ASSERT (no_exception, "Cancelling tasks should not cause any exceptions");
-    TRACE ("Threshold %d, total executed %d, executed after cancellation signal %d", threshold, (intptr)g_cur_executed, (intptr)g_catch_executed);
-    ASSERT (g_cur_executed <= threshold + g_num_threads, "Too many tasks were executed after cancellation");
+    //ASSERT_WARNING (g_catch_executed < threshold + 2 * g_num_threads, "Too many tasks were executed between reaching threshold and signaling cancellation");
+    ASSERT (g_cur_executed < g_catch_executed + g_num_threads, "Too many tasks were executed after cancellation");
 } // void Test5 ()
+
+class my_cancellator_2_task : public tbb::task
+{
+    tbb::task_group_context &my_ctx_to_cancel;
+
+    tbb::task* execute () {
+        util::sleep(20);  // allow the first workers to start
+        my_ctx_to_cancel.cancel_group_execution();
+        g_catch_executed = g_cur_executed;
+        return NULL;
+    }
+public:
+    my_cancellator_2_task ( tbb::task_group_context& ctx ) : my_ctx_to_cancel(ctx) {}
+};
+
+class pfor_body_to_cancel_2 {
+public:
+    void operator()( const range_type& r ) const {
+        ++g_cur_executed;
+        // The test will hang (and be timed out by the test system) if is_cancelled() is broken
+        while( !tbb::task::self().is_cancelled() ) __TBB_Yield();
+    }
+};
+
+//! Test for cancelling an algorithm from outside (from a task running in parallel with the algorithm).
+/** This version also tests task::is_cancelled() method. **/
+void Test6 () {
+    TRACEP ("");
+    reset_globals();
+    tbb::task_group_context  ctx;
+    tbb::empty_task &r = *new( tbb::task::allocate_root() ) tbb::empty_task;
+    r.set_ref_count(3);
+    r.spawn( *new( r.allocate_child() ) my_cancellator_2_task(ctx) );
+    __TBB_Yield();
+    r.spawn( *new( r.allocate_child() ) my_worker_task<pfor_body_to_cancel_2>(ctx) );
+    TRY();
+        r.wait_for_all();
+    CATCH();
+    r.destroy(r);
+    ASSERT (no_exception, "Cancelling tasks should not cause any exceptions");
+    ASSERT_WARNING (g_catch_executed < g_num_threads, "Somehow worker tasks started their execution before the cancellator task");
+    ASSERT (g_cur_executed <= g_catch_executed, "Some tasks were executed after cancellation");
+} // void Test6 ()
 
 
 void TestExceptionHandling ()
@@ -449,12 +493,13 @@ void TestExceptionHandling ()
     TRACE ("Number of threads %d", g_num_threads);
     tbb::task_scheduler_init init (g_num_threads);
     g_master = util::get_my_tid();
-
+    
     Test0();
     Test1();
     Test3();
     Test4();
     Test5();
+    Test6();
 }
 
 #endif /* __TBB_EXCEPTIONS */

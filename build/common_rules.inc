@@ -46,9 +46,10 @@ ifeq ($(origin LIB_OUTPUT_KEY), undefined)
     LIB_OUTPUT_KEY = $(OUTPUT_KEY)
 endif
 ifeq ($(origin LIB_LINK_LIBS), undefined)
-    LIB_LINK_LIBS = $(LIBS)
+    LIB_LINK_LIBS = $(LIBDL) $(LIBS)
 endif
 
+# The most generic rules
 %.$(OBJ): %.cpp
 	$(CPLUS) $(COMPILE_ONLY) $(CPLUS_FLAGS) $(INCLUDES) $<
 
@@ -57,15 +58,6 @@ endif
 
 %.$(OBJ): %.asm
 	$(ASM) $(ASM_FLAGS) $<
-
-tbb_misc.$(OBJ): tbb_misc.cpp version_string.tmp
-	$(CPLUS) $(COMPILE_ONLY) $(CPLUS_FLAGS_NOSTRICT) $(INCLUDE_KEY). $(INCLUDES) $<
-
-tbb_misc.E: tbb_misc.cpp version_string.tmp
-	$(CPLUS) $(CPLUS_FLAGS_NOSTRICT) $(INCLUDE_KEY). $(INCLUDES) $(PREPROC_ONLY) $< >$@
-
-%.res: %.rc version_string.tmp
-	rc /Fo$@ $(INCLUDES) $(filter /D%,$(CPLUS_FLAGS)) $<
 
 # Rule for generating .E file if needed for visual inspection
 %.E: %.cpp
@@ -79,6 +71,7 @@ tbb_misc.E: tbb_misc.cpp version_string.tmp
 %.s: %.cpp
 	$(CPLUS) -S $(CPLUS_FLAGS) $(INCLUDES) $<
 
+# Customizations
 ifeq (1,$(TBB_NOSTRICT))
 # GNU 3.2.3 headers have a ISO syntax that is rejected by Intel compiler in -strict_ansi mode.
 # The Mac uses gcc, so the list is empty for that platform.
@@ -91,6 +84,15 @@ endif
 
 $(KNOWN_WARNINGS): %.$(OBJ): %.cpp
 	$(CPLUS) $(COMPILE_ONLY) $(subst $(WARNING_KEY),,$(CPLUS_FLAGS_NOSTRICT)) $(INCLUDES) $<
+
+tbb_misc.$(OBJ): tbb_misc.cpp version_string.tmp
+	$(CPLUS) $(COMPILE_ONLY) $(CPLUS_FLAGS_NOSTRICT) $(INCLUDE_KEY). $(INCLUDES) $<
+
+tbb_misc.E: tbb_misc.cpp version_string.tmp
+	$(CPLUS) $(CPLUS_FLAGS_NOSTRICT) $(INCLUDE_KEY). $(INCLUDES) $(PREPROC_ONLY) $< >$@
+
+%.res: %.rc version_string.tmp
+	rc /Fo$@ $(INCLUDES) $(filter /D%,$(CPLUS_FLAGS)) $<
 
 version_string.tmp: 
 	$(MAKE_VERSIONS)

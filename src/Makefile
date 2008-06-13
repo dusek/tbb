@@ -67,6 +67,9 @@ native_examples: tbb tbbmalloc
 	$(MAKE) -C $(examples_root) -r -f Makefile tbb_root=.. compiler=$(native_compiler) tbb_build_prefix=$(tbb_build_prefix) debug test
 	$(MAKE) -C $(examples_root) -r -f Makefile tbb_root=.. compiler=$(native_compiler) tbb_build_prefix=$(tbb_build_prefix) clean release test
 
+../examples/% examples/%::
+	$(MAKE) -C $(examples_root) -r -f Makefile tbb_root=.. $(subst examples/,,$(subst ../,,$@))
+
 debug_%:: cfg?=debug
 test_% stress_% time_%:: cfg?=release
 debug_% test_% stress_% time_%::

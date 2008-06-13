@@ -37,13 +37,6 @@ static tbb::atomic<int> sum;
 static tbb::atomic<int> BaseCount;
 static tbb::tbb_thread::id real_ids[THRDS+THRDS_DETACH];
 
-//workaround for old patform SDK
-#if defined(_WIN64) && !defined(_CPPLIB_VER)
-namespace std{
-    using ::printf;
-}
-#endif /* defined(_WIN64) && !defined(_CPPLIB_VER) */
-
 class Base {
     mutable int copy_throws;
     friend void RunTests();

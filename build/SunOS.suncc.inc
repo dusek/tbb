@@ -42,14 +42,14 @@ TBB_NOSTRICT = 1
 CPLUS = CC
 LIB_LINK_FLAGS = -G -R . -M$(tbb_root)/build/suncc.map.pause
 LINK_FLAGS += -M$(tbb_root)/build/suncc.map.pause
-LIBS = -lpthread -lrt -ldl -R .
+LIBS = -lpthread -lrt -R .
 C_FLAGS = $(CPLUS_FLAGS) -Xc
 
 ifeq ($(cfg), release)
-        CPLUS_FLAGS = -DDO_ITT_NOTIFY -xO2 -library=stlport4 -DUSE_PTHREAD 
+        CPLUS_FLAGS = -xO2 -library=stlport4 -DUSE_PTHREAD 
 endif
 ifeq ($(cfg), debug)
-        CPLUS_FLAGS = -DTBB_DO_ASSERT -DDO_ITT_NOTIFY -g -library=stlport4 -DUSE_PTHREAD 
+        CPLUS_FLAGS = -DTBB_DO_ASSERT -g -library=stlport4 -DUSE_PTHREAD 
 endif
 
 ASM=
