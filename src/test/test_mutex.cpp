@@ -1,5 +1,5 @@
 /*
-    Copyright 2005-2007 Intel Corporation.  All Rights Reserved.
+    Copyright 2005-2008 Intel Corporation.  All Rights Reserved.
 
     This file is part of Threading Building Blocks.
 
@@ -40,6 +40,7 @@
 #include "tbb/queuing_rw_mutex.h"
 #include "tbb/queuing_mutex.h"
 #include "tbb/mutex.h"
+#include "tbb/recursive_mutex.h"
 #include "tbb/parallel_for.h"
 #include "tbb/blocked_range.h"
 #include "tbb/tick_count.h"
@@ -247,9 +248,18 @@ void TestTryAcquire_OneThread( const char * mutex_name ) {
     else
         STD::printf("ERROR for %s: try_acquire failed though it should not\n", mutex_name);
     {
-        typename M::scoped_lock lock2(tested_mutex);
-        if( lock1.try_acquire(tested_mutex) )
-            STD::printf("ERROR for %s: try_acquire succeeded though it should not\n", mutex_name);
+        if( M::is_recursive_mutex ) {
+            typename M::scoped_lock lock2(tested_mutex);
+            if( lock1.try_acquire(tested_mutex) )
+                lock1.release();
+            else
+                STD::printf("ERROR for %s: try_acquire on recursive lock failed though it should not\n", mutex_name);
+            //windows.. -- both are recursive
+        } else {
+            typename M::scoped_lock lock2(tested_mutex);
+            if( lock1.try_acquire(tested_mutex) )
+                STD::printf("ERROR for %s: try_acquire succeeded though it should not\n", mutex_name);
+        }
     }
     if( lock1.try_acquire(tested_mutex) )
         lock1.release();
@@ -257,9 +267,88 @@ void TestTryAcquire_OneThread( const char * mutex_name ) {
         STD::printf("ERROR for %s: try_acquire failed though it should not\n", mutex_name);
 }
 
+
+const int RecurN = 4;
+int RecurArray[ RecurN ];
+tbb::recursive_mutex RecurMutex[ RecurN ];
+
+struct RecursiveAcquisition {
+    /** x = number being decoded in base N
+        max_lock = index of highest lock acquired so far
+        mask = bit mask; ith bit set if lock i has been acquired. */
+    void Body( size_t x, int max_lock=-1, unsigned int mask=0 ) const
+    {
+        int i = (int) (x % RecurN);
+        bool first = (mask&1U<<i)==0;
+        if( first ) {
+            // first time to acquire lock
+            if( i<max_lock ) 
+                // out of order acquisition might lead to deadlock, so stop
+                return;
+            max_lock = i;
+        }
+
+        if( (i&1)!=0 ) {
+            // acquire lock on location RecurArray[i] using explict acquire
+            tbb::recursive_mutex::scoped_lock r_lock;
+            r_lock.acquire( RecurMutex[i] );
+            int a = RecurArray[i];
+            ASSERT( (a==0)==first, "should be either a==0 if it is the first time to acquire the lock or a!=0 otherwise" );
+            ++RecurArray[i];
+            if( x ) 
+                Body( x/RecurN, max_lock, mask|1U<<i );
+            --RecurArray[i];
+            ASSERT( a==RecurArray[i], "a is not equal to RecurArray[i]" );                        
+
+            // release lock on location RecurArray[i] using explicit release; otherwise, use implicit one
+            if( (i&2)!=0 ) r_lock.release();
+        } else {
+            // acquire lock on location RecurArray[i] using implicit acquire
+            tbb::recursive_mutex::scoped_lock r_lock( RecurMutex[i] );
+            int a = RecurArray[i];
+
+            ASSERT( (a==0)==first, "should be either a==0 if it is the first time to acquire the lock or a!=0 otherwise" );
+
+            ++RecurArray[i];
+            if( x ) 
+                Body( x/RecurN, max_lock, mask|1U<<i );
+            --RecurArray[i];
+
+            ASSERT( a==RecurArray[i], "a is not equal to RecurArray[i]" );                        
+
+            // release lock on location RecurArray[i] using explicit release; otherwise, use implicit one
+            if( (i&2)!=0 ) r_lock.release();
+        }
+    }
+
+    void operator()( const tbb::blocked_range<size_t> &r ) const
+    {   
+        for( size_t x=r.begin(); x<r.end(); x++ ) {
+            Body( x );
+        }
+    }
+};
+
+/** Thie test is generic so that we may test other kinds of recursive mutexes.*/
+template<typename M>
+void TestRecursiveMutex( const char * mutex_name )
+{
+    tbb::tick_count t0 = tbb::tick_count::now();
+    tbb::parallel_for(tbb::blocked_range<size_t>(0,10000,500), RecursiveAcquisition());
+    tbb::tick_count t1 = tbb::tick_count::now();
+
+    if( Verbose ) {
+        printf("%s recursive mutex time = %g usec\n",
+               mutex_name, (t1-t0).seconds());
+    }
+}
+
+
 #include "tbb/task_scheduler_init.h"
 
 int main( int argc, char * argv[] ) {
+    // Default is to run on two threads
+    MinThread = MaxThread = 2;
     ParseCommandLine( argc, argv );
     for( int p=MinThread; p<=MaxThread; ++p ) {
         tbb::task_scheduler_init init( p );
@@ -273,23 +362,27 @@ int main( int argc, char * argv[] ) {
 #endif /* _OPENMP */
             Test<tbb::queuing_mutex>( "Queuing Mutex" );
             Test<tbb::mutex>( "Wrapper Mutex" );
+            Test<tbb::recursive_mutex>( "Recursive Mutex" );
             Test<tbb::queuing_rw_mutex>( "Queuing RW Mutex" );
             Test<tbb::spin_rw_mutex>( "Spin RW Mutex" );
             
             TestTryAcquire_OneThread<tbb::spin_mutex>("Spin Mutex");
             TestTryAcquire_OneThread<tbb::queuing_mutex>("Queuing Mutex");
-#if USE_PTHREAD
+#if USE_PTHREAD 
             // under ifdef because on Windows tbb::mutex is reenterable and the test will fail
             TestTryAcquire_OneThread<tbb::mutex>("Wrapper Mutex");
 #endif /* USE_PTHREAD */
+            TestTryAcquire_OneThread<tbb::recursive_mutex>( "Recursive Mutex" );
             TestTryAcquire_OneThread<tbb::spin_rw_mutex>("Spin RW Mutex"); // only tests try_acquire for writers
             TestTryAcquire_OneThread<tbb::queuing_rw_mutex>("Queuing RW Mutex"); // only tests try_acquire for writers
 
             TestReaderWriterLock<tbb::queuing_rw_mutex>( "Queuing RW Mutex" );
             TestReaderWriterLock<tbb::spin_rw_mutex>( "Spin RW Mutex" );
+
+            TestRecursiveMutex<tbb::recursive_mutex>( "Recursive Mutex" );
+        }
         if( Verbose )
             printf( "calling destructor for task_scheduler_init\n" );
-        }
     }
     STD::printf("done\n");
     return 0;

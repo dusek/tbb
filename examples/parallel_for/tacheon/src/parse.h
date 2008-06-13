@@ -1,5 +1,5 @@
 /*
-    Copyright 2005-2007 Intel Corporation.  All Rights Reserved.
+    Copyright 2005-2008 Intel Corporation.  All Rights Reserved.
 
     This file is part of Threading Building Blocks.
 
@@ -61,7 +61,7 @@
 /*
  * parse.h - this file contains defines for model file reading.
  *
- *  $Id: parse.h,v 1.2 2007/02/22 17:54:16 dpoulsen Exp $
+ *  $Id: parse.h,v 1.2 2007-02-22 17:54:16 dpoulsen Exp $
  */
 
 #define PARSENOERR       0

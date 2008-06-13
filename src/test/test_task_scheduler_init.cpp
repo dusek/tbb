@@ -1,5 +1,5 @@
 /*
-    Copyright 2005-2007 Intel Corporation.  All Rights Reserved.
+    Copyright 2005-2008 Intel Corporation.  All Rights Reserved.
 
     This file is part of Threading Building Blocks.
 
@@ -78,8 +78,22 @@ struct ThreadedInit {
     }
 };
 
+#if _MSC_VER
+#include <windows.h>
+#include <tchar.h>
+#endif /* _MSC_VER */
+
 //! Test driver
 int main(int argc, char* argv[]) {
+#if _MSC_VER && !__TBB_NO_IMPLICIT_LINKAGE
+    #ifdef _DEBUG
+        ASSERT(!GetModuleHandle(_T("tbb.dll")) && GetModuleHandle(_T("tbb_debug.dll")),
+            "debug application links with non-debug tbb library");
+    #else
+        ASSERT(!GetModuleHandle(_T("tbb_debug.dll")) && GetModuleHandle(_T("tbb.dll")),
+            "non-debug application links with debug tbb library");
+    #endif
+#endif /* _MSC_VER && !__TBB_NO_IMPLICIT_LINKAGE */
     std::srand(2);
     // Set defaults
     MaxThread = MinThread = 2;

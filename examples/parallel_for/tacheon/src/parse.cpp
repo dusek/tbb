@@ -1,5 +1,5 @@
 /*
-    Copyright 2005-2007 Intel Corporation.  All Rights Reserved.
+    Copyright 2005-2008 Intel Corporation.  All Rights Reserved.
 
     This file is part of Threading Building Blocks.
 
@@ -61,7 +61,7 @@
 /* 
  * parse.c - an UltraLame (tm) parser for simple data files...
  *
- *  $Id: parse.cpp,v 1.3 2007/02/22 17:54:15 dpoulsen Exp $
+ *  $Id: parse.cpp,v 1.3 2007-02-22 17:54:15 dpoulsen Exp $
  */
 
 #include <stdio.h>

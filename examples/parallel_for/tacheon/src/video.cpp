@@ -1,5 +1,5 @@
 /*
-    Copyright 2005-2007 Intel Corporation.  All Rights Reserved.
+    Copyright 2005-2008 Intel Corporation.  All Rights Reserved.
 
     This file is part of Threading Building Blocks.
 
@@ -61,7 +61,7 @@
 /*
  * video.c - routines for putting pixels on a screen if one is available.
  *
- *  $Id: video.cpp,v 1.20 2007/02/28 18:35:22 amalakho Exp $
+ *  $Id: video.cpp,v 1.20 2007-02-28 18:35:22 amalakho Exp $
  */
 
 #include <stdio.h>

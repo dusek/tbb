@@ -1,5 +1,5 @@
 /*
-    Copyright 2005-2007 Intel Corporation.  All Rights Reserved.
+    Copyright 2005-2008 Intel Corporation.  All Rights Reserved.
 
     This file is part of Threading Building Blocks.
 
@@ -287,8 +287,8 @@ public:
         are push operations in flight. */
     size_type size() const {return internal_size();}
 
-    //! Equivalent to size()==0.
-    bool empty() const {return size()==0;}
+    //! Equivalent to size()<=0.
+    bool empty() const {return size()<=0;}
 
     //! Maximum number of allowed elements
     size_type capacity() const {

@@ -1,5 +1,5 @@
 /*
-    Copyright 2005-2007 Intel Corporation.  All Rights Reserved.
+    Copyright 2005-2008 Intel Corporation.  All Rights Reserved.
 
     This file is part of Threading Building Blocks.
 
@@ -31,6 +31,9 @@
 // it can get intimate access to the scheduler.
 
 #define TEST_ASSEMBLY_ROUTINES 1
+#define __TBB_TASK_CPP_DIRECTLY_INCLUDED 1
+// to avoid usage of #pragma comment
+#define __TBB_NO_IMPLICIT_LINKAGE 1
 
 #include "../tbb/task.cpp"
 #include <new>
@@ -51,13 +54,7 @@ public:
 
 void GenericScheduler::test_assembly_routines() {
     try_enter_arena();
-#if IMPROVED_GATING
     mark_pool_full();
-#else
-    ASSERT( open_gate==&arena->prefix().gate, NULL );
-    open_gate->open();
-    open_gate = NULL;
-#endif /*IMPROVED_GATING*/
     release_task_pool();
     ASSERT( assert_okay(), NULL );
     long steal_count = 0;
@@ -243,10 +240,6 @@ static void TestPause() {
     __TBB_Pause(1);
 }
 
-static void TestIsGenuineIntel() {
-    if( !IsGenuineIntel() )
-        printf("Warning: not running on genuine Intel hardware\n");
-}
 
 } // namespace internal 
 } // namespace tbb
@@ -254,15 +247,8 @@ static void TestIsGenuineIntel() {
 using namespace tbb;
 
 int main( int argc, char* argv[] ) {
-#if _WIN32||_WIN64
-    // This initialization is normally done by DllMain in task.cpp,
-    // but because this test directly includes task.cpp,
-    // the initialization must be done explicitly.
-    InitializeCriticalSection(&OneTimeInitializationCriticalSection);
-#endif /* _WIN32||_WIN64 */
     try {
         ParseCommandLine( argc, argv );
-        TestIsGenuineIntel();
         TestLog2();
         TestTinyLock();
         TestCompareExchange();

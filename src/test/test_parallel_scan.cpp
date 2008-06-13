@@ -1,5 +1,5 @@
 /*
-    Copyright 2005-2007 Intel Corporation.  All Rights Reserved.
+    Copyright 2005-2008 Intel Corporation.  All Rights Reserved.
 
     This file is part of Threading Building Blocks.
 
@@ -250,6 +250,8 @@ static void TestScanTags() {
 #include "harness_cpu.h"
 
 int main(int argc, char* argv[]) {
+    // Default is to run on two threads.
+    MinThread = MaxThread = 2;
     ParseCommandLine(argc,argv);
     TestScanTags();
     for( int p=MinThread; p<=MaxThread; ++p ) {
@@ -259,7 +261,7 @@ int main(int argc, char* argv[]) {
             TestAccumulator(mode, p);
 
             // Test that all workers sleep when no work
-            TestCPUUserTime(p-1);
+            TestCPUUserTime(p);
 
             // Checking has to be done late, because when parallel_scan makes copies of
             // the user's "Body", the copies might be destroyed slightly after parallel_scan 

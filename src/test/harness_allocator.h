@@ -1,5 +1,5 @@
 /*
-    Copyright 2005-2007 Intel Corporation.  All Rights Reserved.
+    Copyright 2005-2008 Intel Corporation.  All Rights Reserved.
 
     This file is part of Threading Building Blocks.
 
@@ -39,7 +39,15 @@
 #include <windows.h>
 #endif
 #include <new>
+#include <stdexcept>
 #include <tbb/atomic.h>
+
+#if defined(_MSC_VER) && defined(_Wp64)
+    // Workaround for overzealous compiler warnings in /Wp64 mode
+    #pragma warning (push)
+    #pragma warning (disable: 4267)
+#endif /* _MSC_VER && _Wp64 */
+
 
 template <typename base_alloc_t, typename count_t = tbb::atomic<size_t> >
 class static_counting_allocator : public base_alloc_t
@@ -62,11 +70,12 @@ public:
     };
 #endif
 
+    static size_t max_items;
     static count_t items_allocated;
     static count_t items_freed;
     static count_t allocations;
     static count_t frees;
-    static bool verbose;
+    static bool verbose, throwing;
 
     static_counting_allocator() throw() { }
 
@@ -81,6 +90,11 @@ public:
     pointer allocate(const size_type n)
     {
         if(verbose) printf("\t+%d|", int(n));
+        if(max_items && items_allocated + n >= max_items) {
+            if(verbose) printf("items limit hits!");
+            if(throwing) throw std::bad_alloc();
+            return NULL;
+        }
         allocations++;
         items_allocated += n;
         return base_alloc_t::allocate(n, pointer(0));
@@ -104,9 +118,17 @@ public:
         items_freed = 0;
         allocations = 0;
         frees = 0;
+        max_items = 0;
+    }
+
+    static void set_limits(size_type max = 0, bool do_throw = true) {
+        max_items = max;
+        throwing = do_throw;
     }
 };
 
+template <typename base_alloc_t, typename count_t>
+size_t static_counting_allocator<base_alloc_t, count_t>::max_items;
 template <typename base_alloc_t, typename count_t>
 count_t static_counting_allocator<base_alloc_t, count_t>::items_allocated;
 template <typename base_alloc_t, typename count_t>
@@ -117,6 +139,8 @@ template <typename base_alloc_t, typename count_t>
 count_t static_counting_allocator<base_alloc_t, count_t>::frees;
 template <typename base_alloc_t, typename count_t>
 bool static_counting_allocator<base_alloc_t, count_t>::verbose;
+template <typename base_alloc_t, typename count_t>
+bool static_counting_allocator<base_alloc_t, count_t>::throwing;
 
 template <typename base_alloc_t, typename count_t = tbb::atomic<size_t> >
 class local_counting_allocator : public base_alloc_t
@@ -194,3 +218,8 @@ public:
         base_alloc_t::deallocate(ptr, n);
     }
 };
+
+#if defined(_MSC_VER) && defined(_Wp64)
+    // Workaround for overzealous compiler warnings in /Wp64 mode
+    #pragma warning (pop)
+#endif /* _MSC_VER && _Wp64 */

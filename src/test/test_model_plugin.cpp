@@ -1,5 +1,5 @@
 /*
-    Copyright 2005-2007 Intel Corporation.  All Rights Reserved.
+    Copyright 2005-2008 Intel Corporation.  All Rights Reserved.
 
     This file is part of Threading Building Blocks.
 
@@ -108,7 +108,7 @@ void report_error_in(char* function_name)
         NULL, code,MAKELANGID(LANG_NEUTRAL, SUBLANG_DEFAULT),
         (char*)&message, 0, NULL );
 #else
-    char* message = dlerror();
+    char* message = (char*)dlerror();
     int code = 0;
 #endif
     fprintf(stderr,
@@ -127,12 +127,17 @@ int main(int argc, char* argv[])
   ParseCommandLine( argc, argv );
 
   PLUGIN_CALL plugin_call;
-  
+
 #if _WIN32 || _WIN64
   HMODULE hLib = LoadLibrary("test_model_plugin.dll");
   if (hLib==NULL){
+#if !__TBB_NO_IMPLICIT_LINKAGE
     report_error_in("LoadLibrary");
     return -1;
+#else
+    printf("skip\n");
+    return 0;
+#endif
   }
   plugin_call = (PLUGIN_CALL) GetProcAddress(hLib, "plugin_call");
   if (plugin_call==NULL) {
@@ -147,8 +152,13 @@ int main(int argc, char* argv[])
 #endif
   void* hLib = dlopen( dllname, RTLD_LAZY ); 
   if (hLib==NULL){
+#if !__TBB_NO_IMPLICIT_LINKAGE
     report_error_in("dlopen");
     return -1;
+#else
+    printf("skip\n");
+    return 0;
+#endif
   }
   plugin_call = PLUGIN_CALL (dlsym(hLib, "plugin_call"));
   if (plugin_call==NULL) {

@@ -1,5 +1,5 @@
 /*
-    Copyright 2005-2007 Intel Corporation.  All Rights Reserved.
+    Copyright 2005-2008 Intel Corporation.  All Rights Reserved.
 
     This file is part of Threading Building Blocks.
 
@@ -61,6 +61,8 @@
 #ifdef _WIN32
 #include <malloc.h>
 #define alloca _alloca
+#elif __FreeBSD__
+#include <stdlib.h>
 #else
 #include <alloca.h>
 #endif
@@ -68,7 +70,7 @@
 /* 
  * types.h - This file contains all of the type definitions for the raytracer
  *
- *  $Id: types.h,v 1.2 2007/02/22 17:54:16 dpoulsen Exp $
+ *  $Id: types.h,v 1.2 2007-02-22 17:54:16 dpoulsen Exp $
  */
 
 #define MAXOCTNODES 25       /* subdivide octants /w > # of children */

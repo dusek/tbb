@@ -1,5 +1,5 @@
 /*
-    Copyright 2005-2007 Intel Corporation.  All Rights Reserved.
+    Copyright 2005-2008 Intel Corporation.  All Rights Reserved.
 
     This file is part of Threading Building Blocks.
 
@@ -128,6 +128,11 @@ public:
             }
         }
     };
+
+    // Mutex traits
+    static const bool is_rw_mutex = false;
+    static const bool is_recursive_mutex = false;
+    static const bool is_fair_mutex = false;
 
     friend class scoped_lock;
 };

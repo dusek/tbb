@@ -1,5 +1,5 @@
 /*
-    Copyright 2005-2007 Intel Corporation.  All Rights Reserved.
+    Copyright 2005-2008 Intel Corporation.  All Rights Reserved.
 
     This file is part of Threading Building Blocks.
 
@@ -62,7 +62,7 @@
  * intersect.h - This file contains the declarations and defines for the
  *               functions that manage intersection, bounding and CSG..
  *
- *  $Id: intersect.h,v 1.2 2007/02/22 17:54:15 dpoulsen Exp $
+ *  $Id: intersect.h,v 1.2 2007-02-22 17:54:15 dpoulsen Exp $
  */
 
 unsigned int  new_objectid(void);

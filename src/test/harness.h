@@ -1,5 +1,5 @@
 /*
-    Copyright 2005-2007 Intel Corporation.  All Rights Reserved.
+    Copyright 2005-2008 Intel Corporation.  All Rights Reserved.
 
     This file is part of Threading Building Blocks.
 
@@ -35,10 +35,9 @@
 #include <cstdlib>
 #include <cstring>
 #include <new>
-#include "tbb/tbb_stddef.h"
 #include "harness_assert.h"
 
-#if __linux__||__APPLE__
+#if __linux__||__APPLE__||__FreeBSD__
     #include <pthread.h>
 #elif _WIN32||WIN64
     #include <windows.h>
@@ -120,7 +119,7 @@ public:
 
     //! Start task
     void start() {
-#if __linux__||__APPLE__
+#if __linux__||__APPLE__||__FreeBSD__
         int status = pthread_create(&thread_id, NULL, thread_function, this);
         ASSERT(0==status, "NativeParallelFor: pthread_create failed");
 #else
@@ -132,7 +131,7 @@ public:
 
     //! Wait for task to finish
     void wait_to_finish() {
-#if __linux__||__APPLE__
+#if __linux__||__APPLE__||__FreeBSD__
         int status = pthread_join( thread_id, NULL );
         ASSERT( !status, "pthread_join failed" );
 #else
@@ -148,7 +147,7 @@ public:
         Top-level caller should let index default to 0. */
     static size_t build_task_array( const Range& range, const Body& body, NativeParalleForTask* array, size_t index ); 
 private:
-#if __linux__||__APPLE__
+#if __linux__||__APPLE__||__FreeBSD__
     pthread_t thread_id;
 #else
     HANDLE thread_handle;
@@ -160,7 +159,7 @@ private:
     //! Body to invoke over the range.
     const Body body;
 
-#if __linux__||__APPLE__
+#if __linux__||__APPLE__||__FreeBSD__
     static void* thread_function(void* object)
 #else
     static unsigned __stdcall thread_function( void* object )
@@ -171,6 +170,8 @@ private:
         return 0;
     }
 };
+
+#include "tbb/tbb_stddef.h"
 
 template<typename Range,typename Body>
 size_t NativeParalleForTask<Range,Body>::build_task_array( const Range& range, const Body& body, NativeParalleForTask* array, size_t index ) {

@@ -1,5 +1,5 @@
 /*
-    Copyright 2005-2007 Intel Corporation.  All Rights Reserved.
+    Copyright 2005-2008 Intel Corporation.  All Rights Reserved.
 
     This file is part of Threading Building Blocks.
 
@@ -31,6 +31,7 @@
 
 #include "tbb_stddef.h"
 #include "cache_aligned_allocator.h"
+#include "tbb_allocator.h"
 #include "spin_rw_mutex.h"
 #include "atomic.h"
 #include <iterator>
@@ -38,9 +39,12 @@
 
 namespace tbb {
 
+template<typename Key, typename T, typename HashCompare>
+class concurrent_hash_map;
+
 //! @cond INTERNAL
 namespace internal {
-    template<typename Value, typename Iterator>
+    template<typename Iterator>
     class hash_map_range;
 
     struct hash_map_segment_base {
@@ -63,7 +67,12 @@ namespace internal {
     /** Value is either the T or const T type of the container.
         @ingroup containers */ 
     template<typename Container, typename Value>
-    class hash_map_iterator {
+    class hash_map_iterator
+#if defined(_WIN64) && defined(_MSC_VER) 
+        // Ensure that Microsoft's internal template function _Val_type works correctly.
+        : public std::iterator<std::forward_iterator_tag,Value>
+#endif /* defined(_WIN64) && defined(_MSC_VER) */
+    {
         typedef typename Container::bucket bucket;
         typedef typename Container::chain chain;
 
@@ -91,7 +100,7 @@ namespace internal {
         template<typename C, typename U>
         friend class internal::hash_map_iterator;
 
-        template<typename V, typename I>
+        template<typename I>
         friend class internal::hash_map_range;
 
         void advance_to_next_bucket() {
@@ -107,11 +116,17 @@ namespace internal {
         done:
             my_array_index = i;
         }
+#if !defined(_MSC_VER) || defined(__INTEL_COMPILER)
+        template<typename Key, typename T, typename HashCompare>
+        friend class tbb::concurrent_hash_map;
+#else
+    public: // workaround
+#endif 
+        hash_map_iterator( const Container& table, size_t segment_index, size_t array_index=0 );
     public:
         //! Construct undefined iterator
         hash_map_iterator() {}
-        hash_map_iterator( const Container& table, size_t segment_index, size_t array_index=0 );
-        hash_map_iterator( const hash_map_iterator<Container,const Value>& other ) :
+        hash_map_iterator( const hash_map_iterator<Container,typename Container::value_type>& other ) :
             my_table(other.my_table),
             my_bucket(other.my_bucket),
             my_array_index(other.my_array_index),
@@ -137,6 +152,7 @@ namespace internal {
         typedef Value value_type;
         typedef Value* pointer;
         typedef Value& reference;
+        typedef const Value& const_reference;
         typedef std::forward_iterator_tag iterator_category;
     };
 
@@ -173,8 +189,8 @@ namespace internal {
 
     //! Range class used with concurrent_hash_map
     /** @ingroup containers */ 
-    template<typename Value, typename Iterator>
-    class hash_map_range{
+    template<typename Iterator>
+    class hash_map_range {
     private:
         Iterator my_begin;
         Iterator my_end;
@@ -182,12 +198,13 @@ namespace internal {
         size_t my_grainsize;
         //! Set my_midpoint to point approximately half way between my_begin and my_end.
         void set_midpoint() const;
+        template<typename U> friend class hash_map_range;
     public:
-        typedef Value value_type;
-        typedef Value& reference;
-        typedef const Value& const_reference;
+        typedef typename Iterator::value_type value_type;
+        typedef typename Iterator::reference reference;
+        typedef typename Iterator::const_reference const_reference;
+        typedef typename Iterator::difference_type difference_type;
         typedef Iterator iterator;
-        typedef ptrdiff_t difference_type;
 
         //! True if range is empty.
         bool empty() const {return my_begin==my_end;}
@@ -205,7 +222,16 @@ namespace internal {
             set_midpoint();
             r.set_midpoint();
         }
-        hash_map_range( const Iterator& begin_, const Iterator& end_, size_t grainsize ) : 
+        //! type conversion
+        template<typename U>
+        hash_map_range( hash_map_range<U>& r) : 
+            my_begin(r.my_begin),
+            my_end(r.my_end),
+            my_midpoint(r.my_midpoint),
+            my_grainsize(r.my_grainsize)
+        {}
+        //! Init range with iterators and grainsize specified
+        hash_map_range( const Iterator& begin_, const Iterator& end_, size_t grainsize = 1 ) : 
             my_begin(begin_), 
             my_end(end_), 
             my_grainsize(grainsize) 
@@ -217,8 +243,8 @@ namespace internal {
         const Iterator& end() const {return my_end;}
     };
 
-    template<typename Value, typename Iterator>
-    void hash_map_range<Value,Iterator>::set_midpoint() const {
+    template<typename Iterator>
+    void hash_map_range<Iterator>::set_midpoint() const {
         size_t n = my_end.my_segment_index-my_begin.my_segment_index;
         if( n>1 || (n==1 && my_end.my_array_index>0) ) {
             // Split by groups of segments
@@ -255,7 +281,7 @@ private:
     template<typename Container, typename Value>
     friend class internal::hash_map_iterator;
 
-    template<typename V, typename I>
+    template<typename I>
     friend class internal::hash_map_range;
 
     typedef spin_rw_mutex bucket_mutex_t;
@@ -267,6 +293,7 @@ private:
 
     struct bucket;
     friend struct bucket;
+    typedef tbb_allocator<bucket> allocator_type;
 
     //! Basic unit of storage used in chain.
     struct bucket {
@@ -274,7 +301,6 @@ private:
         bucket* next;
         bucket_mutex_t mutex;
         value_type item;
-        bucket( const Key& key ) : item(key,T()) {}
         bucket( const Key& key, const T& t ) : item(key,t) {}
     };
 
@@ -330,7 +356,7 @@ private:
     segment& get_segment( hashcode_t hashcode ) {
         return my_segment[hashcode&n_segment-1];
     }
-        
+
     HashCompare my_hash_compare;
 
     //! Log2 of n_segment
@@ -341,6 +367,17 @@ private:
     size_t n_segment;
 
     segment* my_segment;
+
+    bucket* create_bucket(const Key& key, const T& t) {
+        allocator_type allocator;
+        return new(allocator.allocate(1)) bucket(key, t);
+    }
+
+    void delete_bucket(bucket* b) {
+        allocator_type allocator;
+        allocator.destroy(b);
+        allocator.deallocate(b, 1);
+    }
 
     bucket* search_list( const Key& key, chain& c ) {
         bucket* b = c.bucket_list;
@@ -409,7 +446,7 @@ public:
 
         //! Return reference to associated value in hash table.
         const value_type& operator*() const {
-            __TBB_ASSERT( my_bucket, "attempt to deference empty result" );
+            __TBB_ASSERT( my_bucket, "attempt to dereference empty accessor" );
             return my_bucket->item;
         }
 
@@ -438,7 +475,7 @@ public:
 
         //! Return reference to associated value in hash table.
         value_type& operator*() const {
-            __TBB_ASSERT( this->my_bucket, "attempt to deference empty result" );
+            __TBB_ASSERT( this->my_bucket, "attempt to dereference empty accessor" );
             return this->my_bucket->item;
         }
 
@@ -512,14 +549,14 @@ public:
     typedef internal::hash_map_iterator<concurrent_hash_map,value_type> iterator;
     typedef internal::hash_map_iterator<concurrent_hash_map,const value_type> const_iterator;
 
-    typedef internal::hash_map_range<value_type,iterator> range_type;
-    typedef internal::hash_map_range<const value_type,const_iterator> const_range_type;
+    typedef internal::hash_map_range<iterator> range_type;
+    typedef internal::hash_map_range<const_iterator> const_range_type;
 
-    range_type range( size_type grainsize ) {
+    range_type range( size_type grainsize=1 ) {
         return range_type( begin(), end(), grainsize );
     }
 
-    const_range_type range( size_type grainsize ) const {
+    const_range_type range( size_type grainsize=1 ) const {
         return const_range_type( begin(), end(), grainsize );
     }
 
@@ -602,7 +639,7 @@ bool concurrent_hash_map<Key,T,HashCompare>::lookup( const_accessor* result, con
             } else {
                 if( op==op_insert ) {
                     // Search failed
-                    b_temp = new bucket(key);
+                    b_temp = create_bucket(key, T());
 
                     if( !chain_lock.upgrade_to_writer() ) {
                         // Rerun search_list, in case another thread inserted the item during the upgrade.
@@ -630,7 +667,7 @@ delete_temp:
             // is currently using *b
             bucket_mutex_t::scoped_lock item_lock( b_temp->mutex, /*write=*/true );
         }
-        delete b_temp;
+        delete_bucket(b_temp);
     }
 done:
     return return_value;        
@@ -648,7 +685,7 @@ void concurrent_hash_map<Key,T,HashCompare>::clear() {
             for( size_t j=0; j<n; ++j ) {
                 while( bucket* b = array[j].bucket_list ) {
                     array[j].bucket_list = b->next;
-                    delete b;
+                    delete_bucket(b);
                 }
             }
             cache_aligned_allocator<chain>().deallocate( array, n );
@@ -662,7 +699,7 @@ void concurrent_hash_map<Key,T,HashCompare>::grow_segment( segment_mutex_t::scop
     if( s.my_logical_size >= s.my_physical_size ) {
         chain* old_array = s.my_array;
         size_t old_size = s.my_physical_size;
-        s.allocate_array( s.my_logical_size );
+        s.allocate_array( s.my_logical_size+1 );
         for( size_t k=0; k<old_size; ++k )
             while( bucket* b = old_array[k].bucket_list ) {
                 old_array[k].bucket_list = b->next;
@@ -691,7 +728,7 @@ void concurrent_hash_map<Key,T,HashCompare>::internal_copy( const concurrent_has
                 for( bucket* b = s_array[k].bucket_list; b; b=b->next ) {
                     hashcode_t h = my_hash_compare.hash( b->item.first );
                     __TBB_ASSERT( &get_segment(h)==&d, "hash function changed?" );
-                    bucket* b_new = new bucket(b->item.first,b->item.second);
+                    bucket* b_new = create_bucket(b->item.first, b->item.second);
                     d.get_chain(h,n_segment_bits).push_front(*b_new);
                 }
         }

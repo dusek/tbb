@@ -1,5 +1,5 @@
 /*
-    Copyright 2005-2007 Intel Corporation.  All Rights Reserved.
+    Copyright 2005-2008 Intel Corporation.  All Rights Reserved.
 
     This file is part of Threading Building Blocks.
 
@@ -61,7 +61,7 @@
 /*
  * util.c - Contains all of the timing functions for various platforms.
  *
- *  $Id: util.cpp,v 1.6 2007/02/22 18:17:51 amalakho Exp $ 
+ *  $Id: util.cpp,v 1.6 2007-02-22 18:17:51 amalakho Exp $ 
  */
 
 #include "machine.h"

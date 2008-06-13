@@ -1,5 +1,5 @@
 /*
-    Copyright 2005-2007 Intel Corporation.  All Rights Reserved.
+    Copyright 2005-2008 Intel Corporation.  All Rights Reserved.
 
     This file is part of Threading Building Blocks.
 
@@ -61,7 +61,7 @@
 /*
  * vector.h - This file contains declarations of vector functions
  *
- *  $Id: vector.h,v 1.2 2007/02/22 17:54:17 dpoulsen Exp $
+ *  $Id: vector.h,v 1.2 2007-02-22 17:54:17 dpoulsen Exp $
  */
 
 flt VDot(vector *, vector *);

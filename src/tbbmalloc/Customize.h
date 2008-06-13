@@ -1,5 +1,5 @@
 /*
-    Copyright 2005-2007 Intel Corporation.  All Rights Reserved.
+    Copyright 2005-2008 Intel Corporation.  All Rights Reserved.
 
     This file is part of Threading Building Blocks.
 
@@ -64,7 +64,7 @@ public:
         MallocMutex& mutex;
     public:
         scoped_lock( MallocMutex& m ) : value( __TBB_LockByte(m.value)), mutex(m) {}
-        ~scoped_lock() { mutex.value = value; }
+        ~scoped_lock() { __TBB_store_with_release(mutex.value, value); }
     };
     friend class scoped_lock;
 };

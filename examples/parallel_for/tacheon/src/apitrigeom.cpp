@@ -1,5 +1,5 @@
 /*
-    Copyright 2005-2007 Intel Corporation.  All Rights Reserved.
+    Copyright 2005-2008 Intel Corporation.  All Rights Reserved.
 
     This file is part of Threading Building Blocks.
 
@@ -62,7 +62,7 @@
  * apitrigeom.c - This file contains code for generating triangle tesselated
  *                geometry, for use with OpenGL, XGL, etc.
  * 
- *  $Id: apitrigeom.cpp,v 1.2 2007/02/22 17:54:15 dpoulsen Exp $
+ *  $Id: apitrigeom.cpp,v 1.2 2007-02-22 17:54:15 dpoulsen Exp $
  */
 
 #include "machine.h"

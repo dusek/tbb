@@ -1,4 +1,4 @@
-# Copyright 2005-2007 Intel Corporation.  All Rights Reserved.
+# Copyright 2005-2008 Intel Corporation.  All Rights Reserved.
 #
 # This file is part of Threading Building Blocks.
 #
@@ -66,7 +66,7 @@ export DATASET = balls
 export ARGS =
 
 # detecting x64
-ifeq ($(shell arch),x86_64)
+ifeq ($(shell uname -m),x86_64)
 x64 ?= 64
 endif
 # detecting UI ("mac", "x" or "con")
@@ -77,7 +77,7 @@ UI ?= $(shell sh -c "[ -f /usr/X11R6/lib$(x64)/libX11.so -o -f /usr/lib$(x64)/li
 endif
 
 MYCXXFLAGS = -DX_FULLSYNC
-LIBS = -lm
+LIBS ?= -lm
 
 # Platform-specific settings
 ifeq ($(UI),x)
@@ -95,9 +95,9 @@ endif
 else
 
 ifeq ($(UI),mac)
-TBBLIBS = /Library/Frameworks/TBB.framework/Libraries
+TBBLIBSPATH = /Library/Frameworks/TBB.framework/Libraries
 CXXFLAGS += -arch i386 -mmacosx-version-min=10.4 -fno-rtti -msse3 -ftree-vectorize
-LIBS += -framework OpenGL -framework AGL -framework Carbon -L$(TBBLIBS)
+LIBS += -framework OpenGL -framework AGL -framework Carbon -L$(TBBLIBSPATH)
 RES = $(NAME).$(VERSION).app/Contents/Resources
 EXE = $(NAME).$(VERSION).app/Contents/MacOS/$(NAME).$(VERSION)
 PBXCP = /System/Library/PrivateFrameworks/DevToolsCore.framework/Resources/pbxcp -resolve-src-symlinks -exclude .DS_Store -exclude CVS
@@ -181,7 +181,7 @@ build_one:	$(EXE)
 
 run_one:
 ifeq ($(UI),mac)
-	export DYLD_LIBRARY_PATH="$(DYLD_LIBRARY_PATH):$(TBBLIBS)"; ./$(EXE) $(ARGS) dat/$(DATASET).dat
+	export DYLD_LIBRARY_PATH="$(DYLD_LIBRARY_PATH):$(TBBLIBSPATH)"; ./$(EXE) $(ARGS) dat/$(DATASET).dat
 else
 	./$(EXE) $(ARGS) dat/$(DATASET).dat
 endif

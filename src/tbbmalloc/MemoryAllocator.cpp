@@ -1,5 +1,5 @@
 /*
-    Copyright 2005-2007 Intel Corporation.  All Rights Reserved.
+    Copyright 2005-2008 Intel Corporation.  All Rights Reserved.
 
     This file is part of Threading Building Blocks.
 
@@ -52,11 +52,12 @@ static inline int TRACEF(char *arg, ...)
     inline void do_yield() {sched_yield();}
 
 #elif USE_WINTHREAD
+    #define _WIN32_WINNT 0x0400
     #include <windows.h>
     #define TlsSetValue_func TlsSetValue
     #define TlsGetValue_func TlsGetValue
     typedef DWORD tls_key_t;
-    inline void do_yield() {Sleep(0);}
+    inline void do_yield() {SwitchToThread();}
 
 #else
     #error Must define USE_PTHREAD or USE_WINTHREAD
@@ -67,7 +68,7 @@ static inline int TRACEF(char *arg, ...)
 #include <string.h>
 #include <errno.h>
 
-#if __linux__||__APPLE__
+#if __linux__||__APPLE__ || __FreeBSD__
 #include <fcntl.h>
 #endif
 
@@ -324,7 +325,7 @@ static inline unsigned int highestBitPos(unsigned int number)
     unsigned int pos;
 #if __ARCH_x86_32||__ARCH_x86_64
 
-# if __linux__||__APPLE__
+# if __linux__||__APPLE__||__FreeBSD__
     __asm__ ("bsr %1,%0" : "=r"(pos) : "r"(number));
 # elif (_WIN32 && (!_WIN64 || __INTEL_COMPILER))
     __asm
@@ -1112,12 +1113,15 @@ static inline void *mallocLargeObject (size_t size)
 
     // TODO: can the requestedSize be optimized somehow?
     size_t requestedSize = size + sizeof(LargeObjectHeader) + blockSize;
+    /* errno should be tested because some Linux versions have a known issue
+       of returning non-NULL even if there is no memory */
+    errno = 0;
 #if USE_MALLOC_FOR_LARGE_OBJECT
     unalignedArea = malloc(requestedSize);
 #else
     unalignedArea = getMemory(requestedSize);
 #endif /* USE_MALLOC_FOR_LARGE_OBJECT */
-    if (!unalignedArea) {
+    if (!unalignedArea || errno) {
         /* We can't get any more memory from the OS or executive so return 0 */
         return 0;
     }

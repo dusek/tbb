@@ -1,5 +1,5 @@
 /*
-    Copyright 2005-2007 Intel Corporation.  All Rights Reserved.
+    Copyright 2005-2008 Intel Corporation.  All Rights Reserved.
 
     This file is part of Threading Building Blocks.
 
@@ -62,7 +62,7 @@
  * vol.c - Volume rendering helper routines etc.
  *
  *
- *  $Id: vol.cpp,v 1.3 2007/02/22 18:17:51 amalakho Exp $
+ *  $Id: vol.cpp,v 1.3 2007-02-22 18:17:51 amalakho Exp $
  */
 
 #include<stdio.h>

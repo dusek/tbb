@@ -1,5 +1,5 @@
 /*
-    Copyright 2005-2007 Intel Corporation.  All Rights Reserved.
+    Copyright 2005-2008 Intel Corporation.  All Rights Reserved.
 
     This file is part of Threading Building Blocks.
 
@@ -41,6 +41,12 @@ extern "C" void _ReadWriteBarrier();
 
 #define __TBB_WORDSIZE 4
 #define __TBB_BIG_ENDIAN 0
+
+#if defined(_MSC_VER) && defined(_Wp64)
+    // Workaround for overzealous compiler warnings in /Wp64 mode
+    #pragma warning (push)
+    #pragma warning (disable: 4244 4267)
+#endif /* _MSC_VER && _Wp64 */
 
 extern "C" {
     __int64 __TBB_machine_cmpswp8 (volatile void *ptr, __int64 value, __int64 comparand );
@@ -199,7 +205,10 @@ static inline void __TBB_machine_pause (__int32 delay ) {
 #define __TBB_AtomicOR(P,V) __TBB_machine_OR(P,V)
 
 // Definition of other functions
-#define __TBB_Yield()  Sleep(0)
+#if !defined(_WIN32_WINNT)
+extern "C" BOOL WINAPI SwitchToThread(void);
+#endif
+#define __TBB_Yield()  SwitchToThread()
 #define __TBB_Pause(V) __TBB_machine_pause(V)
 #define __TBB_Log2(V)    __TBB_machine_lg(V)
 
@@ -219,3 +228,7 @@ static inline void __TBB_x86_cpuid( __int32 buffer[4], __int32 mode ) {
     }
 }
 
+#if defined(_MSC_VER) && defined(_Wp64)
+    // Workaround for overzealous compiler warnings in /Wp64 mode
+    #pragma warning (pop)
+#endif /* _MSC_VER && _Wp64 */

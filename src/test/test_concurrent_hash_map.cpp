@@ -1,5 +1,5 @@
 /*
-    Copyright 2005-2007 Intel Corporation.  All Rights Reserved.
+    Copyright 2005-2008 Intel Corporation.  All Rights Reserved.
 
     This file is part of Threading Building Blocks.
 
@@ -231,7 +231,7 @@ struct ParallelTraverseBody {
         array(array_)
     {}
     void operator()( const RangeType& range ) const {
-        for( MyTable::iterator i = range.begin(); i!=range.end(); ++i ) {
+        for( typename RangeType::iterator i = range.begin(); i!=range.end(); ++i ) {
             int k = i->first.value_of();
             ASSERT( 0<=k && size_t(k)<n, NULL ); 
             ++array[k];
@@ -320,11 +320,7 @@ public:
                     // more logical threads than physical threads, and should yield in 
                     // order to let suspended logical threads make progress.
                     j = 0;
-#if __linux__||__APPLE__
-                    sched_yield();
-#else
-                    Sleep(0);
-#endif /* __linux__ */
+                    __TBB_Yield();
                 }
             }
             // Now all threads attempt to simultaneously insert a key.
@@ -384,6 +380,18 @@ void TestIteratorTraits() {
     ASSERT( &xr==xp, NULL );
 }
 
+template<typename Iterator1, typename Iterator2>
+void TestIteratorAssignment( Iterator2 j ) {
+    Iterator1 i(j), k;
+    ASSERT( i==j, NULL ); ASSERT( !(i!=j), NULL );
+    k = j;
+    ASSERT( k==j, NULL ); ASSERT( !(k!=j), NULL );
+}
+
+template<typename Range1, typename Range2>
+void TestRangeAssignment( Range2 r2 ) {
+    Range1 r1(r2); r1 = r2;
+}
 //------------------------------------------------------------------------
 // Test for copy constructor and assignment
 //------------------------------------------------------------------------
@@ -475,6 +483,27 @@ void TestAssignment() {
     }
 }
 
+void TestIteratorsAndRanges() {
+    if( Verbose )
+        printf("testing iterators compliance\n");
+    TestIteratorTraits<MyTable::iterator,MyTable::value_type>();
+    TestIteratorTraits<MyTable::const_iterator,const MyTable::value_type>();
+
+    MyTable v;
+    MyTable const &u = v;
+
+    TestIteratorAssignment<MyTable::const_iterator>( u.begin() );
+    TestIteratorAssignment<MyTable::const_iterator>( v.begin() );
+    TestIteratorAssignment<MyTable::iterator>( v.begin() );
+    // doesn't compile as expected: TestIteratorAssignment<typename V::iterator>( u.begin() );
+
+    if( Verbose )
+        printf("testing ranges compliance\n");
+    TestRangeAssignment<MyTable::const_range_type>( u.range() );
+    TestRangeAssignment<MyTable::const_range_type>( v.range() );
+    TestRangeAssignment<MyTable::range_type>( v.range() );
+    // doesn't compile as expected: TestRangeAssignment<typename V::range_type>( u.range() );
+}
 //------------------------------------------------------------------------
 // Test driver
 //------------------------------------------------------------------------
@@ -494,10 +523,9 @@ int main( int argc, char* argv[] ) {
 
     // Do serial tests
     TestTypes();
-    TestIteratorTraits<MyTable::iterator,MyTable::value_type>();
-    TestIteratorTraits<MyTable::const_iterator,const MyTable::value_type>();
     TestCopy();
     TestAssignment();
+    TestIteratorsAndRanges();
 
     // Do concurrency tests.
     for( int nthread=MinThread; nthread<=MaxThread; ++nthread ) {

@@ -1,5 +1,5 @@
 /*
-    Copyright 2005-2007 Intel Corporation.  All Rights Reserved.
+    Copyright 2005-2008 Intel Corporation.  All Rights Reserved.
 
     This file is part of Threading Building Blocks.
 
@@ -156,7 +156,10 @@ static inline void __TBB_machine_pause (__int32 delay ) {
 #define __TBB_AtomicOR(P,V) __TBB_machine_OR(P,V)
 
 // Definition of other functions
-#define __TBB_Yield()  Sleep(0)
+#if !defined(_WIN32_WINNT)
+extern "C" BOOL WINAPI SwitchToThread(void);
+#endif
+#define __TBB_Yield()  SwitchToThread()
 #define __TBB_Pause(V) __TBB_machine_pause(V)
 #define __TBB_Log2(V)    __TBB_machine_lg(V)
 

@@ -1,5 +1,5 @@
 /*
-    Copyright 2005-2007 Intel Corporation.  All Rights Reserved.
+    Copyright 2005-2008 Intel Corporation.  All Rights Reserved.
 
     This file is part of Threading Building Blocks.
 
@@ -298,6 +298,40 @@ void TestFullQueue() {
     }
 }
 
+template<typename T>
+struct TestNegativeQueueBody {
+    tbb::concurrent_queue<T>& queue;
+    const int nthread;
+    TestNegativeQueueBody( tbb::concurrent_queue<T>& q, int n ) : queue(q), nthread(n) {}
+    void operator()( const tbb::blocked_range<int>& range ) const {
+        if( range.begin()==0 ) {
+            int number_of_pops = nthread-1;
+            // Wait for all pops to pend.
+            while( queue.size()>-number_of_pops ) {
+                __TBB_Yield();
+            }
+            for( int i=0; ; ++i ) {
+                ASSERT( queue.size()==i-number_of_pops, NULL );
+                ASSERT( queue.empty()==(queue.size()<=0), NULL );
+                if( i==number_of_pops ) break;
+                // Satisfy another pop
+                queue.push( T() );
+            }
+        } else {
+            // Pop item from queue
+            T item;
+            queue.pop(item);
+        }
+    }
+};
+
+//! Test a queue with a negative size.
+template<typename T>
+void TestNegativeQueue( int nthread ) {
+    tbb::concurrent_queue<T> queue;
+    NativeParallelFor( tbb::blocked_range<int>(0,nthread,1), TestNegativeQueueBody<T>(queue,nthread) );
+}
+
 int main( int argc, char* argv[] ) {
     // Set default for minimum number of threads.
     MinThread = 1;
@@ -311,6 +345,7 @@ int main( int argc, char* argv[] ) {
 
     // Test concurrent operations
     for( int nthread=MinThread; nthread<=MaxThread; ++nthread ) {
+        TestNegativeQueue<Foo>(nthread);
         for( int prefill=0; prefill<64; prefill+=(1+prefill/3) ) {
             TestPushPop(prefill,ptrdiff_t(-1),nthread);
             TestPushPop(prefill,ptrdiff_t(1),nthread);

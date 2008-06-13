@@ -1,5 +1,5 @@
 /*
-    Copyright 2005-2007 Intel Corporation.  All Rights Reserved.
+    Copyright 2005-2008 Intel Corporation.  All Rights Reserved.
 
     This file is part of Threading Building Blocks.
 
@@ -61,7 +61,7 @@
 /* 
  * util.h - This file contains defines for the timer functions...
  *
- *  $Id: util.h,v 1.3 2007/02/22 17:54:17 dpoulsen Exp $
+ *  $Id: util.h,v 1.3 2007-02-22 17:54:17 dpoulsen Exp $
  */
 
 void timerstart(void);

@@ -1,5 +1,5 @@
 /*
-    Copyright 2005-2007 Intel Corporation.  All Rights Reserved.
+    Copyright 2005-2008 Intel Corporation.  All Rights Reserved.
 
     This file is part of Threading Building Blocks.
 
@@ -30,6 +30,7 @@
 #define __TBB_spin_rw_mutex_H
 
 #include "tbb_stddef.h"
+#include "tbb_machine.h"
 
 namespace tbb {
 
@@ -126,7 +127,7 @@ public:
 #if TBB_DO_THREADING_TOOLS||TBB_DO_ASSERT
                 internal_release_writer(m);
 #else
-                m->state = 0; 
+                __TBB_store_with_release( m->state, 0 ); 
 #endif /* TBB_DO_THREADING_TOOLS||TBB_DO_ASSERT */
             } else {
                 internal_release_reader(m);
@@ -140,8 +141,8 @@ public:
             __TBB_ASSERT( is_writer, "not a writer" );
             internal_downgrade(mutex);
 #else
-            mutex->state = 4; // Bit 2 - reader, 00..00100
-#endif
+            __TBB_store_with_release( mutex->state, ONE_READER ); 
+#endif /* TBB_DO_THREADING_TOOLS||TBB_DO_ASSERT */
             is_writer = false;
 
             return true;
@@ -154,7 +155,8 @@ public:
             is_writer = write; 
             result = write? internal_try_acquire_writer(&m)
                           : internal_try_acquire_reader(&m);
-            if( result ) mutex = &m;
+            if( result ) 
+                mutex = &m;
             return result;
         }
 
@@ -162,10 +164,15 @@ public:
         //! The pointer to the current mutex that is held, or NULL if no mutex is held.
         spin_rw_mutex* mutex;
 
-        //! True if holding a writer lock, false if holding a reader lock.
+        //! If mutex!=NULL, then is_writer is true if holding a writer lock, false if holding a reader lock.
         /** Not defined if not holding a lock. */
         bool is_writer;
     };
+
+    // Mutex traits
+    static const bool is_rw_mutex = true;
+    static const bool is_recursive_mutex = false;
+    static const bool is_fair_mutex = false;
 
 private:
     typedef internal::uintptr state_t;
@@ -174,10 +181,11 @@ private:
     static const state_t READERS = ~(WRITER | WRITER_PENDING);
     static const state_t ONE_READER = 4;
     static const state_t BUSY = WRITER | READERS;
+    //! State of lock
     /** Bit 0 = writer is holding lock
         Bit 1 = request by a writer to acquire lock (hint to readers to wait)
         Bit 2..N = number of readers holding lock */
-    volatile state_t state;
+    state_t state;
 };
 
 } // namespace ThreadingBuildingBlocks

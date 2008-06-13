@@ -1,5 +1,5 @@
 /*
-    Copyright 2005-2007 Intel Corporation.  All Rights Reserved.
+    Copyright 2005-2008 Intel Corporation.  All Rights Reserved.
 
     This file is part of Threading Building Blocks.
 
@@ -31,13 +31,25 @@
 
 #include "tbb_stddef.h"
 
+#if __TBB_EXCEPTIONS
+#include <exception>
+#endif /* __TBB_EXCEPTIONS */
+
 namespace tbb {
 
 class task;
 class task_list;
+#if __TBB_EXCEPTIONS
+class asynch_context;
+#endif /* __TBB_EXCEPTIONS */
 
 //! @cond INTERNAL
 namespace internal {
+
+#if __TBB_EXCEPTIONS
+    class exception_data;
+    template<typename T> class CustomScheduler;
+#endif /* __TBB_EXCEPTIONS */
 
     class scheduler {
     public:
@@ -55,13 +67,28 @@ namespace internal {
         virtual ~scheduler() = 0;
     };
 
+    //! A reference count
+    /** Should always be non-negative.  A signed type is used so that underflow can be detected. */
     typedef intptr reference_count;
+
+    //! An id as used for specifying affinity.
+    typedef unsigned short affinity_id;
 
     class allocate_root_proxy {
     public:
         static task& allocate( size_t size );
         static void free( task& );
     };
+
+#if __TBB_EXCEPTIONS
+    class allocate_root_with_context_proxy {
+        asynch_context& my_context;
+    public:
+        allocate_root_with_context_proxy ( asynch_context& ctx ) : my_context(ctx) {}
+        task& allocate( size_t size ) const;
+        void free( task& ) const;
+    };
+#endif /* __TBB_EXCEPTIONS */
 
     class allocate_continuation_proxy {
     public:
@@ -87,6 +114,8 @@ namespace internal {
     //! Memory prefix to a task object.
     /** This class is internal to the library.
         Do not reference it directly, except within the library itself.
+        Fields are ordered in way that preserves backwards compatibility and yields 
+        good packing on typical 32-bit and 64-bit platforms.
         @ingroup task_scheduling */
     class task_prefix {
     private:
@@ -98,7 +127,14 @@ namespace internal {
         friend class internal::allocate_continuation_proxy;
         friend class internal::allocate_additional_child_of_proxy;
 
-
+#if __TBB_EXCEPTIONS
+        //! Shared context that is used to communicate asynchronous state changes
+        /** Currently it is used to broadcast cancellation requests generated both 
+            by users and as the result of unhandled exceptions in the task::execute()
+            methods. */
+        asynch_context  *context;
+#endif /* __TBB_EXCEPTIONS */
+        
         //! The scheduler that allocated the task, or NULL if task is big.
         /** Small tasks are pooled by the scheduler that allocated the task.
             If a scheduler needs to free a small task allocated by another scheduler,
@@ -127,26 +163,19 @@ namespace internal {
         int depth;
 
         //! A task::state_type, stored as a byte for compactness.
+        /** This state is exposed to users via method task::state(). */
         unsigned char state;
 
-        //! Reserved for future use
-        unsigned char reserved2;
+        //! Miscellaneous state that is not directly visible to users, stored as a byte for compactness.
+        /** 0x0 -> version 1.0 task
+            0x1 -> version 3.0 task
+            0x2 -> task_proxy
+            0x40 -> task has live ref_count */
+        unsigned char extra_state;
 
-#if TBB_DO_ASSERT
-        //! Used for internal debugging.
-        /** Zero if production version of library is linked. */
-        unsigned char debug_state;
-#else
-        //! Reserved for internal use
-        unsigned char reserved0;
-#endif /* TBB_DO_ASSERT */
-
-        //! Reserved for future use
-        unsigned char reserved1;
+        affinity_id affinity;
 
         //! "next" field for list of task
-        /** Assembly coded routine Gettask presumes this field is the last field
-            in the prefix. */
         tbb::task* next;
 
         //! task corresponding to this task_prefix.
@@ -156,6 +185,153 @@ namespace internal {
 } // namespace internal
 //! @endcond
 
+#if __TBB_EXCEPTIONS
+
+class unhandled_exception : public std::exception 
+{
+public:
+    unhandled_exception ( internal::exception_data* data ) : my_exception_data(data) {}
+
+    ~unhandled_exception () throw();
+
+    const char* name() const throw();
+
+    /*override*/
+    const char* what() const throw();
+
+private:
+    friend class internal::scheduler;
+
+    internal::exception_data* my_exception_data;
+};
+
+//! Contains information about events that can happen asynchronously w.r.t. the tasks associated with it 
+/** @ingroup task_scheduling 
+    Currently the context services cancellation requests from user code, and unhandled 
+    exceptions intercepted during tasks execution. Intercepting an exception results 
+    in fact in generating internal cancellation requests. 
+
+    The context is associated with one or more root tasks and defines the cancellation 
+    group that includes all the children of the corresponding root task(s). Association 
+    is established when a context object is passed as an argument to the task::allocate_root()
+    method. See asynch_context::asynch_context for more details.
+    
+    The context can be bound to another one, and other contexts can be bound to it,
+    forming a tree-like structure: parent -> this -> children. Arrows here designate
+    cancellation propagation direction: if a task in a cancellation group is canceled
+    all the other tasks in this group and groups bound to it (as children) get canceled too.*/
+class asynch_context : internal::no_copy
+{
+    typedef unsigned char  mutex_type;
+
+    //! Pointer to the context of the parent cancellation group. NULL for isolated contexts.
+    asynch_context  *my_parent;
+
+    //! Pointer to the context of the first subordinate cancellation group.
+    asynch_context  *my_first_child;
+
+    //! Pointer to the context of my_parent's previous subordinate cancellation group.
+    /** If this == my_parent->my_first_child, then my_prev_sibling == my_parent.
+        This allows to simplify locking in binding/unbinding routines. **/
+    asynch_context  *my_prev_sibling;
+
+    //! Pointer to the context of my_parent's next subordinate cancellation group.
+    asynch_context  *my_next_sibling;
+
+    internal::exception_data    *my_exception_data;
+
+    volatile internal::intptr   my_cancellation_requested;
+
+    mutex_type  my_mutex;
+
+    void*   my_reserved1;   //?? Do we need more reserved space?
+
+public:
+    typedef internal::intptr kind_t;
+
+    static const kind_t isolated = internal::intptr(0);
+    static const kind_t bound = internal::intptr(-1);
+
+    //! Default & binding constructor.
+    /** By default a bound context is created. That is this context will be bound 
+        (as child) to the context of the task calling task::allocate_root(this_context) 
+        method. Cancellation requests passed to the parent context are propagated
+        to all the contexts bound to it.
+
+        If asynch_context::isolated is used as the argument, then the tasks associated
+        with this context will never be affected by events in any other context. */
+    asynch_context ( kind_t relation_with_parent = bound )
+        : my_parent(reinterpret_cast<asynch_context*>(relation_with_parent))
+        , my_first_child(NULL)
+        , my_prev_sibling(NULL)
+        , my_next_sibling(NULL)
+        , my_exception_data(NULL)
+        , my_cancellation_requested(false)
+        , my_mutex(0)
+    {}
+
+    ~asynch_context ();
+
+    //! Forcefully reinitializes context object after an algorithm it was used with finished.
+    /** Because the method assumes that the all the tasks that used to be associated with 
+        this context have already finished, you must be extremely careful to not invalidate 
+        the context while it is still in use somewhere in the task hierarchy.
+        
+        It is assumed that this method is not used concurrently!
+
+        The method does not change the kind of the context and its parent if the latter is set.
+        \todo Decide if we need asynch_context::reset() at all. We may prohibit context object reuse instead. **/ 
+    void reset ();
+
+    //! Initiates cancellation of all tasks in this cancellation group and its subordinate groups.
+    /** \return false if cancellation has already been requested, true otherwise. **/
+    bool cancel_task_group ();
+
+    //! Returns true if the context received cancellation request.
+    bool was_cancelled () { return my_cancellation_requested != 0; }
+
+#if TBB_DO_ASSERT
+    bool assert_okay () const {
+        /// \todo Implement it.
+        return true;
+    }
+    bool assert_unbound () const {
+        bool bound_to_another = my_parent || my_prev_sibling || my_next_sibling;
+        __TBB_ASSERT (!bound_to_another, "context still has parent or siblings");
+        __TBB_ASSERT (!my_first_child, "context still has children");
+        return  !(bound_to_another || my_first_child);
+    }
+
+    bool assert_parent_is_valid ( const asynch_context& parent ) {
+        /// \todo Implement it.
+        // Make sure that ultimate parent of my_parent is the same as for "parent" argument
+        // Assert: "Attempt to bind already bound asynch context to another hierarchy"
+        return true;
+    }
+#endif /* TBB_DO_ASSERT */
+
+private:
+    friend class task;
+    friend class internal::scheduler;
+    friend class internal::allocate_root_with_context_proxy;
+    template<typename T> friend class internal::CustomScheduler;
+
+    void bind_to ( asynch_context& parent );
+    void unbind ();
+
+    //! Stores information about exception in the context
+    /** If the task tree is not canceled, creates new exception_data structure 
+        and stores it in the context **/
+    void register_exception ( const char* name, const char* info );
+    //! Stores information about exception in the context
+    /** If the task tree is not canceled, stores data in the context, otherwise
+        decrements data's refcount. **/
+    void register_exception ( internal::exception_data* data );
+}; // class asynch_context
+
+#endif /* __TBB_EXCEPTIONS */
+
+
 //! Base class for user-defined tasks.
 /** @ingroup task_scheduling */
 class task: internal::no_copy {
@@ -164,7 +340,7 @@ class task: internal::no_copy {
 
 protected:
     //! Default constructor.
-    task() {}
+    task() {prefix().extra_state=1;}
 
 public:
     //! Destructor.
@@ -197,6 +373,13 @@ public:
     static internal::allocate_root_proxy allocate_root() {
         return internal::allocate_root_proxy();
     }
+
+#if __TBB_EXCEPTIONS
+    //! Returns proxy for overloaded new that allocates a root task associated with user supplied context.
+    static internal::allocate_root_with_context_proxy allocate_root( asynch_context& ctx ) {
+        return internal::allocate_root_with_context_proxy(ctx);
+    }
+#endif /* __TBB_EXCEPTIONS */
 
     //! Returns proxy for overloaded new that allocates a continuation task of *this.
     /** The continuation's parent becomes the parent of *this. */
@@ -347,7 +530,7 @@ public:
         prefix().owner->wait_for_all( *this, NULL );
     }
 
-    //! The task() current being run by this thread.
+    //! The task() currently being run by this thread.
     static task& self();
 
     //! task on whose behalf this task is working, or NULL if this is a root.
@@ -359,7 +542,6 @@ public:
         internal::task_prefix& q = parent()->prefix();
         return p.owner!=q.owner;
     }
-
 
     //------------------------------------------------------------------------
     // Debugging
@@ -380,10 +562,43 @@ public:
     //! True if this task is owned by the calling thread; false otherwise.
     bool is_owned_by_current_thread() const;
 
+    //------------------------------------------------------------------------
+    // Affinity
+    //------------------------------------------------------------------------
+ 
+    //! An id as used for specifying affinity.
+    /** Guaranteed to be integral type.  Value of 0 means no affinity. */
+    typedef internal::affinity_id affinity_id;
+
+    //! Set affinity for this task.
+    void set_affinity( affinity_id id ) {prefix().affinity = id;}
+
+    //! Current affinity of this task
+    affinity_id affinity() const {return prefix().affinity;}
+
+    //! Invoked by scheduler to notify task that it ran on unexpected thread.
+    /** Invoked before method execute() runs, if task is stolen, or task has 
+        affinity but will be executed on another thread. 
+
+        The default action does nothing. */
+    virtual void note_affinity( affinity_id id );
+
+#if __TBB_EXCEPTIONS
+    //! Initiates cancellation of all tasks in this cancellation group and its subordinate groups.
+    /** \return false if cancellation has already been requested, true otherwise. **/
+    bool cancel_task_group () { return prefix().context->cancel_task_group(); }
+
+    //! Returns true if the context received cancellation request.
+    bool was_cancelled () { return prefix().context->was_cancelled(); }
+#endif /* __TBB_EXCEPTIONS */
+
 private:
     friend class task_list;
     friend class internal::scheduler;
     friend class internal::allocate_root_proxy;
+#if __TBB_EXCEPTIONS
+    friend class internal::allocate_root_with_context_proxy;
+#endif /* __TBB_EXCEPTIONS */
     friend class internal::allocate_continuation_proxy;
     friend class internal::allocate_child_proxy;
     friend class internal::allocate_additional_child_of_proxy;
@@ -392,7 +607,7 @@ private:
     internal::task_prefix& prefix() const {
         return reinterpret_cast<internal::task_prefix*>(const_cast<task*>(this))[-1];
     }
-};
+}; // class task
 
 //! task that does nothing.  Useful for synchronization.
 /** @ingroup task_scheduling */
@@ -435,6 +650,7 @@ public:
         if( !first ) next_ptr = &first;
         return *result;
     }
+
     //! Clear the list
     void clear() {
         first=NULL;
@@ -458,7 +674,6 @@ inline void task::spawn_root_and_wait( task_list& root_list ) {
     }
 }
 
-
 } // namespace tbb
 
 inline void *operator new( size_t bytes, const tbb::internal::allocate_root_proxy& p ) {
@@ -468,6 +683,16 @@ inline void *operator new( size_t bytes, const tbb::internal::allocate_root_prox
 inline void operator delete( void* task, const tbb::internal::allocate_root_proxy& p ) {
     p.free( *static_cast<tbb::task*>(task) );
 }
+
+#if __TBB_EXCEPTIONS
+inline void *operator new( size_t bytes, const tbb::internal::allocate_root_with_context_proxy& p ) {
+    return &p.allocate(bytes);
+}
+
+inline void operator delete( void* task, const tbb::internal::allocate_root_with_context_proxy& p ) {
+    p.free( *static_cast<tbb::task*>(task) );
+}
+#endif /* __TBB_EXCEPTIONS */
 
 inline void *operator new( size_t bytes, const tbb::internal::allocate_continuation_proxy& p ) {
     return &p.allocate(bytes);

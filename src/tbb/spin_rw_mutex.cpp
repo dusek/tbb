@@ -1,5 +1,5 @@
 /*
-    Copyright 2005-2007 Intel Corporation.  All Rights Reserved.
+    Copyright 2005-2008 Intel Corporation.  All Rights Reserved.
 
     This file is part of Threading Building Blocks.
 
@@ -27,16 +27,19 @@
 */
 
 #include "tbb/spin_rw_mutex.h"
-#include "tbb/tbb_machine.h"
 #include "tbb_misc.h"
 #include "itt_notify.h"
 
+#if defined(_MSC_VER) && defined(_Wp64)
+    // Workaround for overzealous compiler warnings in /Wp64 mode
+    #pragma warning (disable: 4244)
+#endif /* _MSC_VER && _Wp64 */
+
 namespace tbb {
 
-using namespace internal;
-
-static inline bool CAS(volatile uintptr &addr, uintptr newv, uintptr oldv) {
-    return __TBB_CompareAndSwapW((volatile void *)&addr, (intptr)newv, (intptr)oldv) == (intptr)oldv;
+template<typename T> // a template can work with private spin_rw_mutex::state_t
+static inline T CAS(volatile T &addr, T newv, T oldv) {
+    return T(__TBB_CompareAndSwapW((volatile void *)&addr, (intptr_t)newv, (intptr_t)oldv));
 }
 
 //! Signal that write lock is released
@@ -47,11 +50,11 @@ void spin_rw_mutex::internal_itt_releasing(spin_rw_mutex *mutex) {
 bool spin_rw_mutex::internal_acquire_writer(spin_rw_mutex *mutex)
 {
     ITT_NOTIFY(sync_prepare, mutex);
-    ExponentialBackoff backoff;
+    internal::ExponentialBackoff backoff;
     while(true) {
         state_t s = mutex->state;
         if( !(s & BUSY) ) { // no readers, no writers
-            if( CAS(mutex->state, WRITER, s) )
+            if( CAS(mutex->state, WRITER, s)==s )
                 break; // successfully stored writer flag
             backoff.reset(); // we could be very close to complete op.
         } else if( !(s & WRITER_PENDING) ) { // no pending writers
@@ -68,17 +71,17 @@ bool spin_rw_mutex::internal_acquire_writer(spin_rw_mutex *mutex)
 void spin_rw_mutex::internal_release_writer(spin_rw_mutex *mutex) {
     __TBB_ASSERT( (mutex->state & BUSY)==WRITER, "invalid state of a write lock" );
     ITT_NOTIFY(sync_releasing, mutex);
-    mutex->state = 0; 
+    __TBB_store_with_release(mutex->state, 0);
 }
 
 //! Acquire lock on given mutex.
 void spin_rw_mutex::internal_acquire_reader(spin_rw_mutex *mutex) {
     ITT_NOTIFY(sync_prepare, mutex);
-    ExponentialBackoff backoff;
+    internal::ExponentialBackoff backoff;
     while(true) {
-        state_t s = mutex->state;
+        state_t s = const_cast<volatile state_t&>(mutex->state); // ensure reloading
         if( !(s & (WRITER|WRITER_PENDING)) ) { // no writer or write requests
-            if( CAS(mutex->state, s+ONE_READER, s) )
+            if( CAS(mutex->state, s+ONE_READER, s)==s )
                 break; // successfully stored increased number of readers
             backoff.reset(); // we could be very close to complete op.
         }
@@ -99,9 +102,10 @@ bool spin_rw_mutex::internal_upgrade(spin_rw_mutex *mutex) {
     // required conditions: either no pending writers, or we are the only reader
     // (with multiple readers and pending writer, another upgrade could have been requested)
     while( (s & READERS)==ONE_READER || !(s & WRITER_PENDING) ) {
-        if( CAS(mutex->state, s | WRITER_PENDING, s) )
+        state_t old_s = s;
+        if( (s=CAS(mutex->state, s | WRITER_PENDING, s))==old_s )
         {
-            ExponentialBackoff backoff;
+            internal::ExponentialBackoff backoff;
             ITT_NOTIFY(sync_prepare, mutex);
             while( (mutex->state & READERS) != ONE_READER ) // more than 1 reader
                 backoff.pause();
@@ -112,8 +116,6 @@ bool spin_rw_mutex::internal_upgrade(spin_rw_mutex *mutex) {
             ITT_NOTIFY(sync_acquired, mutex);
             __TBB_ASSERT( (mutex->state & BUSY) == WRITER, "invalid state after upgrade" );
             return true; // successfully upgraded
-        } else {
-            s = mutex->state; // re-read
         }
     }
     // slow reacquire
@@ -124,7 +126,7 @@ bool spin_rw_mutex::internal_upgrade(spin_rw_mutex *mutex) {
 void spin_rw_mutex::internal_downgrade(spin_rw_mutex *mutex) {
     __TBB_ASSERT( (mutex->state & BUSY) == WRITER, "invalid state before downgrade" );
     ITT_NOTIFY(sync_releasing, mutex);
-    mutex->state = ONE_READER;
+    __TBB_store_with_release( mutex->state, ONE_READER );
     __TBB_ASSERT( mutex->state & READERS, "invalid state after downgrade: no readers" );
     __TBB_ASSERT( !(mutex->state & WRITER), "invalid state after downgrade: active writer" );
 }
@@ -134,15 +136,15 @@ void spin_rw_mutex::internal_release_reader(spin_rw_mutex *mutex)
     __TBB_ASSERT( mutex->state & READERS, "invalid state of a read lock: no readers" );
     __TBB_ASSERT( !(mutex->state & WRITER), "invalid state of a read lock: active writer" );
     ITT_NOTIFY(sync_releasing, mutex); // release reader
-    __TBB_FetchAndAddWrelease((volatile void *)&(mutex->state),-(intptr)ONE_READER);
+    __TBB_FetchAndAddWrelease((volatile void *)&(mutex->state),-(internal::intptr)ONE_READER);
 }
 
 bool spin_rw_mutex::internal_try_acquire_writer( spin_rw_mutex * mutex )
 {
-// for a writer: only possible to acquire if no active readers or writers
-    state_t s = mutex->state; // on Itanium, this volatile load has acquire semantic
+    // for a writer: only possible to acquire if no active readers or writers
+    state_t s = mutex->state;
     if( !(s & BUSY) ) // no readers, no writers; mask is 1..1101
-        if( CAS(mutex->state, WRITER, s) ) {
+        if( CAS(mutex->state, WRITER, s)==s ) {
             ITT_NOTIFY(sync_acquired, mutex);
             return true; // successfully stored writer flag
         }
@@ -151,13 +153,15 @@ bool spin_rw_mutex::internal_try_acquire_writer( spin_rw_mutex * mutex )
 
 bool spin_rw_mutex::internal_try_acquire_reader( spin_rw_mutex * mutex )
 {
-// for a reader: acquire if no active or waiting writers
-    state_t s = mutex->state;    // on Itanium, a load of volatile variable has acquire semantic
-    while( !(s & (WRITER|WRITER_PENDING)) ) // no writers
-        if( CAS(mutex->state, s+ONE_READER, s) ) {
+    // for a reader: acquire if no active or waiting writers
+    state_t s = mutex->state;
+    while( !(s & (WRITER|WRITER_PENDING)) ) { // no writers
+        state_t old_s = s;
+        if( (s=CAS(mutex->state, s+ONE_READER, s))==old_s ) {
             ITT_NOTIFY(sync_acquired, mutex);
             return true; // successfully stored increased number of readers
         }
+    }
     return false;
 }
 

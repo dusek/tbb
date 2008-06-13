@@ -1,4 +1,4 @@
-# Copyright 2005-2007 Intel Corporation.  All Rights Reserved.
+# Copyright 2005-2008 Intel Corporation.  All Rights Reserved.
 #
 # This file is part of Threading Building Blocks.
 #
@@ -44,11 +44,12 @@ native_compiler := gcc
 export compiler ?= gcc
 debugger ?= gdb
 
+CMD=$(SHELL) -c
 CWD=$(shell pwd)
 RM?=rm -f
 RD?=rmdir
 MD?=mkdir -p
-NUL= > /dev/null 2>&1
+NUL= /dev/null
 SLASH=/
 MAKE_VERSIONS=sh $(tbb_root)/build/version_info_linux.sh $(CPLUS) $(CPLUS_FLAGS) $(INCLUDES) >version_string.tmp
 MAKE_TBBVARS=sh $(tbb_root)/build/generate_tbbvars.sh
@@ -64,18 +65,12 @@ endif
 OBJ = o
 DLL = so
 
-ifeq ($(cfg),debug)
-    DEBUG_SUFFIX = _debug
-endif
-
 TBB.DEF = 
 TBB.DLL = libtbb$(DEBUG_SUFFIX).$(DLL)
 TBB.LIB = $(TBB.DLL)
+LINK_TBB.LIB = $(TBB.LIB)
 
-MALLOC.DLL = libtbbmalloc$(DEBUG_SUFFIX).so
+MALLOC.DLL = libtbbmalloc$(DEBUG_SUFFIX).$(DLL)
 MALLOC.LIB = $(MALLOC.DLL)
 
 TBB_NOSTRICT=1
-
-
-

@@ -1,5 +1,5 @@
 /*
-    Copyright 2005-2007 Intel Corporation.  All Rights Reserved.
+    Copyright 2005-2008 Intel Corporation.  All Rights Reserved.
 
     This file is part of Threading Building Blocks.
 
@@ -62,7 +62,7 @@
  * texture.h This file contains all of the includes and defines for the texture 
  * mapping part of the shader.
  *
- *  $Id: texture.h,v 1.2 2007/02/22 17:54:16 dpoulsen Exp $
+ *  $Id: texture.h,v 1.2 2007-02-22 17:54:16 dpoulsen Exp $
  */
 
 void InitTextures(void);

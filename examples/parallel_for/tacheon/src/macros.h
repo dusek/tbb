@@ -1,5 +1,5 @@
 /*
-    Copyright 2005-2007 Intel Corporation.  All Rights Reserved.
+    Copyright 2005-2008 Intel Corporation.  All Rights Reserved.
 
     This file is part of Threading Building Blocks.
 
@@ -62,7 +62,7 @@
  * macros.h - This file contains macro versions of functions that would be best 
  * used as inlined code rather than function calls.
  *
- *  $Id: macros.h,v 1.2 2007/02/22 17:54:15 dpoulsen Exp $
+ *  $Id: macros.h,v 1.2 2007-02-22 17:54:15 dpoulsen Exp $
  */
 
 #define MYMAX(a , b) ((a) > (b) ? (a) : (b))

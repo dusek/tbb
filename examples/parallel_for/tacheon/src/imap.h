@@ -1,5 +1,5 @@
 /*
-    Copyright 2005-2007 Intel Corporation.  All Rights Reserved.
+    Copyright 2005-2008 Intel Corporation.  All Rights Reserved.
 
     This file is part of Threading Building Blocks.
 
@@ -61,7 +61,7 @@
 /*
  * imap.h - This file contains defines etc for doing image map type things.  
  *
- *  $Id: imap.h,v 1.2 2007/02/22 17:54:15 dpoulsen Exp $
+ *  $Id: imap.h,v 1.2 2007-02-22 17:54:15 dpoulsen Exp $
  */
 
 void       ResetImage(void);

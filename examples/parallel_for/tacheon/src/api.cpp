@@ -1,5 +1,5 @@
 /*
-    Copyright 2005-2007 Intel Corporation.  All Rights Reserved.
+    Copyright 2005-2008 Intel Corporation.  All Rights Reserved.
 
     This file is part of Threading Building Blocks.
 
@@ -62,7 +62,7 @@
  * api.c - This file contains all of the API calls that are defined for
  *         external driver code to use.  
  * 
- *  $Id: api.cpp,v 1.5 2007/02/22 17:54:14 dpoulsen Exp $
+ *  $Id: api.cpp,v 1.5 2007-02-22 17:54:14 dpoulsen Exp $
  */
 
 #include "machine.h"

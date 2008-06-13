@@ -1,5 +1,5 @@
 /*
-    Copyright 2005-2007 Intel Corporation.  All Rights Reserved.
+    Copyright 2005-2008 Intel Corporation.  All Rights Reserved.
 
     This file is part of Threading Building Blocks.
 
@@ -32,6 +32,7 @@
 #define _SCL_SECURE_NO_DEPRECATE
 #include <stdlib.h>
 #include <iostream>
+#include <iomanip>
 #include <sstream>
 #include <vector>
 #include <string>
@@ -43,13 +44,13 @@
 namespace cfg {
     // convex hull problem parameter defaults
     const long    NP = 5000000; // problem size
-    const size_t SNT = 1;        // minimal number of threads
-    const size_t ENT = 8;        // maximal number of threads
+    const int     SNT = 1;        // minimal number of threads
+    const int     ENT = 8;        // maximal number of threads
 
     // convex hull problem user set parameters
     long   MAXPOINTS         = NP;
-    size_t NUM_THREADS_START = SNT;
-    size_t NUM_THREADS_END   = ENT;
+    int    NUM_THREADS_START = SNT;
+    int    NUM_THREADS_END   = ENT;
 
     // convex hull grain sizes for 3 subproblems. Be sure 16*GS < 512Kb
     const size_t GENERATE_GS = 25000;
@@ -95,9 +96,9 @@ namespace util {
                             cfg::MAXPOINTS = cfg::NP;
                         }
                     } else {
-                        cfg::NUM_THREADS_START=strtol(argv[numArgs], &endptr, 0);
+                        cfg::NUM_THREADS_START=(int)strtol(argv[numArgs], &endptr, 0);
                         if(*endptr==delim) {
-                            cfg::NUM_THREADS_END = strtol(endptr+1, &endptr, 0);
+                            cfg::NUM_THREADS_END = (int)strtol(endptr+1, &endptr, 0);
                         } else {
                             std::cout << " wrong parameter format for Number of Threads" << std::endl;
                             exit(1);
@@ -133,7 +134,7 @@ namespace util {
     };
 
     int random(unsigned int& rseed) {
-#if __linux__ || __APPLE__
+#if __linux__ || __APPLE__ || __FreeBSD__
             return rand_r(&rseed);
 #elif _WIN32
             return rand();
@@ -214,7 +215,7 @@ namespace util {
         return (end-start).seconds();
     }
 
-    void WriteResults(size_t nthreads, double initTime, double calcTime) {
+    void WriteResults(int nthreads, double initTime, double calcTime) {
         if(VERBOSE) {
             std::cout << " Step by step hull constuction:" << std::endl;
             for(size_t i = 0; i < OUTPUT.size(); ++i)
@@ -223,9 +224,9 @@ namespace util {
 
         std::cout
             << "  Number of nodes:" << cfg::MAXPOINTS
-            << "  Number of threads:" << nthreads
-            << "  Initialization time:" << initTime
-            << "  Calculation time:" << calcTime
+            << "  Number of threads:" << nthreads 
+            << "  Initialization time:" << std::setw(10) << std::setprecision(3) << initTime 
+            << "  Calculation time:" << std::setw(10) << std::setprecision(3) << calcTime
             << std::endl;
     }
 };

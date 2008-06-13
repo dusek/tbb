@@ -1,5 +1,5 @@
 /*
-    Copyright 2005-2007 Intel Corporation.  All Rights Reserved.
+    Copyright 2005-2008 Intel Corporation.  All Rights Reserved.
 
     This file is part of Threading Building Blocks.
 
@@ -61,7 +61,7 @@
 /* 
  * render.c - This file contains the main program and driver for the raytracer.
  *
- *  $Id: render.cpp,v 1.5 2007/02/22 18:17:51 amalakho Exp $
+ *  $Id: render.cpp,v 1.5 2007-02-22 18:17:51 amalakho Exp $
  */
 
 #include "machine.h"

@@ -1,5 +1,5 @@
 /*
-    Copyright 2005-2007 Intel Corporation.  All Rights Reserved.
+    Copyright 2005-2008 Intel Corporation.  All Rights Reserved.
 
     This file is part of Threading Building Blocks.
 
@@ -61,7 +61,7 @@
 /* 
  * shade.c - This file contains the functions that perform surface shading.
  *
- *  $Id: shade.cpp,v 1.3 2007/02/22 17:54:16 dpoulsen Exp $
+ *  $Id: shade.cpp,v 1.3 2007-02-22 17:54:16 dpoulsen Exp $
  */
 
 #include "machine.h"

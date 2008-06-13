@@ -1,4 +1,4 @@
-# Copyright 2005-2007 Intel Corporation.  All Rights Reserved.
+# Copyright 2005-2008 Intel Corporation.  All Rights Reserved.
 #
 # This file is part of Threading Building Blocks.
 #
@@ -25,6 +25,13 @@
 # the GNU General Public License.
 
 # This file should be always located and called in $(tbb_root)/examples
+
+# Usage:
+#   make [all] [clean] [release] [debug] [test]
+#      executes specified targets for all examples.
+#   make {example's dir}/{target}
+#      calls specified example with specified target.
+#      For instance: make task/tree_sum/all
 
 tbb_root?=..
 BUILDING_PHASE:=0
@@ -84,16 +91,21 @@ else
 endif
 
 COMMON_TARGETS := all clean release debug test
-EXAMPLES_TARGETS := $(foreach T,$(COMMON_TARGETS),$(addsuffix _target.$(T),$(EXAMPLES)))
+# list of directories of examples
+EXAMPLES_DIRS := $(foreach T,$(EXAMPLES),$(dir $(T)))
+# targets to explicitly call example have format: {example's dir}/{example's target}
+EXAMPLES_TARGETS := $(foreach T,$(COMMON_TARGETS),$(addsuffix $(T),$(EXAMPLES_DIRS)))
 
 .PHONY: $(COMMON_TARGETS) $(EXAMPLES_TARGETS)
 
 .DEFAULT: all
 
-$(COMMON_TARGETS):: % : $(addsuffix _target.%,$(EXAMPLES))
+# execute standard targets for all examples
+$(COMMON_TARGETS):: % : $(addsuffix %,$(EXAMPLES_DIRS))
 
+# proxy rule for calling appropriate example
 $(EXAMPLES_TARGETS)::
-	-$(MAKE) -C $(@D)  -f $(EXAMPLE_MAKEFILE) $(subst .,,$(suffix $@)) CXX="$(CPLUS)"
+	-$(MAKE) -C $(@D)  -f $(EXAMPLE_MAKEFILE) $(notdir $@) CXX="$(CPLUS)"
 
 printenv:
 ifeq ($(tbb_os),windows)

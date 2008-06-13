@@ -1,5 +1,5 @@
 /*
-    Copyright 2005-2007 Intel Corporation.  All Rights Reserved.
+    Copyright 2005-2008 Intel Corporation.  All Rights Reserved.
 
     This file is part of Threading Building Blocks.
 
@@ -29,6 +29,16 @@
 #ifndef __TBB_tbb_stddef_H
 #define __TBB_tbb_stddef_H
 
+// Please define version number here:
+#define TBB_VERSION_MAJOR 2
+#define TBB_VERSION_MINOR 0
+
+#define TBB_INTERFACE_VERSION 3000
+#define TBB_INTERFACE_VERSION_MAJOR TBB_INTERFACE_VERSION/1000
+
+// We do not need defines below for resource processing on windows
+#if !defined RC_INVOKED
+
 // Define groups for Doxygen documentation
 /**
  * @defgroup algorithms         Algorithms
@@ -44,11 +54,42 @@
  * \mainpage Main Page
  *
  * Click the tabs above for information about the
- * <a href="./annotated.html">Classes</a> in the library or the
- * <a href="./modules.html">Modules</a> to which they belong.  The
- * <a href="./files.html">Files</a> tab shows which files contain the library
- * components.
+ * - <a href="./modules.html">Modules</a> (groups of functionality) implemented by the library 
+ * - <a href="./annotated.html">Classes</a> provided by the library
+ * - <a href="./files.html">Files</a> constituting the library.
+ * .
+ * Please note that significant part of TBB functionality is implemented in the form of
+ * template functions, descriptions of which are not accessible on the <a href="./annotated.html">Classes</a>
+ * tab. Use <a href="./modules.html">Modules</a> or <a href="./namespacemembers.html">Namespace/Namespace Members</a>
+ * tabs to find them.
+ *
+ * Additional pieces of information can be found here
+ * - \subpage concepts
+ * .
  */
+
+/** \page concepts TBB concepts
+    
+    A concept is a set of requirements to a type, which are necessary and sufficient
+    for the type to model a particular behavior or a set of behaviors. Some concepts 
+    are specific to a particular algorithm (e.g. algorithm body), while other ones 
+    are common to several algorithms (e.g. range concept). 
+
+    All TBB algorithms make use of different classes implementing various concepts.
+    Implementation classes are supplied by the user as type arguments of template 
+    parameters and/or as objects passed as function call arguments. The library 
+    provides predefined  implementations of some concepts (e.g. several kinds of 
+    \ref range_req "ranges"), while other ones must always be implemented by the user. 
+    
+    TBB defines a set of minimal requirements each concept must conform to. Here is 
+    the list of different concepts hyperlinked to the corresponding requirements specifications:
+    - \subpage range_req
+    - \subpage parallel_do_body_req
+    - \subpage parallel_for_body_req
+    - \subpage parallel_reduce_body_req
+    - \subpage parallel_scan_body_req
+    - \subpage parallel_sort_iter_req
+**/
 
 // Define preprocessor symbols used to determine architecture
 #if _WIN32||_WIN64
@@ -119,7 +160,7 @@ namespace tbb {
 //! The namespace tbb contains all components of the library.
 namespace tbb {
 
-//! Dummy type that distinguishs splitting constructor from copy constructor.
+//! Dummy type that distinguishes splitting constructor from copy constructor.
 /**
  * See description of parallel_for and parallel_reduce for example usages.
  * @ingroup algorithms
@@ -171,4 +212,13 @@ public:
 
 } // tbb
 
+#ifndef __TBB_EXCEPTIONS
+#define __TBB_EXCEPTIONS 0
+#endif /* __TBB_EXCEPTIONS */
+
+#ifndef __TBB_SCHEDULER_OBSERVER
+#define __TBB_SCHEDULER_OBSERVER 1
+#endif /* __TBB_SCHEDULER_OBSERVER */
+
+#endif /* RC_INVOKED */
 #endif /* __TBB_tbb_stddef_H */

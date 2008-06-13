@@ -1,5 +1,5 @@
 /*
-    Copyright 2005-2007 Intel Corporation.  All Rights Reserved.
+    Copyright 2005-2008 Intel Corporation.  All Rights Reserved.
 
     This file is part of Threading Building Blocks.
 
@@ -62,7 +62,7 @@
  * trace.c - This file contains the functions for firing primary rays
  *           and handling subsequent calculations
  *
- *   $Id: trace_rest.cpp,v 1.4 2007/02/22 17:54:16 dpoulsen Exp $
+ *   $Id: trace_rest.cpp,v 1.4 2007-02-22 17:54:16 dpoulsen Exp $
  */
 
 #include "machine.h"

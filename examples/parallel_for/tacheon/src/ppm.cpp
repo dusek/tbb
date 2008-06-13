@@ -1,5 +1,5 @@
 /*
-    Copyright 2005-2007 Intel Corporation.  All Rights Reserved.
+    Copyright 2005-2008 Intel Corporation.  All Rights Reserved.
 
     This file is part of Threading Building Blocks.
 
@@ -61,7 +61,7 @@
 /*
  *  ppm.c - This file deals with PPM format image files (reading/writing)
  *
- *  $Id: ppm.cpp,v 1.2 2007/02/22 17:54:16 dpoulsen Exp $
+ *  $Id: ppm.cpp,v 1.2 2007-02-22 17:54:16 dpoulsen Exp $
  */ 
 
 /* For our puposes, we're interested only in the 3 byte per pixel 24 bit

@@ -1,5 +1,5 @@
 /*
-    Copyright 2005-2007 Intel Corporation.  All Rights Reserved.
+    Copyright 2005-2008 Intel Corporation.  All Rights Reserved.
 
     This file is part of Threading Building Blocks.
 
@@ -30,9 +30,7 @@
 #error Do not include this file directly; include tbb_machine.h instead
 #endif
 
-#include <stdint.h>
-#include <unistd.h>
-#include <sched.h>
+#include "linux_common.h"
 
 #define __TBB_WORDSIZE 4
 #define __TBB_BIG_ENDIAN 0
@@ -171,17 +169,17 @@ inline void __TBB_machine_store_with_release(volatile T &location, V value) {
 #define __TBB_CompareAndSwap2(P,V,C) __TBB_machine_cmpswp2(P,V,C)
 #define __TBB_CompareAndSwap4(P,V,C) __TBB_machine_cmpswp4(P,V,C)
 #define __TBB_CompareAndSwap8(P,V,C) __TBB_machine_cmpswp8(P,V,C)
-#define __TBB_CompareAndSwapW(P,V,C)  __TBB_machine_cmpswp4(P,V,C)
+#define __TBB_CompareAndSwapW(P,V,C) __TBB_machine_cmpswp4(P,V,C)
 
 #define __TBB_FetchAndAdd1(P,V) __TBB_machine_fetchadd1(P,V)
 #define __TBB_FetchAndAdd2(P,V) __TBB_machine_fetchadd2(P,V)
 #define __TBB_FetchAndAdd4(P,V) __TBB_machine_fetchadd4(P,V)
-#define __TBB_FetchAndAddW(P,V)  __TBB_machine_fetchadd4(P,V)
+#define __TBB_FetchAndAddW(P,V) __TBB_machine_fetchadd4(P,V)
 
 #define __TBB_FetchAndStore1(P,V) __TBB_machine_fetchstore1(P,V)
 #define __TBB_FetchAndStore2(P,V) __TBB_machine_fetchstore2(P,V)
 #define __TBB_FetchAndStore4(P,V) __TBB_machine_fetchstore4(P,V)
-#define __TBB_FetchAndStoreW(P,V)  __TBB_machine_fetchstore4(P,V)
+#define __TBB_FetchAndStoreW(P,V) __TBB_machine_fetchstore4(P,V)
 
 #define __TBB_Store8(P,V) __TBB_machine_store8(P,V)
 #define __TBB_Load8(P)    __TBB_machine_load8(P)
@@ -194,9 +192,8 @@ inline void __TBB_machine_store_with_release(volatile T &location, V value) {
 #undef __TBB_FetchAndStore8
 
 // Definition of other functions
-#define __TBB_Yield()  sched_yield()
 #define __TBB_Pause(V) __TBB_machine_pause(V)
-#define __TBB_Log2(V)    __TBB_machine_lg(V)
+#define __TBB_Log2(V)  __TBB_machine_lg(V)
 
 // Special atomic functions
 #define __TBB_FetchAndAddWrelease(P,V) __TBB_FetchAndAddW(P,V)
