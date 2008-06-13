@@ -40,6 +40,7 @@
 #include "tbb/mutex.h"
 #include "tbb/spin_mutex.h"
 #include "polyover.h"
+#include "polymain.h"
 #include "pover_video.h"
 
 using namespace std;
@@ -69,7 +70,7 @@ void OverlayOnePolygonWithMap(Polygon_map_t *resultMap, RPolygon *myPoly, Polygo
             myr = r1 + r2;
             myg = g1 + g2;
             myb = b1 + b2;
-            pnew = new RPolygon(newxMin, newyMin, newxMax, newyMax, myr, myg, myb);
+            pnew = RPolygon::alloc_RPolygon(newxMin, newyMin, newxMax, newyMax, myr, myg, myb);
             p1Area -= pnew->area(); // when all the area of the polygon is accounted for, we can quit.
             if(rMutex) {
                 tbb::spin_mutex::scoped_lock lock(*rMutex);
@@ -103,7 +104,7 @@ void SerialOverlayMaps(Polygon_map_t **resultMap, Polygon_map_t *map1, Polygon_m
     p0->get(&ignore1, &ignore2, &mapxSize, &mapySize);
     (*resultMap)->reserve(mapxSize*mapySize); // can't be any bigger than this
     // push the map size as the first polygon,
-    p0 = new RPolygon(0,0,mapxSize, mapySize);
+    p0 = RPolygon::alloc_RPolygon(0,0,mapxSize, mapySize);
     (*resultMap)->push_back(p0);
     for(unsigned int i=1; i < map1->size(); i++) {
         RPolygon *p1 = (*map1)[i];
@@ -140,44 +141,39 @@ public:
 * @param[in] polymap1 first map to be applied (algorithm is parallel on this map)
 * @param[in] polymap2 second map.
 */
-void NaiveParallelOverlay(Polygon_map_t **result_map, Polygon_map_t *polymap1, Polygon_map_t *polymap2) {
+void NaiveParallelOverlay(Polygon_map_t *&result_map, Polygon_map_t &polymap1, Polygon_map_t &polymap2) {
 // -----------------------------------
-    int nthreads;
     bool automatic_threadcount = false;
-    double naiveParallelTime;
-    tbb::tick_count t0, t1;
 
-    tbb::spin_mutex *resultMutex;
     if(gThreadsLow == THREADS_UNSET || gThreadsLow == tbb::task_scheduler_init::automatic) {
         gThreadsLow = gThreadsHigh = tbb::task_scheduler_init::automatic;
         automatic_threadcount = true;
     }
-    *result_map = new Polygon_map_t;
+    result_map = new Polygon_map_t;
 
-    RPolygon *p0 = (*polymap1)[0];
+    RPolygon *p0 = polymap1[0];
     int mapxSize, mapySize, ignore1, ignore2;
     p0->get(&ignore1, &ignore2, &mapxSize, &mapySize);
-    (*result_map)->reserve(mapxSize*mapySize); // can't be any bigger than this
+    result_map->reserve(mapxSize*mapySize); // can't be any bigger than this
     // push the map size as the first polygon,
-    resultMutex = new tbb::spin_mutex();
-    int grain_size;
-    grain_size = gGrainSize;
+    tbb::spin_mutex *resultMutex = new tbb::spin_mutex();
+    int grain_size = gGrainSize;
 
-    for(nthreads = gThreadsLow; nthreads <= gThreadsHigh; nthreads++) {
+    for(int nthreads = gThreadsLow; nthreads <= gThreadsHigh; nthreads++) {
         tbb::task_scheduler_init init(nthreads);
         if(gIsGraphicalVersion) {
-            RPolygon *xp = new RPolygon(0, 0, gMapXSize-1, gMapYSize-1, 0, 0, 0);  // Clear the output space
-            delete xp;
+            RPolygon *xp = RPolygon::alloc_RPolygon(0, 0, gMapXSize-1, gMapYSize-1, 0, 0, 0);  // Clear the output space
+            RPolygon::free_RPolygon( xp );
         }
         // put size polygon in result map
-        p0 = new RPolygon(0,0,mapxSize, mapySize);
-        (*result_map)->push_back(p0);
+        p0 = RPolygon::alloc_RPolygon(0,0,mapxSize, mapySize);
+        result_map->push_back(p0);
 
-        t0 = tbb::tick_count::now();
-        tbb::parallel_for (tbb::blocked_range<int>(1,(int)(polymap1->size()),grain_size), ApplyOverlay((*result_map), polymap1, polymap2, resultMutex));
-        t1 = tbb::tick_count::now();
+        tbb::tick_count t0 = tbb::tick_count::now();
+        tbb::parallel_for (tbb::blocked_range<int>(1,(int)(polymap1.size()),grain_size), ApplyOverlay(result_map, &polymap1, &polymap2, resultMutex));
+        tbb::tick_count t1 = tbb::tick_count::now();
 
-        naiveParallelTime = (t1-t0).seconds() * 1000;
+        double naiveParallelTime = (t1-t0).seconds() * 1000;
         cout << "Naive parallel with spin lock and ";
         if(automatic_threadcount) cout << "automatic";
         else cout << nthreads;
@@ -186,10 +182,14 @@ void NaiveParallelOverlay(Polygon_map_t **result_map, Polygon_map_t *polymap1, P
         if(gCsvFile.is_open()) {
             gCsvFile << "," << naiveParallelTime;
         }
-        for(int i=0; i<int((*result_map)->size());i++) {
-            delete ((*result_map)->at(i));
+#if _DEBUG
+        CheckPolygonMap(result_map);
+        ComparePolygonMaps(result_map, gResultMap);
+#endif
+        for(int i=0; i<int(result_map->size());i++) {
+            RPolygon::free_RPolygon(result_map->at(i));
         }
-        (*result_map)->clear();
+        result_map->clear();
     }
     if(gCsvFile.is_open()) {
         gCsvFile << std::endl;
@@ -244,7 +244,7 @@ public:
         int myb=-1;
         int i1, i2, i3, yMapSize;
         m_map1->at(0)->get(&i1, &i2, &i3, &yMapSize);
-        RPolygon *slicePolygon = new RPolygon(r.begin(), 0, r.end() - 1, yMapSize);
+        RPolygon *slicePolygon = RPolygon::alloc_RPolygon(r.begin(), 0, r.end() - 1, yMapSize);
 
         Flagged_map_t *fmap1, *fmap2;
         fmap1 = new std::vector<RPolygon_flagged>;
@@ -314,7 +314,7 @@ public:
                         myr = r1 + r2;
                         myg = g1 + g2;
                         myb = b1 + b2;
-                        RPolygon *pnew = new RPolygon(xl, yl, xh, yh, myr, myg, myb);
+                        RPolygon *pnew = RPolygon::alloc_RPolygon(xl, yl, xh, yh, myr, myg, myb);
 #ifdef _DEBUG
 #else
                         tbb::spin_mutex::scoped_lock lock(*m_rMutex);
@@ -364,17 +364,17 @@ void SplitParallelOverlay(Polygon_map_t **result_map, Polygon_map_t *polymap1, P
 #ifdef _DEBUG
     grain_size = gMapXSize / 4;
 #else
-    grain_size = 30;
+    grain_size = gGrainSize;
 #endif
 
     for(nthreads = gThreadsLow; nthreads <= gThreadsHigh; nthreads++) {
         tbb::task_scheduler_init init(nthreads);
         if(gIsGraphicalVersion) {
-            RPolygon *xp = new RPolygon(0, 0, gMapXSize-1, gMapYSize-1, 0, 0, 0);  // Clear the output space
-            delete xp;
+            RPolygon *xp = RPolygon::alloc_RPolygon(0, 0, gMapXSize-1, gMapYSize-1, 0, 0, 0);  // Clear the output space
+            RPolygon::free_RPolygon( xp );
         }
         // push the map size as the first polygon,
-        p0 = new RPolygon(0,0,mapxSize, mapySize);
+        p0 = RPolygon::alloc_RPolygon(0,0,mapxSize, mapySize);
         (*result_map)->push_back(p0);
         t0 = tbb::tick_count::now();
         tbb::parallel_for (tbb::blocked_range<int>(0,(int)(mapxSize+1),grain_size), ApplySplitOverlay((*result_map), polymap1, polymap2, resultMutex));
@@ -388,8 +388,12 @@ void SplitParallelOverlay(Polygon_map_t **result_map, Polygon_map_t *polymap1, P
         if(gCsvFile.is_open()) {
             gCsvFile << "," << domainSplitParallelTime;
         }
+#if _DEBUG
+        CheckPolygonMap(*result_map);
+        ComparePolygonMaps(*result_map, gResultMap);
+#endif
         for(int i=0; i<int((*result_map)->size());i++) {
-            delete ((*result_map)->at(i));
+            RPolygon::free_RPolygon((*result_map)->at(i));
         }
         (*result_map)->clear();
 

@@ -75,9 +75,9 @@ DEFINE int gMapXSize INIT(30);
 DEFINE int gMapYSize INIT(30);
 DEFINE int gGrainSize INIT(5);
 #else
-DEFINE int gNPolygons INIT(2000);    // default number of polygons in map
-DEFINE int gMapXSize INIT(100);
-DEFINE int gMapYSize INIT(100);
+DEFINE int gNPolygons INIT(50000);    // default number of polygons in map
+DEFINE int gMapXSize INIT(1000);
+DEFINE int gMapYSize INIT(1000);
 DEFINE int gGrainSize INIT(20);
 #endif
 DEFINE int gMyRandomSeed INIT(2453185);

@@ -32,6 +32,7 @@
 #include "tbb/task.h"
 #include "tbb/atomic.h"
 #include "tbb/parallel_for.h"
+#include "tbb/parallel_reduce.h"
 #include "tbb/blocked_range.h"
 
 #include <cmath>
@@ -298,7 +299,7 @@ public:
         ++g_cur_executed;
 //        util::sleep(1); // Give other threads a chance to steal their first tasks
         __TBB_Yield();
-        tbb::parallel_for( tbb::blocked_range<size_t>(0, NESTED_RANGE, NESTED_GRAIN), simple_pfor_body(), ctx );
+        tbb::parallel_for( tbb::blocked_range<size_t>(0, NESTED_RANGE, NESTED_GRAIN), simple_pfor_body(), tbb::simple_partitioner(), ctx );
     }
 };
 
@@ -335,7 +336,7 @@ public:
         tbb::task_group_context ctx(tbb::task_group_context::isolated);
         ++g_cur_executed;
         TRY();
-            tbb::parallel_for( tbb::blocked_range<size_t>(0, NESTED_RANGE, NESTED_GRAIN), simple_pfor_body(), ctx );
+            tbb::parallel_for( tbb::blocked_range<size_t>(0, NESTED_RANGE, NESTED_GRAIN), simple_pfor_body(), tbb::simple_partitioner(), ctx );
         CATCH();
     }
 };
@@ -413,7 +414,7 @@ class my_worker_task : public tbb::task
     tbb::task_group_context &my_ctx;
 
     tbb::task* execute () {
-        tbb::parallel_for( range_type(0, ITER_RANGE, ITER_GRAIN), B(), my_ctx );
+        tbb::parallel_for( range_type(0, ITER_RANGE, ITER_GRAIN), B(), tbb::simple_partitioner(), my_ctx );
         return NULL;
     }
 public:
@@ -487,19 +488,83 @@ void Test6 () {
     ASSERT (g_cur_executed <= g_catch_executed, "Some tasks were executed after cancellation");
 } // void Test6 ()
 
+////////////////////////////////////////////////////////////////////////////////
+// Regression test based on the contribution by the author of the following forum post:
+// http://softwarecommunity.intel.com/isn/Community/en-US/forums/thread/30254959.aspx
 
-void TestExceptionHandling ()
-{
+#define LOOP_COUNT 16
+#define MAX_NESTING 3
+#define REDUCE_RANGE 1024 
+#define REDUCE_GRAIN 256
+
+class my_worker_t {
+public:
+    void doit (int & result, int nest);
+};
+
+class reduce_test_body_t {
+    my_worker_t * my_shared_worker;
+    int my_nesting_level;
+    int my_result;
+public:
+    reduce_test_body_t ( reduce_test_body_t& src, tbb::split )
+        : my_shared_worker(src.my_shared_worker)
+        , my_nesting_level(src.my_nesting_level)
+        , my_result(0)
+    {}
+    reduce_test_body_t ( my_worker_t *w, int nesting )
+        : my_shared_worker(w)
+        , my_nesting_level(nesting)
+        , my_result(0)
+    {}
+
+    void operator() ( const tbb::blocked_range<size_t>& r ) {
+        for (size_t i = r.begin (); i != r.end (); ++i) {
+            int result = 0;
+            my_shared_worker->doit (result, my_nesting_level);
+            my_result += result;
+        }
+    }
+    void join (const reduce_test_body_t & x) {
+        my_result += x.my_result;
+    }
+    int result () { return my_result; }
+};
+
+void my_worker_t::doit ( int& result, int nest ) {
+    ++nest;
+    if ( nest < MAX_NESTING ) {
+        reduce_test_body_t rt (this, nest);
+        tbb::parallel_reduce (tbb::blocked_range<size_t>(0, REDUCE_RANGE, REDUCE_GRAIN), rt);
+        result = rt.result ();
+    }
+    else
+        ++result;
+}
+
+//! Regression test for hanging that occurred with the first version of cancellation propagation
+void Test7 () {
+    TRACEP ("");
+    my_worker_t w;
+    int result = 0;
+    w.doit (result, 0);
+    ASSERT ( result == 1048576, "Wrong calculation result");
+}
+
+void RunTests () {
     TRACE ("Number of threads %d", g_num_threads);
     tbb::task_scheduler_init init (g_num_threads);
     g_master = util::get_my_tid();
     
     Test0();
+#if !(__GLIBC__==2&&__GLIBC_MINOR__==3)
     Test1();
     Test3();
     Test4();
+#endif
     Test5();
     Test6();
+    Test7();
 }
 
 #endif /* __TBB_EXCEPTIONS */
@@ -525,11 +590,14 @@ int main(int argc, char* argv[]) {
         for ( size_t j = 0; j < 4; ++j ) {
             g_exception_in_master = (j & 1) == 1;
             g_solitary_exception = (j & 2) == 1;
-            TestExceptionHandling();
+            RunTests();
         }
     }
+#if __GLIBC__==2&&__GLIBC_MINOR__==3
+    printf("Warning: Exception handling tests are skipped due to a known issue.\n");
+#endif // workaround
     printf("done\n");
-#else
+#else  /* __TBB_EXCEPTIONS */
     printf("skipped\n");
 #endif /* __TBB_EXCEPTIONS */
     return 0;

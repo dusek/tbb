@@ -65,7 +65,7 @@
 			/>
 			<Tool
 				Name="VCLinkerTool"
-				AdditionalDependencies="tbb_debug.lib"
+				AdditionalDependencies="tbb_debug.lib tbbmalloc_debug.lib"
 				LinkIncremental="1"
 				AdditionalLibraryDirectories="&quot;$(TBB21_INSTALL_DIR)\ia32\vc8\lib&quot;"
 				GenerateDebugInformation="true"
@@ -96,8 +96,90 @@
 			/>
 			<Tool
 				Name="VCPostBuildEventTool"
-				Description="Copying tbb_debug.dll"
-				CommandLine="copy &quot;$(TBB21_INSTALL_DIR)\ia32\vc8\bin\tbb_debug.dll&quot; &quot;$(OutDir)&quot;"
+				Description="Copying tbb_debug.dll and tbbmalloc_debug.dll"
+				CommandLine="copy &quot;$(TBB21_INSTALL_DIR)\ia32\vc8\bin\tbb_debug.dll&quot; &quot;$(OutDir)&quot;&#x0D;&#x0A;copy &quot;$(TBB21_INSTALL_DIR)\ia32\vc8\bin\tbbmalloc_debug.dll&quot; &quot;$(OutDir)&quot;"
+			/>
+		</Configuration>
+		<Configuration
+			Name="Debug|x64"
+			OutputDirectory="$(TEMP)\tbb_examples\$(PlatformName)\$(ConfigurationName)"
+			IntermediateDirectory="$(TEMP)\tbb_examples\$(SolutionName)\$(PlatformName)\$(ConfigurationName)"
+			ConfigurationType="1"
+			CharacterSet="2"
+			WholeProgramOptimization="1"
+			>
+			<Tool
+				Name="VCPreBuildEventTool"
+			/>
+			<Tool
+				Name="VCCustomBuildTool"
+			/>
+			<Tool
+				Name="VCXMLDataGeneratorTool"
+			/>
+			<Tool
+				Name="VCWebServiceProxyGeneratorTool"
+			/>
+			<Tool
+				Name="VCMIDLTool"
+				TargetEnvironment="3"
+			/>
+			<Tool
+				Name="VCCLCompilerTool"
+				Optimization="0"
+				OmitFramePointers="true"
+				WholeProgramOptimization="true"
+				AdditionalIncludeDirectories="&quot;$(TBB21_INSTALL_DIR)\include&quot;"
+				PreprocessorDefinitions="WIN64;_DEBUG;_WINDOWS;TBB_DO_ASSERT"
+				RuntimeLibrary="3"
+				EnableFunctionLevelLinking="true"
+				UsePrecompiledHeader="0"
+				DebugInformationFormat="3"
+			/>
+			<Tool
+				Name="VCManagedResourceCompilerTool"
+			/>
+			<Tool
+				Name="VCResourceCompilerTool"
+			/>
+			<Tool
+				Name="VCPreLinkEventTool"
+			/>
+			<Tool
+				Name="VCLinkerTool"
+				AdditionalDependencies="tbb_debug.lib tbbmalloc_debug.lib"
+				LinkIncremental="1"
+				AdditionalLibraryDirectories="&quot;$(TBB21_INSTALL_DIR)\em64t\vc8\lib&quot;"
+				GenerateDebugInformation="true"
+				SubSystem="2"
+				TargetMachine="17"
+				FixedBaseAddress="1"
+			/>
+			<Tool
+				Name="VCALinkTool"
+			/>
+			<Tool
+				Name="VCManifestTool"
+			/>
+			<Tool
+				Name="VCXDCMakeTool"
+			/>
+			<Tool
+				Name="VCBscMakeTool"
+			/>
+			<Tool
+				Name="VCFxCopTool"
+			/>
+			<Tool
+				Name="VCAppVerifierTool"
+			/>
+			<Tool
+				Name="VCWebDeploymentTool"
+			/>
+			<Tool
+				Name="VCPostBuildEventTool"
+				Description="Copying tbb_debug.dll and tbbmalloc_debug.dll"
+				CommandLine="copy &quot;$(TBB21_INSTALL_DIR)\em64t\vc8\bin\tbb_debug.dll&quot; &quot;$(OutDir)&quot;&#x0D;&#x0A;copy &quot;$(TBB21_INSTALL_DIR)\em64t\vc8\bin\tbbmalloc_debug.dll&quot; &quot;$(OutDir)&quot;"
 			/>
 		</Configuration>
 		<Configuration
@@ -147,7 +229,7 @@
 			/>
 			<Tool
 				Name="VCLinkerTool"
-				AdditionalDependencies="tbb.lib"
+				AdditionalDependencies="tbb.lib tbbmalloc.lib"
 				LinkIncremental="1"
 				AdditionalLibraryDirectories="&quot;$(TBB21_INSTALL_DIR)\ia32\vc8\lib&quot;"
 				SubSystem="2"
@@ -179,8 +261,91 @@
 			/>
 			<Tool
 				Name="VCPostBuildEventTool"
-				Description="Copying tbb.dll"
-				CommandLine="copy &quot;$(TBB21_INSTALL_DIR)\ia32\vc8\bin\tbb.dll&quot; &quot;$(OutDir)&quot;"
+				Description="Copying tbb.dll and tbbmalloc.dll"
+				CommandLine="copy &quot;$(TBB21_INSTALL_DIR)\ia32\vc8\bin\tbb.dll&quot; &quot;$(OutDir)&quot;&#x0D;&#x0A;copy &quot;$(TBB21_INSTALL_DIR)\ia32\vc8\bin\tbbmalloc.dll&quot; &quot;$(OutDir)&quot;"
+			/>
+		</Configuration>
+		<Configuration
+			Name="Release|x64"
+			OutputDirectory="$(TEMP)\tbb_examples\$(PlatformName)\$(ConfigurationName)"
+			IntermediateDirectory="$(TEMP)\tbb_examples\$(SolutionName)\$(PlatformName)\$(ConfigurationName)"
+			ConfigurationType="1"
+			CharacterSet="2"
+			WholeProgramOptimization="1"
+			>
+			<Tool
+				Name="VCPreBuildEventTool"
+			/>
+			<Tool
+				Name="VCCustomBuildTool"
+			/>
+			<Tool
+				Name="VCXMLDataGeneratorTool"
+			/>
+			<Tool
+				Name="VCWebServiceProxyGeneratorTool"
+			/>
+			<Tool
+				Name="VCMIDLTool"
+				TargetEnvironment="3"
+			/>
+			<Tool
+				Name="VCCLCompilerTool"
+				Optimization="2"
+				FavorSizeOrSpeed="1"
+				OmitFramePointers="true"
+				WholeProgramOptimization="true"
+				AdditionalIncludeDirectories="&quot;$(TBB21_INSTALL_DIR)\include&quot;"
+				PreprocessorDefinitions="WIN64;NDEBUG;_WINDOWS"
+				RuntimeLibrary="2"
+				EnableFunctionLevelLinking="true"
+				UsePrecompiledHeader="0"
+			/>
+			<Tool
+				Name="VCManagedResourceCompilerTool"
+			/>
+			<Tool
+				Name="VCResourceCompilerTool"
+			/>
+			<Tool
+				Name="VCPreLinkEventTool"
+			/>
+			<Tool
+				Name="VCLinkerTool"
+				AdditionalDependencies="tbb.lib tbbmalloc.lib"
+				LinkIncremental="1"
+				AdditionalLibraryDirectories="&quot;$(TBB21_INSTALL_DIR)\em64t\vc8\lib&quot;"
+				SubSystem="2"
+				OptimizeReferences="2"
+				EnableCOMDATFolding="2"
+				TargetMachine="17"
+				FixedBaseAddress="1"
+			/>
+			<Tool
+				Name="VCALinkTool"
+			/>
+			<Tool
+				Name="VCManifestTool"
+			/>
+			<Tool
+				Name="VCXDCMakeTool"
+			/>
+			<Tool
+				Name="VCBscMakeTool"
+			/>
+			<Tool
+				Name="VCFxCopTool"
+			/>
+			<Tool
+				Name="VCAppVerifierTool"
+			/>
+			<Tool
+				Name="VCWebDeploymentTool"
+			/>
+			<Tool
+				Name="VCPostBuildEventTool"
+				Description="Copying tbb.dll and tbbmalloc.dll"
+				CommandLine="copy &quot;$(TBB21_INSTALL_DIR)\em64t\vc8\bin\tbb.dll&quot; &quot;$(OutDir)&quot;&#x0D;&#x0A;copy &quot;$(TBB21_INSTALL_DIR)\em64t\vc8\bin\tbbmalloc.dll&quot; &quot;$(OutDir)&quot;"
 			/>
 		</Configuration>
 		<Configuration
@@ -231,7 +396,7 @@
 			/>
 			<Tool
 				Name="VCLinkerTool"
-				AdditionalDependencies="tbb.lib"
+				AdditionalDependencies="tbb.lib tbbmalloc.lib"
 				LinkIncremental="1"
 				AdditionalLibraryDirectories="&quot;$(TBB21_INSTALL_DIR)\ia32\vc8\lib&quot;;&quot;$(DXSDK_DIR)\lib\x86&quot;"
 				SubSystem="2"
@@ -263,256 +428,8 @@
 			/>
 			<Tool
 				Name="VCPostBuildEventTool"
-				Description="Copying tbb.dll"
-				CommandLine="copy &quot;$(TBB21_INSTALL_DIR)\ia32\vc8\bin\tbb.dll&quot; &quot;$(OutDir)&quot;"
-			/>
-		</Configuration>
-		<Configuration
-			Name="DD Debug|Win32"
-			OutputDirectory="$(TEMP)\tbb_examples\$(ConfigurationName)"
-			IntermediateDirectory="$(TEMP)\tbb_examples\$(SolutionName)\$(ConfigurationName)"
-			ConfigurationType="1"
-			CharacterSet="2"
-			WholeProgramOptimization="1"
-			>
-			<Tool
-				Name="VCPreBuildEventTool"
-				CommandLine="..\..\..\common\gui\dxcheck.bat"
-			/>
-			<Tool
-				Name="VCCustomBuildTool"
-			/>
-			<Tool
-				Name="VCXMLDataGeneratorTool"
-			/>
-			<Tool
-				Name="VCWebServiceProxyGeneratorTool"
-			/>
-			<Tool
-				Name="VCMIDLTool"
-			/>
-			<Tool
-				Name="VCCLCompilerTool"
-				Optimization="0"
-				OmitFramePointers="true"
-				WholeProgramOptimization="true"
-				AdditionalIncludeDirectories="&quot;$(TBB21_INSTALL_DIR)\include&quot;;&quot;$(DXSDK_DIR)\include&quot;"
-				PreprocessorDefinitions="WIN32;_DEBUG;_WINDOWS;TBB_DO_ASSERT"
-				RuntimeLibrary="3"
-				EnableFunctionLevelLinking="true"
-				UsePrecompiledHeader="0"
-				Detect64BitPortabilityProblems="true"
-				DebugInformationFormat="3"
-			/>
-			<Tool
-				Name="VCManagedResourceCompilerTool"
-			/>
-			<Tool
-				Name="VCResourceCompilerTool"
-			/>
-			<Tool
-				Name="VCPreLinkEventTool"
-			/>
-			<Tool
-				Name="VCLinkerTool"
-				AdditionalDependencies="tbb_debug.lib"
-				LinkIncremental="1"
-				AdditionalLibraryDirectories="&quot;$(TBB21_INSTALL_DIR)\ia32\vc8\lib&quot;;&quot;$(DXSDK_DIR)\lib\x86&quot;"
-				GenerateDebugInformation="true"
-				SubSystem="2"
-				TargetMachine="1"
-				FixedBaseAddress="1"
-			/>
-			<Tool
-				Name="VCALinkTool"
-			/>
-			<Tool
-				Name="VCManifestTool"
-			/>
-			<Tool
-				Name="VCXDCMakeTool"
-			/>
-			<Tool
-				Name="VCBscMakeTool"
-			/>
-			<Tool
-				Name="VCFxCopTool"
-			/>
-			<Tool
-				Name="VCAppVerifierTool"
-			/>
-			<Tool
-				Name="VCWebDeploymentTool"
-			/>
-			<Tool
-				Name="VCPostBuildEventTool"
-				Description="Copying tbb_debug.dll"
-				CommandLine="copy &quot;$(TBB21_INSTALL_DIR)\ia32\vc8\bin\tbb_debug.dll&quot; &quot;$(OutDir)&quot;"
-			/>
-		</Configuration>
-		<Configuration
-			Name="Debug|x64"
-			OutputDirectory="$(TEMP)\tbb_examples\$(PlatformName)\$(ConfigurationName)"
-			IntermediateDirectory="$(TEMP)\tbb_examples\$(SolutionName)\$(PlatformName)\$(ConfigurationName)"
-			ConfigurationType="1"
-			CharacterSet="2"
-			WholeProgramOptimization="1"
-			>
-			<Tool
-				Name="VCPreBuildEventTool"
-			/>
-			<Tool
-				Name="VCCustomBuildTool"
-			/>
-			<Tool
-				Name="VCXMLDataGeneratorTool"
-			/>
-			<Tool
-				Name="VCWebServiceProxyGeneratorTool"
-			/>
-			<Tool
-				Name="VCMIDLTool"
-				TargetEnvironment="3"
-			/>
-			<Tool
-				Name="VCCLCompilerTool"
-				Optimization="0"
-				OmitFramePointers="true"
-				WholeProgramOptimization="true"
-				AdditionalIncludeDirectories="&quot;$(TBB21_INSTALL_DIR)\include&quot;"
-				PreprocessorDefinitions="WIN64;_DEBUG;_WINDOWS;TBB_DO_ASSERT"
-				RuntimeLibrary="3"
-				EnableFunctionLevelLinking="true"
-				UsePrecompiledHeader="0"
-				DebugInformationFormat="3"
-			/>
-			<Tool
-				Name="VCManagedResourceCompilerTool"
-			/>
-			<Tool
-				Name="VCResourceCompilerTool"
-			/>
-			<Tool
-				Name="VCPreLinkEventTool"
-			/>
-			<Tool
-				Name="VCLinkerTool"
-				AdditionalDependencies="tbb_debug.lib"
-				LinkIncremental="1"
-				AdditionalLibraryDirectories="&quot;$(TBB21_INSTALL_DIR)\em64t\vc8\lib&quot;"
-				GenerateDebugInformation="true"
-				SubSystem="2"
-				TargetMachine="17"
-				FixedBaseAddress="1"
-			/>
-			<Tool
-				Name="VCALinkTool"
-			/>
-			<Tool
-				Name="VCManifestTool"
-			/>
-			<Tool
-				Name="VCXDCMakeTool"
-			/>
-			<Tool
-				Name="VCBscMakeTool"
-			/>
-			<Tool
-				Name="VCFxCopTool"
-			/>
-			<Tool
-				Name="VCAppVerifierTool"
-			/>
-			<Tool
-				Name="VCWebDeploymentTool"
-			/>
-			<Tool
-				Name="VCPostBuildEventTool"
-				Description="Copying tbb_debug.dll"
-				CommandLine="copy &quot;$(TBB21_INSTALL_DIR)\em64t\vc8\bin\tbb_debug.dll&quot; &quot;$(OutDir)&quot;"
-			/>
-		</Configuration>
-		<Configuration
-			Name="Release|x64"
-			OutputDirectory="$(TEMP)\tbb_examples\$(PlatformName)\$(ConfigurationName)"
-			IntermediateDirectory="$(TEMP)\tbb_examples\$(SolutionName)\$(PlatformName)\$(ConfigurationName)"
-			ConfigurationType="1"
-			CharacterSet="2"
-			WholeProgramOptimization="1"
-			>
-			<Tool
-				Name="VCPreBuildEventTool"
-			/>
-			<Tool
-				Name="VCCustomBuildTool"
-			/>
-			<Tool
-				Name="VCXMLDataGeneratorTool"
-			/>
-			<Tool
-				Name="VCWebServiceProxyGeneratorTool"
-			/>
-			<Tool
-				Name="VCMIDLTool"
-				TargetEnvironment="3"
-			/>
-			<Tool
-				Name="VCCLCompilerTool"
-				Optimization="2"
-				FavorSizeOrSpeed="1"
-				OmitFramePointers="true"
-				WholeProgramOptimization="true"
-				AdditionalIncludeDirectories="&quot;$(TBB21_INSTALL_DIR)\include&quot;"
-				PreprocessorDefinitions="WIN64;NDEBUG;_WINDOWS"
-				RuntimeLibrary="2"
-				EnableFunctionLevelLinking="true"
-				UsePrecompiledHeader="0"
-			/>
-			<Tool
-				Name="VCManagedResourceCompilerTool"
-			/>
-			<Tool
-				Name="VCResourceCompilerTool"
-			/>
-			<Tool
-				Name="VCPreLinkEventTool"
-			/>
-			<Tool
-				Name="VCLinkerTool"
-				AdditionalDependencies="tbb.lib"
-				LinkIncremental="1"
-				AdditionalLibraryDirectories="&quot;$(TBB21_INSTALL_DIR)\em64t\vc8\lib&quot;"
-				SubSystem="2"
-				OptimizeReferences="2"
-				EnableCOMDATFolding="2"
-				TargetMachine="17"
-				FixedBaseAddress="1"
-			/>
-			<Tool
-				Name="VCALinkTool"
-			/>
-			<Tool
-				Name="VCManifestTool"
-			/>
-			<Tool
-				Name="VCXDCMakeTool"
-			/>
-			<Tool
-				Name="VCBscMakeTool"
-			/>
-			<Tool
-				Name="VCFxCopTool"
-			/>
-			<Tool
-				Name="VCAppVerifierTool"
-			/>
-			<Tool
-				Name="VCWebDeploymentTool"
-			/>
-			<Tool
-				Name="VCPostBuildEventTool"
-				Description="Copying tbb.dll"
-				CommandLine="copy &quot;$(TBB21_INSTALL_DIR)\em64t\vc8\bin\tbb.dll&quot; &quot;$(OutDir)&quot;"
+				Description="Copying tbb.dll and tbbmalloc.dll"
+				CommandLine="copy &quot;$(TBB21_INSTALL_DIR)\ia32\vc8\bin\tbb.dll&quot; &quot;$(OutDir)&quot;&#x0D;&#x0A;copy &quot;$(TBB21_INSTALL_DIR)\ia32\vc8\bin\tbbmalloc.dll&quot; &quot;$(OutDir)&quot;"
 			/>
 		</Configuration>
 		<Configuration
@@ -563,7 +480,7 @@
 			/>
 			<Tool
 				Name="VCLinkerTool"
-				AdditionalDependencies="tbb.lib"
+				AdditionalDependencies="tbb.lib tbbmalloc.lib"
 				LinkIncremental="1"
 				AdditionalLibraryDirectories="&quot;$(TBB21_INSTALL_DIR)\em64t\vc8\lib&quot;;&quot;$(DXSDK_DIR)\lib\x64&quot;"
 				SubSystem="2"
@@ -595,8 +512,91 @@
 			/>
 			<Tool
 				Name="VCPostBuildEventTool"
-				Description="Copying tbb.dll"
-				CommandLine="copy &quot;$(TBB21_INSTALL_DIR)\em64t\vc8\bin\tbb.dll&quot; &quot;$(OutDir)&quot;"
+				Description="Copying tbb.dll and tbbmalloc.dll"
+				CommandLine="copy &quot;$(TBB21_INSTALL_DIR)\em64t\vc8\bin\tbb.dll&quot; &quot;$(OutDir)&quot;&#x0D;&#x0A;copy &quot;$(TBB21_INSTALL_DIR)\em64t\vc8\bin\tbbmalloc.dll&quot; &quot;$(OutDir)&quot;"
+			/>
+		</Configuration>
+		<Configuration
+			Name="DD Debug|Win32"
+			OutputDirectory="$(TEMP)\tbb_examples\$(ConfigurationName)"
+			IntermediateDirectory="$(TEMP)\tbb_examples\$(SolutionName)\$(ConfigurationName)"
+			ConfigurationType="1"
+			CharacterSet="2"
+			WholeProgramOptimization="1"
+			>
+			<Tool
+				Name="VCPreBuildEventTool"
+				CommandLine="..\..\..\common\gui\dxcheck.bat"
+			/>
+			<Tool
+				Name="VCCustomBuildTool"
+			/>
+			<Tool
+				Name="VCXMLDataGeneratorTool"
+			/>
+			<Tool
+				Name="VCWebServiceProxyGeneratorTool"
+			/>
+			<Tool
+				Name="VCMIDLTool"
+			/>
+			<Tool
+				Name="VCCLCompilerTool"
+				Optimization="0"
+				OmitFramePointers="true"
+				WholeProgramOptimization="true"
+				AdditionalIncludeDirectories="&quot;$(TBB21_INSTALL_DIR)\include&quot;;&quot;$(DXSDK_DIR)\include&quot;"
+				PreprocessorDefinitions="WIN32;_DEBUG;_WINDOWS;TBB_DO_ASSERT"
+				RuntimeLibrary="3"
+				EnableFunctionLevelLinking="true"
+				UsePrecompiledHeader="0"
+				Detect64BitPortabilityProblems="true"
+				DebugInformationFormat="3"
+			/>
+			<Tool
+				Name="VCManagedResourceCompilerTool"
+			/>
+			<Tool
+				Name="VCResourceCompilerTool"
+			/>
+			<Tool
+				Name="VCPreLinkEventTool"
+			/>
+			<Tool
+				Name="VCLinkerTool"
+				AdditionalDependencies="tbb_debug.lib tbbmalloc_debug.lib"
+				LinkIncremental="1"
+				AdditionalLibraryDirectories="&quot;$(TBB21_INSTALL_DIR)\ia32\vc8\lib&quot;;&quot;$(DXSDK_DIR)\lib\x86&quot;"
+				GenerateDebugInformation="true"
+				SubSystem="2"
+				TargetMachine="1"
+				FixedBaseAddress="1"
+			/>
+			<Tool
+				Name="VCALinkTool"
+			/>
+			<Tool
+				Name="VCManifestTool"
+			/>
+			<Tool
+				Name="VCXDCMakeTool"
+			/>
+			<Tool
+				Name="VCBscMakeTool"
+			/>
+			<Tool
+				Name="VCFxCopTool"
+			/>
+			<Tool
+				Name="VCAppVerifierTool"
+			/>
+			<Tool
+				Name="VCWebDeploymentTool"
+			/>
+			<Tool
+				Name="VCPostBuildEventTool"
+				Description="Copying tbb_debug.dll and tbbmalloc_debug.dll"
+				CommandLine="copy &quot;$(TBB21_INSTALL_DIR)\ia32\vc8\bin\tbb_debug.dll&quot; &quot;$(OutDir)&quot;&#x0D;&#x0A;copy &quot;$(TBB21_INSTALL_DIR)\ia32\vc8\bin\tbbmalloc_debug.dll&quot; &quot;$(OutDir)&quot;"
 			/>
 		</Configuration>
 		<Configuration
@@ -647,7 +647,7 @@
 			/>
 			<Tool
 				Name="VCLinkerTool"
-				AdditionalDependencies="tbb_debug.lib"
+				AdditionalDependencies="tbb_debug.lib tbbmalloc_debug.lib"
 				LinkIncremental="1"
 				AdditionalLibraryDirectories="&quot;$(TBB21_INSTALL_DIR)\em64t\vc8\lib&quot;;&quot;$(DXSDK_DIR)\lib\x64&quot;"
 				GenerateDebugInformation="true"
@@ -678,8 +678,8 @@
 			/>
 			<Tool
 				Name="VCPostBuildEventTool"
-				Description="Copying tbb_debug.dll"
-				CommandLine="copy &quot;$(TBB21_INSTALL_DIR)\em64t\vc8\bin\tbb_debug.dll&quot; &quot;$(OutDir)&quot;"
+				Description="Copying tbb_debug.dll and tbbmalloc_debug.dll"
+				CommandLine="copy &quot;$(TBB21_INSTALL_DIR)\em64t\vc8\bin\tbb_debug.dll&quot; &quot;$(OutDir)&quot;&#x0D;&#x0A;copy &quot;$(TBB21_INSTALL_DIR)\em64t\vc8\bin\tbbmalloc_debug.dll&quot; &quot;$(OutDir)&quot;"
 			/>
 		</Configuration>
 	</Configurations>
@@ -745,7 +745,7 @@
 					/>
 				</FileConfiguration>
 				<FileConfiguration
-					Name="Release|Win32"
+					Name="Debug|x64"
 					ExcludedFromBuild="true"
 					>
 					<Tool
@@ -753,7 +753,7 @@
 					/>
 				</FileConfiguration>
 				<FileConfiguration
-					Name="Debug|x64"
+					Name="Release|Win32"
 					ExcludedFromBuild="true"
 					>
 					<Tool
@@ -781,7 +781,7 @@
 					/>
 				</FileConfiguration>
 				<FileConfiguration
-					Name="DD Debug|Win32"
+					Name="DD Release|x64"
 					ExcludedFromBuild="true"
 					>
 					<Tool
@@ -789,7 +789,7 @@
 					/>
 				</FileConfiguration>
 				<FileConfiguration
-					Name="DD Release|x64"
+					Name="DD Debug|Win32"
 					ExcludedFromBuild="true"
 					>
 					<Tool

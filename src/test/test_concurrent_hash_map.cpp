@@ -27,15 +27,26 @@
 */
 
 #ifndef TBB_PERFORMANCE_WARNINGS
-#define TBB_PERFORMANCE_WARNINGS 0
+#define TBB_PERFORMANCE_WARNINGS 1
 #endif
-#include "tbb/concurrent_hash_map.h"
+#include "tbb/tbb_stddef.h"
 #include "tbb/parallel_for.h"
 #include "tbb/blocked_range.h"
 #include "tbb/atomic.h"
 #include "tbb/tick_count.h"
 #include "harness.h"
 #include "harness_allocator.h"
+
+// hook performance warning
+#define runtime_warning hooked_warning
+bool bad_hashing = false;
+namespace tbb { namespace internal {
+    void hooked_warning( const char* format, ... ) {
+        ASSERT(bad_hashing, NULL);
+    }
+}}// namespace tbb::internal
+
+#include "tbb/concurrent_hash_map.h"
 
 class MyException : public std::bad_alloc {
 public:
@@ -451,6 +462,10 @@ void TestInsertFindErase( int nthread ) {
     TraverseTable(table,n,0);
     CheckAllocator(table, m, m+100);
 
+    bad_hashing = true;
+    table.clear();
+    bad_hashing = false;
+
     if(nthread > 1) {
         YourTable ie_table;
         for( int i=0; i<IE_SIZE; ++i )
@@ -535,7 +550,7 @@ void TestConcurrency( int nthread ) {
         const int m = 1000;
         Counter = 0;
         tbb::tick_count t0 = tbb::tick_count::now();
-        tbb::parallel_for( tbb::blocked_range<int>(0,nthread,1), AddToTable(table,nthread,m) );
+        NativeParallelFor( tbb::blocked_range<int>(0,nthread,1), AddToTable(table,nthread,m) );
         tbb::tick_count t1 = tbb::tick_count::now();
         if( Verbose )
             printf("time for %u insertions = %g with %d threads\n",unsigned(MyDataCount),(t1-t0).seconds(),nthread);
@@ -543,7 +558,7 @@ void TestConcurrency( int nthread ) {
 
         EraseCount = 0;
         t0 = tbb::tick_count::now();
-        tbb::parallel_for( tbb::blocked_range<int>(0,nthread,1), RemoveFromTable(table,nthread,m) );
+        NativeParallelFor( tbb::blocked_range<int>(0,nthread,1), RemoveFromTable(table,nthread,m) );
         t1 = tbb::tick_count::now();
         if( Verbose )
             printf("time for %u deletions = %g with %d threads\n",unsigned(EraseCount),(t1-t0).seconds(),nthread);
@@ -839,6 +854,11 @@ int main( int argc, char* argv[] ) {
         tbb::task_scheduler_init init( nthread );
         TestInsertFindErase( nthread );
         TestConcurrency( nthread );
+    }
+    // check linking
+    #undef runtime_warning
+    if(bad_hashing) { //should be false
+        tbb::internal::runtime_warning("none\nERROR: it must not be executed");
     }
 
     printf("done\n");

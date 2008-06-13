@@ -511,12 +511,8 @@ int main( int argc, char* argv[] ) {
             TestPushPop(prefill,ptrdiff_t(100),nthread);
         }
     }
-#if __GNUC__==3&&__GNUC_MINOR__==2&&__GNUC_PATCHLEVEL__==3
-#if TBB_DO_ASSERT
-    TestExceptions<FooEx>();
-#else
-    printf("Exception safety test skipped due to a known issue.\n");
-#endif
+#if __GLIBC__==2&&__GLIBC_MINOR__==3
+    printf("Warning: Exception safety test is skipped due to a known issue.\n");
 #else
     TestExceptions<FooEx>();
 #endif

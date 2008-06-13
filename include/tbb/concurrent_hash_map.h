@@ -225,6 +225,8 @@ namespace internal {
         void set_midpoint() const;
         template<typename U> friend class hash_map_range;
     public:
+        //! Type for size of a range
+        typedef std::size_t size_type;
         typedef typename Iterator::value_type value_type;
         typedef typename Iterator::reference reference;
         typedef typename Iterator::const_reference const_reference;
@@ -256,7 +258,7 @@ namespace internal {
             my_grainsize(r.my_grainsize)
         {}
         //! Init range with iterators and grainsize specified
-        hash_map_range( const Iterator& begin_, const Iterator& end_, size_t grainsize = 1 ) : 
+        hash_map_range( const Iterator& begin_, const Iterator& end_, size_type grainsize = 1 ) : 
             my_begin(begin_), 
             my_end(end_), 
             my_grainsize(grainsize) 
@@ -267,7 +269,7 @@ namespace internal {
         const Iterator& begin() const {return my_begin;}
         const Iterator& end() const {return my_end;}
         //! The grain size for this range.
-        size_t grainsize() const {return my_grainsize;}
+        size_type grainsize() const {return my_grainsize;}
     };
 
     template<typename Iterator>
@@ -306,7 +308,7 @@ namespace internal {
     - Added template argument for allocator
     - Added allocator argument in constructors
     - Added constructor from a range of iterators
-    - Added insert(I i, I j) for the range [i; j)
+    - Added several new overloaded insert() methods
     - Added get_allocator()
     - Added swap()
     - Added count()
@@ -871,16 +873,13 @@ void concurrent_hash_map<Key,T,HashCompare,A>::swap(concurrent_hash_map<Key,T,Ha
 template<typename Key, typename T, typename HashCompare, typename A>
 void concurrent_hash_map<Key,T,HashCompare,A>::clear() {
 #if TBB_PERFORMANCE_WARNINGS
-    size_t total_physical_size = 0, empty_segments = 0; // usage statistics
+    size_t total_physical_size = 0, min_physical_size = size_t(-1L), max_physical_size = 0; //< usage statistics
     static bool reported = false;
 #endif
     for( size_t i=0; i<n_segment; ++i ) {
         segment& s = my_segment[i];
+        size_t n = s.my_physical_size;
         if( chain* array = s.my_array ) {
-            size_t n = s.my_physical_size;
-#if TBB_PERFORMANCE_WARNINGS
-            total_physical_size += n;
-#endif
             s.my_array = NULL;
             s.my_physical_size = 0;
             s.my_logical_size = 0;
@@ -893,15 +892,20 @@ void concurrent_hash_map<Key,T,HashCompare,A>::clear() {
             cache_aligned_allocator<chain>().deallocate( array, n );
         }
 #if TBB_PERFORMANCE_WARNINGS
-        else ++empty_segments;
-#endif
+        total_physical_size += n;
+        if(min_physical_size > n) min_physical_size = n;
+        if(max_physical_size < n) max_physical_size = n;
     }
-#if TBB_PERFORMANCE_WARNINGS
-    if(!reported && empty_segments && total_physical_size > 16*n_segment ) {
+    if( !reported
+        && ( (total_physical_size >= n_segment*48 && min_physical_size < total_physical_size/n_segment/2)
+         || (total_physical_size >= n_segment*128 && max_physical_size > total_physical_size/n_segment*2) ) )
+    {
         reported = true;
-        internal::runtime_warning(typeid(*this).name(), "Performance is not optimal because the hash function produces bad randomness in lower bits");
-    }
+        internal::runtime_warning(
+            "Performance is not optimal because the hash function produces bad randomness in lower bits in %s",
+            typeid(*this).name() );
 #endif
+    }
 }
 
 template<typename Key, typename T, typename HashCompare, typename A>

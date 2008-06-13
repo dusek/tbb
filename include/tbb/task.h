@@ -210,9 +210,7 @@ class task_group_context : internal::no_copy
 public:
     enum kind_type {
         isolated,
-        bound,
-        binding_required = bound,
-        binding_completed
+        bound
     };
 
 private:
@@ -319,6 +317,9 @@ protected:
 private:
     friend class task;
     friend class internal::allocate_root_with_context_proxy;
+
+    static const kind_type binding_required = bound;
+    static const kind_type binding_completed = kind_type(bound+1);
 
     //! Checks if any of the ancestors has a cancellation request outstanding, 
     //! and propagates it back to descendants.
@@ -435,6 +436,9 @@ public:
         p.state = allocated;
         p.parent = &new_parent;
         p.depth = new_parent.prefix().depth+1;
+#if __TBB_EXCEPTIONS
+        p.context = new_parent.prefix().context;
+#endif /* __TBB_EXCEPTIONS */
     }
 
     //! Schedule this for reexecution after current execute() returns.

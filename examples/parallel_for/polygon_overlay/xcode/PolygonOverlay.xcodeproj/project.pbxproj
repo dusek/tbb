@@ -15,6 +15,8 @@
 		A12649490B8392750091D5AD /* OpenGL.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = A1E3E7BC0B3AD4EC007C3AB5 /* OpenGL.framework */; };
 		A126495E0B83936D0091D5AD /* Info.plist in Resources */ = {isa = PBXBuildFile; fileRef = 8D0C4E960486CD37000505A6 /* Info.plist */; };
 		A18D2A340B861B99007D8D2C /* libtbb.dylib in Frameworks */ = {isa = PBXBuildFile; fileRef = A18D2A330B861B99007D8D2C /* libtbb.dylib */; };
+		A1976ADA0DF6A6910032C3EA /* libtbbmalloc.dylib in CopyFiles */ = {isa = PBXBuildFile; fileRef = A1976AD90DF6A6910032C3EA /* libtbbmalloc.dylib */; };
+		A1976ADF0DF6A6E10032C3EA /* libtbbmalloc.dylib in Frameworks */ = {isa = PBXBuildFile; fileRef = A1976AD90DF6A6910032C3EA /* libtbbmalloc.dylib */; };
 		A1A8F41E0B8B4DBE001C55B1 /* AGL.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = A1A8F41D0B8B4DBE001C55B1 /* AGL.framework */; };
 		A1A8F4310B8B4EA8001C55B1 /* Carbon.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = A1A8F4300B8B4EA8001C55B1 /* Carbon.framework */; };
 		A1D44D9A0B861E8A0006E401 /* libtbb.dylib in CopyFiles */ = {isa = PBXBuildFile; fileRef = A18D2A330B861B99007D8D2C /* libtbb.dylib */; };
@@ -29,6 +31,7 @@
 			dstPath = "";
 			dstSubfolderSpec = 16;
 			files = (
+				A1976ADA0DF6A6910032C3EA /* libtbbmalloc.dylib in CopyFiles */,
 				A1D44D9A0B861E8A0006E401 /* libtbb.dylib in CopyFiles */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
@@ -50,6 +53,7 @@
 		8D0C4E960486CD37000505A6 /* Info.plist */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.plist; path = Info.plist; sourceTree = "<group>"; };
 		8D0C4E970486CD37000505A6 /* PolygonOverlay.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = PolygonOverlay.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		A18D2A330B861B99007D8D2C /* libtbb.dylib */ = {isa = PBXFileReference; lastKnownFileType = "compiled.mach-o.dylib"; name = libtbb.dylib; path = /Library/Frameworks/TBB.framework/Libraries/libtbb.dylib; sourceTree = "<absolute>"; };
+		A1976AD90DF6A6910032C3EA /* libtbbmalloc.dylib */ = {isa = PBXFileReference; lastKnownFileType = "compiled.mach-o.dylib"; name = libtbbmalloc.dylib; path = /Library/Frameworks/TBB.framework/Libraries/libtbbmalloc.dylib; sourceTree = "<absolute>"; };
 		A1A8F41D0B8B4DBE001C55B1 /* AGL.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = AGL.framework; path = /System/Library/Frameworks/AGL.framework; sourceTree = "<absolute>"; };
 		A1A8F4300B8B4EA8001C55B1 /* Carbon.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = Carbon.framework; path = /System/Library/Frameworks/Carbon.framework; sourceTree = "<absolute>"; };
 		A1E3E7BC0B3AD4EC007C3AB5 /* OpenGL.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = OpenGL.framework; path = /System/Library/Frameworks/OpenGL.framework; sourceTree = "<absolute>"; };
@@ -65,6 +69,7 @@
 				A1E3E7BD0B3AD4EC007C3AB5 /* OpenGL.framework in Frameworks */,
 				A12649490B8392750091D5AD /* OpenGL.framework in Frameworks */,
 				A18D2A340B861B99007D8D2C /* libtbb.dylib in Frameworks */,
+				A1976ADF0DF6A6E10032C3EA /* libtbbmalloc.dylib in Frameworks */,
 				A1A8F41E0B8B4DBE001C55B1 /* AGL.framework in Frameworks */,
 				A1A8F4310B8B4EA8001C55B1 /* Carbon.framework in Frameworks */,
 			);
@@ -123,6 +128,7 @@
 		20286C32FDCF999611CA2CEA /* External Frameworks and Libraries */ = {
 			isa = PBXGroup;
 			children = (
+				A1976AD90DF6A6910032C3EA /* libtbbmalloc.dylib */,
 				A18D2A330B861B99007D8D2C /* libtbb.dylib */,
 				A1A8F4300B8B4EA8001C55B1 /* Carbon.framework */,
 				A1A8F41D0B8B4DBE001C55B1 /* AGL.framework */,

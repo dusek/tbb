@@ -550,6 +550,28 @@ void TestAssignment( const char* name ) {
     tbb::atomic<T> x;
     x = 0;
     NativeParallelFor( tbb::blocked_range<int>(0,2,1), HammerAssignment<T>( x, name ) );
+#if __TBB_x86_32 && (__linux__ || __FreeBSD__ || _WIN32)
+    if( sizeof(T)==8 ) {
+        // Some compilers for IA-32 fail to provide 8-byte alignment of objects on the stack, 
+        // even if the object specifies 8-byte alignment.  On such platforms, the IA-32 implementation 
+        // of atomic<long long> and atomic<unsigned long long> use different tactics depending upon 
+        // whether the object is properly aligned or not.  The following abusive test ensures that we
+        // cover both the proper and improper alignment cases, one with the x above and the other with 
+        // the y below, perhaps not respectively.
+
+        // Allocate space big enough to always contain 8-byte locations that are aligned and misaligned.
+        char raw_space[15];
+        // Set delta to 0 if x is aligned, 4 otherwise.
+        uintptr_t delta = ((reinterpret_cast<uintptr_t>(&x)&7) ? 0 : 4); 
+        // y crosses 8-byte boundary if and only if x does not cross.
+        tbb::atomic<T>& y = *reinterpret_cast<tbb::atomic<T>*>((reinterpret_cast<uintptr_t>(&raw_space[7+delta])&~7u) - delta);
+        // Assertion checks that y really did end up somewhere inside "raw_space".
+        __TBB_ASSERT( raw_space<=reinterpret_cast<char*>(&y), "y starts before raw_space" );
+        __TBB_ASSERT( reinterpret_cast<char*>(&y+1) <= raw_space+sizeof(raw_space), "y starts after raw_space" );
+        y = 0;
+        NativeParallelFor( tbb::blocked_range<int>(0,2,1), HammerAssignment<T>( y, name ) );
+    }
+#endif /* __TBB_x86_32 && (__linux__ || __FreeBSD__ || _WIN32) */
 }
 
 template<typename T>

@@ -46,9 +46,9 @@
 #include "tbb/parallel_for.h"
 #include "tbb/tick_count.h"
 #include "tbb/blocked_range.h"
-#include "harness.h"
+#include "../test/harness.h"
 //#include "harness_barrier.h"
-#include "harness_allocator.h"
+#include "../test/harness_allocator.h"
 #define STATISTICS_INLINE
 #include "statistics.h"
 

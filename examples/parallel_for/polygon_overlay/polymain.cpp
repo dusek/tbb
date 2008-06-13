@@ -29,9 +29,8 @@
 // Polygon overlay
 //
 // Don't want warnings about deprecated sscanf, getenv
-#ifdef _CRT_SECURE_NO_DEPRECATE 
-#undef _CRT_SECURE_NO_DEPRECATE 
-#define _CRT_SECURE_NO_DEPRECATE 0
+#ifndef _CRT_SECURE_NO_DEPRECATE
+#define _CRT_SECURE_NO_DEPRECATE
 #endif
 #define _MAIN_C_ 1
 #include <iostream>
@@ -105,13 +104,7 @@ int main( int argc, char **argv) {
         maprXLoc = 3*BORDER_SIZE + 2 * gMapXSize * gPolyXBoxSize;
 
     }
-    else {
-#ifndef _DEBUG
-        // release version should have large problem size.
-        gNPolygons = 20000;
-        gMapXSize = 500;
-        gMapYSize = 500;
-#endif
+    else {  // not gIsGraphicalVersion
         // gMapXSize, gMapYSize, gNPolygons defined in pover_global.h
     }
 
@@ -138,6 +131,7 @@ void Usage(int argc, char **argv) {
     cout << "   --seed nnn - initial value of random number generator" << std::endl;
     cout << "   --csv filename - write timing data to CSV-format file" << std::endl;
     cout << "   --grainsize n - set grainsize to n" << std::endl;
+    cout << "   --use_malloc - allocate polygons with malloc instead of scalable allocator" << std::endl;
     cout << std::endl;
     cout << "npolys must be smaller than the size of the map" << std::endl;
     cout << std::endl;
@@ -151,6 +145,7 @@ bool ParseCmdLine(int argc, char **argv ) {
     bool nSeedSpecified = false;
     bool csvSpecified = false;
     bool grainsizeSpecified = false;
+    bool mallocSpecified = false;
     int origArgc = argc;
     char** origArgv = argv;
     unsigned int newnPolygons = gNPolygons;
@@ -253,7 +248,7 @@ bool ParseCmdLine(int argc, char **argv ) {
             }
         }
         else if(!strncmp("--grainsize", *argv, (size_t)11)) {
-            argv++; argc++;
+            argv++; argc--;
             if(grainsizeSpecified) {
                 cout << "Error: Multiple specification of grainsize" << std::endl;
                 error_found = true;
@@ -263,7 +258,20 @@ bool ParseCmdLine(int argc, char **argv ) {
                 grainsizeSpecified = true;
                 if(newGrainSize == 0) {
                     cout << "Error: grainsize must be greater than 0" << std::endl;
+                    error_found = true;
                 }
+            }
+            argv++; argc--;
+        }
+        else if(!strncmp("--use_malloc", *argv, (size_t)12)) {
+            argv++; argc--;
+            if(mallocSpecified) {
+                cout << "Error: --use_malloc multiply-specified" << std::endl;
+                error_found = true;
+            }
+            else {
+                mallocSpecified = true;
+                gMBehavior = UseMalloc;
             }
         }
         else {
@@ -333,7 +341,7 @@ bool GenerateMap(Polygon_map_t **newMap, int xSize, int ySize, int gNPolygons, c
     // *newMap = new vector<RPolygon>;
     *newMap = new Polygon_map_t;
     (*newMap)->reserve(gNPolygons + 1);  // how much bigger does this need to be on average?
-    newPoly = new RPolygon(0,0,xSize-1, ySize-1);
+    newPoly = RPolygon::alloc_RPolygon(0,0,xSize-1, ySize-1);
     (*newMap)->push_back(newPoly);
     for(int i=0; i < gNPolygons; i++) {
         int nX;
@@ -345,7 +353,7 @@ bool GenerateMap(Polygon_map_t **newMap, int xSize, int ySize, int gNPolygons, c
         int nR = (maxR * NextRan(1000)) / 999;
         int nG = (maxG * NextRan(1000)) / 999;
         int nB = (maxB * NextRan(1000)) / 999;
-        newPoly = new RPolygon(nX,nY,nX,nY,nR,nG,nB);
+        newPoly = RPolygon::alloc_RPolygon(nX,nY,nX,nY,nR,nG,nB);
         (*newMap)->push_back(newPoly);
         tempMap[nX * ySize + nY] = i+1;     // index of this polygon + 1
     }
@@ -409,7 +417,7 @@ bool GenerateMap(Polygon_map_t **newMap, int xSize, int ySize, int gNPolygons, c
             }
         }
         else {
-            // once we cannot expand olong a side, we will never be able to; remove from the list.
+            // once we cannot expand along a side, we will never be able to; remove from the list.
             for(int i=indx + 1; i < maxSides; i++) {
                 validPolys[i-1] = validPolys[i];
                 validSide[i-1] = validSide[i];
@@ -425,11 +433,11 @@ bool GenerateMap(Polygon_map_t **newMap, int xSize, int ySize, int gNPolygons, c
                 // try to grow in the x direction, then the y direction
                 int ilen = i;
                 int jlen = j;
-                while(ilen < xSize && tempMap[(ilen+1)*ySize + jlen] == 0) {
+                while(ilen < (xSize - 1) && tempMap[(ilen+1)*ySize + jlen] == 0) {
                     ilen++;
                 }
                 bool yok = true;
-                while(yok) {
+                while(yok && jlen < (ySize - 1)) {
                     for(int ii = i; ii <= ilen && yok; ii++) {
                         yok = (tempMap[ii*ySize + jlen + 1] == 0);
                     }
@@ -442,7 +450,7 @@ bool GenerateMap(Polygon_map_t **newMap, int xSize, int ySize, int gNPolygons, c
                 int nR = (maxR * NextRan(1000)) / 999;
                 int nG = (maxG * NextRan(1000)) / 999;
                 int nB = (maxB * NextRan(1000)) / 999;
-                newPoly = new RPolygon(i,j,ilen,jlen,nR,nG,nB);
+                newPoly = RPolygon::alloc_RPolygon(i,j,ilen,jlen,nR,nG,nB);
                 (*newMap)->push_back(newPoly);
                 gNPolygons++;
                 for(int ii=i; ii<=ilen;ii++) {

@@ -724,12 +724,12 @@ void Test10 () {
         ASSERT (strcmp(e.what(), "tbb::movable_exception") == 0, "Unexpected original exception info ");
         if ( g_solitary_exception ) {
             solitary_movable_exception& me = dynamic_cast<solitary_movable_exception&>(e);
-            ASSERT (me.my_exception_data == g_int_exception_data, "Unexpected solitary movable_exception data");
+            ASSERT (me.data() == g_int_exception_data, "Unexpected solitary movable_exception data");
         }
         else {
             multiple_movable_exception& me = dynamic_cast<multiple_movable_exception&>(e);
-            ASSERT (me.my_exception_data.my_int == g_int_exception_data, "Unexpected multiple movable_exception int data");
-            ASSERT (me.my_exception_data.my_string == g_string_exception_data, "Unexpected multiple movable_exception string data");
+            ASSERT (me.data().my_int == g_int_exception_data, "Unexpected multiple movable_exception int data");
+            ASSERT (me.data().my_string == g_string_exception_data, "Unexpected multiple movable_exception string data");
         }
         if ( g_solitary_exception ) {
             g_exc_stat.trace("stat at throw moment:");

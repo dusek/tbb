@@ -38,6 +38,7 @@ tbbmalloc: tbbmalloc_release tbbmalloc_debug
 test: tbbmalloc_test_release test_release tbbmalloc_test_debug test_debug
 
 test_no_depends: tbbmalloc_test_release_no_depends test_release_no_depends tbbmalloc_test_debug_no_depends test_debug_no_depends
+	@echo done
 
 release: tbb_release tbbmalloc_release
 release: $(call cross_cfg,tbbmalloc_test_release) $(call cross_cfg,test_release)

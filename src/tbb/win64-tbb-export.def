@@ -86,7 +86,7 @@ __TBB_machine_pause
 ?get_initial_auto_partitioner_divisor@internal@tbb@@YA_KXZ
 ?handle_perror@internal@tbb@@YAXHPEBD@Z
 ?set_assertion_handler@tbb@@YAP6AXPEBDH00@ZP6AX0H00@Z@Z
-?runtime_warning@internal@tbb@@YAXPEBD0@Z
+?runtime_warning@internal@tbb@@YAXPEBDZZ
 
 ; itt_notify.cpp
 ?itt_load_pointer_with_acquire_v3@internal@tbb@@YAPEAXPEBX@Z
@@ -221,6 +221,7 @@ __TBB_machine_pause
 ?allocate_closure_v3@internal@tbb@@YAPEAX_K@Z
 ?detach@tbb_thread_v3@internal@tbb@@QEAAXXZ
 ?free_closure_v3@internal@tbb@@YAXPEAX@Z
+?hardware_concurrency@tbb_thread_v3@internal@tbb@@SAIXZ
 ?internal_start@tbb_thread_v3@internal@tbb@@AEAAXP6AIPEAX@Z0@Z
 ?join@tbb_thread_v3@internal@tbb@@QEAAXXZ
 ?move_v3@internal@tbb@@YAXAEAVtbb_thread_v3@12@0@Z

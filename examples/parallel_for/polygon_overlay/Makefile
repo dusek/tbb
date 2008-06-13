@@ -44,7 +44,7 @@ endif
 
 ifeq ($(UI),x)
 EXE=./$(NAME)
-CXXFLAGS += -DX_FULLSYNC -I/usr/X11R6/include
+CXXFLAGS += -DX_FULLSYNC -I/usr/X11R6/include -DUSE_SCALABLE_ALLOC=0
 LIBS += -lpthread -L/usr/X11R6/lib$(x64) -lX11
 # detect if libXext can be found
 ifeq ($(shell sh -c "[ -f /usr/X11R6/lib$(x64)/libXext.so -o -f /usr/lib$(x64)/libXext.so ] && echo 0"),0)
@@ -60,7 +60,8 @@ CXXFLAGS += -L$(TBBLIBSPATH) -arch i386 -mmacosx-version-min=10.4 -msse3 -ftree-
 LIBS += -framework OpenGL -framework AGL -framework Carbon
 APPRES = $(NAME).app/Contents/Resources
 EXE = ./$(NAME).app/Contents/MacOS/$(NAME)
-PBXCP = /System/Library/PrivateFrameworks/DevToolsCore.framework/Resources/pbxcp -resolve-src-symlinks -exclude .DS_Store -exclude CVS
+# look in /System and /Developer (for Xcode 3)
+PBXCP = $(wildcard /[SD]*/Library/PrivateFrameworks/DevToolsCore.framework/Resources/pbxcp) -resolve-src-symlinks -exclude .DS_Store -exclude CVS -exclude .svn
 else # ! Mac
 UI=con
 EXE=./$(NAME)
@@ -79,10 +80,10 @@ ifeq ($(UI),mac)
 endif
 
 release: $(GUIFILES) $(SRCFILES) resources
-	$(CXX) -O2 -DNDEBUG $(CXXFLAGS) -o $(EXE) $< *.cpp -ltbb $(LIBS)
+	$(CXX) -O3 -DNDEBUG $(CXXFLAGS) -o $(EXE) $< *.cpp -ltbb -ltbbmalloc $(LIBS)
 
 debug:  $(GUIFILES) $(SRCFILES) resources
-	$(CXX) -g -O0 -DTBB_DO_ASSERT $(CXXFLAGS) -o $(EXE) $< *.cpp -ltbb_debug $(LIBS)
+	$(CXX) -g -O0 -DTBB_DO_ASSERT -D_DEBUG $(CXXFLAGS) -o $(EXE) $< *.cpp -ltbb_debug -ltbbmalloc_debug $(LIBS)
 
 clean:
 	rm -f $(EXE) *.o *.d

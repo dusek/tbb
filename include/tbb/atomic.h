@@ -264,7 +264,8 @@ public:
     }
 };
 
-#if WORDSIZE == 4
+#if __TBB_WORDSIZE == 4
+// Plaforms with 32-bit hardware require special effort for 64-bit loads and stores.
 #if defined(__INTEL_COMPILER)||!defined(_MSC_VER)||_MSC_VER>=1400
 
 template<>
@@ -290,7 +291,7 @@ inline atomic_impl<unsigned __TBB_LONG_LONG,unsigned __TBB_LONG_LONG,1>::value_t
 }
 
 #endif /* defined(__INTEL_COMPILER)||!defined(_MSC_VER)||_MSC_VER>=1400 */
-#endif
+#endif /* __TBB_WORDSIZE==4 */
 
 } /* Internal */
 //! @endcond

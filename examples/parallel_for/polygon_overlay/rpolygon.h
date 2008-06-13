@@ -34,7 +34,22 @@
 #include <iostream>
 #include "pover_video.h"
 
+#include "tbb/scalable_allocator.h"
+
 using namespace std;
+
+using namespace tbb;
+
+class RPolygon;
+typedef scalable_allocator<RPolygon> RPolygon_allocator;
+DEFINE RPolygon_allocator rAlloc;
+
+enum MallocBehavior {
+    UseMalloc,
+    UseScalableAllocator,
+};
+
+DEFINE MallocBehavior gMBehavior INIT(UseScalableAllocator);
 
 class RPolygon {
 public:
@@ -48,8 +63,43 @@ public:
         }
     }
 
+    static RPolygon *alloc_RPolygon(int xMin, int yMin, int xMax, int yMax, int r=-1, int g=-1, int b=-1) {
+        switch(gMBehavior) {
+            case UseScalableAllocator: {
+                RPolygon *my_p = rAlloc.allocate(1);
+                my_p->set_nodraw(xMin,yMin,xMax,yMax);
+                my_p->setColor(r,g,b);
+                if( r >= 0 && gDoDraw) {
+                    my_p->drawPoly();
+                }
+                return my_p;
+            }
+            case UseMalloc: {
+                RPolygon *my_p = new RPolygon(xMin,yMin,xMax,yMax,r,g,b);
+                return my_p;
+            }
+        }
+        return NULL;
+    }
+
+    static void free_RPolygon(RPolygon *p) { 
+        switch(gMBehavior) {
+            case UseScalableAllocator: {
+                rAlloc.deallocate(p, 1);
+                break;
+            }
+            case UseMalloc: {
+                delete p;
+                break;
+            }
+        }
+    }
+
+    void set_nodraw(int xMin, int yMin, int xMax, int yMax) {m_XMin=xMin; m_YMin=yMin; m_XMax=xMax; m_YMax=yMax;}
+
     RPolygon &intersect(RPolygon &otherPoly);
-    void set(int xMin, int yMin, int xMax, int yMax, bool drawit=false) {m_XMin=xMin; m_YMin=yMin; m_XMax=xMax; m_YMax=yMax;
+    void set(int xMin, int yMin, int xMax, int yMax) {
+         set_nodraw(xMin,yMin,xMax,yMax);
          if(gDoDraw) {
             drawPoly();
          }

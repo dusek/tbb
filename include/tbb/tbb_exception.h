@@ -29,8 +29,21 @@
 #ifndef __TBB_exception_H
 #define __TBB_exception_H
 
-#if __TBB_EXCEPTIONS
 #include "tbb_stddef.h"
+#include <stdexcept>
+
+namespace tbb {
+
+//! Exception for concurrent containers
+class bad_last_alloc : public std::bad_alloc {
+public:
+    virtual const char* what() const throw() { return "bad allocation in previous or concurrent attempt"; }
+    virtual ~bad_last_alloc() throw() {}
+};
+
+} // namespace tbb
+
+#if __TBB_EXCEPTIONS
 #include "tbb/tbb_allocator.h"
 #include <exception>
 #include <typeinfo>
@@ -155,39 +168,51 @@ template<typename ExceptionData>
 class movable_exception : public tbb_exception
 {
     typedef movable_exception<ExceptionData> self_type;
-public:
-    const ExceptionData  my_exception_data;
 
+public:
     movable_exception ( const ExceptionData& data ) 
         : my_exception_data(data)
-        , my_cloned(false)
+        , my_dynamic(false)
         , my_exception_name(typeid(self_type).name())
     {}
 
     movable_exception ( const movable_exception& src ) throw () 
         : my_exception_data(src.my_exception_data)
-        , my_cloned(false)
+        , my_dynamic(false)
         , my_exception_name(src.my_exception_name)
     {}
 
     ~movable_exception () throw() {}
 
-    /*override*/ const char* name() const throw() { return my_exception_name; }
+    const movable_exception& operator= ( const movable_exception& src ) {
+        if ( this != &src ) {
+            my_exception_data = src.my_exception_data;
+            my_exception_name = src.my_exception_name;
+        }
+        return *this;
+    }
 
-    /*override*/ const char* what() const throw() { return "tbb::movable_exception"; }
+    ExceptionData& data () throw() { return my_exception_data; }
+
+    const ExceptionData& data () const throw() { return my_exception_data; }
+
+    /*override*/ const char* name () const throw() { return my_exception_name; }
+
+    /*override*/ const char* what () const throw() { return "tbb::movable_exception"; }
 
     /*override*/ 
     movable_exception* move () throw() {
         void* e = internal::allocate_via_handler_v3(sizeof(movable_exception));
         if ( e ) {
             new (e) movable_exception(*this);
-            ((movable_exception*)e)->my_cloned = true;
+            ((movable_exception*)e)->my_dynamic = true;
         }
         return (movable_exception*)e;
     }
     /*override*/ 
     void destroy () throw() {
-        if ( my_cloned ) {
+        __TBB_ASSERT ( my_dynamic, "Method destroy can be called only on dynamically allocated movable_exceptions" );
+        if ( my_dynamic ) {
             this->~movable_exception();
             internal::deallocate_via_handler_v3(this);
         }
@@ -198,7 +223,14 @@ public:
     }
 
 protected:
-    bool my_cloned;
+    //! User data
+    ExceptionData  my_exception_data;
+
+private:
+    //! Flag specifying whether this object has been dynamically allocated (by the move method)
+    bool my_dynamic;
+
+    //! RTTI name of this class
     /** We rely on the fact that RTTI names are static string constants. **/
     const char* my_exception_name;
 };

@@ -29,7 +29,7 @@
 			<Tool
 				Name="VCCustomBuildTool"
 				Description="Constructing input.txt"
-				CommandLine="copy &quot;$(TBB21_INSTALL_DIR)\doc\*.txt&quot;+&quot;$(TBB21_INSTALL_DIR)\doc\html\*.html&quot; &quot;$(OutDir)\input.txt&quot; &gt;NUL"
+				CommandLine="type ..\index.html &gt;input.txt&#x0D;&#x0A;for /L %%a in (1,1,500) do type ..\index.html &gt;&gt; input.txt"
 				Outputs="&quot;$(OutDir)\input.txt&quot;"/>
 			<Tool
 				Name="VCLinkerTool"
@@ -79,7 +79,7 @@
 			<Tool
 				Name="VCCustomBuildTool"
 				Description="Constructing input.txt"
-				CommandLine="copy &quot;$(TBB21_INSTALL_DIR)\doc\*.txt&quot;+&quot;$(TBB21_INSTALL_DIR)\doc\html\*.html&quot; &quot;$(OutDir)\input.txt&quot; &gt;NUL"
+				CommandLine="type ..\index.html &gt;input.txt&#x0D;&#x0A;for /L %%a in (1,1,500) do type ..\index.html &gt;&gt; input.txt"
 				Outputs="&quot;$(OutDir)\input.txt&quot;"/>
 			<Tool
 				Name="VCLinkerTool"

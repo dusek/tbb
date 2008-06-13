@@ -40,10 +40,11 @@ tbb_strict=0
 TBB_NOSTRICT = 1
 
 CPLUS = CC
+CONLY = cc
 LIB_LINK_FLAGS = -G -R . -M$(tbb_root)/build/suncc.map.pause
 LINK_FLAGS += -M$(tbb_root)/build/suncc.map.pause
 LIBS = -lpthread -lrt -R .
-C_FLAGS = $(CPLUS_FLAGS) -Xc
+C_FLAGS = $(CPLUS_FLAGS)
 
 ifeq ($(cfg), release)
         CPLUS_FLAGS = -xO2 -library=stlport4 -DUSE_PTHREAD 

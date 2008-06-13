@@ -7,6 +7,19 @@ Intel(R) Threading Building Blocks - Release Notes
 System Requirements
 -------------------
 
+Intel(R) Threading Building Blocks (Intel(R) TBB) is available
+commercially (see http://www.intel.com/software/products/threading) as a
+binary distribution, and in open source, in both source and binary
+forms (see http://threadingbuildingblocks.org).
+
+When built from source, Intel(R) TBB is intended to be highly portable
+and so supports a wide variety of operating systems and platforms (see
+http://threadingbuildingblocks.org for more details).
+
+Binary distributions, including commercial distributions, are validated
+and officially supported for the hardware, software, operating systems
+and compilers listed here.
+
 Hardware - Recommended
 
     Microsoft* Windows* Systems
@@ -14,16 +27,17 @@ Hardware - Recommended
 	    or higher
     Linux* Systems
 	Intel(R) Core(TM) 2 Duo processor or Intel(R) Xeon(R) processor
-	    or higher, or Intel(R) Itanium(R) processor
+	    or Intel(R) Itanium(R) processor or higher
     Mac OS* X Systems
-	Intel(R) Core(TM) 2 Duo processor
+	Intel(R) Core(TM) 2 Duo processor or higher
 
 Hardware - Supported
 
     Intel(R) Pentium(R) 4 processor family
     Intel(R) Pentium(R) D processor family
     Intel(R) Xeon(R) processor family
-    Intel(R) Core processor family
+    Intel(R) Core(TM) processor family
+    Intel(R) Core(TM) 2 processor family
     Intel(R) Itanium(R) processor family (Linux* systems only)
     Non Intel(R) processors compatible with the above processors
 
@@ -90,15 +104,13 @@ Intel(R) Threading Building Blocks.
 
 Library Issues
 
-    - The cache_aligned_allocator template is incompatible with the
-	Microsoft* deque and list containers.
-
     - The atomic<long long> and atomic<unsigned long long> templates are
 	not supported when using the Microsoft* Visual C++* 7.1
 	(Microsoft* Visual Studio* .NET 2003) compiler.
 
-    - When using exceptions, note that an exception must be caught
-	within the same task that throws the exception.
+    - Unhandled exceptions in the user code executed in the context of
+	TBB algorithms or containers may lead to segmentation faults when
+	Intel(R) C++ Compiler 10.x is used with glibc 2.3.2, 2.3.3, or 2.3.4.
 
     - To allow more accurate results to be obtained with Intel(R) Thread
 	Checker or Intel(R) Thread Profiler, download the latest update
@@ -130,17 +142,6 @@ Library Issues
 	from the system.  See the following link for more details:
 
 	https://bugs.launchpad.net/ubuntu/+source/gcc-4.1/+bug/77559
-
-Library Example Issues
-
-    - When building an example on Windows* systems, either via a
-	Makefile or via a Microsoft* Visual Studio* project, a spurious
-	warning may be encountered of the form:
-
-	cl : Command line warning D4002 : ignoring unknown option '/G-'
-
-	This warning can be ignored; the compilation should complete and
-	the compiled example should execute correctly.
 
 
 ------------------------------------------------------------------------

@@ -90,7 +90,7 @@ __TBB_machine_trylockbyte
 ?get_initial_auto_partitioner_divisor@internal@tbb@@YAIXZ
 ?handle_perror@internal@tbb@@YAXHPBD@Z
 ?set_assertion_handler@tbb@@YAP6AXPBDH00@ZP6AX0H00@Z@Z
-?runtime_warning@internal@tbb@@YAXPBD0@Z
+?runtime_warning@internal@tbb@@YAXPBDZZ
 
 ; itt_notify.cpp
 ?itt_load_pointer_with_acquire_v3@internal@tbb@@YAPAXPBX@Z
@@ -227,6 +227,7 @@ __TBB_machine_trylockbyte
 ?internal_start@tbb_thread_v3@internal@tbb@@AAEXP6GIPAX@Z0@Z
 ?allocate_closure_v3@internal@tbb@@YAPAXI@Z
 ?free_closure_v3@internal@tbb@@YAXPAX@Z
+?hardware_concurrency@tbb_thread_v3@internal@tbb@@SAIXZ
 ?thread_yield_v3@internal@tbb@@YAXXZ
 ?thread_sleep_v3@internal@tbb@@YAXABVinterval_t@tick_count@2@@Z
 ?move_v3@internal@tbb@@YAXAAVtbb_thread_v3@12@0@Z

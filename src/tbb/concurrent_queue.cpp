@@ -34,6 +34,7 @@
 #include "tbb/spin_mutex.h"
 #include "tbb/atomic.h"
 #include "tbb/concurrent_queue.h"
+#include "tbb/tbb_exception.h"
 #include "tbb_misc.h"
 #include "itt_notify.h"
 #if __SUNPRO_CC

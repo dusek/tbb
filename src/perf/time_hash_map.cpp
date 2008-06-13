@@ -33,11 +33,11 @@
 
 //! enable/disable old implementation tests (correct include file also)
 #define OLDTABLE 0
-#define OLDTABLEHEADER "tbb/concurrent_hash_map-4329.h"
+#define OLDTABLEHEADER "tbb/concurrent_hash_map-4078.h"//-4329
 
 //! enable/disable experimental implementation tests (correct include file also)
 #define TESTTABLE 0
-#define TESTTABLEHEADER "tbb/concurrent_hash_map_raf.h"
+#define TESTTABLEHEADER "tbb/concurrent_hash_map-4148.h"
 
 //////////////////////////////////////////////////////////////////////////////////
 
@@ -87,11 +87,11 @@ typedef version_base::tbb::concurrent_hash_map<int,int,IntHashCompare> OldTable;
 
 #if TESTTABLE
 #undef __TBB_concurrent_hash_map_H
-namespace version_raf {
+namespace version_new {
     namespace tbb { using namespace ::tbb; namespace internal { using namespace ::tbb::internal; } }
     #include TESTTABLEHEADER
 }
-typedef version_raf::tbb::concurrent_hash_map<int,int,IntHashCompare> TestTable;
+typedef version_new::tbb::concurrent_hash_map<int,int,IntHashCompare> TestTable;
 #define TESTTABLE 1
 #endif
 
@@ -204,11 +204,11 @@ public:
             run("std::map ", new NanosecPerValue<TestSTLMap<spin_mutex> >() ),
 #endif
 #if OLDTABLE
-            run("old::hash", new NanosecPerValue<TestTBBMap<OldTable> >() ),
+            run("old::hmap", new NanosecPerValue<TestTBBMap<OldTable> >() ),
 #endif
-            run("tbb::hash", new NanosecPerValue<TestTBBMap<IntTable> >() ),
+            run("tbb::hmap", new NanosecPerValue<TestTBBMap<IntTable> >() ),
 #if TESTTABLE
-            run("raf::hash", new NanosecPerValue<TestTBBMap<TestTable> >() ),
+            run("new::hmap", new NanosecPerValue<TestTBBMap<TestTable> >() ),
 #endif
         end );
         //stat->Print(StatisticsCollector::Stdout);
@@ -299,15 +299,15 @@ public:
         if(Verbose) printf("Processing with %d threads: %d...\n", threads, value);
         process( value, threads,
 #if OLDTABLE
-            run("old::hash", new NanosecPerValue<TestHashMapFind<OldTable> >() ),
+            run("old::hashmap", new NanosecPerValue<TestHashMapFind<OldTable> >() ),
 #endif
-            run("tbb::hash", new NanosecPerValue<TestHashMapFind<IntTable> >() ),
+            run("tbb::hashmap", new NanosecPerValue<TestHashMapFind<IntTable> >() ),
 #if OLDTABLE
             run("old::countstr", new TimeTest<TestHashCountStrings<OldTable> >() ),
 #endif
             run("tbb::countstr", new TimeTest<TestHashCountStrings<IntTable> >() ),
 #if TESTTABLE
-            run("raf::countstr", new TimeTest<TestHashCountStrings<TestTable> >() ),
+            run("new::countstr", new TimeTest<TestHashCountStrings<TestTable> >() ),
 #endif
         end );
         //stat->Print(StatisticsCollector::HTMLFile);

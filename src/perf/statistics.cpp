@@ -50,7 +50,7 @@ void GetDate(char* buff,int size_buff)
 	time_t timer;
 	time(&timer);  
 	newtime=localtime(&timer);
-	strftime(buff,size_buff,"%F",newtime); 
+	strftime(buff,size_buff,"%Y-%m-%d",newtime); 
 }
 
 

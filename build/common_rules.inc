@@ -49,12 +49,14 @@ ifeq ($(origin LIB_LINK_LIBS), undefined)
     LIB_LINK_LIBS = $(LIBDL) $(LIBS)
 endif
 
+CONLY ?= $(CPLUS)
+
 # The most generic rules
 %.$(OBJ): %.cpp
 	$(CPLUS) $(COMPILE_ONLY) $(CPLUS_FLAGS) $(INCLUDES) $<
 
 %.$(OBJ): %.c
-	$(CPLUS) $(COMPILE_ONLY) $(C_FLAGS) $(INCLUDES) $<
+	$(CONLY) $(COMPILE_ONLY) $(C_FLAGS) $(INCLUDES) $<
 
 %.$(OBJ): %.asm
 	$(ASM) $(ASM_FLAGS) $<

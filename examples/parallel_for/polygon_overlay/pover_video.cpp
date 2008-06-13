@@ -74,7 +74,7 @@ bool g_last_frame() {
 bool initializeVideo(int argc, char **argv) {
     //pover_video *l_video = new pover_video();
     //gVideo = l_video;
-    gVideo->init_console();
+    gVideo->init_console();  // don't check return code.
     gVideo->title = g_windowTitle;
     g_useGraphics = gVideo->init_window(g_xwinsize, g_ywinsize);
     return true;
@@ -83,10 +83,10 @@ bool initializeVideo(int argc, char **argv) {
 void pover_video::on_process() {
     tbb::tick_count t0, t1;
     double naiveParallelTime, domainSplitParallelTime;
-    // create map1
-    GenerateMap(&gPolymap1, gMapXSize, gMapYSize, gNPolygons, 255, 0, 127);
+    // create map1  These could be done in parallel, if the pseudorandom number generator were re-seeded.
+    GenerateMap(&gPolymap1, gMapXSize, gMapYSize, gNPolygons, /*red*/255, /*green*/0, /*blue*/127);
     // create map2
-    GenerateMap(&gPolymap2, gMapXSize, gMapYSize, gNPolygons, 0, 255, 127);
+    GenerateMap(&gPolymap2, gMapXSize, gMapYSize, gNPolygons, /*red*/0, /*green*/255, /*blue*/127);
         //
         // Draw source maps
     gDrawXOffset = map1XLoc;
@@ -105,18 +105,22 @@ void pover_video::on_process() {
     gDrawXOffset = maprXLoc;
     gDrawYOffset = maprYLoc;
     {
-        RPolygon *xp = new RPolygon(0, 0, gMapXSize-1, gMapYSize-1, 0, 0, 0);  // Clear the output space
-        delete xp;
-            Polygon_map_t *resultMap;
+        RPolygon *xp = RPolygon::alloc_RPolygon(0, 0, gMapXSize-1, gMapYSize-1, 0, 0, 0);  // Clear the output space
+        RPolygon::free_RPolygon( xp );
         t0 = tbb::tick_count::now();
-        SerialOverlayMaps(&resultMap, gPolymap1, gPolymap2);
+        SerialOverlayMaps(&gResultMap, gPolymap1, gPolymap2);
         t1 = tbb::tick_count::now();
         cout << "Serial overlay took " << (t1-t0).seconds()*1000 << " msec" << std::endl;
         gSerialTime = (t1-t0).seconds()*1000;
-        for(int i=0; i<int(resultMap->size());i++) {
-            delete (resultMap->at(i));
+#if _DEBUG
+        CheckPolygonMap(gResultMap);
+        // keep the map for comparison purposes.
+#else
+        for(int i=0; i<int(gResultMap->size());i++) {
+            RPolygon::free_RPolygon(gResultMap->at(i));
         }
-        delete resultMap;
+        delete gResultMap;
+#endif
         if(gCsvFile.is_open()) {
             gCsvFile << "Serial Time," << gSerialTime << std::endl;
             gCsvFile << "Threads,";
@@ -139,7 +143,7 @@ void pover_video::on_process() {
         if(gCsvFile.is_open()) {
             gCsvFile << "Naive Time";
         }
-        NaiveParallelOverlay(&resultMap, gPolymap1, gPolymap2);
+        NaiveParallelOverlay(resultMap, *gPolymap1, *gPolymap2);
         delete resultMap;
         if(gIsGraphicalVersion) rt_sleep(2000);
     }

@@ -1418,10 +1418,15 @@ void GenericScheduler::free_nonlocal_small_task( task& t ) {
 }
 
 inline void GenericScheduler::mark_pool_full() {
-     // Double-check idiom
-     Gate::state_t snapshot = arena->prefix().gate.get_state();
-     if( snapshot!=SNAPSHOT_FULL && snapshot!=SNAPSHOT_PERMANENTLY_OPEN ) 
-         arena->prefix().gate.try_update( SNAPSHOT_FULL, SNAPSHOT_PERMANENTLY_OPEN, true );
+    // Double-check idiom that is deliberately sloppy about memory fences.
+    // Technically, to avoid missed wakeups, there should be a full memory fence between the point we 
+    // released the task pool (i.e. spawned task) and read the gate's state.  However, adding such a 
+    // fence might hurt overall performance more than it helps, because the fence would be executed 
+    // on every task pool release, even when stealing does not occur.  Since TBB allows parallelism, 
+    // but never promises parallelism, the missed wakeup is not a correctness problem.
+    Gate::state_t snapshot = arena->prefix().gate.get_state();
+    if( snapshot!=SNAPSHOT_FULL && snapshot!=SNAPSHOT_PERMANENTLY_OPEN ) 
+        arena->prefix().gate.try_update( SNAPSHOT_FULL, SNAPSHOT_PERMANENTLY_OPEN, true );
 }
 
 bool GenericScheduler::wait_while_pool_is_empty() {
@@ -1921,7 +1926,6 @@ void GenericScheduler::spawn( task& first, task*& next ) {
             parent->prefix().extra_state |= es_ref_count_active;
         }
 #endif /* TBB_DO_ASSERT */
-        __TBB_ASSERT( t->prefix().next!=first_ptr, "cyclic list will be created" );
         affinity_id dst_thread=t->prefix().affinity;
         __TBB_ASSERT( dst_thread==0 || is_version_3_task(*t), "backwards compatibility to TBB 2.0 tasks is broken" );
         if( dst_thread!=0 && dst_thread!=my_affinity_id ) {
@@ -2354,8 +2358,7 @@ exception_was_caught:
             // Try to steal a task from a random victim.
             size_t n = arena->prefix().limit;
             if( n>1 ) {
-                t = get_mailbox_task();
-                if( !t ) {
+                if( !my_affinity_id || !(t=get_mailbox_task()) ) {
                     size_t k = random.get() % (n-1);
                     ArenaSlot* victim = &arena->slot[k];
                     if( victim>=arena_slot )
@@ -3030,7 +3033,7 @@ void task_group_context::init () {
     if ( my_kind == bound ) {
         GenericScheduler *s = GetThreadSpecific();
         my_owner = s;
-        __TBB_ASSERT ( my_owner, "Task group contexts can be created only after the scheduler is initialized" );
+        __TBB_ASSERT ( my_owner, "Thread has not activated a task_scheduler_init object?" );
         // Backward links are used by this thread only, thus no fences are necessary
         my_node.my_prev = &s->context_list_head;
         s->context_list_head.my_next->my_prev = &my_node;

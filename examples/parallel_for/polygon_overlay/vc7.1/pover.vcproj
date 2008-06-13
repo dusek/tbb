@@ -35,7 +35,7 @@
 				Name="VCCustomBuildTool"/>
 			<Tool
 				Name="VCLinkerTool"
-				AdditionalDependencies="tbb_debug.lib"
+				AdditionalDependencies="tbb_debug.lib tbbmalloc_debug.lib"
 				LinkIncremental="1"
 				AdditionalLibraryDirectories="&quot;$(TBB21_INSTALL_DIR)\ia32\vc7.1\lib&quot;"
 				GenerateDebugInformation="TRUE"
@@ -90,7 +90,7 @@ copy &quot;$(TBB21_INSTALL_DIR)\ia32\vc7.1\bin\tbbmalloc_debug.dll&quot; &quot;$
 				Name="VCCustomBuildTool"/>
 			<Tool
 				Name="VCLinkerTool"
-				AdditionalDependencies="tbb.lib"
+				AdditionalDependencies="tbb.lib tbbmalloc.lib"
 				LinkIncremental="1"
 				AdditionalLibraryDirectories="&quot;$(TBB21_INSTALL_DIR)\ia32\vc7.1\lib&quot;"
 				SubSystem="1"
@@ -146,7 +146,7 @@ copy &quot;$(TBB21_INSTALL_DIR)\ia32\vc7.1\bin\tbbmalloc.dll&quot; &quot;$(OutDi
 				Name="VCCustomBuildTool"/>
 			<Tool
 				Name="VCLinkerTool"
-				AdditionalDependencies="tbb.lib"
+				AdditionalDependencies="tbb.lib tbbmalloc.lib"
 				LinkIncremental="1"
 				AdditionalLibraryDirectories="&quot;$(TBB21_INSTALL_DIR)\ia32\vc7.1\lib&quot;"
 				SubSystem="2"
@@ -204,7 +204,7 @@ copy &quot;$(TBB21_INSTALL_DIR)\ia32\vc7.1\bin\tbbmalloc.dll&quot; &quot;$(OutDi
 				Name="VCCustomBuildTool"/>
 			<Tool
 				Name="VCLinkerTool"
-				AdditionalDependencies="tbb_debug.lib"
+				AdditionalDependencies="tbb_debug.lib tbbmalloc_debug.lib"
 				LinkIncremental="1"
 				AdditionalLibraryDirectories="&quot;$(TBB21_INSTALL_DIR)\ia32\vc7.1\lib&quot;"
 				GenerateDebugInformation="TRUE"
@@ -261,7 +261,7 @@ copy &quot;$(TBB21_INSTALL_DIR)\ia32\vc7.1\bin\tbbmalloc_debug.dll&quot; &quot;$
 				Name="VCCustomBuildTool"/>
 			<Tool
 				Name="VCLinkerTool"
-				AdditionalDependencies="tbb_debug.lib"
+				AdditionalDependencies="tbb_debug.lib tbbmalloc_debug.lib"
 				LinkIncremental="1"
 				AdditionalLibraryDirectories="&quot;$(TBB21_INSTALL_DIR)\ia32\vc7.1\lib&quot;;&quot;$(DXSDK_DIR)\lib\x86&quot;"
 				GenerateDebugInformation="TRUE"
@@ -317,7 +317,7 @@ copy &quot;$(TBB21_INSTALL_DIR)\ia32\vc7.1\bin\tbbmalloc_debug.dll&quot; &quot;$
 				Name="VCCustomBuildTool"/>
 			<Tool
 				Name="VCLinkerTool"
-				AdditionalDependencies="tbb.lib"
+				AdditionalDependencies="tbb.lib tbbmalloc.lib"
 				LinkIncremental="1"
 				AdditionalLibraryDirectories="&quot;$(TBB21_INSTALL_DIR)\ia32\vc7.1\lib&quot;;&quot;$(DXSDK_DIR)\lib\x86&quot;"
 				SubSystem="2"

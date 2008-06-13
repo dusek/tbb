@@ -116,7 +116,7 @@
 #       define __TBB_x86_64 1
 #   elif __ia64__
 #       define __TBB_ipf 1
-#   elif __i386__
+#   elif __i386__||__i386  // __i386 is for Sun OS
 #       define __TBB_x86_32 1
 #   else
 #       define __TBB_generic_arch 1
@@ -124,15 +124,19 @@
 #endif
 
 #if _WIN32||_WIN64
-// define the parts of stdint.h that are needed 
-typedef __int8 int8_t;
-typedef __int16 int16_t;
-typedef __int32 int32_t;
-typedef __int64 int64_t;
-typedef unsigned __int8 uint8_t;
-typedef unsigned __int16 uint16_t;
-typedef unsigned __int32 uint32_t;
-typedef unsigned __int64 uint64_t;
+// define the parts of stdint.h that are needed, but put them inside tbb::internal 
+namespace tbb {
+namespace internal {
+    typedef __int8 int8_t;
+    typedef __int16 int16_t;
+    typedef __int32 int32_t;
+    typedef __int64 int64_t;
+    typedef unsigned __int8 uint8_t;
+    typedef unsigned __int16 uint16_t;
+    typedef unsigned __int32 uint32_t;
+    typedef unsigned __int64 uint64_t;
+} // namespace internal
+} // namespace tbb
 #else
 #include <stdint.h>
 #endif
@@ -179,31 +183,6 @@ namespace tbb {
 
 #endif /* TBB_DO_ASSERT */
 
-// Debug builds compile inline functions defined in headers as out-of-line. 
-// As the result both TBB library and the executable using it have public 
-// symbols with same name. On Linux this may lead to the situation when the 
-// loader resolves TBB symbol reference to the instance from the executable. 
-// When the executable is instrumented by Intel(R) Thread Checker, calling 
-// the instrumented version of a function from TBB internals leads to 
-// numerous false positives reported by the tool. To prevent such situations 
-// we have to ensure that inline functions instantiated in TBB and user 
-// executables have different names.
-#if __TBB_BUILD && __linux__
-
-#if (defined(__INTEL_COMPILER) && (__INTEL_COMPILER==910 || __INTEL_COMPILER==1000 || __INTEL_COMPILER==1010))
-#define __TBB_ALIAS_TEMPLATE_FUNC 1
-#define __TBB_static
-#define poison_pointer __TBB_internal_poison_pointer
-#else  /* (defined(__INTEL_COMPILER) && (__INTEL_COMPILER==910 ... */
-#define __TBB_static static
-#endif /* (defined(__INTEL_COMPILER) && (__INTEL_COMPILER==910 ... */
-
-#else
-
-#define __TBB_static
-
-#endif /* __TBB_BUILD && __linux__ */
-
 //! The namespace tbb contains all components of the library.
 namespace tbb {
 
@@ -234,12 +213,12 @@ typedef size_t uintptr;
 typedef std::ptrdiff_t intptr;
 
 //! Report a runtime warning.
-void runtime_warning( const char* location, const char* comment );
+void runtime_warning( const char* format, ... );
 
 #if TBB_DO_ASSERT
 //! Set p to invalid pointer value.
 template<typename T>
-__TBB_static inline void poison_pointer( T* & p ) {
+inline void poison_pointer( T* & p ) {
     p = reinterpret_cast<T*>(-1);
 }
 #else
@@ -271,19 +250,7 @@ typedef version_tag_v3 version_tag;
 
 } // tbb
 
-// tbbmalloc should be able to compile without exception handling support
 #if defined(__EXCEPTIONS) || defined(_CPPUNWIND) || defined(__SUNPRO_CC)
-#include <stdexcept>
-
-namespace tbb {
-//! Exception for concurrent containers
-class bad_last_alloc : public std::bad_alloc {
-public:
-    virtual const char *what() const throw() { return "bad allocation in previous or concurrent attempt"; }
-    virtual ~bad_last_alloc() throw() {}
-};
-} // tbb
-
 #ifndef __TBB_EXCEPTIONS
 #define __TBB_EXCEPTIONS 1
 #endif /* __TBB_EXCEPTIONS */
