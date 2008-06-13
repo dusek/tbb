@@ -68,24 +68,21 @@ namespace internal {
             my_partition.note_affinity( id );
         }
     public:
-#if !__TBB_EXCEPTIONS
         static void run(  const Range& range, const Body& body, const Partitioner& partitioner ) {
             if( !range.empty() ) {
+#if !__TBB_EXCEPTIONS || TBB_JOIN_OUTER_TASK_GROUP
                 start_for& a = *new(task::allocate_root()) start_for(range,body,const_cast<Partitioner&>(partitioner));
-                task::spawn_root_and_wait(a);
-            }
-        }
-#else /* __TBB_EXCEPTIONS */
-        static void run( const Range& range, const Body& body, const Partitioner& partitioner ) {
-            // Bound context prevents exceptions from body to affect nesting or sibling algorithms,
-            // and allows users to handle exceptions safely by wrapping parallel_for in the try-block.
-            if( !range.empty() ) {
-                asynch_context context;
+#else
+                // Bound context prevents exceptions from body to affect nesting or sibling algorithms,
+                // and allows users to handle exceptions safely by wrapping parallel_for in the try-block.
+                task_group_context context;
                 start_for& a = *new(task::allocate_root(context)) start_for(range,body,const_cast<Partitioner&>(partitioner));
+#endif /* __TBB_EXCEPTIONS && !TBB_JOIN_OUTER_TASK_GROUP */
                 task::spawn_root_and_wait(a);
             }
         }
-        static void run(  const Range& range, const Body& body, const Partitioner& partitioner, asynch_context& context ) {
+#if __TBB_EXCEPTIONS
+        static void run(  const Range& range, const Body& body, const Partitioner& partitioner, task_group_context& context ) {
             if( !range.empty() ) {
                 start_for& a = *new(task::allocate_root(context)) start_for(range,body,const_cast<Partitioner&>(partitioner));
                 task::spawn_root_and_wait(a);
@@ -151,28 +148,28 @@ void parallel_for( const Range& range, const Body& body, affinity_partitioner& p
 //! Parallel iteration over range with default partitioner and user-supplied context.
 /** @ingroup algorithms **/
 template<typename Range, typename Body>
-void parallel_for( const Range& range, const Body& body, asynch_context& context ) {
+void parallel_for( const Range& range, const Body& body, task_group_context& context ) {
     internal::start_for<Range,Body,simple_partitioner>::run(range, body, simple_partitioner(), context);
 }
 
 //! Parallel iteration over range with simple partitioner and user-supplied context.
 /** @ingroup algorithms **/
 template<typename Range, typename Body>
-void parallel_for( const Range& range, const Body& body, const simple_partitioner& partitioner, asynch_context& context ) {
+void parallel_for( const Range& range, const Body& body, const simple_partitioner& partitioner, task_group_context& context ) {
     internal::start_for<Range,Body,simple_partitioner>::run(range, body, partitioner, context);
 }
 
 //! Parallel iteration over range with auto_partitioner and user-supplied context.
 /** @ingroup algorithms **/
 template<typename Range, typename Body>
-void parallel_for( const Range& range, const Body& body, const auto_partitioner& partitioner, asynch_context& context ) {
+void parallel_for( const Range& range, const Body& body, const auto_partitioner& partitioner, task_group_context& context ) {
     internal::start_for<Range,Body,auto_partitioner>::run(range, body, partitioner, context);
 }
 
 //! Parallel iteration over range with affinity_partitioner and user-supplied context.
 /** @ingroup algorithms **/
 template<typename Range, typename Body>
-void parallel_for( const Range& range, const Body& body, affinity_partitioner& partitioner, asynch_context& context ) {
+void parallel_for( const Range& range, const Body& body, affinity_partitioner& partitioner, task_group_context& context ) {
     internal::start_for<Range,Body,affinity_partitioner>::run(range,body,partitioner, context);
 }
 #endif /* __TBB_EXCEPTIONS */

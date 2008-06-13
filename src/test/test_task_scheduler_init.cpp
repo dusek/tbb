@@ -29,13 +29,20 @@
 #include "tbb/task_scheduler_init.h"
 #include <cstdlib>
 
+//workaround for old patform SDK
+#if defined(_WIN64) && !defined(_CPPLIB_VER)
+namespace std{
+    using ::rand;
+}
+#endif /* defined(_WIN64) && !defined(_CPPLIB_VER) */
+
 //! Test that task::initialize and task::terminate work when doing nothing else.
 /** maxthread is treated as the "maximum" number of worker threads. */
 void InitializeAndTerminate( int maxthread ) {
     for( int i=0; i<200; ++i ) {
         switch( i&3 ) {
             default: {
-                tbb::task_scheduler_init init( rand() % maxthread + 1 );
+                tbb::task_scheduler_init init( std::rand() % maxthread + 1 );
                 break;
             }
             case 0: {   
@@ -48,7 +55,7 @@ void InitializeAndTerminate( int maxthread ) {
             }
             case 2: {
                 tbb::task_scheduler_init init( tbb::task_scheduler_init::deferred );
-                init.initialize( rand() % maxthread + 1 );
+                init.initialize( std::rand() % maxthread + 1 );
                 init.terminate();
                 break;
             }

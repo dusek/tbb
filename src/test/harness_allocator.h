@@ -33,7 +33,7 @@
 
 #if __linux__
 #include <unistd.h>
-#elif __APPLE__
+#elif __APPLE__ || __sun
 #include <unistd.h>
 #elif _WIN32
 #include <windows.h>
@@ -61,12 +61,12 @@ public:
     typedef typename base_alloc_t::size_type size_type;
     typedef typename base_alloc_t::difference_type difference_type;
 #if defined(_WIN64) && !defined(_CPPLIB_VER)
-    template<typename U, typename C = count_t> struct rebind {
-        typedef static_counting_allocator<base_alloc_t,C> other;
+    template<typename U> struct rebind {
+        typedef static_counting_allocator<base_alloc_t,count_t> other;
     };
 #else
-    template<typename U, typename C = count_t> struct rebind {
-        typedef static_counting_allocator<typename base_alloc_t::template rebind<U>::other,C> other;
+    template<typename U> struct rebind {
+        typedef static_counting_allocator<typename base_alloc_t::template rebind<U>::other,count_t> other;
     };
 #endif
 
@@ -89,9 +89,9 @@ public:
 
     pointer allocate(const size_type n)
     {
-        if(verbose) printf("\t+%d|", int(n));
+        if(verbose) std::printf("\t+%d|", int(n));
         if(max_items && items_allocated + n >= max_items) {
-            if(verbose) printf("items limit hits!");
+            if(verbose) std::printf("items limit hits!");
             if(throwing) throw std::bad_alloc();
             return NULL;
         }
@@ -105,7 +105,7 @@ public:
 
     void deallocate(const pointer ptr, const size_type n)
     {
-        if(verbose) printf("\t-%d|", int(n));
+        if(verbose) std::printf("\t-%d|", int(n));
         frees++;
         items_freed += n;
         base_alloc_t::deallocate(ptr, n);
@@ -113,7 +113,7 @@ public:
 
     static void init_counters(bool v = false) {
         verbose = v;
-        if(verbose) printf("\n------------------------------------------- Allocations:\n");
+        if(verbose) std::printf("\n------------------------------------------- Allocations:\n");
         items_allocated = 0;
         items_freed = 0;
         allocations = 0;
@@ -154,12 +154,12 @@ public:
     typedef typename base_alloc_t::size_type size_type;
     typedef typename base_alloc_t::difference_type difference_type;
 #if defined(_WIN64) && !defined(_CPPLIB_VER)
-    template<typename U, typename C = count_t> struct rebind {
-        typedef local_counting_allocator<base_alloc_t,C> other;
+    template<typename U> struct rebind {
+        typedef local_counting_allocator<base_alloc_t,count_t> other;
     };
 #else
-    template<typename U, typename C = count_t> struct rebind {
-        typedef local_counting_allocator<typename base_alloc_t::template rebind<U>::other,C> other;
+    template<typename U> struct rebind {
+        typedef local_counting_allocator<typename base_alloc_t::template rebind<U>::other,count_t> other;
     };
 #endif
 
@@ -167,19 +167,22 @@ public:
     count_t items_freed;
     count_t allocations;
     count_t frees;
+    size_t max_items;
 
-    local_counting_allocator() throw()
-        : items_allocated(0)
-        , items_freed(0)
-        , allocations(0)
-        , frees(0)
-    { }
+    local_counting_allocator() throw() {
+        items_allocated = 0;
+        items_freed = 0;
+        allocations = 0;
+        frees = 0;
+        max_items = 0;
+    }
 
     local_counting_allocator(const local_counting_allocator &a) throw()
         : items_allocated(a.items_allocated)
         , items_freed(a.items_freed)
         , allocations(a.allocations)
         , frees(a.frees)
+        , max_items(a.max_items)
     { }
 
     template<typename U, typename C>
@@ -188,14 +191,16 @@ public:
         items_freed = static_counting_allocator<U,C>::items_freed;
         allocations = static_counting_allocator<U,C>::allocations;
         frees = static_counting_allocator<U,C>::frees;
+        max_items = static_counting_allocator<U,C>::max_items;
     }
 
     template<typename U, typename C>
-    local_counting_allocator(const local_counting_allocator<U,C>&) throw()
-        : items_allocated(0)
-        , items_freed(0)
-        , allocations(0)
-        , frees(0)
+    local_counting_allocator(const local_counting_allocator<U,C> &a) throw()
+        : items_allocated(a.items_allocated)
+        , items_freed(a.items_freed)
+        , allocations(a.allocations)
+        , frees(a.frees)
+        , max_items(a.max_items)
     { }
 
     bool operator==(const local_counting_allocator &a) const
@@ -203,6 +208,8 @@ public:
 
     pointer allocate(const size_type n)
     {
+        if(max_items && items_allocated + n >= max_items)
+            throw std::bad_alloc();
         ++allocations;
         items_allocated += n;
         return base_alloc_t::allocate(n, pointer(0));
@@ -216,6 +223,10 @@ public:
         ++frees;
         items_freed += n;
         base_alloc_t::deallocate(ptr, n);
+    }
+
+    void set_limits(size_type max = 0) {
+        max_items = max;
     }
 };
 

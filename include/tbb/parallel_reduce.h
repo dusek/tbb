@@ -132,11 +132,11 @@ namespace internal {
             // Bound context prevents exceptions from body to affect nesting or sibling algorithms,
             // and allows users to handle exceptions safely by wrapping parallel_for in the try-block.
             if( !range.empty() )  {
-                asynch_context context;
+                task_group_context context;
                 task::spawn_root_and_wait( *new(task::allocate_root(context)) start_reduce(range,&body,partitioner) );
             }
         }
-        static void run( const Range& range, Body& body, const Partitioner &partitioner, asynch_context& context ) {
+        static void run( const Range& range, Body& body, const Partitioner &partitioner, task_group_context& context ) {
             if( !range.empty() ) 
                 task::spawn_root_and_wait( *new(task::allocate_root(context)) start_reduce(range,&body,partitioner) );
         }
@@ -230,21 +230,20 @@ namespace internal {
         }
 
 public:
-#if !__TBB_EXCEPTIONS
         static void run( const Range& range, Body& body, affinity_partitioner& partitioner ) {
-            if( !range.empty() ) 
-                task::spawn_root_and_wait( *new(task::allocate_root()) start_reduce_with_affinity(range,&body,partitioner) );
-        }
-#else /* __TBB_EXCEPTIONS */
-        static void run( const Range& range, Body& body, affinity_partitioner& partitioner ) {
-            // Bound context prevents exceptions from body to affect nesting or sibling algorithms,
-            // and allows users to handle exceptions safely by wrapping parallel_for in the try-block.
             if( !range.empty() ) {
-                asynch_context context;
+#if !__TBB_EXCEPTIONS || TBB_JOIN_OUTER_TASK_GROUP
+                task::spawn_root_and_wait( *new(task::allocate_root()) start_reduce_with_affinity(range,&body,partitioner) );
+#else
+                // Bound context prevents exceptions from body to affect nesting or sibling algorithms,
+                // and allows users to handle exceptions safely by wrapping parallel_for in the try-block.
+                task_group_context context;
                 task::spawn_root_and_wait( *new(task::allocate_root(context)) start_reduce_with_affinity(range,&body,partitioner) );
+#endif /* __TBB_EXCEPTIONS && !TBB_JOIN_OUTER_TASK_GROUP */
             }
         }
-        static void run( const Range& range, Body& body, affinity_partitioner& partitioner, asynch_context& context ) {
+#if __TBB_EXCEPTIONS
+        static void run( const Range& range, Body& body, affinity_partitioner& partitioner, task_group_context& context ) {
             if( !range.empty() ) 
                 task::spawn_root_and_wait( *new(task::allocate_root(context)) start_reduce_with_affinity(range,&body,partitioner) );
         }
@@ -320,28 +319,28 @@ void parallel_reduce( const Range& range, Body& body, affinity_partitioner& part
 //! Parallel iteration with reduction, default partitioner and user-supplied context.
 /** @ingroup algorithms **/
 template<typename Range, typename Body>
-void parallel_reduce( const Range& range, Body& body, asynch_context& context ) {
+void parallel_reduce( const Range& range, Body& body, task_group_context& context ) {
     internal::start_reduce<Range,Body,simple_partitioner>::run( range, body, context );
 }
 
 //! Parallel iteration with reduction, simple partitioner and user-supplied context.
 /** @ingroup algorithms **/
 template<typename Range, typename Body>
-void parallel_reduce( const Range& range, Body& body, const simple_partitioner& partitioner, asynch_context& context ) {
+void parallel_reduce( const Range& range, Body& body, const simple_partitioner& partitioner, task_group_context& context ) {
     internal::start_reduce<Range,Body,simple_partitioner>::run( range, body, partitioner, context );
 }
 
 //! Parallel iteration with reduction, auto_partitioner and user-supplied context
 /** @ingroup algorithms **/
 template<typename Range, typename Body>
-void parallel_reduce( const Range& range, Body& body, const auto_partitioner& partitioner, asynch_context& context ) {
+void parallel_reduce( const Range& range, Body& body, const auto_partitioner& partitioner, task_group_context& context ) {
     internal::start_reduce<Range,Body,auto_partitioner>::run( range, body, partitioner, context );
 }
 
 //! Parallel iteration with reduction, affinity_partitioner and user-supplied context
 /** @ingroup algorithms **/
 template<typename Range, typename Body>
-void parallel_reduce( const Range& range, Body& body, affinity_partitioner& partitioner, asynch_context& context ) {
+void parallel_reduce( const Range& range, Body& body, affinity_partitioner& partitioner, task_group_context& context ) {
     internal::start_reduce_with_affinity<Range,Body>::run( range, body, partitioner, context );
 }
 #endif /* __TBB_EXCEPTIONS */

@@ -317,7 +317,7 @@ void CMemTest::AddrArifm()
   if (FullLog) printf("Count zero: %d\n",CountZero);
   for (int i=0; i<COUNT_ELEM-1; i++)
   {
-    if ((DWORD)MasPointer[i]+MasCountElem[i] > (DWORD)MasPointer[i+1])
+    if ((uintptr_t)MasPointer[i]+MasCountElem[i] > (uintptr_t)MasPointer[i+1])
     {
       CountErrors++;
 //      if (FullLog) printf("intersection detect at 0x%x between %d element(int) and 0x%x\n"
@@ -352,7 +352,7 @@ void CMemTest::AddrArifm()
   // now we have a sorted array of pointers
   for (int i=0; i<COUNT_ELEM-1; i++)
   {
-    if ((DWORD)MasPointer[i]+MasCountElem[i] > (DWORD)MasPointer[i+1])
+    if ((uintptr_t)MasPointer[i]+MasCountElem[i] > (uintptr_t)MasPointer[i+1])
     {
       CountErrors++;
 //      if (FullLog) printf("intersection detect at 0x%x between %d element(int) and 0x%x\n"
@@ -391,7 +391,7 @@ void CMemTest::AddrArifm()
   // now we have a sorted array of pointers
   for (int i=0; i<COUNT_ELEM-1; i++)
   {
-    if ((DWORD)MasPointer[i]+MasCountElem[i] > (DWORD)MasPointer[i+1])
+    if ((uintptr_t)MasPointer[i]+MasCountElem[i] > (uintptr_t)MasPointer[i+1])
     {
       CountErrors++;
 //      if (FullLog) printf("intersection detect at 0x%x between %d element(int) and 0x%x\n"

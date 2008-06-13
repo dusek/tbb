@@ -168,7 +168,7 @@ int main(int argc, char **argv)
 void initialize_strings_vector(std::vector <std::string>* vector)
 {
     vector->push_back("TBB: VERSION\t\t2.0");
-    vector->push_back("TBB: INTERFACE VERSION\t3000");
+    vector->push_back("TBB: INTERFACE VERSION\t3010");
     vector->push_back("TBB: BUILD_DATE");
     vector->push_back("TBB: BUILD_HOST");
 #if _WIN32||_WIN64
@@ -182,6 +182,22 @@ void initialize_strings_vector(std::vector <std::string>* vector)
 		vector->push_back("TBB: BUILD_COMPILER");
     }
     vector->push_back("TBB: BUILD_LD");
+//#elif __linux__ //We use version_info_linux.sh for unsupported OSes
+#elif __APPLE__
+    vector->push_back("TBB: BUILD_KERNEL");
+    vector->push_back("TBB: BUILD_GCC");
+    if( getenv("COMPILER_VERSION") ) {
+		vector->push_back("TBB: BUILD_COMPILER");
+    }
+    vector->push_back("TBB: BUILD_LD");
+//#elif __linux__ //We use version_info_linux.sh for unsupported OSes
+#elif __sun
+    vector->push_back("TBB: BUILD_OS");
+    vector->push_back("TBB: BUILD_KERNEL");
+    vector->push_back("TBB: BUILD_SUNCC");
+    if( getenv("COMPILER_VERSION") ) {
+		vector->push_back("TBB: BUILD_COMPILER");
+    }
 //#elif __linux__ //We use version_info_linux.sh for unsupported OSes
 #else
     vector->push_back("TBB: BUILD_OS");

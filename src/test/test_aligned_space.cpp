@@ -26,12 +26,6 @@
     the GNU General Public License.
 */
 
-#if __linux__
-#define STD std
-#else
-#define STD   /* Cater to broken Windows compilers that are missing "std". */
-#endif /* __linux__ */
-
 //! Wrapper around T where all members are private.
 /** Used to prove that aligned_space<T,N> never calls member of T. */
 template<typename T>
@@ -94,6 +88,13 @@ void TestAlignedSpace() {
 #include "harness_m128.h"
 #include <cstdio>         // Inclusion of <cstdio> deferred, to improve odds of detecting accidental dependences on it.
 
+//workaround for old patform SDK
+#if defined(_WIN64) && !defined(_CPPLIB_VER)
+namespace std {
+    using ::printf;
+}
+#endif /* defined(_WIN64) && !defined(_CPPLIB_VER) */
+
 int main() {
     TestAlignedSpace<char>();
     TestAlignedSpace<short>();
@@ -105,7 +106,7 @@ int main() {
 #if HAVE_m128
     TestAlignedSpace<__m128>();
 #endif /* HAVE_m128 */
-    STD::printf("done\n");
+    std::printf("done\n");
     return 0;
 }
 
@@ -113,6 +114,6 @@ int main() {
 #include "harness.h"
 
 static void PrintSpaceWastingWarning( const char* type_name ) {
-    STD::printf("Consider rewriting aligned_space<%s,N> to waste less space\n", type_name ); 
+    std::printf("Consider rewriting aligned_space<%s,N> to waste less space\n", type_name ); 
 }
 

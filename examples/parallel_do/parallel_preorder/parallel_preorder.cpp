@@ -36,6 +36,8 @@
 #include <cstring>
 #include "Graph.h"
 
+using namespace std;
+
 //! Number of trials. Can be changed from command line
 int ntrial = 50;
 
@@ -61,7 +63,7 @@ public:
     }
 };   
 
-void ParallelPreorderTraversal( const std::vector<Cell*>& root_set ) {
+void ParallelPreorderTraversal( const vector<Cell*>& root_set ) {
     tbb::parallel_do(root_set.begin(), root_set.end(),Body());
 }
 
@@ -149,7 +151,7 @@ int main( int argc, char* argv[] ) {
         for( int trial=0; trial<ntrial; ++trial ) {
             Graph g;
             g.create_random_dag(1000);
-            std::vector<Cell*> root_set;
+            vector<Cell*> root_set;
             g.get_root_set(root_set);
             total_root_set_size += root_set.size();
 

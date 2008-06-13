@@ -31,7 +31,7 @@
 // This header is an optional part of the test harness.
 // It assumes that "harness_assert.h" has already been included.
 
-#if __linux__
+#if __linux__ || __sun
 #include <sys/resource.h>
 #include <unistd.h>
 

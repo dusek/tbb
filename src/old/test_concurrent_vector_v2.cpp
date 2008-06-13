@@ -31,6 +31,13 @@
 #include <cstdlib>
 #include "../test/harness_assert.h"
 
+//workaround for old patform SDK
+#if defined(_WIN64) && !defined(_CPPLIB_VER)
+namespace std{
+    using ::printf;
+}
+#endif /* defined(_WIN64) && !defined(_CPPLIB_VER) */
+
 tbb::atomic<long> FooCount;
 
 //! Problem size
@@ -92,7 +99,7 @@ static void CheckVector( const tbb::concurrent_vector<Foo>& cv, size_t expected_
     ASSERT( cv.empty()==(expected_size==0), NULL );
     for( int j=0; j<int(expected_size); ++j ) {
         if( cv[j].bar()!=~j )
-            printf("ERROR on line %d for old_size=%ld expected_size=%ld j=%d\n",__LINE__,long(old_size),long(expected_size),j);
+            std::printf("ERROR on line %d for old_size=%ld expected_size=%ld j=%d\n",__LINE__,long(old_size),long(expected_size),j);
     }
 }
 
@@ -112,7 +119,7 @@ void TestResizeAndCopy() {
             for( int j=0; j<new_size; ++j ) {
                 int expected = j<old_size ? j*j : Foo::initial_value_of_bar;
                 if( v[j].bar()!=expected ) 
-                    printf("ERROR on line %d for old_size=%ld new_size=%ld v[%ld].bar()=%d != %d\n",__LINE__,long(old_size),long(new_size),long(j),v[j].bar(), expected);
+                    std::printf("ERROR on line %d for old_size=%ld new_size=%ld v[%ld].bar()=%d != %d\n",__LINE__,long(old_size),long(new_size),long(j),v[j].bar(), expected);
             }
             ASSERT( v.size()==size_t(new_size), NULL );
             for( int j=0; j<new_size; ++j ) {
@@ -158,7 +165,7 @@ struct AssignElement {
     void operator()( const tbb::concurrent_vector<int>::range_type& range ) const {
         for( iterator i=range.begin(); i!=range.end(); ++i ) {
             if( *i!=0 )
-                printf("ERROR for v[%ld]\n", long(i-base));
+                std::printf("ERROR for v[%ld]\n", long(i-base));
             *i = int(i-base);
         }
     }
@@ -171,7 +178,7 @@ struct CheckElement {
     void operator()( const tbb::concurrent_vector<int>::const_range_type& range ) const {
         for( iterator i=range.begin(); i!=range.end(); ++i )
             if( *i != int(i-base) )
-                printf("ERROR for v[%ld]\n", long(i-base));
+                std::printf("ERROR for v[%ld]\n", long(i-base));
     }
     CheckElement( iterator base_ ) : base(base_) {}
 };
@@ -186,18 +193,18 @@ void TestParallelFor( int nthread ) {
     v.grow_to_at_least(N);  
     tbb::tick_count t0 = tbb::tick_count::now();
     if( Verbose )
-        printf("Calling parallel_for.h with %ld threads\n",long(nthread));
+        std::printf("Calling parallel_for.h with %ld threads\n",long(nthread));
     tbb::parallel_for( v.range(10000), AssignElement(v.begin()) );
     tbb::tick_count t1 = tbb::tick_count::now();
     const vector_t& u = v;      
     tbb::parallel_for( u.range(10000), CheckElement(u.begin()) );
     tbb::tick_count t2 = tbb::tick_count::now();
     if( Verbose )
-        printf("Time for parallel_for.h: assign time = %8.5f, check time = %8.5f\n",
+        std::printf("Time for parallel_for.h: assign time = %8.5f, check time = %8.5f\n",
                (t1-t0).seconds(),(t2-t1).seconds());
     for( long i=0; size_t(i)<v.size(); ++i )
         if( v[i]!=i )
-            printf("ERROR for v[%ld]\n", i);
+            std::printf("ERROR for v[%ld]\n", i);
 }
 
 template<typename Iterator1, typename Iterator2>
@@ -227,11 +234,11 @@ template<typename Vector, typename Iterator>
 void CheckConstIterator( const Vector& u, int i, const Iterator& cp ) {
     typename Vector::const_reference pref = *cp;
     if( pref.bar()!=i )
-        printf("ERROR for u[%ld] using const_iterator\n", long(i));
+        std::printf("ERROR for u[%ld] using const_iterator\n", long(i));
     typename Vector::difference_type delta = cp-u.begin();
     ASSERT( delta==i, NULL );
     if( u[i].bar()!=i )
-        printf("ERROR for u[%ld] using subscripting\n", long(i));
+        std::printf("ERROR for u[%ld] using subscripting\n", long(i));
     ASSERT( u.begin()[i].bar()==i, NULL );
 }
 
@@ -268,7 +275,7 @@ void TestSequentialFor() {
     ASSERT( !p->is_const(), NULL );
     for( int i=0; size_t(i)<v.size(); ++i, ++p ) {
         if( (*p).state!=Foo::DefaultInitialized )
-            printf("ERROR for v[%ld]\n", long(i));
+            std::printf("ERROR for v[%ld]\n", long(i));
         typename V::reference pref = *p;
         pref.bar() = i;
         typename V::difference_type delta = p-v.begin();
@@ -287,7 +294,7 @@ void TestSequentialFor() {
     }
     tbb::tick_count t2 = tbb::tick_count::now();
     if( Verbose )
-        printf("Time for serial for:  assign time = %8.5f, check time = %8.5f\n",
+        std::printf("Time for serial for:  assign time = %8.5f, check time = %8.5f\n",
                (t1-t0).seconds(),(t2-t1).seconds());
 
     // Now go backwards
@@ -434,7 +441,7 @@ void TestConcurrentGrowBy( int nthread ) {
     }
     delete[] found;
     if( nthread>1 && inversions<m/10 )
-        printf("WARNING: not much concurrency in TestConcurrentGrowBy\n");
+        std::printf("WARNING: not much concurrency in TestConcurrentGrowBy\n");
 }
 
 //! Test the assignment operator
@@ -511,14 +518,14 @@ static void TestFindPrimes() {
     double t128 = TimeFindPrimes(128);
 
     if( Verbose ) 
-        printf("TestFindPrimes: t2==%g t128=%g\n", t2, t128 );
+        std::printf("TestFindPrimes: t2==%g t128=%g\n", t2, t128 );
 
     // We allow the 128-thread run a little extra time to allow for thread overhead.
     // Theoretically, following test will fail on machine with >128 processors.
     // But that situation is not going to come up in the near future,
     // and the generalization to fix the issue is not worth the trouble.
     if( t128>1.10*t2 ) {
-        printf("Warning: grow_by is pathetically slow: t2==%g t128=%g\n", t2, t128);
+        std::printf("Warning: grow_by is pathetically slow: t2==%g t128=%g\n", t2, t128);
     } 
 }
 
@@ -548,7 +555,7 @@ int main( int argc, char* argv[] ) {
     MinThread = 1;
     ParseCommandLine( argc, argv );
     if( MinThread<1 ) {
-        printf("ERROR: MinThread=%d, but must be at least 1\n",MinThread);
+        std::printf("ERROR: MinThread=%d, but must be at least 1\n",MinThread);
     }
 
     TestIteratorTraits<tbb::concurrent_vector<Foo>::iterator,Foo>();
@@ -565,6 +572,6 @@ int main( int argc, char* argv[] ) {
     }
     TestFindPrimes();
     TestSort();
-    printf("done\n");
+    std::printf("done\n");
     return 0;
 }

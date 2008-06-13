@@ -28,7 +28,7 @@
 
 // Header that sets HAVE_m128 if we have type __m128
 
-#if __SSE__||_M_IX86
+#if (__SSE__||_M_IX86) && !defined(__sun)
 #include <xmmintrin.h>
 #define HAVE_m128 1
 #endif /* __SSE__||_M_IX86 */

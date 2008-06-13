@@ -228,14 +228,15 @@ template<typename T>
 void TestAtomicInteger( const char* name ) {
     if( Verbose )
         printf("testing atomic<%s>\n",name);
-#if __linux__ && __TBB_x86_32 && __GNUC__==3 && __GNUC_MINOR__==3
+#if ( __linux__ && __TBB_x86_32 && __GNUC__==3 && __GNUC_MINOR__==3 ) || defined(__SUNPRO_CC)
     // gcc 3.3 has known problem for 32-bit Linux, so only warn if there is a problem.
+    // SUNPRO_CC does have this problem as well
     if( sizeof(T)==8 ) {
         if( sizeof(AlignmentChecker<T>)!=2*sizeof(tbb::atomic<T>) ) {
-            printf("Warning: alignment for atomic<%s> is wrong (known issue with gcc 3.3 for IA32)\n",name);
+            printf("Warning: alignment for atomic<%s> is wrong (known issue with gcc 3.3 and sunCC 5.9 2008/01/28 for IA32)\n",name);
         }
     } else
-#endif /* __linux__ && __GNUC__ */
+#endif /* ( __linux__ && __TBB_x86_32 && __GNUC__==3 && __GNUC_MINOR__==3 ) || defined(__SUNPRO_CC) */
     ASSERT( sizeof(AlignmentChecker<T>)==2*sizeof(tbb::atomic<T>), NULL );
     TestOperations<T>(0L,T(-T(1)),T(1));
     for( int k=0; k<int(sizeof(long))*8-1; ++k ) {

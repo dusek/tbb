@@ -49,6 +49,14 @@ namespace tbb {
 //! @cond INTERNAL
 namespace internal {
     
+    class tbb_thread_v3;
+
+} // namespace internal
+
+void swap( internal::tbb_thread_v3& t1, internal::tbb_thread_v3& t2 ); 
+
+namespace internal {
+
     //! Allocate a closure
     void* allocate_closure_v3( size_t size );
     //! Free a closure allocated by allocate_closure_v3
@@ -67,8 +75,7 @@ namespace internal {
             try {
                 self->function();
             } catch ( ... ) {
-                delete self;
-                throw;
+                std::terminate();
             }
             delete self;
             return 0;
@@ -85,8 +92,7 @@ namespace internal {
             try {
                 self->function(self->arg1);
             } catch ( ... ) {
-                delete self;
-                throw;
+                std::terminate();
             }
             delete self;
             return 0;
@@ -103,8 +109,7 @@ namespace internal {
             try {
                 self->function(self->arg1, self->arg2);
             } catch ( ... ) {
-                delete self;
-                throw;
+                std::terminate();
             }
             delete self;
             return 0;
@@ -170,6 +175,7 @@ namespace internal {
         void internal_start( __TBB_NATIVE_THREAD_ROUTINE_PTR(start_routine), 
                              void* closure );
         friend void move_v3( tbb_thread_v3& t1, tbb_thread_v3& t2 );
+        friend void tbb::swap( tbb_thread_v3& t1, tbb_thread_v3& t2 ); 
     };
         
     class tbb_thread_v3::id { 
@@ -238,22 +244,40 @@ namespace internal {
     {
         return x.my_id >= y.my_id;
     }
-        
+
 } // namespace internal;
-     
+
 //! Users reference thread class by name tbb_thread
 typedef internal::tbb_thread_v3 tbb_thread;
 
-static inline void move( tbb_thread& t1, tbb_thread& t2 ) {
+using internal::operator==;
+using internal::operator!=;
+using internal::operator<;
+using internal::operator>;
+using internal::operator<=;
+using internal::operator>=;
+
+inline void move( tbb_thread& t1, tbb_thread& t2 ) {
     internal::move_v3(t1, t2);
 }
 
+inline void swap( internal::tbb_thread_v3& t1, internal::tbb_thread_v3& t2 ) {
+    tbb::tbb_thread::native_handle_type h = t1.my_handle;
+    t1.my_handle = t2.my_handle;
+    t2.my_handle = h;
+#if _WIN32||_WIN64
+    DWORD i = t1.my_thread_id;
+    t1.my_thread_id = t2.my_thread_id;
+    t2.my_thread_id = i;
+#endif /* _WIN32||_WIN64 */
+}
+
 namespace this_tbb_thread {
-    static inline tbb_thread::id get_id() { return internal::thread_get_id_v3(); }
+    inline tbb_thread::id get_id() { return internal::thread_get_id_v3(); }
     //! Offers the operating system the opportunity to schedule another thread.
-    static inline void yield() { internal::thread_yield_v3(); }
+    inline void yield() { internal::thread_yield_v3(); }
     //! The current thread blocks at least until the time specified.
-    static inline void sleep(const tick_count::interval_t &i) { 
+    inline void sleep(const tick_count::interval_t &i) { 
         internal::thread_sleep_v3(i);  
     }
 }  // namespace this_tbb_thread

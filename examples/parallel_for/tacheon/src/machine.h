@@ -72,4 +72,6 @@
 #include <sys/stat.h>
 #include <fcntl.h>
 
+using namespace std;
+
 #define STDTIME

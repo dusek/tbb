@@ -74,13 +74,14 @@ __TBB_machine_trylockbyte
 ?observe@task_scheduler_observer_v3@internal@tbb@@QAEX_N@Z
 
 ; exception handling support
-;?allocate@allocate_root_with_context_proxy@internal@tbb@@QBEAAVtask@3@I@Z
-;?free@allocate_root_with_context_proxy@internal@tbb@@QBEXAAVtask@3@@Z
-;?cancel_task_group@asynch_context@tbb@@QAE_NXZ
-;?reset@asynch_context@tbb@@QAEXXZ
-;??1asynch_context@tbb@@QAE@XZ
-;?what@unhandled_exception@tbb@@UBEPBDXZ
-;??_Gunhandled_exception@tbb@@UAEPAXI@Z
+?allocate@allocate_root_with_context_proxy@internal@tbb@@QBEAAVtask@3@I@Z
+?free@allocate_root_with_context_proxy@internal@tbb@@QBEXAAVtask@3@@Z
+?cancel_group_execution@task_group_context@tbb@@QAE_NXZ
+?reset@task_group_context@tbb@@QAEXXZ
+??1task_group_context@tbb@@QAE@XZ
+?name@captured_exception@tbb@@UBEPBDXZ
+?what@captured_exception@tbb@@UBEPBDXZ
+??1captured_exception@tbb@@UAE@XZ
 
 ; tbb_misc.cpp
 ?assertion_failure@tbb@@YAXPBDH00@Z
@@ -147,7 +148,8 @@ __TBB_machine_trylockbyte
 ; concurrent_hash_map.cpp
 ?internal_grow_predicate@hash_map_segment_base@internal@tbb@@QBE_NXZ
 
-; concurrent_queue.cpp
+#if !TBB_NO_LEGACY
+; concurrent_queue.cpp v2
 ?advance@concurrent_queue_iterator_base@internal@tbb@@IAEXXZ
 ?assign@concurrent_queue_iterator_base@internal@tbb@@IAEXABV123@@Z
 ?internal_size@concurrent_queue_base@internal@tbb@@IBEHXZ
@@ -160,6 +162,23 @@ __TBB_machine_trylockbyte
 ?internal_push@concurrent_queue_base@internal@tbb@@IAEXPBX@Z
 ?internal_push_if_not_full@concurrent_queue_base@internal@tbb@@IAE_NPBX@Z
 ?internal_set_capacity@concurrent_queue_base@internal@tbb@@IAEXHI@Z
+#endif
+
+; concurrent_queue v3
+??1concurrent_queue_iterator_base_v3@internal@tbb@@IAE@XZ
+??0concurrent_queue_iterator_base_v3@internal@tbb@@IAE@ABVconcurrent_queue_base_v3@12@@Z
+?advance@concurrent_queue_iterator_base_v3@internal@tbb@@IAEXXZ
+?assign@concurrent_queue_iterator_base_v3@internal@tbb@@IAEXABV123@@Z
+??0concurrent_queue_base_v3@internal@tbb@@IAE@I@Z
+??1concurrent_queue_base_v3@internal@tbb@@MAE@XZ
+?internal_pop@concurrent_queue_base_v3@internal@tbb@@IAEXPAX@Z
+?internal_pop_if_present@concurrent_queue_base_v3@internal@tbb@@IAE_NPAX@Z
+?internal_push@concurrent_queue_base_v3@internal@tbb@@IAEXPBX@Z
+?internal_push_if_not_full@concurrent_queue_base_v3@internal@tbb@@IAE_NPBX@Z
+?internal_size@concurrent_queue_base_v3@internal@tbb@@IBEHXZ
+?internal_set_capacity@concurrent_queue_base_v3@internal@tbb@@IAEXHI@Z
+?internal_finish_clear@concurrent_queue_base_v3@internal@tbb@@IAEXXZ
+?internal_throw_exception@concurrent_queue_base_v3@internal@tbb@@IBEXXZ
 
 #if !TBB_NO_LEGACY
 ; concurrent_vector.cpp v2

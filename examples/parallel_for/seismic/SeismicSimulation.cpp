@@ -40,6 +40,8 @@
 #include "tbb/parallel_for.h"
 #include "tbb/tick_count.h"
 
+using namespace std;
+
 #ifdef _MSC_VER
 // warning C4068: unknown pragma
 #pragma warning(disable: 4068)

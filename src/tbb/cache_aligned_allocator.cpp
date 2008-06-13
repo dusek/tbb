@@ -37,6 +37,8 @@
 #include <dlfcn.h>
 #endif /* _WIN32||_WIN64 */
 
+using namespace std;
+
 #if __TBB_WEAK_SYMBOLS
 
 #pragma weak scalable_malloc
@@ -109,7 +111,7 @@ static void (*padded_free_handler)( void* p ) = &dummy_padded_free;
 #define MALLOCLIB_NAME "tbbmalloc" DEBUG_SUFFIX ".dll"
 #elif __APPLE__
 #define MALLOCLIB_NAME "libtbbmalloc" DEBUG_SUFFIX ".dylib"
-#elif __linux__ || __FreeBSD__
+#elif __linux__ || __FreeBSD__ || __sun
 #define MALLOCLIB_NAME "libtbbmalloc" DEBUG_SUFFIX ".so"
 #else
 #error Unknown OS
@@ -198,7 +200,7 @@ void* NFS_Allocate( size_t n, size_t element_size, void* hint ) {
 
     if (bytes<n || bytes+m<bytes) {
         // Overflow
-        throw std::bad_alloc();
+        throw bad_alloc();
     }
     
     void* result = (*padded_allocate_handler)( bytes, m );
@@ -206,7 +208,7 @@ void* NFS_Allocate( size_t n, size_t element_size, void* hint ) {
     unsigned char* base;
     if( bytes<n || bytes+m<bytes || !(base=(unsigned char*)(bytes>=BigSize?malloc(m+bytes):(*MallocHandler)(m+bytes))) ) {
         // Overflow
-        throw std::bad_alloc();
+        throw bad_alloc();
     }
     // Round up to next line
     unsigned char* result = (unsigned char*)((uintptr)(base+m)&-m);
@@ -243,7 +245,7 @@ void NFS_Free( void* p ) {
 static void* padded_allocate_via_scalable_malloc( size_t bytes, size_t alignment  ) {  
     unsigned char* base;
     if( !(base=(unsigned char*)(*MallocHandler)((bytes+alignment)&-alignment))) {
-        throw std::bad_alloc();
+        throw bad_alloc();
     }        
     return base; // scalable_malloc returns aligned pointer
 }
@@ -251,7 +253,7 @@ static void* padded_allocate_via_scalable_malloc( size_t bytes, size_t alignment
 static void* padded_allocate( size_t bytes, size_t alignment ) {    
     unsigned char* base;
     if( !(base=(unsigned char*)malloc(alignment+bytes)) ) {        
-        throw std::bad_alloc();
+        throw bad_alloc();
     }
     // Round up to the next line
     unsigned char* result = (unsigned char*)((uintptr)(base+alignment)&-alignment);
@@ -276,7 +278,7 @@ void* allocate_via_handler_v3( size_t n ) {
     result = (*MallocHandler) (n);
     if (!result) {
         // Overflow
-        throw std::bad_alloc();
+        throw bad_alloc();
     }
     return result;
 }

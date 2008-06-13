@@ -33,7 +33,7 @@
 
 namespace tbb {
 
-typedef size_t stack_size_type;
+typedef std::size_t stack_size_type;
 
 //! @cond INTERNAL
 namespace internal {

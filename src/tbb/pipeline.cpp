@@ -251,7 +251,7 @@ void pipeline::inject_token( task& ) {
 
 pipeline::pipeline() : 
     filter_list(NULL),
-    filter_end(&filter_list),
+    filter_end(NULL),
     end_counter(NULL),
     token_counter(0),
     end_of_input(false)
@@ -272,19 +272,64 @@ void pipeline::clear() {
         }
         next=f->next_filter_in_pipeline;
         f->next_filter_in_pipeline = filter::not_in_pipeline();
+        if ( (f->my_filter_mode & internal::VERSION_MASK) >= __TBB_PIPELINE_VERSION(3) ) {
+            f->prev_filter_in_pipeline = filter::not_in_pipeline();
+            f->my_pipeline = NULL;
+        }
     }
-    filter_list = NULL;
+    filter_list = filter_end = NULL;
 }
 
-void pipeline::add_filter( filter& filter ) {
-    __TBB_ASSERT( filter.next_filter_in_pipeline==filter::not_in_pipeline(), "filter already part of pipeline?" );
+void pipeline::add_filter( filter& filter_ ) {
+#if TBB_DO_ASSERT
+    if ( (filter_.my_filter_mode & internal::VERSION_MASK) >= __TBB_PIPELINE_VERSION(3) ) 
+        __TBB_ASSERT( filter_.prev_filter_in_pipeline==filter::not_in_pipeline(), "filter already part of pipeline?" );
+    __TBB_ASSERT( filter_.next_filter_in_pipeline==filter::not_in_pipeline(), "filter already part of pipeline?" );
     __TBB_ASSERT( !end_counter, "invocation of add_filter on running pipeline" );
-    if( filter.is_serial() ) {
-        filter.input_buffer = new internal::ordered_buffer();
+#endif    
+    if( filter_.is_serial() ) {
+        filter_.input_buffer = new internal::ordered_buffer();
     }
-    *filter_end = &filter;
-    filter_end = &filter.next_filter_in_pipeline;
-    *filter_end = NULL;
+    if ( (filter_.my_filter_mode & internal::VERSION_MASK) >= __TBB_PIPELINE_VERSION(3) ) {
+        filter_.my_pipeline = this;
+        filter_.prev_filter_in_pipeline = filter_end;
+        if ( filter_list == NULL)
+            filter_list = &filter_;
+        else
+            filter_end->next_filter_in_pipeline = &filter_;
+        filter_.next_filter_in_pipeline = NULL;
+        filter_end = &filter_;
+    }
+    else
+    {
+        if( !filter_end )
+            filter_end = reinterpret_cast<filter*>(&filter_list);
+        
+        *reinterpret_cast<filter**>(filter_end) = &filter_;
+        filter_end = reinterpret_cast<filter*>(&filter_.next_filter_in_pipeline);
+        *reinterpret_cast<filter**>(filter_end) = NULL;
+    }
+}
+
+void pipeline::remove_filter( filter& filter_ ) {
+    if (&filter_ == filter_list) 
+        filter_list = filter_.next_filter_in_pipeline;
+    else {
+        __TBB_ASSERT( filter_.prev_filter_in_pipeline, "filter list broken?" ); 
+        filter_.prev_filter_in_pipeline->next_filter_in_pipeline = filter_.next_filter_in_pipeline;
+    }
+    if (&filter_ == filter_end)
+        filter_end = filter_.prev_filter_in_pipeline;
+    else {
+        __TBB_ASSERT( filter_.next_filter_in_pipeline, "filter list broken?" ); 
+        filter_.next_filter_in_pipeline->prev_filter_in_pipeline = filter_.prev_filter_in_pipeline;
+    }
+    if( internal::ordered_buffer* b = filter_.input_buffer ) {
+        delete b; 
+        filter_.input_buffer = NULL;
+    }
+    filter_.next_filter_in_pipeline = filter_.prev_filter_in_pipeline = filter::not_in_pipeline();
+    filter_.my_pipeline = NULL;
 }
 
 void pipeline::run( size_t max_number_of_live_tokens ) {
@@ -311,7 +356,15 @@ void pipeline::run( size_t max_number_of_live_tokens ) {
 }
 
 filter::~filter() {
-    __TBB_ASSERT( next_filter_in_pipeline==filter::not_in_pipeline(), "cannot destroy filter that is part of pipeline" );
+    if ( (my_filter_mode & internal::VERSION_MASK) >= __TBB_PIPELINE_VERSION(3) ) {
+        if ( next_filter_in_pipeline != filter::not_in_pipeline() ) { 
+            __TBB_ASSERT( prev_filter_in_pipeline != filter::not_in_pipeline(), "probably filter list is broken" );
+            my_pipeline->remove_filter(*this);
+        } else 
+            __TBB_ASSERT( prev_filter_in_pipeline == filter::not_in_pipeline(), "probably filter list is broken" );
+    } else {
+        __TBB_ASSERT( next_filter_in_pipeline==filter::not_in_pipeline(), "cannot destroy filter that is part of pipeline" );
+    }
 }
 
 } // tbb

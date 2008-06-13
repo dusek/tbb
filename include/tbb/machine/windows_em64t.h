@@ -82,6 +82,10 @@ inline void __TBB_machine_OR( volatile void *operand, uintptr_t addend ) {
     InterlockedOr64((LONGLONG *)operand, addend); 
 }
 
+inline void __TBB_machine_AND( volatile void *operand, uintptr_t addend ) {
+    InterlockedAnd64((LONGLONG *)operand, addend); 
+}
+
 #define __TBB_CompareAndSwap1(P,V,C) __TBB_machine_cmpswp1(P,V,C)
 #define __TBB_CompareAndSwap2(P,V,C) __TBB_machine_cmpswp2(P,V,C)
 #define __TBB_CompareAndSwap4(P,V,C) InterlockedCompareExchange( (LONG *) P , V , C ) 
@@ -105,6 +109,7 @@ inline void __TBB_machine_OR( volatile void *operand, uintptr_t addend ) {
 #undef __TBB_Load8
 
 #define __TBB_AtomicOR(P,V) __TBB_machine_OR(P,V)
+#define __TBB_AtomicAND(P,V) __TBB_machine_AND(P,V)
 
 // Definition of other functions
 #if !defined(_WIN32_WINNT)

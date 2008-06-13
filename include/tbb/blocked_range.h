@@ -53,7 +53,7 @@ public:
     typedef Value const_iterator;
 
     //! Type for size of a range
-    typedef size_t size_type;
+    typedef std::size_t size_type;
 
     //! Construct range with default-constructed values for begin and end.
     /** Requires that Value have a default constructor. */

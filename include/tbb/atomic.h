@@ -75,7 +75,7 @@ struct atomic_base {
     I my_value;
 };
 
-#if __GNUC__ 
+#if __GNUC__ || __SUNPRO_CC
 #define __TBB_DECL_ATOMIC_FIELD(t,f,a) t f  __attribute__ ((aligned(a)));
 #elif defined(__INTEL_COMPILER)||_MSC_VER >= 1300
 #define __TBB_DECL_ATOMIC_FIELD(t,f,a) __declspec(align(a)) t f;

@@ -169,6 +169,15 @@ static inline void __TBB_machine_OR( volatile void *operand, unsigned __int32 ad
    }
 }
 
+static inline void __TBB_machine_AND( volatile void *operand, unsigned __int32 addend ) {
+   __asm 
+   {
+       mov eax, addend
+       mov edx, [operand]
+       lock and [edx], eax
+   }
+}
+
 static inline void __TBB_machine_pause (__int32 delay ) {
     _asm 
     {
@@ -203,6 +212,7 @@ static inline void __TBB_machine_pause (__int32 delay ) {
 #define __TBB_Store8(P,V) __TBB_machine_store8(P,V)
 #define __TBB_Load8(P) __TBB_machine_load8(P)
 #define __TBB_AtomicOR(P,V) __TBB_machine_OR(P,V)
+#define __TBB_AtomicAND(P,V) __TBB_machine_AND(P,V)
 
 // Definition of other functions
 #if !defined(_WIN32_WINNT)

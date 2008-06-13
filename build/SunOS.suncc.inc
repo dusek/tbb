@@ -24,91 +24,68 @@
 # invalidate any other reasons why the executable file might be covered by
 # the GNU General Public License.
 
-#------------------------------------------------------------------------------
-# Define compiler-specific variables.
-#------------------------------------------------------------------------------
+COMPILE_ONLY = -c -MMD -errtags
+PREPROC_ONLY = -E -MMD
+INCLUDE_KEY = -I
+DEFINE_KEY = -D
+OUTPUT_KEY = -o #
+OUTPUTOBJ_KEY = -o #
+PIC_KEY = -KPIC
+DYLIB_KEY = -G
+LIBDL = -ldl
+WARNING_AS_ERROR_KEY = Warning as error
+WARNING_SUPPRESS = -erroff=unassigned,attrskipunsup,badargtype2w,badbinaryopw,wbadasg
+tbb_strict=0
 
+TBB_NOSTRICT = 1
 
-#------------------------------------------------------------------------------
-# Setting compiler flags.
-#------------------------------------------------------------------------------
-CPLUS = cl
-LINK_FLAGS = /link /nologo
-LIB_LINK_FLAGS=/link /nologo /DLL /MAP /DEBUG /fixed:no
-MS_CRT_KEY = /MD$(if $(findstring debug,$(cfg)),d)
-EH_FLAGS = /EHsc /GR
-               
+CPLUS = CC
+LIB_LINK_FLAGS = -G -R . -M$(tbb_root)/build/suncc.map.pause
+LINK_FLAGS += -M$(tbb_root)/build/suncc.map.pause
+LIBS = -lpthread -lrt -ldl -R .
+C_FLAGS = $(CPLUS_FLAGS) -Xc
+
 ifeq ($(cfg), release)
-        CPLUS_FLAGS = /nologo $(MS_CRT_KEY) /O2 /Zi $(EH_FLAGS) /Zc:forScope /DDO_ITT_NOTIFY \
-                      /DUSE_WINTHREAD /D_CRT_SECURE_NO_DEPRECATE
-        ASM_FLAGS =
-ifeq (ia32,$(arch))
-        CPLUS_FLAGS += /Oy
-endif
+        CPLUS_FLAGS = -DDO_ITT_NOTIFY -xO2 -library=stlport4 -DUSE_PTHREAD 
 endif
 ifeq ($(cfg), debug)
-        CPLUS_FLAGS = /nologo $(MS_CRT_KEY) /Od /Ob0 /Zi $(EH_FLAGS) /Zc:forScope \
-                      /DTBB_DO_ASSERT /DDO_ITT_NOTIFY
-        ASM_FLAGS = /DUSE_FRAME_POINTER
+        CPLUS_FLAGS = -DTBB_DO_ASSERT -DDO_ITT_NOTIFY -g -library=stlport4 -DUSE_PTHREAD 
 endif
 
+ASM=
+ASM_FLAGS=
 
-COMPILE_ONLY = /c
-PREPROC_ONLY = /TC /EP
-INCLUDE_KEY = /I
-DEFINE_KEY = /D
-OUTPUT_KEY = /Fe
-OUTPUTOBJ_KEY = /Fo
-WARNING_AS_ERROR_KEY = /WX
-WARNING_KEY = /W3
-DYLIB_KEY = /DLL
-EXPORT_KEY = /DEF:
-
-ifeq ($(runtime),vc8)
-        OPENMP_FLAG = /openmp
-endif
+TBB_ASM.OBJ=
 
 ifeq (em64t,$(arch))
-        ASM_FLAGS += /DEM64T=1
-        CPLUS_FLAGS += /GS-
-endif
+    CPLUS_FLAGS += -m64
+    ASM_FLAGS += -m64
+    LIB_LINK_FLAGS += -m64
+endif 
 
-
-
-CPLUS_FLAGS += /DUSE_WINTHREAD /D_CRT_SECURE_NO_DEPRECATE \
-        /D_WIN32_WINNT=$(_WIN32_WINNT)
-C_FLAGS = $(CPLUS_FLAGS) /TC
-#------------------------------------------------------------------------------
-# End of setting compiler flags.
-#------------------------------------------------------------------------------
-
+ifeq (ia32,$(arch))
+    CPLUS_FLAGS += -m32
+    LIB_LINK_FLAGS += -m32
+endif 
 
 #------------------------------------------------------------------------------
 # Setting assembler data.
 #------------------------------------------------------------------------------
-ASSEMBLY_SOURCE=$(arch)-masm
-ifeq (em64t,$(arch))
-    ASM=ml64
-    ASM_FLAGS += /c /Zi
-    TBB_ASM.OBJ = atomic_support.obj
-else
-    ASM=ml
-    ASM_FLAGS += /c /coff /Zi
-    TBB_ASM.OBJ = atomic_support.obj lock_byte.obj
-endif
+%.$(OBJ): %.s
+	cpp $(ASM_FLAGS) <$< | grep -v '^#' >$*.tmp
+	$(ASM) $(ASM_FLAGS) -o $@ $*.tmp
+	rm $*.tmp
+
+ASSEMBLY_SOURCE=$(arch)-fbe
 #------------------------------------------------------------------------------
 # End of setting assembler data.
 #------------------------------------------------------------------------------
 
-
 #------------------------------------------------------------------------------
 # Setting tbbmalloc data.
 #------------------------------------------------------------------------------
-M_CPLUS_FLAGS = $(subst $(EH_FLAGS),/EHs-,$(CPLUS_FLAGS))
+M_INCLUDES = $(INCLUDES) -I$(MALLOC_ROOT) -I$(MALLOC_SOURCE_ROOT)
+M_CPLUS_FLAGS = $(CPLUS_FLAGS)
 #------------------------------------------------------------------------------
 # End of setting tbbmalloc data.
-#------------------------------------------------------------------------------
-
-#------------------------------------------------------------------------------
-# End of define compiler-specific variables.
 #------------------------------------------------------------------------------

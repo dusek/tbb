@@ -46,7 +46,7 @@
 #       define __ARCH_x86_64 1
 #   elif __ia64__
 #       define __ARCH_ipf 1
-#   elif __i386__
+#   elif __i386__ || __i386
 #       define __ARCH_x86_32 1
 #   else
 #       define __ARCH_unknown 1

@@ -24,7 +24,7 @@
 # invalidate any other reasons why the executable file might be covered by
 # the GNU General Public License.
 
-COMPILE_ONLY = -c -MMD
+COMPILE_ONLY = -c -MMD 
 PREPROC_ONLY = -E -x c
 INCLUDE_KEY = -I
 DEFINE_KEY = -D
@@ -44,10 +44,10 @@ LIBS = -lpthread -lrt -ldl
 C_FLAGS = $(CPLUS_FLAGS) -x c
 
 ifeq ($(cfg), release)
-        CPLUS_FLAGS = -DDO_ITT_NOTIFY -O2 -DUSE_PTHREAD -D__linux__ -D__custom_linux__
+        CPLUS_FLAGS = -DDO_ITT_NOTIFY -O2 -DUSE_PTHREAD
 endif
 ifeq ($(cfg), debug)
-        CPLUS_FLAGS = -DTBB_DO_ASSERT -DDO_ITT_NOTIFY -g -O0 -DUSE_PTHREAD -D__linux__ -D__custom_linux__
+        CPLUS_FLAGS = -DTBB_DO_ASSERT -DDO_ITT_NOTIFY -g -O0 -DUSE_PTHREAD
 endif
 
 ASM=

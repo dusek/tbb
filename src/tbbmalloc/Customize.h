@@ -54,7 +54,7 @@ extern "C" void mallocProcessShutdownNotification(void);
     in a strict block-scoped locking pattern.  Omitting these methods permitted
     further simplication. */
 class MallocMutex {
-    volatile unsigned char value;
+    unsigned char value;
 
     //! Deny assignment
     void operator=( MallocMutex& MallocMutex );

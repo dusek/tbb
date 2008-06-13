@@ -29,20 +29,6 @@
 #ifndef __TBB_machine_H
 #define __TBB_machine_H
 
-#if _WIN32||_WIN64
-// define the parts of stdint.h that are needed 
-typedef __int8 int8_t;
-typedef __int16 int16_t;
-typedef __int32 int32_t;
-typedef __int64 int64_t;
-typedef unsigned __int8 uint8_t;
-typedef unsigned __int16 uint16_t;
-typedef unsigned __int32 uint32_t;
-typedef unsigned __int64 uint64_t;
-#else
-#include <stdint.h>
-#endif
-
 #include <cstdio>
 #include <assert.h>
 #include "tbb/tbb_stddef.h"
@@ -88,6 +74,17 @@ typedef unsigned __int64 uint64_t;
 #elif _AIX
 
 #include "tbb/machine/ibm_aix51.h"
+
+#elif __sun || __SUNPRO_CC
+
+#define __asm__ asm 
+#define __volatile__ volatile 	
+#if __i386  || __i386__
+#include "tbb/machine/linux_ia32.h"
+#elif __x86_64__
+#include "tbb/machine/linux_em64t.h"
+#endif
+
 #endif
 
 #if !defined(__TBB_CompareAndSwap4) || !defined(__TBB_CompareAndSwap8) || !defined(__TBB_Yield)
@@ -271,7 +268,7 @@ inline T __TBB_FetchAndStoreGeneric (volatile void *ptr, T value) {
 // strictest alignment is 16.
 #ifndef __TBB_TypeWithAlignmentAtLeastAsStrict
 
-#if __GNUC__
+#if __GNUC__ || __SUNPRO_CC
 struct __TBB_machine_type_with_strictest_alignment {
     int member[4];
 } __attribute__((aligned(16)));
@@ -302,7 +299,7 @@ struct work_around_alignment_bug {
 #endif
 };
 #define __TBB_TypeWithAlignmentAtLeastAsStrict(T) tbb::internal::type_with_alignment<tbb::internal::work_around_alignment_bug<sizeof(T),T>::alignment>
-#elif __GNUC__
+#elif __GNUC__ || __SUNPRO_CC
 #define __TBB_TypeWithAlignmentAtLeastAsStrict(T) tbb::internal::type_with_alignment<__alignof__(T)>
 #else
 #define __TBB_TypeWithAlignmentAtLeastAsStrict(T) __TBB_machine_type_with_strictest_alignment
@@ -536,23 +533,30 @@ inline intptr_t __TBB_Log2( uintptr_t x ) {
 
 #ifndef __TBB_AtomicOR
 inline void __TBB_AtomicOR( volatile void *operand, uintptr_t addend ) {
-       uintptr_t result, tmp;
+       uintptr_t result = *(uintptr_t *)operand, tmp;
        do {
-          tmp = *(uintptr_t *)operand;
-          result = __TBB_CompareAndSwapW(operand, tmp|addend, tmp);
-       } while (result != tmp);
+	  tmp = result;
+       } while ( (result = __TBB_CompareAndSwapW(operand, tmp|addend, tmp)) != tmp ) ;
+    }
+#endif
+
+#ifndef __TBB_AtomicAND
+inline void __TBB_AtomicAND( volatile void *operand, uintptr_t addend ) {
+       uintptr_t result = *(uintptr_t *)operand, tmp;
+       do {
+	  tmp = result;
+       } while ( (result = __TBB_CompareAndSwapW(operand, tmp&addend, tmp)) != tmp ) ;
     }
 #endif
 
 #ifndef __TBB_TryLockByte
-inline bool __TBB_TryLockByte( volatile unsigned char &flag ) {
-  volatile void *f = &flag;
-  return ( __TBB_CompareAndSwap1(f,1,0) == 0);
+inline bool __TBB_TryLockByte( unsigned char &flag ) {
+    return __TBB_CompareAndSwap1(&flag,1,0)==0;
 }
 #endif
 
 #ifndef __TBB_LockByte
-inline uintptr_t __TBB_LockByte( volatile unsigned char& flag ) {
+inline uintptr_t __TBB_LockByte( unsigned char& flag ) {
     if ( !__TBB_TryLockByte(flag) ) {
         tbb::internal::AtomicBackoff b;
         do {

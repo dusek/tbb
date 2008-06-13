@@ -116,9 +116,9 @@ static color_t render_one_pixel (int x, int y, unsigned int *local_mbox, unsigne
             sample.serial = serial; 
 
             {
-                sample.d.x+=((rand() % 100) - 50) / jitterscale;
-                sample.d.y+=((rand() % 100) - 50) / jitterscale;
-                sample.d.z+=((rand() % 100) - 50) / jitterscale;
+                sample.d.x+=((std::rand() % 100) - 50) / jitterscale;
+                sample.d.y+=((std::rand() % 100) - 50) / jitterscale;
+                sample.d.z+=((std::rand() % 100) - 50) / jitterscale;
             }
 
             avcol=trace(&sample);  

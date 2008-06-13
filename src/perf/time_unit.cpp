@@ -26,316 +26,266 @@
     the GNU General Public License.
 */
 
-#include "tbb/parallel_for.h"
-#include "tbb/parallel_reduce.h"
-#include "tbb/blocked_range.h"
 #include "tbb/task_scheduler_init.h"
 #include "tbb/tick_count.h"
-#include <cstdio>
 #include <cmath>
 #include <cstdlib>
-#include <cstring>
-#include <cctype>
+#include <cerrno>
+#include <cfloat>
+#include <vector>
+#include <algorithm>
 
-// This file is a microbenchmark for TBB.  
+#include "../src/test/harness.h"
+
+#if  __linux__ || __APPLE__ || __FreeBSD__
+    #include <sys/resource.h>
+#endif /* __APPLE__ */
+
+// The code, performance of which is to be measured, is surrounded by the StartSimpleTiming
+// and StopSimpleTiming macros. It is called "target code" or "code of interest" hereafter.
 //
-// Command line: 
-//     test_unit.exe [P] filter1 filter2 ...
-// where
-//     p is of the form m or m:n, which indicates the number of threads to use.  m:n indicates a closed range [m:n]
-//     filteri is a string indicating which tests to select.  If the filter is xyz, only tests with xyz in their name 
-//     will be run.  Multiple filters are logically ANDed.
+// The target code is executed inside the nested loop. Nesting is necessary to allow
+// measurements on arrays that fit cache of a particular level, while making the load
+// big enough to eliminate the influence of random deviations.
 //
-// Results are printed in tab-separate form suitable for importing into a spreadsheet.
-// Each line has the form
-//     name     P       N       rate0...rate4
-// where 
-//     name describes the test
-//     P is the number of threads
-//     N is the value of N used.  It is set so that the test runs in 1 millisecond.
-//     rate0...rate4 are the rates that were measured.  Rates are in printed in per-millisecond.  
+// Macro StartSimpleTiming defines reduction variable "util::anchor", which may be modified (usually 
+// by adding to) by the target code. This can be necessary to prevent optimizing compilers 
+// from throwing out the code of interest. Besides, if the target code is complex enough, 
+// make sure that all its branches contribute (directly or indirectly) to the value 
+// being added to the "util::anchor" variable.
+//
+// To factor out overhead introduced by the measurement infra code it is recommended to make 
+// a calibration run with target code replaced by a no-op (but still modifying "sum"), and
+// store the resulting time in the "util::base" variable.
+//
+// A generally good approach is to make the target code use elements of a preliminary 
+// initialized array. Then for calibration run you just need to add vector elements 
+// to the "sum" variable. To get rid of memory access delays make the array small 
+// enough to fit L2 or L1 cache (play with StartSimpleTiming arguments if necessary).
+//
+// Macro CalibrateSimpleTiming performs default calibration using "util::anchor += i;" operation.
+//
+// Macro ANCHOR_TYPE defines the type of the reduction variable. If it was not 
+// defined  before including this header, it is defined as size_t. Depending on 
+// the target code modern super scalar architectures may blend reduction operation
+// and instructions of interest differently for different target alternatives. So
+// you may play with the type to minimize out-of-order and parallel execution impact
+// on the calibration time veracity. You may even end up with different reduction 
+// variable types (and different calibration times) for different measurements.
 
-int filterc;
 
-//! Pointer into argv where filter arguments begin. 
-char** filterv;
+namespace util {
 
-//! Miniumum number of threads.
-int min_thread=1;
+typedef std::vector<double>    durations_t;
 
-//! Maximum number of thread
-int max_thread=1;
+    void trace_histogram ( const durations_t& t, char* histogramFileName )
+    {
+        FILE* f = histogramFileName ? fopen(histogramFileName, "wt") : stdout;
+        size_t  n = t.size();
+        const size_t num_buckets = 100;
+        double  min_val = *std::min_element(t.begin(), t.end()),
+                max_val = *std::max_element(t.begin(), t.end()),
+                bucket_size = (max_val - min_val) / num_buckets;
+        std::vector<size_t> hist(num_buckets + 1, 0);
+        for ( size_t i = 0; i < n; ++i )
+            ++hist[size_t((t[i]-min_val)/bucket_size)];
+        fprintf (f, "Histogram: nvals = %u, min = %g, max = %g, nbuckets = %u\n", (unsigned)n, min_val, max_val, (unsigned)num_buckets);
+        double bucket = min_val;
+        for ( size_t i = 0; i <= num_buckets; ++i, bucket+=bucket_size )
+            fprintf (f, "%12g\t%u\n", bucket, (unsigned)hist[i]);
+        fclose(f);
+    }
 
-//! Type of a count.  
-typedef size_t count_type;
-
-typedef void (*benchmark_type)(count_type);
-
-//! Desired time in which each test must run.
-/** It is a millisecond, because TBB targets desktop parallelism, and 
-    interactive programs have to do calculations in fractions of a video frame. */
-const double DESIRED_TEST_TIME = 0.001;
-
-//! Number of times to repeat a test.
-const int REPETITIONS = 10;
-
-//! Each run must not vary more than a relative tolerand of (+/-)TOLERANCE
-const double TOLERANCE = 0.1;
-
-//! Number of times to run each test.
-const int N_TRIAL = 5;
-
-//! Measure time it takes to run test with n iterations.
-double time_one( benchmark_type test, count_type n ) {
-    tbb::tick_count t0 = tbb::tick_count::now();
-    for( int i=0; i<REPETITIONS; ++i )
-        test(n);
-    tbb::tick_count t1 = tbb::tick_count::now();
-    return (t1-t0).seconds()/REPETITIONS;
-}
-
-//! Print a rate.
-/** This routine prints a typical rate in only 7 characters, instead of the 9 
-    that would be print if a %g format were used.  The savings are because
-    print_one_rate prints the exponent without a "+", and without a "0" 
-    if the exponent is a single digit. */
-void print_one_rate( double rate ) {
-    int exponent = int(floor(log10(rate)));
-    printf("%.3fe%d", rate/pow(10.0,exponent), exponent );
-}
-
-//! Time a benchmark
-/** Fills in elements of rate[] with per-second rates. 
-    Returns nominal number of times the benchmark was run in DESIRED_TIME.
-    Returns 0 if it cannot get a repeatable time. */
-count_type run_one( const char* name, benchmark_type benchmark, double rate[N_TRIAL] ) {
-    // Estimate appropriate value for n
-    double time;
-    count_type n;
-    int n_retry = 0;
-retry:
-    for(n=1;;n*=2) {
-        time = time_one(benchmark,n);
-        // Quit early if overflow might happen
-        if( time>=DESIRED_TEST_TIME ) break;
-        if( n*2<n ) {
-            printf("error: overflow for %s\n",name);
-            exit(1);
+    double average ( const durations_t& d, double& variation_percent, double& std_dev_percent )
+    {
+        durations_t t = d;
+        if ( t.size() > 5 ) {
+            t.erase(std::min_element(t.begin(), t.end()));
+            t.erase(std::max_element(t.begin(), t.end()));
         }
-    }
-    n = count_type(n*DESIRED_TEST_TIME/time+0.5);
-    time = time_one(benchmark,n);
-    n = count_type(n*DESIRED_TEST_TIME/time+0.5);
-    double expected_rate = n/time;
-    for( int i=0; i<N_TRIAL; ++i ) {
-        // Test is run n+wobble times, to reveal any sensitivity to small variations in n.
-        int wobble = (i-N_TRIAL)/2;
-        time = time_one(benchmark,n+wobble);
-        rate[i] = (n+wobble)/time;
-        if( rate[i]<expected_rate*(1-TOLERANCE) || rate[i]>expected_rate*(1+TOLERANCE) ) {
-            if( ++n_retry==3 ) {
-                return 0;
-            }
-            goto retry; 
+        size_t  n = t.size();
+        double  sum = 0,
+                min_val = *std::min_element(t.begin(), t.end()),
+                max_val = *std::max_element(t.begin(), t.end());
+        for ( size_t i = 0; i < n; ++i )
+            sum += t[i];
+        double  avg = sum / n,
+                std_dev = 0;
+        for ( size_t i = 0; i < n; ++i ) {
+            double    dev = fabs(t[i] - avg);
+            std_dev += dev * dev;
         }
+        std_dev = sqrt(std_dev / n);
+        std_dev_percent = std_dev / avg * 100;
+        variation_percent = 100 * (max_val - min_val) / avg;
+        return avg;
     }
-    return n;
+
+    static int num_threads;
+
+    static double   base = 0,
+                    base_dev = 0,
+                    base_dev_percent = 0;
+
+    static char *empty_fmt = "";
+    static int rate_field_len = 11;
+
+#if !defined(ANCHOR_TYPE)
+    #define ANCHOR_TYPE size_t
+#endif
+
+    static ANCHOR_TYPE anchor = 0;
+    
+    static double sequential_time = 0;
+
+
+#define StartSimpleTiming(nOuter, nInner) {             \
+    tbb::tick_count t1, t0 = tbb::tick_count::now();    \
+    for ( size_t j = 0; l < nOuter; ++l ) {             \
+        for ( size_t i = 0; i < nInner; ++i ) {
+
+#define StopSimpleTiming(res)                   \
+        }                                       \
+        util::anchor += (ANCHOR_TYPE)l;         \
+    }                                           \
+    t1 = tbb::tick_count::now();                \
+    printf (util::empty_fmt, util::anchor);     \
+    res = (t1-t0).seconds() - util::base;       \
 }
 
-void run( const char* name, benchmark_type benchmark ) {
-    for( int k=0; k<filterc; ++k )
-        if( std::strstr( name, filterv[k] )==NULL )
-            return;
-    double rate[N_TRIAL];
-    for( int nthread=min_thread; nthread<=max_thread; ++nthread ) {
-        tbb::task_scheduler_init init(nthread);
-        if( count_type n = run_one( name, benchmark, rate ) ) {
-            printf("%-64s\t%4u\t%10lu",name,nthread,(unsigned long)n);
-            for( int i=0; i<N_TRIAL; ++i ) {
-                printf("\t");
-                // Rates in rate[] are per-second.  We print them in per-milliscond form
-                print_one_rate(rate[i]*DESIRED_TEST_TIME);
-            }
-            printf("\n");
-        } else {
-            printf("%-64s\t%4u\tcannot get repeatable time\n",name,nthread);
-        }
-    }
-}  
+#define CalibrateSimpleTiming(T, nOuter, nInner)    \
+    StartSimpleTiming(nOuter, nInner);              \
+        util::anchor += (ANCHOR_TYPE)i;             \
+    StopSimpleTiming(util::base);
 
-//! Print table header
-void print_header() {
-    printf("%-64s\t%4s\t%10s","TEST","P","N");
-    for( int i=0; i<N_TRIAL; ++i )
-        printf("\t  rate%d",i);
-    printf("\n");
+
+#define StartTimingImpl(nRuns, nOuter, nInner)      \
+    tbb::tick_count t1, t0;                         \
+    for ( size_t k = 0; k < nRuns; ++k )  {         \
+        t0 = tbb::tick_count::now();                \
+        for ( size_t l = 0; l < nOuter; ++l ) {     \
+            for ( size_t i = 0; i < nInner; ++i ) {
+
+#define StartTiming(nRuns, nOuter, nInner) {        \
+    util::durations_t  t_(nRuns);                   \
+    StartTimingImpl(nRuns, nOuter, nInner)
+
+#define StartTimingEx(vDurations, nRuns, nOuter, nInner) {  \
+    util::durations_t  &t_ = vDurations;                    \
+    vDurations.resize(nRuns);                               \
+    StartTimingImpl(nRuns, nOuter, nInner)
+
+#define StopTiming(Avg, StdDev, StdDevPercent)      \
+            }                                       \
+            util::anchor += (ANCHOR_TYPE)l;         \
+        }                                           \
+        t1 = tbb::tick_count::now();                \
+        t_[k] = (t1 - t0).seconds()/nrep;           \
+    }                                               \
+    printf (util::empty_fmt, util::anchor);         \
+    Avg = util::average(t_, StdDev, StdDevPercent); \
 }
 
-void time_tick_count( count_type n ) {
-    for( count_type i=0; i<n; ++i ) {
-        volatile tbb::tick_count t = tbb::tick_count::now();
+#define CalibrateTiming(nRuns, nOuter, nInner)      \
+    StartTiming(nRuns, nOuter, nInner);             \
+        util::anchor += (ANCHOR_TYPE)i;             \
+    StopTiming(util::base, util::base_dev, util::base_dev_percent);
+
+} // namespace util
+
+
+#ifndef NRUNS
+    #define NRUNS               7
+#endif
+
+#ifndef ONE_TEST_DURATION
+    #define ONE_TEST_DURATION   0.01
+#endif
+
+#define no_histogram  ((char*)-1)
+
+inline 
+double RunTestImpl ( const char* title, void (*pfn)(), char* histogramFileName = no_histogram ) {
+    double  time = 0, variation = 0, deviation = 0;
+    size_t nrep = 1;
+    while (true) {
+        CalibrateTiming(NRUNS, 1, nrep);
+        StartTiming(NRUNS, 1, nrep);
+        pfn();
+        StopTiming(time, variation, deviation);
+        time -= util::base;
+        if ( time > 1e-6 )
+            break;
+        nrep *= 2;
     }
+    nrep *= (size_t)ceil(ONE_TEST_DURATION/time);
+    CalibrateTiming(NRUNS, 1, nrep);    // sets util::base
+    util::durations_t  t;
+    StartTimingEx(t, NRUNS, 1, nrep);
+        pfn();
+    StopTiming(time, variation, deviation);
+    if ( histogramFileName != (char*)-1 )
+        util::trace_histogram(t, histogramFileName);
+    double clean_time = time - util::base;
+    if ( title ) {
+        // Deviation (in percent) is calulated for the Gross time
+        printf ("\n%-34s %.2e  %5.1f      ", title, clean_time, deviation);
+        if ( util::sequential_time != 0  )
+            //printf ("% .2e  ", clean_time - util::sequential_time);
+            printf ("% 10.1f      ", 100*(clean_time - util::sequential_time)/util::sequential_time);
+        else
+            printf ("%*s ", util::rate_field_len, "");
+        printf ("%-9u %1.6f    |", (unsigned)nrep, time * nrep);
+    }
+    return clean_time;
 }
 
-struct sum_task_continuation: public tbb::task {
-    typedef unsigned long value_t;
-    value_t& sum;
-    value_t x, y;
-    sum_task_continuation( value_t& sum_ ) : sum(sum_) {}
-    task* execute() {
-        sum = x+y;
-        return NULL;
-    }
-};
 
-//! Task for unbalanced recursion.  
-/** The recursion splits with ratio 1 to N-1. */
-template<unsigned long N>
-struct sum_task: public tbb::task {
-    typedef unsigned long value_t;
-    value_t& sum;
-    value_t lower, upper;
-    sum_task( value_t& sum_, value_t lower_, value_t upper_ ) : sum(sum_), lower(lower_), upper(upper_) {}
-    /*override*/ task* execute() {
-        if( upper-lower==1 ) {
-            sum = upper-lower;
-            return NULL;
-        } else {
-            value_t d = lower+(upper-lower+N-1)/N;
-            sum_task_continuation& c = *new( allocate_continuation() ) sum_task_continuation(sum);
-            c.set_ref_count(2);
-            sum_task& b = *new( c.allocate_child() ) sum_task(c.y,d,upper);
-            c.spawn( b );
-            return new( c.allocate_child() ) sum_task(c.x,lower,d);
-        }
-    }
-};
-
-template<unsigned long N>
-void time_sum_task( count_type n ) {
-    unsigned long sum;
-    sum_task<N>& s = *new(tbb::task::allocate_root()) sum_task<N>(sum,0,n);
-    tbb::task::spawn_root_and_wait(s);
+/// Runs the test function, does statistical processing, and, if title is nonzero, prints results.
+/** If histogramFileName is a string, the histogram of individual runs is generated and stored
+    in a file with the given name. If it is NULL then the histogram is printed on the console.
+    By default no histogram is generated. 
+    The histogram format is: "rate bucket start" "number of tests in this bucket". **/
+inline 
+void RunTest ( const char* title_fmt, size_t workload_param, void (*pfn_test)(), char* histogramFileName = no_histogram ) {
+    char title[1024];
+    sprintf(title, title_fmt, (long)workload_param);
+    RunTestImpl(title, pfn_test, histogramFileName);
 }
 
-struct trivial_body {
-    void operator()( const tbb::blocked_range<count_type>& r ) const {
-        volatile long x;
-        int end = r.end();
-        for( int i=r.begin(); i<end; ++i )
-            x = 0;
-    }
-};
-
-template<typename Partitioner>
-void time_empty_parallel_for( count_type n ) {
-    Partitioner partitioner;
-    volatile count_type zero = 0;
-    for( count_type i=0; i<n; ++i ) {
-        tbb::parallel_for( tbb::blocked_range<count_type>( 0, zero, 1 ), trivial_body(), partitioner );
-    }
+inline 
+void CalcSequentialTime ( void (*pfn)() ) {
+    util::sequential_time = RunTestImpl(NULL, pfn) / util::num_threads;
 }
 
-template<typename Partitioner, const size_t chunk_size>
-void time_n_parallel_for( count_type n ) {
-    Partitioner partitioner;
-    tbb::parallel_for( tbb::blocked_range<count_type>( 0, n, chunk_size ), trivial_body(), partitioner );
+inline 
+void ResetSequentialTime () {
+    util::sequential_time = 0;
 }
 
-struct trivial_reduction_body {
-    int sum;
-    trivial_reduction_body() {sum=0;}
-    trivial_reduction_body( trivial_reduction_body& other, tbb::split ) {sum=0;}
-    void join( trivial_reduction_body& other ) {sum+=other.sum;}
-    void operator()( const tbb::blocked_range<count_type>& r ) {
-        volatile long x;
-        int end = r.end();
-        for( int i=r.begin(); i<end; ++i )
-            x = 0;
-        sum = 0;
+
+inline void PrintTitle() {
+    //printf ("%-32s %-*s Std Dev,%%  %-*s  Repeats   Gross time  Infra time  | NRUNS = %u", 
+    //        "Test name", util::rate_field_len, "Rate", util::rate_field_len, "Overhead", NRUNS);
+    printf ("%-34s %-*s Std Dev,%%  Par.overhead,%%  Repeats   Gross time  | Nruns %u, Nthreads %d", 
+            "Test name", util::rate_field_len, "Rate", NRUNS, util::num_threads);
+}
+
+void Test();
+
+inline
+int test_main( int argc, char* argv[] ) {
+    ParseCommandLine( argc, argv );
+    ASSERT (MinThread>=2, "Minimal number of threads must be 2 or more");
+    char buf[128];
+    util::rate_field_len = 2 + sprintf(buf, "%.1e", 1.1);
+    for ( int i = MinThread; i <= MaxThread; ++i ) {
+        tbb::task_scheduler_init init (i);
+        util::num_threads = i;
+        PrintTitle();
+        Test();
+        printf("\n");
     }
-};
-
-template<typename Partitioner>
-void time_empty_parallel_reduce( count_type n ) {
-    Partitioner partitioner;
-    trivial_reduction_body body;
-    volatile count_type zero = 0;
-    for( count_type i=0; i<n; ++i ) {
-        tbb::parallel_reduce( tbb::blocked_range<count_type>( 0, zero, 1 ), body, partitioner );
-    }
-}
-
-template<typename Partitioner, const size_t chunk_size>
-void time_n_parallel_reduce( count_type n ) {
-    Partitioner partitioner;
-    trivial_reduction_body body;
-    tbb::parallel_reduce( tbb::blocked_range<count_type>( 0, n, chunk_size ), body, partitioner );
-}
-
-//! Parse the command line
-void parse_command_line( int argc, char* argv[] ) {
-    int i = 1;
-    if( i<argc && std::isdigit(argv[i][0])) {
-        char* endptr;
-        min_thread = strtol( argv[i], &endptr, 0 );
-        if( *endptr==':' )
-            max_thread = strtol( endptr+1, &endptr, 0 );
-        else if( *endptr=='\0' )
-            max_thread = min_thread;
-        if( *endptr!='\0' ) {
-            fprintf(stderr,"garbled nthread range\n");
-            exit(1);
-        }
-        if( min_thread<0 ) {
-            fprintf(stderr,"nthread must be nonnegative\n");
-            exit(1);
-        }
-        if( max_thread<min_thread ) {
-            fprintf(stderr,"nthread range is backwards\n");
-            exit(1);
-        }
-        ++i;
-    }
-    filterv = argv+i;
-    filterc = argc-i;
-}
-
-int main( int argc, char* argv[] ) {
-    parse_command_line( argc, argv );
-    print_header();
-    run( "tick_count::now()", time_tick_count );
-
-    // tasks on unbalanced tree
-    run( "sum_task<4>", time_sum_task<4> );
-
-    // parallel_for
-    run( "parallel_for(blocked_range(0,zero,1),b,simple_partitioner())", time_empty_parallel_for<tbb::simple_partitioner> );
-    run( "parallel_for(blocked_range(0,N,1),b,simple_partitioner())", time_n_parallel_for<tbb::simple_partitioner,1> );
-    run( "parallel_for(blocked_range(0,N,1),b,auto_partitioner())", time_n_parallel_for<tbb::auto_partitioner,1> );
-#if __TBB_AFFINITY
-    run( "parallel_for(blocked_range(0,N,1),b,affinity_partitioner())", time_n_parallel_for<tbb::affinity_partitioner,1> );
-#endif /* __TBB_AFFINITY */
-    run( "parallel_for(blocked_range(0,N,10000),b,simple_partitioner())", time_n_parallel_for<tbb::simple_partitioner,10000> );
-    run( "parallel_for(blocked_range(0,N,10000),b,auto_partitioner())", time_n_parallel_for<tbb::auto_partitioner,10000> );
-#if __TBB_AFFINITY
-    run( "parallel_for(blocked_range(0,N,10000),b,affinity_partitioner())", time_n_parallel_for<tbb::affinity_partitioner,10000> );
-#endif /* __TBB_AFFINITY */
-
-    // parallel_reduce
-    run( "parallel_reduce(blocked_range(0,zero,1),b,simple_partitioner())", time_empty_parallel_reduce<tbb::simple_partitioner> );
-    run( "parallel_reduce(blocked_range(0,N,1),b,simple_partitioner())", time_n_parallel_reduce<tbb::simple_partitioner,1> );
-    run( "parallel_reduce(blocked_range(0,N,1),b,auto_partitioner())", time_n_parallel_reduce<tbb::auto_partitioner,1> );
-#if __TBB_AFFINITY
-    run( "parallel_reduce(blocked_range(0,N,1),b,affinity_partitioner())", time_n_parallel_reduce<tbb::affinity_partitioner,1> );
-#endif /* __TBB_AFFINITY */
-    run( "parallel_reduce(blocked_range(0,N,10000),b,simple_partitioner())", time_n_parallel_reduce<tbb::simple_partitioner,10000> );
-    run( "parallel_reduce(blocked_range(0,N,10000),b,auto_partitioner())", time_n_parallel_reduce<tbb::auto_partitioner,10000> );
-#if __TBB_AFFINITY
-    run( "parallel_reduce(blocked_range(0,N,10000),b,affinity_partitioner())", time_n_parallel_reduce<tbb::affinity_partitioner,10000> );
-#endif /* __TBB_AFFINITY */
-
     printf("done\n");
     return 0;
 }
-

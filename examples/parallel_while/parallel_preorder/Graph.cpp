@@ -30,6 +30,8 @@
 #include <cstdlib>
 #include "Graph.h"
 
+using namespace std;
+
 void Graph::create_random_dag( size_t number_of_nodes ) {
     my_vertex_set.resize(number_of_nodes);
     for( size_t k=0; k<number_of_nodes; ++k ) {
@@ -70,7 +72,7 @@ void Graph::print() {
     }
 }
 
-void Graph::get_root_set( std::vector<Cell*>& root_set ) {
+void Graph::get_root_set( vector<Cell*>& root_set ) {
     for( size_t k=0; k<my_vertex_set.size(); ++k ) {
         my_vertex_set[k].successor.clear();
     }

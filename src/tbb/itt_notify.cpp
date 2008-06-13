@@ -78,7 +78,7 @@ static const DynamicLinkDescriptor ITT_HandlerTable[] = {
 // LIBITTNOTIFY_NAME is the name of the ITT notification library 
 # if _WIN32||_WIN64
 #  define LIBITTNOTIFY_NAME "libittnotify.dll"
-# elif __linux__ || __FreeBSD__
+# elif __linux__ || __FreeBSD__ || __sun
 #  define LIBITTNOTIFY_NAME "libittnotify.so"
 # elif __APPLE__
 #  define LIBITTNOTIFY_NAME "libittnotify.dylib"

@@ -90,8 +90,7 @@ TASK_CPP_DEPENDENCIES = $(TBB_ASM.OBJ) cache_aligned_allocator.$(OBJ) tbb_misc.$
 test_eh_tasks.exe test_assembly.exe: spin_mutex.$(OBJ)
 
 # These executables don't depend on the TBB library, but include task.cpp directly
-TASK_CPP_DIRECTLY_INCLUDED = test_eh_algorithms.exe \
- test_eh_tasks.exe \
+TASK_CPP_DIRECTLY_INCLUDED = test_eh_tasks.exe \
  test_task_leaks.exe \
  test_task_assertions.exe \
  test_assembly.exe
@@ -210,7 +209,7 @@ test_tbb_plain:
 	./test_eh_algorithms.exe 2:4
 endif # norun
 
-TEST_TBB_OLD.OBJ = test_concurrent_vector_v2.$(OBJ)
+TEST_TBB_OLD.OBJ = test_concurrent_vector_v2.$(OBJ) test_concurrent_queue_v2.$(OBJ)
 
 # For old files, we don't mind warnings etc., thus compilation rules are most relaxed
 $(TEST_TBB_OLD.OBJ): %.$(OBJ): %.cpp
@@ -223,6 +222,7 @@ test_tbb_old: $(TEST_TBB_OLD.EXE)
 ifndef norun
 test_tbb_old:
 	./test_concurrent_vector_v2.exe 1:4
+	./test_concurrent_queue_v2.exe 1:4
 endif # norun
 
 debug_%: test_%.exe

@@ -56,10 +56,6 @@
 #include <new>
 #include "tbb/tbb_stddef.h"
 
-#if __TBB_EXCEPTIONS
-#include <typeinfo>
-#endif /* __TBB_EXCEPTIONS */
-
 /* Temporarily change "private" to "public" while including "tbb/task.h"
    This hack allows us to avoid publishing types Arena and CustomScheduler
    in the public header files. */
@@ -806,61 +802,6 @@ public:
     }
 };
 
-#if __TBB_EXCEPTIONS
-//------------------------------------------------------------------------
-// exception_data
-//------------------------------------------------------------------------
-
-//! Contains information about unhandled exception thrown from task's execute method
-class exception_data : no_copy
-{
-    char* my_exception_name;
-    char* my_exception_info;
-    reference_count my_ref_count;
-
-    exception_data ( const char* name, const char* info )
-        : my_exception_info(NULL)
-        , my_ref_count(1)
-    {
-        size_t  l = strlen(name) + 1;
-        my_exception_name = new char[l];
-        strncpy (my_exception_name, name, l);
-        if ( info ) {
-            l = strlen(info) + 1;
-            my_exception_info = new char[l];
-            strncpy (my_exception_info, info, l);
-        }
-    }
-
-    ~exception_data ()
-    {
-        __TBB_ASSERT (my_exception_name, "empty exception data object cannot be empty");
-        delete [] my_exception_name;
-        delete [] my_exception_info;
-    }
-
-public:
-    static exception_data* allocate ( const char* name, const char* info )
-    {
-        __TBB_ASSERT (name && *name, "creating exception_data object with empty name is not allowed");
-        return new exception_data(name, info);
-    }
-
-    const char* name () const { return my_exception_name; }
-
-    const char* info () const { return my_exception_info; }
-
-    void addref () { __TBB_FetchAndIncrementWacquire(&my_ref_count); };
-
-    void release ()
-    {
-        if ( __TBB_FetchAndDecrementWrelease(&my_ref_count) == 1 )
-            delete this;
-    }
-}; // class exception_data
-
-#endif /* __TBB_EXCEPTIONS */
-
 //------------------------------------------------------------------------
 // GenericScheduler
 //------------------------------------------------------------------------
@@ -899,7 +840,7 @@ class GenericScheduler: public scheduler {
     //! Context to be associated with dummy tasks of worker threads schedulers.
     /** It is never used for its direct purpose, and is introduced solely for the sake 
         of avoiding one extra conditional branch in the end of wait_for_all method. **/
-    static asynch_context dummy_context;
+    static task_group_context dummy_context;
 #endif /* __TBB_EXCEPTIONS */
 
     //! Definitions for bits in task_prefix::extra_state
@@ -1094,7 +1035,7 @@ public:
     //! Allocate task object, either from the heap or a free list.
     /** Returns uninitialized task object with initialized prefix. */
 #if __TBB_EXCEPTIONS
-    task& allocate_task( size_t number_of_bytes, depth_type depth, task* parent, asynch_context* context );
+    task& allocate_task( size_t number_of_bytes, depth_type depth, task* parent, task_group_context* context );
 #else
     task& allocate_task( size_t number_of_bytes, depth_type depth, task* parent );
 #endif /* __TBB_EXCEPTIONS */
@@ -1197,7 +1138,7 @@ class auto_empty_task {
     GenericScheduler* my_scheduler;
 public:
 #if __TBB_EXCEPTIONS
-    auto_empty_task ( GenericScheduler *s, int depth, asynch_context* context ) 
+    auto_empty_task ( GenericScheduler *s, int depth, task_group_context* context ) 
         : my_task( new(&s->allocate_task(sizeof(empty_task), depth, NULL, context)) empty_task )
 #else
     auto_empty_task ( GenericScheduler *s, int depth )
@@ -1220,9 +1161,9 @@ public:
 
 #if __TBB_EXCEPTIONS
 
-asynch_context GenericScheduler::dummy_context(asynch_context::isolated);
+task_group_context GenericScheduler::dummy_context(task_group_context::isolated);
 
-inline task& GenericScheduler::allocate_task( size_t number_of_bytes, depth_type depth, task* parent, asynch_context* context ) {
+inline task& GenericScheduler::allocate_task( size_t number_of_bytes, depth_type depth, task* parent, task_group_context* context ) {
 #else
 inline task& GenericScheduler::allocate_task( size_t number_of_bytes, depth_type depth, task* parent ) {
 #endif /* __TBB_EXCEPTIONS */
@@ -1644,11 +1585,11 @@ void GenericScheduler::free_scheduler() {
         leave_arena(/*compress=*/false);
     }
 #if __TBB_EXCEPTIONS
-    asynch_context* &context = dummy_task->prefix().context;
+    task_group_context* &context = dummy_task->prefix().context;
     // Only master thread's dummy task has a context
     if ( context != &dummy_context) {
         __TBB_ASSERT (context->assert_unbound(), "master's dummy task context still has children");
-        context->asynch_context::~asynch_context();
+        context->task_group_context::~task_group_context();
         NFS_Free(context);
     }
 #endif /* __TBB_EXCEPTIONS */
@@ -2253,14 +2194,21 @@ fail:
         t->prefix().owner = this;
     } // end of stealing loop
 #if __TBB_EXCEPTIONS
-    } catch ( unhandled_exception& exc ) {
-        t->prefix().context->register_exception( exc.my_exception_data );
-        // Previous call transferred exception data ownership to t's context
-        exc.my_exception_data = NULL; 
+    } catch ( tbb_exception& exc ) {
+        if ( t->prefix().context->cancel_group_execution() ) {
+            // We are the first to signal cancellation, so store the exception that caused it.
+            t->prefix().context->my_exception = exc.clone();
+        }
     } catch ( std::exception& exc ) {
-        t->prefix().context->register_exception( typeid(exc).name(), exc.what() );
+        if ( t->prefix().context->cancel_group_execution() ) {
+            // We are the first to signal cancellation, so store the exception that caused it.
+            t->prefix().context->my_exception = captured_exception::allocate(typeid(exc).name(), exc.what());
+        }
     } catch ( ... ) {
-        t->prefix().context->register_exception( "...", "Unknown exception" );
+        if ( t->prefix().context->cancel_group_execution() ) {
+            // We are the first to signal cancellation, so store the exception that caused it.
+            t->prefix().context->my_exception = captured_exception::allocate("...", "Unidentified exception");
+        }
     }
     goto exception_was_caught;
 #endif /* __TBB_EXCEPTIONS */
@@ -2275,25 +2223,19 @@ done:
     }
 #if __TBB_EXCEPTIONS
     __TBB_ASSERT(parent.prefix().context && dummy_task->prefix().context, "");
-    asynch_context* parent_ctx = parent.prefix().context;
+    task_group_context* parent_ctx = parent.prefix().context;
     if ( __TBB_load_with_acquire(parent_ctx->my_cancellation_requested) ) {
-        exception_data* ed = __TBB_load_with_acquire(parent_ctx->my_exception_data);
+        tbb_exception *e = __TBB_load_with_acquire(parent_ctx->my_exception);
         if ( innermost_running_task == dummy_task ) {
             // We are in the innermost task dispatch loop of a master thread, and 
             // the whole task tree has been collapsed. So we may clear cancellation data.
-            parent_ctx->my_exception_data = NULL;
             __TBB_store_with_release(parent_ctx->my_cancellation_requested, 0);
             __TBB_ASSERT(dummy_task->prefix().context == parent_ctx || !CANCELLATION_INFO_PRESENT(dummy_task), 
                          "Unexpected exception or cancellation data in the dummy task");
             __TBB_ASSERT(dummy_task->prefix().context->assert_unbound(), NULL);
         }
-        if ( ed )  {
-            if ( innermost_running_task != dummy_task ) {
-                // A copy of exception data remains in the parent's context so bump up the refcount
-                ed->addref();
-            }
-            throw unhandled_exception(ed);
-        }
+        if ( e )
+            e->throw_itself();
     }
     __TBB_ASSERT(!is_worker() || !CANCELLATION_INFO_PRESENT(dummy_task), 
                  "Worker's dummy task context modified");
@@ -2403,6 +2345,16 @@ GenericScheduler* GenericScheduler::create_worker( WorkerDescriptor& w ) {
     slot.steal_end = -2;
     slot.owner_waits = false;
 
+#if USE_WINTHREAD
+    HANDLE cur_process = GetCurrentProcess();
+    BOOL bRes = DuplicateHandle(cur_process, GetCurrentThread(), cur_process, &w.thread_handle, 0, FALSE, DUPLICATE_SAME_ACCESS);
+    if( !bRes ) {
+        printf("ERROR: DuplicateHandle failed with status 0x%08X", GetLastError());
+        w.thread_handle = INVALID_HANDLE_VALUE;
+    }
+#else /* USE_PTHREAD */
+    w.thread_handle = pthread_self();
+#endif /* USE_PTHREAD */
     // Attempt to publish worker
     ITT_NOTIFY(sync_releasing, &w.scheduler);
     // Note: really need only release fence on the compare-and-swap.
@@ -2413,11 +2365,11 @@ GenericScheduler* GenericScheduler::create_worker( WorkerDescriptor& w ) {
 #if USE_WINTHREAD
         CloseHandle( w.thread_handle );
         w.thread_handle = (HANDLE)0;
-#else
+#else /* USE_PTHREAD */
         int status = pthread_detach( w.thread_handle );
         if( status )
             handle_perror(status,"pthread_detach");
-#endif /* USE_WINTHREAD */
+#endif /* USE_PTHREAD */
     } else {
         __TBB_ASSERT( w.scheduler==s, NULL );
     }
@@ -2433,7 +2385,7 @@ GenericScheduler* GenericScheduler::create_master( Arena* arena ) {
     // Context to be used by root tasks by default (if the user has not specified one).
     // Allocation is done by NFS allocator because we cannot reuse memory allocated 
     // for task objects since the free list is empty at the moment.
-    t.prefix().context = new ( NFS_Allocate(sizeof(asynch_context), 1, NULL) ) asynch_context(asynch_context::isolated);
+    t.prefix().context = new ( NFS_Allocate(sizeof(task_group_context), 1, NULL) ) task_group_context(task_group_context::isolated);
     //printf("Master's context is %0x", t.prefix().context);
 #endif /* __TBB_EXCEPTIONS */
     __TBB_ASSERT( &task::self()==&t, NULL );
@@ -2517,7 +2469,7 @@ void WorkerDescriptor::start_one_worker_thread() {
     if( status==0 )
         handle_perror(errno,"__beginthreadex");
     else
-        thread_handle = (HANDLE)status;
+        CloseHandle((HANDLE)status);
 #else
     int status;
     pthread_attr_t stack_size;
@@ -2529,13 +2481,16 @@ void WorkerDescriptor::start_one_worker_thread() {
         if( status )
             handle_perror( status, "pthread_attr_setstacksize" );
     }
+    // this->thread_handle will be set from the thread function to avoid possible
+    // race with subsequent pthread_detach or pthread_join calls.
+    pthread_t handle;
     // This if is due to an Intel Compiler Bug, tracker # C70996
     // This #if should be removed as soon as the bug is fixed
 #if __APPLE__ && __TBB_x86_64
     static void *(*r)(void*) = GenericScheduler::worker_routine;
-    status = pthread_create( &thread_handle, &stack_size, r, this );
+    status = pthread_create( &handle, &stack_size, r, this );
 #else
-    status = pthread_create( &thread_handle, &stack_size, GenericScheduler::worker_routine, this );
+    status = pthread_create( &handle, &stack_size, GenericScheduler::worker_routine, this );
 #endif
     if( status )
         handle_perror( status, "pthread_create" );
@@ -2575,7 +2530,7 @@ task& allocate_root_with_context_proxy::allocate( size_t size ) const {
     __TBB_ASSERT( v, "thread did not activate a task_scheduler_init object?" );
     task_prefix& p = v->innermost_running_task->prefix();
     task& t = v->allocate_task( size, p.depth+1, NULL, &my_context );
-    if ( (intptr)my_context.my_parent == asynch_context::bound ) {
+    if ( (intptr)my_context.my_parent == task_group_context::bound ) {
         if ( v->innermost_running_task == v->dummy_task ) {
             // We are in the innermost task dispatch loop of a master thread, and
             // there is nothing to bind this context to. So treat it as isolated.
@@ -2707,49 +2662,98 @@ void affinity_partitioner_base_v3::resize( unsigned factor ) {
 
 } // namespace internal
 
-
 using namespace tbb::internal;
-
 
 #if __TBB_EXCEPTIONS
 
 //------------------------------------------------------------------------
-// unhandled_exception
+// captured_exception
 //------------------------------------------------------------------------
 
-unhandled_exception::~unhandled_exception () throw() {
-    if ( my_exception_data )
-        my_exception_data->release();
+inline 
+void copy_string ( char*& dst, const char* src ) {
+    if ( src ) {
+        size_t len = strlen(src) + 1;
+        dst = (char*)malloc(len);
+        strncpy (dst, src, len);
+    }
+    else
+        dst = NULL;
 }
 
-const char* unhandled_exception::name() const throw() {
-    return my_exception_data->name();
+captured_exception::captured_exception ( const captured_exception& src ) {
+    copy_string(const_cast<char*&>(my_exception_name), src.my_exception_name);
+    copy_string(const_cast<char*&>(my_exception_info), src.my_exception_info);
 }
-const char* unhandled_exception::what() const throw() {
-    return my_exception_data->info();
+
+captured_exception::captured_exception ( const char* name, const char* info, bool deepcopy ) { 
+    if ( deepcopy ) {
+        copy_string(const_cast<char*&>(my_exception_name), name);
+        copy_string(const_cast<char*&>(my_exception_info), info);
+    }
+    else {
+        my_exception_name = name;
+        my_exception_info = info;
+    }
+}
+
+captured_exception::~captured_exception () throw() {
+    free (const_cast<char*>(my_exception_name));
+    free (const_cast<char*>(my_exception_info));
+}
+
+tbb_exception* captured_exception::clone () throw() {
+    captured_exception *e = (captured_exception*)malloc(sizeof(captured_exception));
+    if ( e ) {
+        new (e) captured_exception(my_exception_name, my_exception_info, false);
+        my_exception_name = my_exception_info = NULL;
+    }
+    return e;
+}
+
+bool captured_exception::destroy () throw() {
+    this->captured_exception::~captured_exception();
+    free (this);
+    return true;
+}
+
+captured_exception* captured_exception::allocate ( const char* name, const char* info )
+{
+    void *e = malloc(sizeof(captured_exception));
+    if ( e )
+        new (e) captured_exception(name, info);
+    return (captured_exception*)e;
+}
+
+const char* captured_exception::name() const throw() {
+    return my_exception_name;
+}
+
+const char* captured_exception::what() const throw() {
+    return my_exception_info;
 }
 
 //------------------------------------------------------------------------
-// asynch_context
+// task_group_context
 //------------------------------------------------------------------------
 
-asynch_context::~asynch_context () {
+task_group_context::~task_group_context () {
     // The second part of the condition means that the context was constructed 
     // to be bound but the actual binding has not happened.
-    if ( my_parent && (intptr)my_parent != bound)
+    if ( my_parent && (intptr_t)my_parent != bound)
         unbind();
-    if ( my_exception_data )
-        my_exception_data->release();
+    if ( my_exception )
+        my_exception->destroy();
 }
 
-bool asynch_context::cancel_task_group () {
+bool task_group_context::cancel_group_execution () {
     if ( my_cancellation_requested  || __TBB_CompareAndSwapW(&my_cancellation_requested, 1, 0) )
         return false; // This task tree has already been canceled
-    asynch_context* prev_ctx = this;
+    task_group_context* prev_ctx = this;
     __TBB_LockByte(my_mutex);
-    asynch_context* next_ctx = my_first_child;
+    task_group_context* next_ctx = my_first_child;
     while ( next_ctx ) {
-        next_ctx->cancel_task_group();
+        next_ctx->cancel_group_execution();
         __TBB_LockByte(next_ctx->my_mutex);
         __TBB_store_with_release(prev_ctx->my_mutex, 0);
         prev_ctx = next_ctx;
@@ -2759,20 +2763,20 @@ bool asynch_context::cancel_task_group () {
     return true;
 }
 
-void asynch_context::bind_to ( asynch_context& parent ) {
+void task_group_context::bind_to ( task_group_context& parent ) {
     // Several threads may concurrently try to bind the same context to their parent task's context
-    intptr cur_parent = __TBB_CompareAndSwapW( &my_parent, (intptr)&parent, asynch_context::bound );
-    if ( cur_parent != asynch_context::bound )  {
+    intptr_t cur_parent = __TBB_CompareAndSwapW( &my_parent, (intptr_t)&parent, task_group_context::bound );
+    if ( cur_parent != task_group_context::bound )  {
         // Already bound
         __TBB_ASSERT (assert_parent_is_valid(parent), NULL);
-        __TBB_ASSERT (cur_parent == (intptr)&parent, "Inconsistent usage of bound context: attempt to bind to different parents");
+        __TBB_ASSERT (cur_parent == (intptr_t)&parent, "Inconsistent usage of bound context: attempt to bind to different parents");
         return;
     }
     __TBB_LockByte(parent.my_mutex);
     __TBB_ASSERT(!(my_first_child || my_prev_sibling || my_next_sibling), 
                 "context being bound is supposed to be new one and not have children or siblings");
     my_prev_sibling = &parent;
-    asynch_context *head = parent.my_first_child;
+    task_group_context *head = parent.my_first_child;
     if ( head )  {
         // Since the parent (this) is locked we can safely operate with its first child 
         // because it cannot be removed and removals of list items next to it affect 
@@ -2786,7 +2790,7 @@ void asynch_context::bind_to ( asynch_context& parent ) {
     __TBB_store_with_release(parent.my_mutex, 0);    // release mutex
 }
 
-void asynch_context::unbind () {
+void task_group_context::unbind () {
     __TBB_LockByte(my_prev_sibling->my_mutex);
     __TBB_LockByte(my_mutex);
     /// \todo Possible design change: 
@@ -2815,29 +2819,15 @@ void asynch_context::unbind () {
     //my_prev_sibling = my_next_sibling = NULL;
 }
 
-void asynch_context::reset () {
+void task_group_context::reset () {
     // It is assumed that this method is not used concurrently
     __TBB_ASSERT (!my_mutex, "Context is still in use and locked");
     __TBB_ASSERT (!(my_prev_sibling || my_next_sibling || my_first_child), "Context is still in use");
-    if ( my_exception_data )  {
-        my_exception_data->release();
-        my_exception_data = NULL;
+    if ( my_exception )  {
+        my_exception->destroy();
+        my_exception = NULL;
     }
     my_cancellation_requested = 0;
-}
-
-void asynch_context::register_exception ( const char* name, const char* info )
-{
-    if ( cancel_task_group() )
-        __TBB_store_with_release(my_exception_data, exception_data::allocate(name, info));
-}
-
-void asynch_context::register_exception ( exception_data* data )
-{
-    if ( cancel_task_group() )
-        __TBB_store_with_release(my_exception_data, data);
-    else
-        data->release();
 }
 
 #endif /* __TBB_EXCEPTIONS */

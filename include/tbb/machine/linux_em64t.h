@@ -85,6 +85,10 @@ static inline void __TBB_machine_or( volatile void *ptr, uint64_t addend ) {
     __asm__ __volatile__("lock\norq %1,%0" : "=m"(*(uint64_t *)ptr) : "r"(addend) : "memory");
 }
 
+static inline void __TBB_machine_and( volatile void *ptr, uint64_t addend ) {
+    __asm__ __volatile__("lock\nandq %1,%0" : "=m"(*(uint64_t *)ptr) : "r"(addend) : "memory");
+}
+
 static inline void __TBB_machine_pause( int32_t delay ) {
     for (int32_t i = 0; i < delay; i++) {
        __asm__ __volatile__("pause;");
@@ -116,6 +120,7 @@ static inline void __TBB_machine_pause( int32_t delay ) {
 #define __TBB_Load8(P)    (*P)
 
 #define __TBB_AtomicOR(P,V) __TBB_machine_or(P,V)
+#define __TBB_AtomicAND(P,V) __TBB_machine_and(P,V)
 
 // Definition of other functions
 #define __TBB_Pause(V) __TBB_machine_pause(V)

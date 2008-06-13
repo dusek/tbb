@@ -1,3 +1,5 @@
+#!/bin/sh
+#
 # Copyright 2005-2008 Intel Corporation.  All Rights Reserved.
 #
 # This file is part of Threading Building Blocks.
@@ -24,55 +26,14 @@
 # invalidate any other reasons why the executable file might be covered by
 # the GNU General Public License.
 
-ifndef arch
-        ifeq ($(shell arch),i86pc)
-                export arch:=ia32
-        endif
-endif
-
-ifndef runtime
-        gcc_version:=$(shell gcc -v 2>&1 | grep 'gcc version' | sed -e 's/^gcc version //' | sed -e 's/ .*$$//')
-        os_version:=$(shell uname -r)
-        os_kernel_version:=$(shell uname -r | sed -e 's/-.*$$//')
-        export runtime:=cc$(gcc_version)_kernel$(os_kernel_version)
-endif
-
-native_compiler := suncc
-export compiler ?= suncc
-# debugger ?= gdb
-
-CMD=$(SHELL) -c
-CWD=$(shell pwd)
-RM?=rm -f
-RD?=rmdir
-MD?=mkdir -p
-NUL= /dev/null
-SLASH=/
-MAKE_VERSIONS=bash $(tbb_root)/build/version_info_sunos.sh $(CPLUS) $(CPLUS_FLAGS) $(INCLUDES) >version_string.tmp
-MAKE_TBBVARS=bash $(tbb_root)/build/generate_tbbvars.sh
-
-ifeq ($(compiler),suncc)
-        export TBB_CUSTOM_VARS=CXXFLAGS="-I$(CWD)/include -library=stlport4 $(CXXFLAGS) -M$(CWD)/build/suncc.map.pause"
-endif
-	
-
-ifdef LD_LIBRARY_PATH
-        export LD_LIBRARY_PATH := .:$(LD_LIBRARY_PATH)
-else
-        export LD_LIBRARY_PATH := .
-endif
-
-####### Build settigns ########################################################
-
-OBJ = o
-DLL = so
-
-TBB.DEF = 
-TBB.DLL = libtbb$(DEBUG_SUFFIX).$(DLL)
-TBB.LIB = $(TBB.DLL)
-LINK_TBB.LIB = $(TBB.LIB)
-
-MALLOC.DLL = libtbbmalloc$(DEBUG_SUFFIX).$(DLL)
-MALLOC.LIB = $(MALLOC.DLL)
-
-TBB_NOSTRICT=1
+# Script used to generate version info string
+echo "#define __TBB_VERSION_STRINGS \\"
+echo '"TBB:' "BUILD_HOST\t"`hostname`" ("`arch`")"'" ENDL \'
+echo '"TBB:' "BUILD_OS\t\t"`uname`'" ENDL \'
+echo '"TBB:' "BUILD_KERNEL\t"`uname -rv`'" ENDL \'
+echo '"TBB:' "BUILD_SUNCC\t"`CC -V </dev/null 2>&1 | grep 'C++'`'" ENDL \'
+[ -z "$COMPILER_VERSION" ] || echo '"TBB: ' "BUILD_COMPILER\t"$COMPILER_VERSION'" ENDL \'
+echo '"TBB:' "BUILD_TARGET\t$arch on $runtime"'" ENDL \'
+echo '"TBB:' "BUILD_COMMAND\t"$*'" ENDL \'
+echo ""
+echo "#define __TBB_DATETIME \""`date -u`"\""

@@ -72,13 +72,17 @@ protected:
     filter( bool is_serial_ ) : 
         next_filter_in_pipeline(not_in_pipeline()),
         input_buffer(NULL),
-        my_filter_mode(static_cast<unsigned char>(is_serial_ ? serial : parallel))
+        my_filter_mode(static_cast<unsigned char>(is_serial_ ? serial : parallel)),
+        prev_filter_in_pipeline(not_in_pipeline()),
+        my_pipeline(NULL)
     {}
     
     filter( mode filter_mode ) :
         next_filter_in_pipeline(not_in_pipeline()),
         input_buffer(NULL),
-        my_filter_mode(static_cast<unsigned char>(filter_mode))
+        my_filter_mode(static_cast<unsigned char>(filter_mode)),
+        prev_filter_in_pipeline(not_in_pipeline()),
+        my_pipeline(NULL)
     {}
 
 
@@ -108,6 +112,12 @@ private:
 
     //! Internal storage for is_serial()
     const unsigned char my_filter_mode;
+
+    //! Pointer to previous filter in the pipeline.
+    filter* prev_filter_in_pipeline;
+
+    //! Pointer to the pipeline
+    pipeline* my_pipeline;
 };
 
 //! A processing pipeling that applies filters to items.
@@ -121,7 +131,7 @@ public:
     virtual ~pipeline();
 
     //! Add filter to end of pipeline.
-    void add_filter( filter& filter );
+    void add_filter( filter& filter_ );
 
     //! Run the pipeline to completion.
     void run( size_t max_number_of_live_tokens );
@@ -131,12 +141,13 @@ public:
 
 private:
     friend class internal::stage_task;
+    friend class filter;
 
     //! Pointer to first filter in the pipeline.
     filter* filter_list;
 
     //! Pointer to location where address of next filter to be added should be stored.
-    filter** filter_end;
+    filter* filter_end;
 
     //! task who's reference count is used to determine when all stages are done.
     empty_task* end_counter;
@@ -149,6 +160,9 @@ private:
 
     //! False until fetch_input returns NULL.
     bool end_of_input;
+
+    //! Remove filter from pipeline.
+    void remove_filter( filter& filter_ );
 
     //! Not used, but retained to satisfy old export files.
     void inject_token( task& self );

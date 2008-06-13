@@ -38,7 +38,7 @@
 #include "tbb/task_scheduler_init.h"
 #include "tbb/spin_mutex.h"
 #include "tbb/tick_count.h"
-#include <algorithm>
+#include <string>
 
 #include "harness.h"
 #include "harness_trace.h"
@@ -179,8 +179,9 @@ void throw_test_exception ( intptr throw_threshold ) {
     bool no_exception = true, unknown_exception = false;    \
     try {
 
+// When changing this macro check test10 as well - it uses similar code
 #define CATCH()     \
-    } catch ( tbb::unhandled_exception& e ) {     \
+    } catch ( tbb::captured_exception& e ) {     \
         ASSERT (strcmp(e.name(), (g_solitary_exception ? typeid(solitary_test_exception) : typeid(test_exception)).name() ) == 0, "Unexpected original exception name");    \
         ASSERT (strcmp(e.what(), EXCEPTION_DESCR) == 0, "Unexpected original exception info");   \
         if ( g_solitary_exception ) {   \
@@ -259,8 +260,8 @@ public:
 };
 
 //! Default exception behavior test. 
-/** Allocates a root task that spawns a bunch of children, one of which throws a test 
-    exception in a worker or master thread (depending on the global setting). **/
+/** Allocates a root task that spawns a bunch of children, one or several of which throw 
+    a test exception in a worker or master thread (depending on the global setting). **/
 void Test1 () {
     TRACEP ("");
     reset_globals();
@@ -308,7 +309,7 @@ void Test3 ()
 {
     TRACEP ("");
     reset_globals();
-    tbb::asynch_context  ctx(tbb::asynch_context::bound);
+    tbb::task_group_context  ctx(tbb::task_group_context::bound);
     my_simple_root_task &r = *new( tbb::task::allocate_root(ctx) ) my_simple_root_task;
     ASSERT (g_cur_stat.existing() == 1 && g_cur_stat.existed() == 1 && !g_cur_stat.executed(), 
             "something wrong with the task accounting");
@@ -321,19 +322,22 @@ void Test3 ()
 
 class my_root_with_context_launcher_task : public my_base_task
 {
-    tbb::asynch_context::kind_t my_context_kind;
+    tbb::task_group_context::kind_t my_context_kind;
  
     task* do_execute () {
-        tbb::asynch_context  ctx (tbb::asynch_context::isolated);
+        tbb::task_group_context  ctx (tbb::task_group_context::isolated);
         my_simple_root_task &r = *new( allocate_root(ctx) ) my_simple_root_task;
         TRY();
             spawn_root_and_wait(r);
             util::sleep(20);    // Give a child of our siblings a chance to throw the test exception
-        CATCH_AND_ASSERT();
+        CATCH();
+        // The check may fail if the machine is overloaded
+        ASSERT_WARNING (!g_no_exception, "no exception occurred");
+        ASSERT (!g_unknown_exception, "unknown exception was caught");
         return NULL;
     }
 public:
-    my_root_with_context_launcher_task ( tbb::asynch_context::kind_t ctx_kind = tbb::asynch_context::isolated ) : my_context_kind(ctx_kind) {}
+    my_root_with_context_launcher_task ( tbb::task_group_context::kind_t ctx_kind = tbb::task_group_context::isolated ) : my_context_kind(ctx_kind) {}
 };
 
 /** Allocates and spawns a bunch of roots, which allocate and spawn new root with 
@@ -363,7 +367,7 @@ void Test4 () {
 class my_root_with_context_group_launcher_task : public my_base_task
 {
     task* do_execute () {
-        tbb::asynch_context  ctx (tbb::asynch_context::isolated);
+        tbb::task_group_context  ctx (tbb::task_group_context::isolated);
         tbb::task_list  tl;
         for ( size_t i = 0; i < NUM_ROOT_TASKS; ++i ) {
             my_simple_root_task &r = *new( allocate_root(ctx) ) my_simple_root_task;
@@ -404,15 +408,15 @@ void Test5 () {
 class my_throwing_root_with_context_launcher_task : public my_base_task
 {
     task* do_execute () {
-        tbb::asynch_context  ctx (tbb::asynch_context::bound);
+        tbb::task_group_context  ctx (tbb::task_group_context::bound);
         my_simple_root_task &r = *new( allocate_root(ctx) ) my_simple_root_task(false);
         TRY();
             spawn_root_and_wait(r);
         CATCH();
         ASSERT (no_exception, "unexpected exception intercepted");
-        throw_test_exception(NUM_CHILD_TASKS*2);
+        throw_test_exception(NUM_CHILD_TASKS);
         __TBB_Yield();
-        g_task_was_cancelled |= was_cancelled();
+        g_task_was_cancelled |= is_cancelled();
         return NULL;
     }
 };
@@ -421,7 +425,7 @@ class my_bound_hierarchy_launcher_task : public my_base_task
 {
     bool my_recover;
 
-    void alloc_roots ( tbb::asynch_context& ctx, tbb::task_list& tl ) {
+    void alloc_roots ( tbb::task_group_context& ctx, tbb::task_list& tl ) {
         for ( size_t i = 0; i < NUM_ROOT_TASKS; ++i ) {
             my_throwing_root_with_context_launcher_task &r = *new( allocate_root(ctx) ) my_throwing_root_with_context_launcher_task;
             tl.push_back(r);
@@ -429,7 +433,7 @@ class my_bound_hierarchy_launcher_task : public my_base_task
     }
 
     task* do_execute () {
-        tbb::asynch_context  ctx (tbb::asynch_context::isolated);
+        tbb::task_group_context  ctx (tbb::task_group_context::isolated);
         tbb::task_list tl;
         alloc_roots(ctx, tl);
         TRY();
@@ -440,7 +444,7 @@ class my_bound_hierarchy_launcher_task : public my_base_task
         if ( g_solitary_exception )
             ASSERT (g_task_was_cancelled, "No tasks were cancelled despite of exception");
         if ( my_recover ) {
-            // Test asynch_context::unbind and asynch_context::reset methods
+            // Test task_group_context::unbind and task_group_context::reset methods
             g_throw_exception = false;
             no_exception = true;
             tl.clear();
@@ -481,7 +485,7 @@ void Test6 () {
     // A number of branches running concurrently with the first one will be able to spawn leaves though.
     /// \todo: If additional checkpoints are added to scheduler the following assertion must weaken
     intptr  num_tasks_expected = 1 + NUM_ROOT_TASKS * (2 + NUM_CHILD_TASKS);
-    intptr  min_num_tasks_created = 1 + g_num_threads * (2 + NUM_CHILD_TASKS);
+    intptr  min_num_tasks_created = 1 + g_num_threads * 2 + NUM_CHILD_TASKS;
     // 2 stands for my_bound_hierarchy_launcher_task and my_simple_root_task
     // g_num_threads corresponds to my_bound_hierarchy_launcher_task
     intptr  min_num_tasks_executed = 2 + g_num_threads + NUM_CHILD_TASKS;
@@ -491,7 +495,7 @@ void Test6 () {
     ASSERT_TEST_POSTCOND();
 } // void Test6 ()
 
-//! Tests asynch_context::unbind and asynch_context::reset methods.
+//! Tests task_group_context::unbind and task_group_context::reset methods.
 /** Allocates and spawns a root that spawns a bunch of 2nd level roots sharing 
     the same isolated context, each of which in their turn spawns a single 3rd level 
     root with  the bound context, and these 3rd level roots spawn bunches of leaves 
@@ -511,10 +515,10 @@ void Test7 () {
 class my_bound_hierarchy_launcher_task_2 : public my_base_task
 {
     task* do_execute () {
-        tbb::asynch_context  ctx;
+        tbb::task_group_context  ctx;
         tbb::task_list  tl;
         for ( size_t i = 0; i < NUM_ROOT_TASKS; ++i ) {
-            my_root_with_context_launcher_task &r = *new( allocate_root(ctx) ) my_root_with_context_launcher_task(tbb::asynch_context::bound);
+            my_root_with_context_launcher_task &r = *new( allocate_root(ctx) ) my_root_with_context_launcher_task(tbb::task_group_context::bound);
             tl.push_back(r);
         }
         TRY();
@@ -555,43 +559,42 @@ void Test8 () {
 
 class my_cancellation_root_task : public my_base_task
 {
-    tbb::asynch_context &my_ctx_to_cancel;
+    tbb::task_group_context &my_ctx_to_cancel;
     intptr              my_cancel_threshold;
 
     task* do_execute () {
         while ( g_cur_stat.executed() < my_cancel_threshold )
             yield_if_singlecore();
-        my_ctx_to_cancel.cancel_task_group();
+        my_ctx_to_cancel.cancel_group_execution();
         g_exc_stat = g_cur_stat;
         return NULL;
     }
 public:
-    my_cancellation_root_task ( tbb::asynch_context& ctx, intptr threshold ) 
+    my_cancellation_root_task ( tbb::task_group_context& ctx, intptr threshold ) 
         : my_ctx_to_cancel(ctx), my_cancel_threshold(threshold)
     {}
 };
 
 class my_calculation_root_task : public my_base_task
 {
-    tbb::asynch_context &my_ctx;
+    tbb::task_group_context &my_ctx;
 
     task* do_execute () {
         tbb::task::spawn_root_and_wait( *new( tbb::task::allocate_root(my_ctx) ) my_simple_root_task );
         return NULL;
     }
 public:
-    my_calculation_root_task ( tbb::asynch_context& ctx ) : my_ctx(ctx) {}
+    my_calculation_root_task ( tbb::task_group_context& ctx ) : my_ctx(ctx) {}
 };
 
 
-
-//! Test for a task hierarchy from outside (from a task running in parallel with it).
+//! Test for cancelling a task hierarchy from outside (from a task running in parallel with it).
 void Test9 () {
     TRACEP ("");
     reset_globals();
     g_throw_exception = false;
     intptr  threshold = NUM_CHILD_TASKS / 4;
-    tbb::asynch_context  ctx;
+    tbb::task_group_context  ctx;
     tbb::task_list  tl;
     tl.push_back( *new( tbb::task::allocate_root() ) my_calculation_root_task(ctx) );
     tl.push_back( *new( tbb::task::allocate_root() ) my_cancellation_root_task(ctx, threshold) );
@@ -599,9 +602,119 @@ void Test9 () {
         tbb::task::spawn_root_and_wait(tl);
     CATCH();
     ASSERT (no_exception, "Cancelling tasks should not cause any exceptions");
-    TRACE ("Threshold %d, total executed %d, executed after cancellation signal %d", threshold, g_cur_stat.executed(), g_exc_stat.executed());
-    ASSERT (g_cur_stat.executed() <= threshold + 2 * g_num_threads, "Too many tasks were executed after cancellation");
+    // g_exc_stat contains statistics snapshot at the moment right after cancellation signal sending
+    TRACE ("Threshold %d; executed: after cancellation signal %d, total %d", threshold, g_exc_stat.executed(), g_cur_stat.executed());
+    // 2 - root tasks in the calculation branch
+    ASSERT_WARNING (g_exc_stat.executed() - threshold <= g_num_threads + 2, "too many tasks executed between reaching threshold and statistics cutoff");
+    // 3 - all root tasks 
+    ASSERT (g_cur_stat.executed() <= g_exc_stat.executed() + g_num_threads + 3, "Too many tasks were executed after cancellation");
 } // void Test9 ()
+
+
+//static tbb::atomic<int> g_int_exception_data_counter;
+
+template<typename T>
+void throw_movable_exception ( intptr throw_threshold, const T& data ) {
+    if ( g_exception_in_master ^ (internal::GetThreadSpecific() == g_master) )
+        return; 
+    if ( !g_solitary_exception ) {
+        TRACE ("About to throw one of multiple movable_exceptions... :");
+        throw tbb::movable_exception<T>(data);
+    }
+    while ( g_cur_stat.existed() < throw_threshold )
+        yield_if_singlecore();
+    if ( __TBB_CompareAndSwapW(&g_exception_thrown, 1, 0) == 0 ) {
+        g_exc_stat = g_cur_stat;
+        TRACE ("About to throw solitary movable_exception... :");
+        throw tbb::movable_exception<T>(data);
+    }
+}
+
+const int g_int_exception_data = -375;
+const std::string g_string_exception_data = "My test string";
+
+// Exception data class implementing minimal requirements of tbb::movable_exception 
+class my_exception_data_t {
+    const my_exception_data_t& operator = ( const my_exception_data_t& src );
+    explicit my_exception_data_t ( int n ) : my_int(n), my_string(g_string_exception_data) {}
+public:
+    my_exception_data_t ( const my_exception_data_t& src ) : my_int(src.my_int), my_string(src.my_string) {}
+    ~my_exception_data_t () {}
+
+    int my_int;
+    std::string my_string;
+
+    // Simple way to provide an instance when all initializing constructors are private
+    // and to avoid memory reclamation problems.
+    static my_exception_data_t s_data;
+};
+
+my_exception_data_t my_exception_data_t::s_data(g_int_exception_data);
+
+typedef tbb::movable_exception<int> solitary_movable_exception;
+typedef tbb::movable_exception<my_exception_data_t> multiple_movable_exception;
+
+class my_leaf_task_with_movable_exceptions : public my_base_task
+{
+    bool my_int_as_data;
+
+    task* do_execute () {
+        if ( g_solitary_exception )
+            throw_movable_exception<int>(NUM_CHILD_TASKS/2, g_int_exception_data);
+        else {
+            throw_movable_exception<my_exception_data_t>(NUM_CHILD_TASKS/2, my_exception_data_t::s_data);
+        }
+        return NULL;
+    }
+};
+
+//! Test for movable_exception behavior and semantics. 
+/** Allocates a root task that spawns a bunch of children, one or several of which throw 
+    a movable exception in a worker or master thread (depending on the global settings). **/
+void Test10 () {
+    TRACEP ("");
+    reset_globals();
+    tbb::empty_task &r = *new( tbb::task::allocate_root() ) tbb::empty_task;
+    ASSERT (!g_cur_stat.existing() && !g_cur_stat.existed() && !g_cur_stat.executed(), 
+            "something wrong with the task accounting");
+    r.set_ref_count(NUM_CHILD_TASKS + 1);
+    for ( size_t i = 0; i < NUM_CHILD_TASKS; ++i ) {
+        my_leaf_task_with_movable_exceptions &t = *new( r.allocate_child() ) my_leaf_task_with_movable_exceptions;
+        r.spawn(t);
+        // Make sure that worker threads on multicore machines had a chance to steal something
+        util::sleep(20);
+        //__TBB_Yield();
+    }
+    TRY()
+        r.wait_for_all();
+    } catch ( tbb::tbb_exception& e ) {
+        ASSERT (strcmp(e.name(), (g_solitary_exception ? typeid(solitary_movable_exception) 
+                                                       : typeid(multiple_movable_exception)).name() ) == 0, 
+                                                       "Unexpected original exception name");
+        ASSERT (strcmp(e.what(), "tbb::movable_exception") == 0, "Unexpected original exception info ");
+        if ( g_solitary_exception ) {
+            solitary_movable_exception& me = dynamic_cast<solitary_movable_exception&>(e);
+            ASSERT (me.my_exception_data == g_int_exception_data, "Unexpected solitary movable_exception data");
+        }
+        else {
+            multiple_movable_exception& me = dynamic_cast<multiple_movable_exception&>(e);
+            ASSERT (me.my_exception_data.my_int == g_int_exception_data, "Unexpected multiple movable_exception int data");
+            ASSERT (me.my_exception_data.my_string == g_string_exception_data, "Unexpected multiple movable_exception string data");
+        }
+        if ( g_solitary_exception ) {
+            g_exc_stat.trace("stat at throw moment:");
+            g_cur_stat.trace("stat upon catch     :");
+        }
+        g_no_exception = no_exception = false;
+    }
+    catch ( ... ) {
+        g_no_exception = false;
+        g_unknown_exception = unknown_exception = true;
+    }
+    ASSERT_EXCEPTION();
+    ASSERT_TEST_POSTCOND();
+    r.destroy(r);
+} // void Test10 ()
 
 
 
@@ -621,6 +734,7 @@ void TestExceptionHandling ()
     Test7();
     Test8();
     Test9();
+    Test10();
     // The following assertion must hold true because if the dummy context is not cleaned up 
     // properly none of the tasks after Test1 completion will be executed.
     ASSERT (g_cur_stat.executed(), "Scheduler's dummy task context has not been cleaned up properly");
@@ -630,13 +744,16 @@ void TestExceptionHandling ()
 
 //------------------------------------------------------------------------
 
+/** If min and max thread numbers specified on the command line are different, 
+    the test is run only for 2 sizes of the thread pool (MinThread and MaxThread) 
+    to be able to test the high and low contention modes while keeping the test reasonably fast **/
 int main(int argc, char* argv[]) {
-#if __TBB_EXCEPTIONS
     ParseCommandLine( argc, argv );
     ASSERT (NUM_ROOTS_IN_GROUP < NUM_ROOT_TASKS, "Fix defines");
     MaxThread = std::min<int>(NUM_ROOTS_IN_GROUP, MaxThread);
     MinThread = std::min<int>(MinThread, MaxThread);
     ASSERT (MinThread>=2, "Minimal number of threads must be 2 or more");
+#if __TBB_EXCEPTIONS
     int step = std::max<int>(MaxThread - MinThread, 1);
     for ( g_num_threads = MinThread; g_num_threads <= MaxThread; g_num_threads += step ) {
         g_max_concurrency = std::min<int>(g_num_threads, tbb::task_scheduler_init::default_num_threads());
@@ -645,8 +762,10 @@ int main(int argc, char* argv[]) {
             TestExceptionHandling();
         }
     }
-#endif /* __TBB_EXCEPTIONS */
     printf("done\n");
+#else
+    printf("skipped\n");
+#endif /* __TBB_EXCEPTIONS */
     return 0;
 }
 

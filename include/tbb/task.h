@@ -32,7 +32,14 @@
 #include "tbb_stddef.h"
 
 #if __TBB_EXCEPTIONS
+#if __APPLE__
+#include <cstdlib>
+#else
+#include <malloc.h>
+#endif
 #include <exception>
+#include <typeinfo>
+#include <new>
 #endif /* __TBB_EXCEPTIONS */
 
 namespace tbb {
@@ -40,16 +47,11 @@ namespace tbb {
 class task;
 class task_list;
 #if __TBB_EXCEPTIONS
-class asynch_context;
+class task_group_context;
 #endif /* __TBB_EXCEPTIONS */
 
 //! @cond INTERNAL
 namespace internal {
-
-#if __TBB_EXCEPTIONS
-    class exception_data;
-    template<typename T> class CustomScheduler;
-#endif /* __TBB_EXCEPTIONS */
 
     class scheduler {
     public:
@@ -74,21 +76,23 @@ namespace internal {
     //! An id as used for specifying affinity.
     typedef unsigned short affinity_id;
 
+#if __TBB_EXCEPTIONS
+    template<typename T> class CustomScheduler;
+
+    class allocate_root_with_context_proxy {
+        task_group_context& my_context;
+    public:
+        allocate_root_with_context_proxy ( task_group_context& ctx ) : my_context(ctx) {}
+        task& allocate( size_t size ) const;
+        void free( task& ) const;
+    };
+#endif /* __TBB_EXCEPTIONS */
+
     class allocate_root_proxy {
     public:
         static task& allocate( size_t size );
         static void free( task& );
     };
-
-#if __TBB_EXCEPTIONS
-    class allocate_root_with_context_proxy {
-        asynch_context& my_context;
-    public:
-        allocate_root_with_context_proxy ( asynch_context& ctx ) : my_context(ctx) {}
-        task& allocate( size_t size ) const;
-        void free( task& ) const;
-    };
-#endif /* __TBB_EXCEPTIONS */
 
     class allocate_continuation_proxy {
     public:
@@ -132,7 +136,7 @@ namespace internal {
         /** Currently it is used to broadcast cancellation requests generated both 
             by users and as the result of unhandled exceptions in the task::execute()
             methods. */
-        asynch_context  *context;
+        task_group_context  *context;
 #endif /* __TBB_EXCEPTIONS */
         
         //! The scheduler that allocated the task, or NULL if task is big.
@@ -187,70 +191,202 @@ namespace internal {
 
 #if __TBB_EXCEPTIONS
 
-class unhandled_exception : public std::exception 
-{
+//! Interface to be implemented by all exceptions TBB recognizes and propagates across the threads.
+/** If an unhandled exception of the type derived from tbb::tbb_exception is intercepted
+    by the TBB scheduler in one of the worker threads, it is delivered to and re-thrown in
+    the root thread. The root thread is the thread that has started the outermost algorithm 
+    or root task sharing the same task_group_context with the guilty algorithm/task (the one
+    that threw the exception first).
+    
+    Note: when documentation mentions workers with respect to exception handling, 
+    masters are implied as well, because they are completely equivalent in this context.
+    Consequently a root thread can be master or worker thread. 
+
+    NOTE: In case of nested algorithms or complex task hierarchies when the nested 
+    levels share (explicitly or by means of implicit inheritance) the task group 
+    context of the outermost level, the exception may be (re-)thrown multiple times 
+    (ultimately - in each worker on each nesting level) before reaching the root 
+    thread at the outermost level. IMPORTANT: if you intercept an exception derived 
+    from this class on a nested level, you must re-throw it in the catch block by means
+    of the "throw;" operator. 
+    
+    TBB provides two implementations of this interface: tbb::captured_exception and 
+    template class tbb::movable_exception. See their declarations for more info. **/
+class tbb_exception : public std::exception {
 public:
-    unhandled_exception ( internal::exception_data* data ) : my_exception_data(data) {}
+    //! Creates and returns pointer to the deep copy of this exception object. 
+    /** Move semantics is allowed. **/
+    virtual tbb_exception* clone () throw() = 0;
+    
+    //! Destroys objects created by the clone() method.
+    /** Frees memory and calls destructor for this exception object. 
+        Must and can be used only on objects created by the clone method. 
+        Returns true in case of success. One of the reasons to fail is the fact 
+        that this object was not created by the clone() method. **/
+    virtual bool destroy () throw() = 0;
 
-    ~unhandled_exception () throw();
+    //! Throws this exception object.
+    /** Make sure that if you have several levels of derivation from this interface
+        you implement or override this method on the most derived level. The implementation 
+        is as simple as "throw *this;". Failure to do this will result in exception 
+        of a base class type being thrown. **/
+    virtual void throw_itself () = 0;
 
-    const char* name() const throw();
+    //! Returns RTTI name of the originally intercepted exception
+    virtual const char* name() const throw() = 0;
 
-    /*override*/
-    const char* what() const throw();
-
-private:
-    friend class internal::scheduler;
-
-    internal::exception_data* my_exception_data;
+    //! Returns the result of originally intercepted exception's what() method.
+    virtual const char* what() const throw() = 0;
 };
 
-//! Contains information about events that can happen asynchronously w.r.t. the tasks associated with it 
+//! This class is used by TBB to propagate information about unhandled exceptions into the root thread.
+/** Exception of this type is thrown by TBB in the root thread (thread that started a parallel 
+    algorithm ) if an unhandled exception was intercepted during the algorithm execution in one 
+    of the workers.
+    \sa tbb::tbb_exception **/
+class captured_exception : public tbb_exception
+{
+public:
+    ~captured_exception () throw();
+
+    /*override*/ 
+    const char* name() const throw();
+
+    /*override*/ 
+    const char* what() const throw();
+
+protected:
+    captured_exception ( const captured_exception& src );
+
+    captured_exception ( const char* name, const char* info, bool deepcopy = true );
+
+    static captured_exception* allocate ( const char* name, const char* info );
+
+    /*override*/ 
+    tbb_exception* clone () throw();
+    
+    /*override*/ 
+    bool destroy () throw();
+
+    /*override*/ 
+    void throw_itself () { throw *this; }
+
+protected:
+    template<typename T> friend class internal::CustomScheduler;
+
+    const char* my_exception_name;
+    const char* my_exception_info;
+};
+
+//! Template that can be used to implement exception that transfers arbitrary ExceptionData to the root thread
+/** Code using TBB can instantiate this template with an arbitrary ExceptionData type 
+    and throw this exception object. Such exceptions are intercepted by the TBB scheduler
+    and delivered to the root thread (). 
+    \sa tbb::tbb_exception **/
+template<typename ExceptionData>
+class movable_exception : public tbb_exception
+{
+    typedef movable_exception<ExceptionData> self_type;
+public:
+    const ExceptionData  my_exception_data;
+
+    movable_exception ( const ExceptionData& data ) 
+        : my_exception_data(data)
+        , my_cloned(false)
+        , my_exception_name(typeid(self_type).name())
+    {}
+
+    movable_exception ( const movable_exception& src ) throw () 
+        : my_exception_data(src.my_exception_data)
+        , my_cloned(false)
+        , my_exception_name(src.my_exception_name)
+    {}
+
+    ~movable_exception () throw() {}
+
+    /*override*/ const char* name() const throw() { return my_exception_name; }
+
+    /*override*/ const char* what() const throw() { return "tbb::movable_exception"; }
+
+protected:
+    /*override*/ 
+    tbb_exception* clone () throw() {
+        void* e = malloc(sizeof(movable_exception));
+        if ( e ) {
+            new (e) movable_exception(*this);
+            ((movable_exception*)e)->my_cloned = true;
+        }
+        return (movable_exception*)e;
+    }
+    /*override*/ 
+    bool destroy () throw() {
+        if ( my_cloned ) {
+            this->movable_exception<ExceptionData>::~movable_exception();
+            free(this);
+            return true;
+        }
+        return false;
+    }
+    /*override*/ 
+    void throw_itself () {
+        throw *this;
+    }
+
+protected:
+    bool my_cloned;
+    // We rely on the fact that RTTI names are static string constants.
+    const char* my_exception_name;
+};
+
+//! Used to form groups of tasks 
 /** @ingroup task_scheduling 
-    Currently the context services cancellation requests from user code, and unhandled 
+    The context services explicit cancellation requests from user code, and unhandled 
     exceptions intercepted during tasks execution. Intercepting an exception results 
-    in fact in generating internal cancellation requests. 
+    in generating internal cancellation requests. 
 
     The context is associated with one or more root tasks and defines the cancellation 
     group that includes all the children of the corresponding root task(s). Association 
     is established when a context object is passed as an argument to the task::allocate_root()
-    method. See asynch_context::asynch_context for more details.
+    method. See task_group_context::task_group_context for more details.
     
     The context can be bound to another one, and other contexts can be bound to it,
     forming a tree-like structure: parent -> this -> children. Arrows here designate
-    cancellation propagation direction: if a task in a cancellation group is canceled
+    cancellation propagation direction. If a task in a cancellation group is canceled
     all the other tasks in this group and groups bound to it (as children) get canceled too.*/
-class asynch_context : internal::no_copy
+class task_group_context : internal::no_copy
 {
+    typedef task_group_context self_type;
+    
+    // If mutex_type definition changes, object layout will be affected!
     typedef unsigned char  mutex_type;
 
     //! Pointer to the context of the parent cancellation group. NULL for isolated contexts.
-    asynch_context  *my_parent;
+    self_type  *my_parent;
 
     //! Pointer to the context of the first subordinate cancellation group.
-    asynch_context  *my_first_child;
+    self_type  *my_first_child;
 
     //! Pointer to the context of my_parent's previous subordinate cancellation group.
     /** If this == my_parent->my_first_child, then my_prev_sibling == my_parent.
         This allows to simplify locking in binding/unbinding routines. **/
-    asynch_context  *my_prev_sibling;
+    self_type  *my_prev_sibling;
 
     //! Pointer to the context of my_parent's next subordinate cancellation group.
-    asynch_context  *my_next_sibling;
+    self_type  *my_next_sibling;
 
-    internal::exception_data    *my_exception_data;
+    tbb_exception    *my_exception;
 
-    volatile internal::intptr   my_cancellation_requested;
+    volatile intptr_t  my_cancellation_requested;
 
     mutex_type  my_mutex;
-
-    void*   my_reserved1;   //?? Do we need more reserved space?
+    
+    char  my_version;
 
 public:
-    typedef internal::intptr kind_t;
+    typedef intptr_t kind_t;
 
-    static const kind_t isolated = internal::intptr(0);
-    static const kind_t bound = internal::intptr(-1);
+    static const kind_t isolated = kind_t(0);
+    static const kind_t bound = ~kind_t(0);
 
     //! Default & binding constructor.
     /** By default a bound context is created. That is this context will be bound 
@@ -258,19 +394,20 @@ public:
         method. Cancellation requests passed to the parent context are propagated
         to all the contexts bound to it.
 
-        If asynch_context::isolated is used as the argument, then the tasks associated
+        If self_type::isolated is used as the argument, then the tasks associated
         with this context will never be affected by events in any other context. */
-    asynch_context ( kind_t relation_with_parent = bound )
-        : my_parent(reinterpret_cast<asynch_context*>(relation_with_parent))
+    task_group_context ( kind_t relation_with_parent = bound )
+        : my_parent(reinterpret_cast<self_type*>(relation_with_parent))
         , my_first_child(NULL)
         , my_prev_sibling(NULL)
         , my_next_sibling(NULL)
-        , my_exception_data(NULL)
+        , my_exception(NULL)
         , my_cancellation_requested(false)
         , my_mutex(0)
+        , my_version(0)
     {}
 
-    ~asynch_context ();
+    ~task_group_context ();
 
     //! Forcefully reinitializes context object after an algorithm it was used with finished.
     /** Because the method assumes that the all the tasks that used to be associated with 
@@ -279,16 +416,15 @@ public:
         
         It is assumed that this method is not used concurrently!
 
-        The method does not change the kind of the context and its parent if the latter is set.
-        \todo Decide if we need asynch_context::reset() at all. We may prohibit context object reuse instead. **/ 
+        The method does not change the kind of the context and its parent if the latter is set. **/ 
     void reset ();
 
     //! Initiates cancellation of all tasks in this cancellation group and its subordinate groups.
     /** \return false if cancellation has already been requested, true otherwise. **/
-    bool cancel_task_group ();
+    bool cancel_group_execution ();
 
     //! Returns true if the context received cancellation request.
-    bool was_cancelled () { return my_cancellation_requested != 0; }
+    bool execution_cancelled () const { return my_cancellation_requested != 0; }
 
 #if TBB_DO_ASSERT
     bool assert_okay () const {
@@ -302,7 +438,7 @@ public:
         return  !(bound_to_another || my_first_child);
     }
 
-    bool assert_parent_is_valid ( const asynch_context& parent ) {
+    bool assert_parent_is_valid ( const self_type& parent ) {
         /// \todo Implement it.
         // Make sure that ultimate parent of my_parent is the same as for "parent" argument
         // Assert: "Attempt to bind already bound asynch context to another hierarchy"
@@ -316,21 +452,11 @@ private:
     friend class internal::allocate_root_with_context_proxy;
     template<typename T> friend class internal::CustomScheduler;
 
-    void bind_to ( asynch_context& parent );
+    void bind_to ( self_type& parent );
     void unbind ();
-
-    //! Stores information about exception in the context
-    /** If the task tree is not canceled, creates new exception_data structure 
-        and stores it in the context **/
-    void register_exception ( const char* name, const char* info );
-    //! Stores information about exception in the context
-    /** If the task tree is not canceled, stores data in the context, otherwise
-        decrements data's refcount. **/
-    void register_exception ( internal::exception_data* data );
-}; // class asynch_context
+}; // class task_group_context
 
 #endif /* __TBB_EXCEPTIONS */
-
 
 //! Base class for user-defined tasks.
 /** @ingroup task_scheduling */
@@ -346,7 +472,7 @@ public:
     //! Destructor.
     virtual ~task() {}
 
-    //! Should be overriden by derived classes.
+    //! Should be overridden by derived classes.
     virtual task* execute() = 0;
 
     //! Enumeration of task states that the scheduler considers.
@@ -376,7 +502,7 @@ public:
 
 #if __TBB_EXCEPTIONS
     //! Returns proxy for overloaded new that allocates a root task associated with user supplied context.
-    static internal::allocate_root_with_context_proxy allocate_root( asynch_context& ctx ) {
+    static internal::allocate_root_with_context_proxy allocate_root( task_group_context& ctx ) {
         return internal::allocate_root_with_context_proxy(ctx);
     }
 #endif /* __TBB_EXCEPTIONS */
@@ -586,10 +712,10 @@ public:
 #if __TBB_EXCEPTIONS
     //! Initiates cancellation of all tasks in this cancellation group and its subordinate groups.
     /** \return false if cancellation has already been requested, true otherwise. **/
-    bool cancel_task_group () { return prefix().context->cancel_task_group(); }
+    bool cancel_group_execution () { return prefix().context->cancel_group_execution(); }
 
     //! Returns true if the context received cancellation request.
-    bool was_cancelled () { return prefix().context->was_cancelled(); }
+    bool is_cancelled () const { return prefix().context->execution_cancelled(); }
 #endif /* __TBB_EXCEPTIONS */
 
 private:

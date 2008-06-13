@@ -43,7 +43,7 @@ namespace tbb {
     @ingroup synchronization */
 class spin_mutex {
     //! 0 if lock is released, 1 if lock is acquired.
-    volatile unsigned char flag;
+    unsigned char flag;
 
 public:
     //! Construct unacquired lock.
@@ -112,7 +112,7 @@ public:
 #if TBB_DO_THREADING_TOOLS||TBB_DO_ASSERT
             internal_release();
 #else
-            my_mutex->flag = static_cast<unsigned char>(my_unlock_value);
+            __TBB_store_with_release(my_mutex->flag, static_cast<unsigned char>(my_unlock_value));
             my_mutex = NULL;
 #endif /* TBB_DO_THREADING_TOOLS||TBB_DO_ASSERT */
         }
@@ -123,7 +123,7 @@ public:
 #if TBB_DO_THREADING_TOOLS||TBB_DO_ASSERT
                 internal_release();
 #else
-                my_mutex->flag = static_cast<unsigned char>(my_unlock_value);
+                __TBB_store_with_release(my_mutex->flag, static_cast<unsigned char>(my_unlock_value));
 #endif /* TBB_DO_THREADING_TOOLS||TBB_DO_ASSERT */
             }
         }

@@ -56,7 +56,7 @@ else # ! X
 
 ifeq ($(UI),mac)
 TBBLIBSPATH = /Library/Frameworks/TBB.framework/Libraries
-CXXFLAGS += -L$(TBBLIBSPATH) -arch i386 -mmacosx-version-min=10.4 -fno-rtti -msse3 -ftree-vectorize
+CXXFLAGS += -L$(TBBLIBSPATH) -arch i386 -mmacosx-version-min=10.4 -msse3 -ftree-vectorize
 LIBS += -framework OpenGL -framework AGL -framework Carbon
 APPRES = $(NAME).app/Contents/Resources
 EXE = ./$(NAME).app/Contents/MacOS/$(NAME)

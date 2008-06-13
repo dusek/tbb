@@ -27,13 +27,19 @@
 */
 
 #include <cstring>
-#include <stdio.h>
+#include <cstdio>
 #include "tbb/tbb_machine.h"
 #include "tbb/cache_aligned_allocator.h"
 #include "tbb/spin_mutex.h"
 #include "tbb/atomic.h"
 #include "tbb/concurrent_queue.h"
 #include "tbb_misc.h"
+#include "itt_notify.h"
+#if __SUNPRO_CC
+#include <memory.h>
+#endif
+
+using namespace std;
 
 #define __TBB_NO_BUSY_WAIT_IN_CONCURRENT_QUEUE 1
 
@@ -65,6 +71,8 @@ struct micro_queue {
     typedef concurrent_queue_base::page page;
     typedef size_t ticket;
 
+    friend class micro_queue_pop_finalizer;
+
     atomic<page*> head_page;
     atomic<ticket> head_counter;
 
@@ -87,31 +95,34 @@ struct micro_queue {
 
     void push( const void* item, ticket k, concurrent_queue_base& base );
 
-    class pop_finalizer {
-        ticket my_ticket;
-        micro_queue& my_queue;
-        page* my_page; 
-    public:
-        pop_finalizer( micro_queue& queue, ticket k, page* p ) :
-            my_ticket(k), my_queue(queue), my_page(p)
-        {}
-        ~pop_finalizer() {
-            page* p = my_page;
-            if( p ) {
-                spin_mutex::scoped_lock lock( my_queue.page_mutex );
-                page* q = p->next;
-                my_queue.head_page = q;
-                if( !q ) {
-                    my_queue.tail_page = NULL;
-                }
-            }
-            my_queue.head_counter = my_ticket;
-            if( p ) 
-                operator delete(p);
-        }
-    };
-
     bool pop( void* dst, ticket k, concurrent_queue_base& base );
+};
+
+class micro_queue_pop_finalizer {
+    typedef concurrent_queue_base::page page;
+    typedef size_t ticket;
+    ticket my_ticket;
+    micro_queue& my_queue;
+    page* my_page; 
+    concurrent_queue_base &base;
+public:
+    micro_queue_pop_finalizer( micro_queue& queue, concurrent_queue_base& b, ticket k, page* p ) :
+        my_ticket(k), my_queue(queue), my_page(p), base(b)
+    {}
+    ~micro_queue_pop_finalizer() {
+        page* p = my_page;
+        if( p ) {
+            spin_mutex::scoped_lock lock( my_queue.page_mutex );
+            page* q = p->next;
+            my_queue.head_page = q;
+            if( !q ) {
+                my_queue.tail_page = NULL;
+            }
+        }
+        my_queue.head_counter = my_ticket;
+        if( p )
+           base.deallocate_page( p );
+    }
 };
 
 //! Internal representation of a ConcurrentQueue.
@@ -210,22 +221,46 @@ public:
 #pragma warning( disable: 4146 )
 #endif /* _MSC_VER && !defined(__INTEL_COMPILER) */
 
+
+static void* invalid_page;
+
 //------------------------------------------------------------------------
 // micro_queue
 //------------------------------------------------------------------------
 void micro_queue::push( const void* item, ticket k, concurrent_queue_base& base ) {
+    static concurrent_queue_base::page dummy = {static_cast<page*>((void*)1), 0};
     k &= -concurrent_queue_rep::n_queue;
     page* p = NULL;
     size_t index = (k/concurrent_queue_rep::n_queue & base.items_per_page-1);
     if( !index ) {
-        size_t n = sizeof(page) + base.items_per_page*base.item_size;
-        p = static_cast<page*>(operator new( n ));
+        try {
+            p = base.allocate_page();
+        } catch (...) {
+            // mark it so that no more pushes are allowed.
+            invalid_page = &dummy;
+            spin_mutex::scoped_lock lock( page_mutex );
+            tail_counter = k+concurrent_queue_rep::n_queue+1;
+            if( page* q = tail_page )
+                q->next = static_cast<page*>(invalid_page);
+            else
+                head_page = static_cast<page*>(invalid_page); 
+            tail_page = static_cast<page*>(invalid_page);
+            throw;
+        }
         p->mask = 0;
         p->next = NULL;
     }
     {
         push_finalizer finalizer( *this, k+concurrent_queue_rep::n_queue ); 
-        SpinwaitUntilEq( tail_counter, k );
+        if( tail_counter!=k ) {
+            ExponentialBackoff backoff;
+            do {
+                backoff.pause();
+                // no memory. throws an exception
+                if( tail_counter&0x1 ) throw bad_last_alloc();
+            } while( tail_counter!=k ) ;
+        }
+        
         if( p ) {
             spin_mutex::scoped_lock lock( page_mutex );
             if( page* q = tail_page )
@@ -236,7 +271,9 @@ void micro_queue::push( const void* item, ticket k, concurrent_queue_base& base 
         } else {
             p = tail_page;
         }
+        ITT_NOTIFY( sync_acquired, p );
         base.copy_item( *p, index, item );
+        ITT_NOTIFY( sync_releasing, p );
         // If no exception was thrown, mark item as present.
         p->mask |= uintptr(1)<<index;
     } 
@@ -251,10 +288,18 @@ bool micro_queue::pop( void* dst, ticket k, concurrent_queue_base& base ) {
     size_t index = (k/concurrent_queue_rep::n_queue & base.items_per_page-1);
     bool success = false; 
     {
-        pop_finalizer finalizer( *this, k+concurrent_queue_rep::n_queue, index==base.items_per_page-1 ? &p : NULL ); 
+        micro_queue_pop_finalizer finalizer( *this, base, k+concurrent_queue_rep::n_queue, index==base.items_per_page-1 ? &p : NULL ); 
         if( p.mask & uintptr(1)<<index ) {
             success = true;
+#if DO_ITT_NOTIFY
+            if( ((intptr_t)dst&1) ) {
+                dst = (void*) ((intptr_t)dst&~1);
+                ITT_NOTIFY( sync_acquired, dst );
+            }
+#endif
+            ITT_NOTIFY( sync_acquired, head_page );
             base.assign_and_destroy_item( dst, p, index );
+            ITT_NOTIFY( sync_releasing, head_page );
         }
     }
     return success;
@@ -267,7 +312,7 @@ bool micro_queue::pop( void* dst, ticket k, concurrent_queue_base& base ) {
 //------------------------------------------------------------------------
 // concurrent_queue_base
 //------------------------------------------------------------------------
-concurrent_queue_base::concurrent_queue_base( size_t item_size ) {
+concurrent_queue_base_v3::concurrent_queue_base_v3( size_t item_size ) {
     items_per_page = item_size<=8 ? 32 :
                      item_size<=16 ? 16 : 
                      item_size<=32 ? 8 :
@@ -311,14 +356,10 @@ concurrent_queue_base::concurrent_queue_base( size_t item_size ) {
 #endif /* __TBB_NO_BUSY_WAIT_IN_CONCURRENT_QUEUE */
 }
 
-concurrent_queue_base::~concurrent_queue_base() {
+concurrent_queue_base_v3::~concurrent_queue_base_v3() {
     size_t nq = my_rep->n_queue;
-    for( size_t i=0; i<nq; i++ ) {
-        page* tp = my_rep->array[i].tail_page;
-        __TBB_ASSERT( my_rep->array[i].head_page==tp, "at most one page should remain" );
-        if( tp!=NULL )
-            delete tp;
-    }
+    for( size_t i=0; i<nq; i++ )
+        __TBB_ASSERT( my_rep->array[i].tail_page==NULL, "pages were not freed properly" );
 #if __TBB_NO_BUSY_WAIT_IN_CONCURRENT_QUEUE
 # if _WIN32||_WIN64
     CloseHandle( my_rep->var_wait_for_items );
@@ -334,7 +375,7 @@ concurrent_queue_base::~concurrent_queue_base() {
     cache_aligned_allocator<concurrent_queue_rep>().deallocate(my_rep,1);
 }
 
-void concurrent_queue_base::internal_push( const void* src ) {
+void concurrent_queue_base_v3::internal_push( const void* src ) {
     concurrent_queue_rep& r = *my_rep;
 #if !__TBB_NO_BUSY_WAIT_IN_CONCURRENT_QUEUE
     concurrent_queue_rep::ticket k  = r.tail_counter++;
@@ -350,6 +391,10 @@ void concurrent_queue_base::internal_push( const void* src ) {
     r.choose(k).push(src,k,*this);
 #else /* __TBB_NO_BUSY_WAIT_IN_CONCURRENT_QUEUE */
 
+#if DO_ITT_NOTIFY
+    bool sync_prepare_done = false;
+#endif
+
 # if !__TBB_USE_PTHREAD_CONDWAIT
     concurrent_queue_rep::ticket k = r.tail_counter;
     bool in_transition = false;
@@ -358,6 +403,12 @@ void concurrent_queue_base::internal_push( const void* src ) {
         AtomicBackoff backoff;
         for( ;; ) {
             while( (ptrdiff_t)(k-r.head_counter)>=e ) {
+#if DO_ITT_NOTIFY
+                if( !sync_prepare_done ) {
+                     ITT_NOTIFY( sync_prepare, &sync_prepare_done );
+                     sync_prepare_done = true;
+                }
+#endif
                 if( !backoff.bounded_pause() ) {
                     // queue is full.  go to sleep.
                     r.n_waiting_producers++;
@@ -411,6 +462,11 @@ void concurrent_queue_base::internal_push( const void* src ) {
             }
         }
 
+#if DO_ITT_NOTIFY
+        if( sync_prepare_done )
+            ITT_NOTIFY( sync_acquired, &sync_prepare_done );
+#endif
+
         r.choose( k ).push( src, k, *this );
 
 #if _WIN32||_WIN64
@@ -446,6 +502,12 @@ void concurrent_queue_base::internal_push( const void* src ) {
         AtomicBackoff backoff;
         for( ;; ) {
             while( (ptrdiff_t)(k-r.head_counter)>=e ) {
+#if DO_ITT_NOTIFY
+                if( !sync_prepare_done ) {
+                    ITT_NOTIFY( sync_prepare, &sync_prepare_done );
+                    sync_prepare_done = true;
+                }
+#endif
                 if( !backoff.bounded_pause() ) {
                     // queue is full.  go to sleep.
 
@@ -469,9 +531,13 @@ void concurrent_queue_base::internal_push( const void* src ) {
             concurrent_queue_rep::ticket tk = k;
             k = r.tail_counter.compare_and_swap( tk+1, tk );
             if( tk==k )
-		break;
+                break;
         }
     }
+#if DO_ITT_NOTIFY
+    if( sync_prepare_done )
+        ITT_NOTIFY( sync_acquired, &sync_prepare_done );
+#endif
     r.choose( k ).push( src, k, *this );
 
     if( r.n_waiting_consumers>0 ) {
@@ -487,7 +553,7 @@ void concurrent_queue_base::internal_push( const void* src ) {
 #endif /* !__TBB_NO_BUSY_WAIT_IN_CONCURRENT_QUEUE */
 }
 
-void concurrent_queue_base::internal_pop( void* dst ) {
+void concurrent_queue_base_v3::internal_pop( void* dst ) {
     concurrent_queue_rep& r = *my_rep;
 #if !__TBB_NO_BUSY_WAIT_IN_CONCURRENT_QUEUE
     concurrent_queue_rep::ticket k;
@@ -496,14 +562,25 @@ void concurrent_queue_base::internal_pop( void* dst ) {
     } while( !r.choose(k).pop(dst,k,*this) );
 #else /* __TBB_NO_BUSY_WAIT_IN_CONCURRENT_QUEUE */
 
+#if DO_ITT_NOTIFY
+    bool sync_prepare_done = false;
+#endif
 # if !__TBB_USE_PTHREAD_CONDWAIT
-    concurrent_queue_rep::ticket k=r.head_counter;
+    concurrent_queue_rep::ticket k;
     bool in_transition = false;
     AtomicBackoff backoff;
 
     do {
+        k = r.head_counter;
         for( ;; ) {
             while( r.tail_counter<=k ) {
+#if DO_ITT_NOTIFY
+                if( !sync_prepare_done ) {
+                    ITT_NOTIFY( sync_prepare, dst );
+                    dst = (void*) ((intptr_t)dst | 1);
+                    sync_prepare_done = true;
+                }
+#endif
                 // Queue is empty; pause and re-try a few times
                 if( !backoff.bounded_pause() ) {
                     // it is really empty.. go to sleep
@@ -578,12 +655,20 @@ void concurrent_queue_base::internal_pop( void* dst ) {
 
 # else /* __TBB_USE_PTHREAD_CONDWAIT */
 
-    concurrent_queue_rep::ticket k=r.head_counter;
+    concurrent_queue_rep::ticket k;
     AtomicBackoff backoff;
 
     do {
+        k = r.head_counter;
         for( ;; ) {
             while( r.tail_counter<=k ) {
+#if DO_ITT_NOTIFY
+                if( !sync_prepare_done ) {
+                    ITT_NOTIFY( sync_prepare, dst );
+                    dst = (void*) ((intptr_t)dst | 1);
+                    sync_prepare_done = true;
+                }
+#endif
                 // Queue is empty; pause and re-try a few times
                 if( !backoff.bounded_pause() ) {
                     // it is really empty.. go to sleep
@@ -593,7 +678,7 @@ void concurrent_queue_base::internal_pop( void* dst ) {
                     r.n_waiting_consumers++;
 
                     if( r.tail_counter<=k ) {
-		        while( r.tail_counter<=k )
+                        while( r.tail_counter<=k )
                             pthread_cond_wait( &r.var_wait_for_items, &r.mtx_items_avail );
 
                         --r.n_waiting_consumers;
@@ -631,10 +716,11 @@ void concurrent_queue_base::internal_pop( void* dst ) {
 #endif /* !__TBB_NO_BUSY_WAIT_IN_CONCURRENT_QUEUE */
 }
 
-bool concurrent_queue_base::internal_pop_if_present( void* dst ) {
+bool concurrent_queue_base_v3::internal_pop_if_present( void* dst ) {
     concurrent_queue_rep& r = *my_rep;
-    concurrent_queue_rep::ticket k = r.head_counter;
+    concurrent_queue_rep::ticket k;
     do {
+        k = r.head_counter;
         for(;;) {
             if( r.tail_counter<=k ) {
                 // Queue is empty 
@@ -661,7 +747,7 @@ bool concurrent_queue_base::internal_pop_if_present( void* dst ) {
     if( r.n_waiting_producers>0 ) {
         pthread_mutex_lock( &r.mtx_slots_avail );
         if( r.n_waiting_producers>0 )
-	    pthread_cond_signal( &r.var_wait_for_slots );
+            pthread_cond_signal( &r.var_wait_for_slots );
         pthread_mutex_unlock( &r.mtx_slots_avail );
     }
 #endif
@@ -670,7 +756,7 @@ bool concurrent_queue_base::internal_pop_if_present( void* dst ) {
     return true;
 }
 
-bool concurrent_queue_base::internal_push_if_not_full( const void* src ) {
+bool concurrent_queue_base_v3::internal_push_if_not_full( const void* src ) {
     concurrent_queue_rep& r = *my_rep;
     concurrent_queue_rep::ticket k = r.tail_counter;
     for(;;) {
@@ -686,10 +772,27 @@ bool concurrent_queue_base::internal_push_if_not_full( const void* src ) {
         // Another thread claimed the slot, so retry. 
     }
     r.choose(k).push(src,k,*this);
+#if __TBB_NO_BUSY_WAIT_IN_CONCURRENT_QUEUE
+#if _WIN32||_WIN64
+    // wake up a consumer..
+    if( r.n_waiting_consumers>0 )
+        SetEvent( r.var_wait_for_items );
+#elif __TBB_USE_FUTEX
+    if( r.n_waiting_consumers>0 && __TBB_CompareAndSwapW( &r.var_wait_for_items, 1, 0 )==0 )
+        futex_wakeup_one( &r.var_wait_for_items );
+#else /* including MacOS */
+    if( r.n_waiting_consumers>0 ) {
+        pthread_mutex_lock( &r.mtx_items_avail );
+        if( r.n_waiting_consumers>0 )
+            pthread_cond_signal( &r.var_wait_for_items );
+        pthread_mutex_unlock( &r.mtx_items_avail );
+    }
+#endif
+#endif /* __TBB_NO_BUSY_WAIT_IN_CONCURRENT_QUEUE */
     return true;
 }
 
-ptrdiff_t concurrent_queue_base::internal_size() const {
+ptrdiff_t concurrent_queue_base_v3::internal_size() const {
     __TBB_ASSERT( sizeof(ptrdiff_t)<=sizeof(size_t), NULL );
 #if __TBB_NO_BUSY_WAIT_IN_CONCURRENT_QUEUE
 # if !__TBB_USE_PTHREAD_CONDWAIT
@@ -736,8 +839,24 @@ ptrdiff_t concurrent_queue_base::internal_size() const {
 #endif /* __TBB_NO_BUSY_WAIT_IN_CONCURRENT_QUEUE */
 }
 
-void concurrent_queue_base::internal_set_capacity( ptrdiff_t capacity, size_t /*item_size*/ ) {
+void concurrent_queue_base_v3::internal_set_capacity( ptrdiff_t capacity, size_t /*item_size*/ ) {
     my_capacity = capacity<0 ? concurrent_queue_rep::infinite_capacity : capacity;
+}
+
+void concurrent_queue_base_v3::internal_finish_clear() {
+    size_t nq = my_rep->n_queue;
+    for( size_t i=0; i<nq; i++ ) {
+        page* tp = my_rep->array[i].tail_page;
+        __TBB_ASSERT( my_rep->array[i].head_page==tp, "at most one page should remain" );
+        if( tp!=NULL) {
+            if( tp!=invalid_page ) deallocate_page( tp );
+            my_rep->array[i].tail_page = NULL;
+        }
+    }
+}
+
+void concurrent_queue_base_v3::internal_throw_exception() const {
+    throw bad_alloc();
 }
 
 //------------------------------------------------------------------------
@@ -773,25 +892,27 @@ public:
 //------------------------------------------------------------------------
 // concurrent_queue_iterator_base
 //------------------------------------------------------------------------
-concurrent_queue_iterator_base::concurrent_queue_iterator_base( const concurrent_queue_base& queue ) {
-    my_rep = new concurrent_queue_iterator_rep(queue);
+concurrent_queue_iterator_base_v3::concurrent_queue_iterator_base_v3( const concurrent_queue_base& queue ) {
+    my_rep = cache_aligned_allocator<concurrent_queue_iterator_rep>().allocate(1);
+    new( my_rep ) concurrent_queue_iterator_rep(queue);
     my_item = my_rep->choose(my_rep->head_counter);
 }
 
-void concurrent_queue_iterator_base::assign( const concurrent_queue_iterator_base& other ) {
+void concurrent_queue_iterator_base_v3::assign( const concurrent_queue_iterator_base& other ) {
     if( my_rep!=other.my_rep ) {
         if( my_rep ) {
-            delete my_rep;
+            cache_aligned_allocator<concurrent_queue_iterator_rep>().deallocate(my_rep, 1);
             my_rep = NULL;
         }
         if( other.my_rep ) {
-            my_rep = new concurrent_queue_iterator_rep( *other.my_rep );
+            my_rep = cache_aligned_allocator<concurrent_queue_iterator_rep>().allocate(1);
+            new( my_rep ) concurrent_queue_iterator_rep( *other.my_rep );
         }
     }
     my_item = other.my_item;
 }
 
-void concurrent_queue_iterator_base::advance() {
+void concurrent_queue_iterator_base_v3::advance() {
     __TBB_ASSERT( my_item, "attempt to increment iterator past end of queue" );  
     size_t k = my_rep->head_counter;
     const concurrent_queue_base& queue = my_rep->my_queue;
@@ -805,8 +926,9 @@ void concurrent_queue_iterator_base::advance() {
     my_item = my_rep->choose(k+1);
 }
 
-concurrent_queue_iterator_base::~concurrent_queue_iterator_base() {
-    delete my_rep;
+concurrent_queue_iterator_base_v3::~concurrent_queue_iterator_base_v3() {
+    //delete my_rep;
+    cache_aligned_allocator<concurrent_queue_iterator_rep>().deallocate(my_rep, 1);
     my_rep = NULL;
 }
 

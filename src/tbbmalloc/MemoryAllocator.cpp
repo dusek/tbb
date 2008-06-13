@@ -68,7 +68,7 @@ static inline int TRACEF(const char *arg, ...)
 #include <string.h>
 #include <errno.h>
 
-#if __linux__||__APPLE__ || __FreeBSD__
+#if __linux__||__APPLE__ || __FreeBSD__ || __sun
 #include <fcntl.h>
 #endif
 
@@ -325,7 +325,7 @@ static inline unsigned int highestBitPos(unsigned int number)
     unsigned int pos;
 #if __ARCH_x86_32||__ARCH_x86_64
 
-# if __linux__||__APPLE__||__FreeBSD__
+# if __linux__||__APPLE__||__FreeBSD__ || __sun
     __asm__ ("bsr %1,%0" : "=r"(pos) : "r"(number));
 # elif (_WIN32 && (!_WIN64 || __INTEL_COMPILER))
     __asm

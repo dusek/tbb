@@ -49,8 +49,11 @@
 
 #include <cstdarg>
 
-#if _WIN32 || _WIN64
+#if _WIN32||_WIN64
     #define snprintf _snprintf
+#endif
+#if defined(_MSC_VER) && (_MSC_VER<=1400)
+    #define vsnprintf _vsnprintf
 #endif
 
 namespace harness_internal {
@@ -87,7 +90,7 @@ namespace harness_internal {
                 snprintf (msg_fmt_buf, MAX_TRACE_SIZE, "[%s] %s", my_func, fmt);
                 msg_fmt = msg_fmt_buf;
             }
-            va_list argptr;
+            std::va_list argptr;
             va_start (argptr, fmt);
             int len = vsnprintf (msg, MAX_TRACE_SIZE, msg_fmt, argptr);
             va_end (argptr);
@@ -111,7 +114,7 @@ namespace harness_internal {
 #if defined(_MSC_VER)  &&  _MSC_VER >= 1300  ||  defined(__GNUC__)  ||  defined(__GNUG__)
 	#define HARNESS_TRACE_ORIG_INFO __FILE__, __LINE__, __FUNCTION__
 #else
-	#define HARNESS_TRACE_ORIG_INFO ___FILE__, __LINE__, ""
+	#define HARNESS_TRACE_ORIG_INFO __FILE__, __LINE__, ""
 #endif
 
 

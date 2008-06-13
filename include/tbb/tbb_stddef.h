@@ -33,7 +33,7 @@
 #define TBB_VERSION_MAJOR 2
 #define TBB_VERSION_MINOR 0
 
-#define TBB_INTERFACE_VERSION 3000
+#define TBB_INTERFACE_VERSION 3010
 #define TBB_INTERFACE_VERSION_MAJOR TBB_INTERFACE_VERSION/1000
 
 // We do not need defines below for resource processing on windows
@@ -115,7 +115,21 @@
 #   endif
 #endif
 
-#include <cstddef>              /* Need size_t and ptrdiff_t from here. */
+#if _WIN32||_WIN64
+// define the parts of stdint.h that are needed 
+typedef __int8 int8_t;
+typedef __int16 int16_t;
+typedef __int32 int32_t;
+typedef __int64 int64_t;
+typedef unsigned __int8 uint8_t;
+typedef unsigned __int16 uint16_t;
+typedef unsigned __int32 uint32_t;
+typedef unsigned __int64 uint64_t;
+#else
+#include <stdint.h>
+#endif
+
+#include <cstddef>      /* Need size_t and ptrdiff_t (the latter on Windows only) from here. */
 
 #if _WIN32||_WIN64
 #define __TBB_tbb_windef_H
@@ -174,6 +188,8 @@ class split {
  */
 namespace internal {
 
+using std::size_t;
+
 //! An unsigned integral type big enough to hold a pointer.
 /** There's no guarantee by the C++ standard that a size_t is really big enough,
     but it happens to be for all platforms of interest. */
@@ -182,12 +198,12 @@ typedef size_t uintptr;
 //! A signed integral type big enough to hold a pointer.
 /** There's no guarantee by the C++ standard that a ptrdiff_t is really big enough,
     but it happens to be for all platforms of interest. */
-typedef ptrdiff_t intptr;
+typedef std::ptrdiff_t intptr;
 
 #if TBB_DO_ASSERT
 //! Set p to invalid pointer value.
 template<typename T>
-inline void poison_pointer( T* volatile & p ) {
+inline void poison_pointer( T* & p ) {
     p = reinterpret_cast<T*>(-1);
 }
 #else
@@ -212,9 +228,24 @@ public:
 
 } // tbb
 
+// tbbmalloc should be able to compile without exception handling support
+#if defined(__EXCEPTIONS) || defined(_CPPUNWIND) || defined(__SUNPRO_CC)
+#include <stdexcept>
+
+namespace tbb {
+//! Exception for concurrent containers
+class bad_last_alloc : public std::bad_alloc {
+public:
+    virtual const char *what() const throw() { return "bad allocation in previous or concurrent attempt"; }
+    virtual ~bad_last_alloc() throw() {}
+};
+} // tbb
+
 #ifndef __TBB_EXCEPTIONS
-#define __TBB_EXCEPTIONS 0
+#define __TBB_EXCEPTIONS 1
 #endif /* __TBB_EXCEPTIONS */
+
+#endif
 
 #ifndef __TBB_SCHEDULER_OBSERVER
 #define __TBB_SCHEDULER_OBSERVER 1

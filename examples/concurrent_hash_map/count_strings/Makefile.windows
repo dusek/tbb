@@ -42,6 +42,4 @@ debug:
 clean:
 	@cmd.exe /C del $(PROG).exe *.obj *.?db *.manifest
 test:
-	$(PROG)  1
-	$(PROG)  2
-	$(PROG)  4
+	$(PROG)

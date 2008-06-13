@@ -38,6 +38,8 @@
 #include <crtdbg.h>
 #endif
 
+using namespace std;
+
 namespace tbb {
     //! Type for an assertion handler
     typedef void(*assertion_handler_type)( const char* filename, int line, const char* expression, const char * comment );

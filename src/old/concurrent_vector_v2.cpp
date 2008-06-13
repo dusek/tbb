@@ -39,6 +39,13 @@
     #pragma warning (disable: 4267)
 #endif /* _MSC_VER && _Wp64 */
 
+//workaround for old patform SDK
+#if defined(_WIN64) && !defined(_CPPLIB_VER)
+namespace std{
+    using ::memset;
+}
+#endif /* defined(_WIN64) && !defined(_CPPLIB_VER) */
+
 namespace tbb {
 
 namespace internal {
@@ -79,7 +86,7 @@ public:
 void concurrent_vector_base::helper::extend_segment( concurrent_vector_base& v ) {
     const size_t pointers_per_long_segment = sizeof(void*)==4 ? 32 : 64;
     segment_t* s = (segment_t*)NFS_Allocate( pointers_per_long_segment, sizeof(segment_t), NULL );
-    memset( s, 0, pointers_per_long_segment*sizeof(segment_t) );
+    std::memset( s, 0, pointers_per_long_segment*sizeof(segment_t) );
     // If other threads are trying to set pointers in the short segment, wait for them to finish their
     // assigments before we copy the short segment to the long segment.
     ExponentialBackoff backoff;

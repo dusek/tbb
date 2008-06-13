@@ -37,6 +37,8 @@
     #pragma warning (disable: 4267)
 #endif /* _MSC_VER && _Wp64 */
 
+using namespace std;
+
 namespace tbb {
 
 namespace internal {
@@ -67,7 +69,7 @@ public:
 
     inline static void *allocate_segment(concurrent_vector_base_v3 &v, size_type n) {
         void *ptr = v.vector_allocator_ptr(v, n);
-        if(!ptr) throw std::bad_alloc(); // check for bad allocation, throw exception
+        if(!ptr) throw bad_alloc(); // check for bad allocation, throw exception
         return ptr;
     }
 
@@ -112,7 +114,7 @@ public:
 
     static void extend_segment_table(concurrent_vector_base_v3 &v) {
         segment_t* s = (segment_t*)NFS_Allocate( pointers_per_long_table, sizeof(segment_t), NULL );
-        // if( !s ) throw std::bad_alloc() -- implemented in NFS_Allocate
+        // if( !s ) throw bad_alloc() -- implemented in NFS_Allocate
         memset( s, 0, pointers_per_long_table*sizeof(segment_t) );
         // If other threads are trying to set pointers in the short segment, wait for them to finish their
         // assigments before we copy the short segment to the long segment.
@@ -144,15 +146,15 @@ concurrent_vector_base_v3::size_type concurrent_vector_base_v3::internal_capacit
 
 void concurrent_vector_base_v3::internal_throw_exception(size_type t) const {
     switch(t) {
-        case 0: throw std::out_of_range("Index out of range");
-        case 1: throw std::out_of_range("Index out of segments table range");
-        case 2: throw std::range_error ("Index is inside segment which failed to be allocated");
+        case 0: throw out_of_range("Index out of range");
+        case 1: throw out_of_range("Index out of segments table range");
+        case 2: throw range_error ("Index is inside segment which failed to be allocated");
     }
 }
 
 void concurrent_vector_base_v3::internal_reserve( size_type n, size_type element_size, size_type max_size ) {
     if( n>max_size ) {
-        throw std::length_error("argument to ConcurrentVector::reserve exceeds ConcurrentVector::max_size()");
+        throw length_error("argument to ConcurrentVector::reserve exceeds ConcurrentVector::max_size()");
     }
     helper::assign_first_segment_if_neccessary(*this, segment_index_of(n-1), element_size);
     for( segment_index_t k = helper::find_segment_end(*this); segment_base(k)<n; ++k ) {

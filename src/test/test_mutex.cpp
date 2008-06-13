@@ -53,11 +53,12 @@
 #endif /* _OPENMP */
 
 
-#if __linux__
-#define STD std
-#else
-#define STD   /* Cater to broken Windows compilers that are missing "std". */
-#endif /* __linux__ */
+//workaround for old patform SDK
+#if defined(_WIN64) && !defined(_CPPLIB_VER)
+namespace std{
+    using ::printf;
+}
+#endif /* defined(_WIN64) && !defined(_CPPLIB_VER) */
 
 // This test deliberately avoids a "using tbb" statement,
 // so that the error of putting types in the wrong namespace will be caught.
@@ -111,7 +112,7 @@ void Test( const char * name ) {
         fflush(stdout);
     }
     if( counter.value!=n )
-        STD::printf("ERROR for %s: counter.value=%ld\n",name,counter.value);
+        std::printf("ERROR for %s: counter.value=%ld\n",name,counter.value);
 }
 
 template<typename M, size_t N>
@@ -207,7 +208,7 @@ struct TwiddleInvariant {
                 }
             }
             if( !okay ) {
-                STD::printf( "ERROR for %s at %ld: %s %s %s %s\n",invariant.mutex_name, long(i),
+                std::printf( "ERROR for %s at %ld: %s %s %s %s\n",invariant.mutex_name, long(i),
                              write?"write,":"read,", write?(i%16==7?"downgrade,":""):(i%8==3?"upgrade,":""),
                              lock_kept?"lock kept,":"lock not kept,", (i/8)&1?"imp/exp":"exp/imp" );
             }
@@ -231,7 +232,7 @@ void TestReaderWriterLock( const char * mutex_name ) {
     // There is either a writer or a reader upgraded to a writer for each 4th iteration
     long expected_value = n/4;
     if( !invariant.value_is(expected_value) )
-        STD::printf("ERROR for %s: final invariant value is wrong\n",mutex_name);
+        std::printf("ERROR for %s: final invariant value is wrong\n",mutex_name);
     if( Verbose ) {
         printf("%g usec\n",(t1-t0).seconds());
         fflush(stdout);
@@ -246,25 +247,25 @@ void TestTryAcquire_OneThread( const char * mutex_name ) {
     if( lock1.try_acquire(tested_mutex) )
         lock1.release();
     else
-        STD::printf("ERROR for %s: try_acquire failed though it should not\n", mutex_name);
+        std::printf("ERROR for %s: try_acquire failed though it should not\n", mutex_name);
     {
         if( M::is_recursive_mutex ) {
             typename M::scoped_lock lock2(tested_mutex);
             if( lock1.try_acquire(tested_mutex) )
                 lock1.release();
             else
-                STD::printf("ERROR for %s: try_acquire on recursive lock failed though it should not\n", mutex_name);
+                std::printf("ERROR for %s: try_acquire on recursive lock failed though it should not\n", mutex_name);
             //windows.. -- both are recursive
         } else {
             typename M::scoped_lock lock2(tested_mutex);
             if( lock1.try_acquire(tested_mutex) )
-                STD::printf("ERROR for %s: try_acquire succeeded though it should not\n", mutex_name);
+                std::printf("ERROR for %s: try_acquire succeeded though it should not\n", mutex_name);
         }
     }
     if( lock1.try_acquire(tested_mutex) )
         lock1.release();
     else
-        STD::printf("ERROR for %s: try_acquire failed though it should not\n", mutex_name);
+        std::printf("ERROR for %s: try_acquire failed though it should not\n", mutex_name);
 }
 
 
@@ -384,6 +385,6 @@ int main( int argc, char * argv[] ) {
         if( Verbose )
             printf( "calling destructor for task_scheduler_init\n" );
     }
-    STD::printf("done\n");
+    std::printf("done\n");
     return 0;
 }

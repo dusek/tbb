@@ -73,6 +73,17 @@ else
             export CXXFLAGS += -m32
         endif
     endif
+    ifeq ($(compiler),suncc)
+    	export CXXFLAGS += -I$(tbb_root)$(SLASH)include -library=stlport4 -M$(tbb_root)/build/suncc.map.pause
+    endif
+    ifeq ($(tbb_os),SunOS)
+        ifeq ($(arch),em64t)
+            export CXXFLAGS += -m64
+        endif
+        ifeq ($(arch),ia32)
+            export CXXFLAGS += -m32
+        endif
+    endif
     ifeq ($(tbb_os),macos)
         ifeq ($(arch),em64t)
             # making GUI examples work in text console due to incompatible arch

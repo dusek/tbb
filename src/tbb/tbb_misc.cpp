@@ -37,20 +37,24 @@
 #include <cstdio>
 #include <cstdlib>
 #include <cstring>
-#if defined(__EXCEPTIONS) || defined(_CPPUNWIND)
+#if defined(__EXCEPTIONS) || defined(_CPPUNWIND) || defined(__SUNPRO_CC)
 #include <stdexcept>
 #endif
 #if !(_WIN32||_WIN64)
 #include <dlfcn.h>
 #endif 
 
+using namespace std;
+
 #include "tbb/tbb_machine.h"
+
+#include <iterator>
 
 namespace tbb {
 
 namespace internal {
 
-#if defined(__EXCEPTIONS) || defined(_CPPUNWIND)
+#if defined(__EXCEPTIONS) || defined(_CPPUNWIND) || defined(__SUNPRO_CC)
 // The above preprocessor symbols are defined by compilers when exception handling is enabled.
 // However, in some cases it could be disabled for this file.
 
@@ -62,7 +66,7 @@ void handle_perror( int error_code, const char* what ) {
     strncpy( end, strerror( error_code ), n );
     // Ensure that buffer ends in terminator.
     buf[sizeof(buf)-1] = 0; 
-    throw std::runtime_error(buf);
+    throw runtime_error(buf);
 }
 #endif //__EXCEPTIONS || _CPPUNWIND
 

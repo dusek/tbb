@@ -26,25 +26,21 @@
     the GNU General Public License.
 */
 
-// to avoid usage of #pragma comment
-#define __TBB_NO_IMPLICIT_LINKAGE 1
-
-#define  COUNT_TASK_NODES 1
-#define __TBB_TASK_CPP_DIRECTLY_INCLUDED 1
-#include "../tbb/task.cpp"
-
-#if __TBB_EXCEPTIONS
-
+#include "stddef.h"
 #include "tbb/task_scheduler_init.h"
+#include "tbb/task.h"
 #include "tbb/atomic.h"
 #include "tbb/parallel_for.h"
 #include "tbb/blocked_range.h"
 
 #include <cmath>
+#include <typeinfo>
 
 #include "harness.h"
 #include "harness_trace.h"
 
+
+#if __TBB_EXCEPTIONS
 
 //------------------------------------------------------------------------
 // Utility definitions
@@ -64,19 +60,39 @@ using internal::intptr;
 
 namespace util {
 
-void sleep ( int ms ) {
 #if _WIN32 || _WIN64
-    ::Sleep(ms);
-#else
-    timespec  requested = { ms / 1000, (ms % 1000)*1000000 };
-    timespec  remaining = {0};
-    nanosleep(&requested, &remaining);
-#endif // _WIN32 || _WIN64
-}
+
+    typedef DWORD tid_t;
+
+    tid_t get_my_tid () {
+        return GetCurrentThreadId();
+    }
+
+    void sleep ( int ms ) {
+        ::Sleep(ms);
+    }
+
+#else /* !WIN */
+
+    typedef pthread_t tid_t;
+
+    tid_t get_my_tid () {
+        return pthread_self();
+    }
+
+    void sleep ( int ms ) {
+        timespec  requested = { ms / 1000, (ms % 1000)*1000000 };
+        timespec  remaining = {0};
+        nanosleep(&requested, &remaining);
+    }
+
+#endif /* !WIN */
+
 
 inline intptr num_subranges ( intptr length, intptr grain ) {
-    return (intptr)pow(2, ceil(log((double)length / grain) / log(2.)));
+    return (intptr)std::pow(2., std::ceil(std::log((double)length / grain) / std::log(2.)));
 }
+
 
 } // namespace util
 
@@ -107,7 +123,7 @@ tbb::atomic<intptr> g_cur_executed, // number of times a body was requested to p
                     g_catch_executed, // snapshot of execution statistics at the moment when the 1st exception is caught
                     g_exceptions; // number of exceptions exposed to TBB users (i.e. intercepted by the test code)
 
-internal::GenericScheduler  *g_master = NULL;
+util::tid_t  g_master = 0;
 
 volatile intptr g_exception_thrown = 0;
 volatile bool g_throw_exception = true;
@@ -129,17 +145,14 @@ void reset_globals () {
     g_unknown_exception = false;
     g_task_was_cancelled = false;
     g_wait_completed = false;
-    //g_num_tasks_when_last_exception = 0;
 }
 
-intptr num_tasks () { return g_master->get_task_node_count(true); }
-
 void throw_test_exception ( intptr throw_threshold ) {
-    if ( !g_throw_exception  ||  g_exception_in_master ^ (internal::GetThreadSpecific() == g_master) )
+    if ( !g_throw_exception  ||  g_exception_in_master ^ (util::get_my_tid() == g_master) )
         return; 
     if ( !g_solitary_exception ) {
         __TBB_CompareAndSwapW(&g_exc_executed, g_cur_executed, 0);
-        TRACE ("About to throw one of multiple test_exceptions (thread %08x):", internal::GetThreadSpecific());
+        TRACE ("About to throw one of multiple test_exceptions (thread %08x):", util::get_my_tid());
         throw (test_exception(EXCEPTION_DESCR));
     }
     while ( g_cur_executed < throw_threshold )
@@ -156,7 +169,7 @@ void throw_test_exception ( intptr throw_threshold ) {
     try {
 
 #define CATCH()     \
-    } catch ( tbb::unhandled_exception& e ) {     \
+    } catch ( tbb::captured_exception& e ) {     \
         g_catch_executed = g_cur_executed;  \
         ASSERT (strcmp(e.name(), (g_solitary_exception ? typeid(solitary_test_exception) : typeid(test_exception)).name() ) == 0, "Unexpected original exception name");    \
         ASSERT (strcmp(e.what(), EXCEPTION_DESCR) == 0, "Unexpected original exception info");   \
@@ -178,7 +191,6 @@ void throw_test_exception ( intptr throw_threshold ) {
     ASSERT_EXCEPTION()
 
 #define ASSERT_TEST_POSTCOND()
-    //ASSERT (!num_tasks(), "Not all tasks objects have been destroyed")
 
 
 //------------------------------------------------------------------------
@@ -232,7 +244,7 @@ public:
         for( count_type i=r.begin(); i<end; ++i )
             x = 0;
         ++g_cur_executed;
-        if ( g_exception_in_master  ^  (internal::GetThreadSpecific() == g_master) )
+        if ( g_exception_in_master  ^  (util::get_my_tid() == g_master) )
         {
             // Make absolutely sure that worker threads on multicore machines had a chance to steal something
             util::sleep(10);
@@ -259,7 +271,7 @@ class nesting_pfor_body {
 public:
     void operator()( const range_type& ) const {
         ++g_cur_executed;
-        if ( internal::GetThreadSpecific() == g_master )
+        if ( util::get_my_tid() == g_master )
             yield_if_singlecore();
         tbb::parallel_for( tbb::blocked_range<size_t>(0, NESTED_RANGE, NESTED_GRAIN), simple_pfor_body() );
     }
@@ -289,7 +301,7 @@ void Test2 () {
 class nesting_pfor_with_isolated_context_body {
 public:
     void operator()( const range_type& ) const {
-        tbb::asynch_context ctx(tbb::asynch_context::isolated);
+        tbb::task_group_context ctx(tbb::task_group_context::isolated);
         ++g_cur_executed;
         util::sleep(1); // Give other threads a chance to steal their first tasks
         tbb::parallel_for( tbb::blocked_range<size_t>(0, NESTED_RANGE, NESTED_GRAIN), simple_pfor_body(), ctx );
@@ -326,7 +338,7 @@ void Test3 () {
 class nesting_pfor_with_eh_body {
 public:
     void operator()( const range_type& ) const {
-        tbb::asynch_context ctx(tbb::asynch_context::isolated);
+        tbb::task_group_context ctx(tbb::task_group_context::isolated);
         ++g_cur_executed;
         TRY();
             tbb::parallel_for( tbb::blocked_range<size_t>(0, NESTED_RANGE, NESTED_GRAIN), simple_pfor_body(), ctx );
@@ -373,18 +385,18 @@ void Test4 () {
 
 class my_cancellation_root_task : public tbb::task
 {
-    tbb::asynch_context &my_ctx_to_cancel;
+    tbb::task_group_context &my_ctx_to_cancel;
     intptr              my_cancel_threshold;
 
     task* execute () {
         while ( g_cur_executed < my_cancel_threshold )
             yield_if_singlecore();
-        my_ctx_to_cancel.cancel_task_group();
+        my_ctx_to_cancel.cancel_group_execution();
         g_catch_executed = g_cur_executed;
         return NULL;
     }
 public:
-    my_cancellation_root_task ( tbb::asynch_context& ctx, intptr threshold ) 
+    my_cancellation_root_task ( tbb::task_group_context& ctx, intptr threshold ) 
         : my_ctx_to_cancel(ctx), my_cancel_threshold(threshold)
     {}
 };
@@ -400,14 +412,14 @@ public:
 
 class my_calculation_root_task : public tbb::task
 {
-    tbb::asynch_context &my_ctx;
+    tbb::task_group_context &my_ctx;
 
     task* execute () {
         tbb::parallel_for( range_type(0, ITER_RANGE, ITER_GRAIN), pfor_body_to_cancel(), my_ctx );
         return NULL;
     }
 public:
-    my_calculation_root_task ( tbb::asynch_context& ctx ) : my_ctx(ctx) {}
+    my_calculation_root_task ( tbb::task_group_context& ctx ) : my_ctx(ctx) {}
 };
 
 
@@ -418,7 +430,8 @@ void Test5 () {
     g_throw_exception = false;
     intptr  threshold = util::num_subranges(ITER_RANGE, ITER_GRAIN) / 4;
     TRACE ("Threshold %d", threshold);
-    tbb::asynch_context  ctx;
+    tbb::task_group_context  ctx;
+    ctx.reset();
     tbb::task_list  tl;
     tl.push_back( *new( tbb::task::allocate_root() ) my_calculation_root_task(ctx) );
     tl.push_back( *new( tbb::task::allocate_root() ) my_cancellation_root_task(ctx, threshold) );
@@ -435,12 +448,7 @@ void TestExceptionHandling ()
 {
     TRACE ("Number of threads %d", g_num_threads);
     tbb::task_scheduler_init init (g_num_threads);
-    g_master = internal::GetThreadSpecific();
-
-#if 0 /* !(__APPLE__ || (__linux__ && __TBB_x86_64)) */
-    test_num_subranges_calculation<nesting_pfor_body>(NESTING_RANGE, NESTING_GRAIN, NESTED_RANGE, NESTED_GRAIN);
-    Test2();
-#endif /* 0 */
+    g_master = util::get_my_tid();
 
     Test0();
     Test1();
@@ -456,17 +464,18 @@ void TestExceptionHandling ()
 // Entry point
 //------------------------------------------------------------------------
 
-#include <algorithm>
-
+/** If min and max thread numbers specified on the command line are different, 
+    the test is run only for 2 sizes of the thread pool (MinThread and MaxThread) 
+    to be able to test the high and low contention modes while keeping the test reasonably fast **/
 int main(int argc, char* argv[]) {
-#if __TBB_EXCEPTIONS
     ParseCommandLine( argc, argv );
-    MinThread = std::min<int>(MinThread, MaxThread);
+    MinThread = min(MinThread, MaxThread);
     ASSERT (MinThread>=2, "Minimal number of threads must be 2 or more");
     ASSERT (ITER_RANGE >= ITER_GRAIN * MaxThread, "Fix defines");
-    int step = std::max<int>(MaxThread - MinThread, 1);
+#if __TBB_EXCEPTIONS
+    int step = max(MaxThread - MinThread, 1);
     for ( g_num_threads = MinThread; g_num_threads <= MaxThread; g_num_threads += step ) {
-        g_max_concurrency = std::min<int>(g_num_threads, tbb::task_scheduler_init::default_num_threads());
+        g_max_concurrency = min(g_num_threads, tbb::task_scheduler_init::default_num_threads());
         // Execute in all the possible modes
         for ( size_t j = 0; j < 4; ++j ) {
             g_exception_in_master = (j & 1) == 1;
@@ -474,8 +483,10 @@ int main(int argc, char* argv[]) {
             TestExceptionHandling();
         }
     }
-#endif /* __TBB_EXCEPTIONS */
     printf("done\n");
+#else
+    printf("skipped\n");
+#endif /* __TBB_EXCEPTIONS */
     return 0;
 }
 

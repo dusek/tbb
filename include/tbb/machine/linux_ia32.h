@@ -103,6 +103,10 @@ static inline void __TBB_machine_or( volatile void *ptr, uint32_t addend ) {
     __asm__ __volatile__("lock\norl %1,%0" : "=m"(*(uint32_t *)ptr) : "r"(addend) : "memory");
 }
 
+static inline void __TBB_machine_and( volatile void *ptr, uint32_t addend ) {
+    __asm__ __volatile__("lock\nandl %1,%0" : "=m"(*(uint32_t *)ptr) : "r"(addend) : "memory");
+}
+
 static inline void __TBB_machine_pause( int32_t delay ) {
     for (int32_t i = 0; i < delay; i++) {
        __asm__ __volatile__("pause;");
@@ -185,6 +189,7 @@ inline void __TBB_machine_store_with_release(volatile T &location, V value) {
 #define __TBB_Load8(P)    __TBB_machine_load8(P)
 
 #define __TBB_AtomicOR(P,V) __TBB_machine_or(P,V)
+#define __TBB_AtomicAND(P,V) __TBB_machine_and(P,V)
 
 
 // Those we chose not to implement (they will be implemented generically using CMPSWP8)

@@ -51,4 +51,4 @@ __TBB_machine_trylockbyte:
 ;;
 (p6)    mov RETCODE=1
    	br.ret.sptk.many b0	
-	.endp __TBB_TryLockByte#
+	.endp __TBB_machine_trylockbyte#

@@ -123,16 +123,14 @@ public:
             __TBB_ASSERT( mutex, "lock is not acquired" );
             spin_rw_mutex *m = mutex; 
             mutex = NULL;
-            if( is_writer ) {
 #if TBB_DO_THREADING_TOOLS||TBB_DO_ASSERT
-                internal_release_writer(m);
+            if( is_writer ) internal_release_writer(m);
+            else            internal_release_reader(m);
 #else
-                __TBB_store_with_release( m->state, 0 ); 
+            if( is_writer ) __TBB_AtomicAND( &m->state, READERS ); 
+            else            __TBB_FetchAndAddWrelease( &m->state, -(intptr_t)ONE_READER);
 #endif /* TBB_DO_THREADING_TOOLS||TBB_DO_ASSERT */
-            } else {
-                internal_release_reader(m);
-            }
-        };
+        }
 
         //! Downgrade writer to become a reader.
         bool downgrade_to_reader() {
@@ -141,7 +139,7 @@ public:
             __TBB_ASSERT( is_writer, "not a writer" );
             internal_downgrade(mutex);
 #else
-            __TBB_store_with_release( mutex->state, ONE_READER ); 
+	     __TBB_FetchAndAddW( &mutex->state, ((intptr_t)ONE_READER-WRITER));
 #endif /* TBB_DO_THREADING_TOOLS||TBB_DO_ASSERT */
             is_writer = false;
 
@@ -175,7 +173,7 @@ public:
     static const bool is_fair_mutex = false;
 
 private:
-    typedef internal::uintptr state_t;
+    typedef intptr_t state_t;
     static const state_t WRITER = 1;
     static const state_t WRITER_PENDING = 2;
     static const state_t READERS = ~(WRITER | WRITER_PENDING);

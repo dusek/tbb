@@ -37,6 +37,13 @@ static tbb::atomic<int> sum;
 static tbb::atomic<int> BaseCount;
 static tbb::tbb_thread::id real_ids[THRDS+THRDS_DETACH];
 
+//workaround for old patform SDK
+#if defined(_WIN64) && !defined(_CPPLIB_VER)
+namespace std{
+    using ::printf;
+}
+#endif /* defined(_WIN64) && !defined(_CPPLIB_VER) */
+
 class Base {
     mutable int copy_throws;
     friend void RunTests();
@@ -176,14 +183,24 @@ void RunTests() {
     tbb::tbb_thread thrs[THRDS];
     tbb::tbb_thread thr;
     tbb::tbb_thread thr0(t);
-    tbb::tbb_thread thr1(t, 1);
-    tbb::tbb_thread thr2(t, 2, d100);
+    tbb::tbb_thread thr1(t, 2);
+    tbb::tbb_thread thr2(t, 1, d100);
     
     ASSERT( thr0.get_id() != id, NULL );
     id0 = thr0.get_id();
     tbb::move(thrs[0], thr0);
     ASSERT( thr0.get_id() == id, NULL );
     ASSERT( thrs[0].get_id() == id0, NULL );
+
+    tbb::tbb_thread::native_handle_type h1 = thr1.native_handle();
+    tbb::tbb_thread::native_handle_type h2 = thr2.native_handle();
+    tbb::tbb_thread::id id1 = thr1.get_id();
+    tbb::tbb_thread::id id2 = thr2.get_id();
+    tbb::swap(thr1, thr2);
+    ASSERT( thr1.native_handle() == h2, NULL );
+    ASSERT( thr2.native_handle() == h1, NULL );
+    ASSERT( thr1.get_id() == id2, NULL );
+    ASSERT( thr2.get_id() == id1, NULL );
 
     tbb::move(thrs[1], thr1);
     ASSERT( thr1.get_id() == id, NULL );
@@ -229,9 +246,22 @@ void RunTests() {
     ASSERT( tbb::tbb_thread::hardware_concurrency() > 0, NULL);
 }
 
+typedef bool (*id_relation)( tbb::tbb_thread::id, tbb::tbb_thread::id );
+
+id_relation CheckSignatures() {
+    id_relation r[6] = {&tbb::operator==,
+                        &tbb::operator!=,
+                        &tbb::operator<,
+                        &tbb::operator>,
+                        &tbb::operator<=,
+                        &tbb::operator>=};
+    return r[1];
+}
+
 int main( int , char *[] ) {
+    CheckSignatures();
     RunTests();
-    printf("done\n");
+    std::printf("done\n");
     return 0;
 }
 

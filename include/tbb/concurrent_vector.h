@@ -30,7 +30,6 @@
 #define __TBB_concurrent_vector_H
 
 #include "tbb_stddef.h"
-#include <stdexcept>
 #include <algorithm>
 #include <iterator>
 #include <memory>
@@ -48,6 +47,13 @@
     #pragma warning (push)
     #pragma warning (disable: 4267)
 #endif /* _MSC_VER && _Wp64 */
+
+//workaround for old patform SDK
+#if defined(_WIN64) && !defined(_CPPLIB_VER)
+namespace std{
+    using ::memset;
+}
+#endif /* defined(_WIN64) && !defined(_CPPLIB_VER) */
 
 namespace tbb {
 
@@ -357,26 +363,19 @@ public: // workaround for MSVC
     template<typename T, class A>
     class allocator_base {
     public:
-#if defined(_WIN64) && !defined(_CPPLIB_VER)
+#if (defined(_WIN64) && !defined(_CPPLIB_VER))
         typedef A allocator_type;
 #else
         typedef typename A::template
             rebind<T>::other allocator_type;
 #endif
-        allocator_type allocator;
+        allocator_type my_allocator;
 
-        allocator_base(const allocator_type &a = allocator_type() ) : allocator(a) {}
+        allocator_base(const allocator_type &a = allocator_type() ) : my_allocator(a) {}
     };
 
 } // namespace internal
 //! @endcond
-
-//! Exception for concurrent_vector
-class bad_last_alloc : public std::bad_alloc {
-public:
-    virtual const char *what() const throw() { return "bad allocation in previous or concurrent attempt"; }
-    virtual ~bad_last_alloc() throw() {}
-};
 
 //! Concurrent vector container
 /** concurrent_vector is a container having the following main properties:
@@ -481,14 +480,18 @@ public:
     }
 
     //! Copying constructor
-    concurrent_vector( const concurrent_vector& vector ) {
+    concurrent_vector( const concurrent_vector& vector, const allocator_type& a = allocator_type() )
+        : internal::allocator_base<T, A>(a)
+    {
         vector_allocator_ptr = &internal_allocator;
         internal_copy(vector, sizeof(T), &copy_array);
     }
 
     //! Copying constructor for vector with different allocator type
     template<class M>
-    concurrent_vector( const concurrent_vector<T, M>& vector ) {
+    concurrent_vector( const concurrent_vector<T, M>& vector, const allocator_type& a = allocator_type() )
+        : internal::allocator_base<T, A>(a)
+    {
         vector_allocator_ptr = &internal_allocator;
         internal_copy(vector.internal_vector_base(), sizeof(T), &copy_array);
     }
@@ -663,7 +666,7 @@ public:
         return internal_subscript( my_early_size-1 );
     }
     //! return allocator object
-    allocator_type get_allocator() const { return this->allocator; }
+    allocator_type get_allocator() const { return this->my_allocator; }
 
     //! assign n items by copying t item
     void assign(size_type n, const_reference t) { clear(); internal_assign( n, t ); }
@@ -678,7 +681,7 @@ public:
     void swap(concurrent_vector &vector) {
         if( this != &vector ) {
             concurrent_vector_base_v3::internal_swap(static_cast<concurrent_vector_base_v3&>(vector));
-            std::swap(this->allocator, vector.allocator);
+            std::swap(this->my_allocator, vector.my_allocator);
         }
     }
 
@@ -699,7 +702,7 @@ public:
 private:
     //! Allocate k items
     static void *internal_allocator(internal::concurrent_vector_base_v3 &vb, size_t k) {
-        return static_cast<concurrent_vector<T, A>&>(vb).allocator.allocate(k);
+        return static_cast<concurrent_vector<T, A>&>(vb).my_allocator.allocate(k);
     }
     //! Free k segments from table
     void internal_free_segments(void *table[], segment_index_t k, segment_index_t first_block);
@@ -760,7 +763,7 @@ private:
         template<class I> void iterate(I &src) { for(; i < n; ++i, ++src) new( &array[i] ) T( *src ); }
         ~internal_loop_guide() {
             if(i < n) // if exception raised, do zerroing on the rest of items
-                memset(array+i, 0, (n-i)*sizeof(value_type));
+                std::memset(array+i, 0, (n-i)*sizeof(value_type));
         }
     };
 };
@@ -786,13 +789,13 @@ void concurrent_vector<T, A>::internal_free_segments(void *table[], segment_inde
         T* array = static_cast<T*>(table[k]);
         table[k] = NULL;
         if( array > __TBB_BAD_ALLOC ) // check for correct segment pointer
-            this->allocator.deallocate( array, segment_size(k) );
+            this->my_allocator.deallocate( array, segment_size(k) );
     }
     T* array = static_cast<T*>(table[0]);
     if( array > __TBB_BAD_ALLOC ) {
         __TBB_ASSERT( first_block > 0, NULL );
         while(k > 0) table[--k] = NULL;
-        this->allocator.deallocate( array, segment_size(first_block) );
+        this->my_allocator.deallocate( array, segment_size(first_block) );
     }
 }
 

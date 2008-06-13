@@ -140,24 +140,49 @@ void* MyInput::operator()(void*) {
 //! The struct below repeats layout of tbb::pipeline.
 struct hacked_pipeline {
     tbb::filter* filter_list;
-    tbb::filter** filter_end;
+    tbb::filter* filter_end;
     tbb::empty_task* end_counter;
     tbb::internal::Token input_tokens;
     tbb::internal::Token token_counter;
     bool end_of_input;
+
+    virtual ~hacked_pipeline();
 };
+
+//! The struct below repeats layout of tbb::internal::ordered_buffer.
+struct hacked_ordered_buffer {
+    tbb::task** array;
+    tbb::internal::Token array_size;
+    tbb::internal::Token low_token;
+    tbb::spin_mutex array_mutex;
+};
+
+//! The struct below repeats layout of tbb::filter.
+struct hacked_filter {
+    tbb::filter* next_filter_in_pipeline;
+    hacked_ordered_buffer* input_buffer;
+    unsigned char my_filter_mode;
+    tbb::filter* prev_filter_in_pipeline;
+    tbb::pipeline* my_pipeline;
+
+    virtual ~hacked_filter();
+};
+
+const tbb::internal::Token tokens_before_wraparound = 0xF;
 
 void TestTrivialPipeline( size_t nthread, int number_of_filters ) {
     if( Verbose ) 
         printf("testing with %d threads and %d filters\n", int(nthread), number_of_filters );
     ASSERT( number_of_filters<=MaxFilters, "too many filters" );
+    ASSERT( sizeof(hacked_pipeline) == sizeof(tbb::pipeline), "layout changed for tbb::pipeline?" );
+    ASSERT( sizeof(hacked_filter) == sizeof(tbb::filter), "layout changed for tbb::filter?" );
     size_t ntokens = nthread<MaxBuffer ? nthread : MaxBuffer;
     // Iterate over possible ordered/unordered filter sequences
     for( int bitmask=0; bitmask<1<<number_of_filters; ++bitmask ) {
         // Build pipeline
         tbb::pipeline pipeline;
         // A private member of pipeline is hacked there for sake of testing wrap-around immunity.
-        ((hacked_pipeline*)(void*)&pipeline)->token_counter = ~(tbb::internal::Token)0xF;
+        ((hacked_pipeline*)(void*)&pipeline)->token_counter = ~tokens_before_wraparound;
         tbb::filter* filter[MaxFilters];
         bool first_stage_is_ordered = false;
         for( int i=0; i<number_of_filters; ++i ) {
@@ -170,6 +195,9 @@ void TestTrivialPipeline( size_t nthread, int number_of_filters ) {
             else
                 filter[i] = new MyFilter(is_ordered,Done[i],is_last,first_stage_is_ordered);
             pipeline.add_filter(*filter[i]);
+            // The ordered buffer of serial filters is hacked as well.
+            if (is_ordered)
+                ((hacked_filter*)(void*)filter[i])->input_buffer->low_token = ~tokens_before_wraparound;
         }
         for( StreamSize=0; StreamSize<=MaxStreamSize; StreamSize += StreamSize/3+1 ) {
             memset( Done, 0, sizeof(Done) );

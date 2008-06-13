@@ -30,7 +30,7 @@ PROG=count_strings
 # The C++ compiler
 #CXX=g++
 
-all:	release test
+all:   release test
 
 release: *.cpp
 	$(CXX) -O2 -DNDEBUG $(CXXFLAGS) -o $(PROG) $^ -ltbb $(LIBS)
@@ -42,6 +42,4 @@ clean:
 	rm -f $(PROG) *.o *.d
 
 test:
-	./$(PROG) 1
-	./$(PROG) 2
-	./$(PROG) 4
+	./$(PROG)

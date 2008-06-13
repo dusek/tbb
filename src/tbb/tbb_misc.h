@@ -34,6 +34,9 @@
 
 #if defined(__linux__)
 #include <sys/sysinfo.h>
+#elif defined(__sun)
+#include <sys/sysinfo.h>
+#include <unistd.h>
 #elif defined(__APPLE__)
 #include <sys/types.h>
 #include <sys/sysctl.h>
@@ -59,11 +62,11 @@ static inline int DetectNumberOfWorkers() {
     return static_cast<int>(si.dwNumberOfProcessors);
 }
 
-#elif defined(__linux__) || defined(__APPLE__) || defined(__FreeBSD__) 
+#elif defined(__linux__) || defined(__APPLE__) || defined(__FreeBSD__) || defined(__sun) 
 static inline int DetectNumberOfWorkers() {
     long number_of_workers;
 
-#if defined(__FreeBSD__) && defined(_SC_NPROCESSORS_ONLN) 
+#if (defined(__FreeBSD__) || defined(__sun)) && defined(_SC_NPROCESSORS_ONLN) 
     number_of_workers = sysconf(_SC_NPROCESSORS_ONLN);
 
 // In theory, sysconf should work everywhere.
@@ -151,21 +154,6 @@ struct DynamicLinkDescriptor {
     If the library and all of the handlers are found, then all corresponding handler pointers are set.
     Otherwise all corresponding handler pointers are untouched. */
 bool FillDynamicLinks( const char* libraryname, const DynamicLinkDescriptor list[], size_t n );
-
-//! Template functions to temporary add volatile attribute to a variable.
-/** Allow to perform operations with volatile semantics on non-volatile variables
-    which is useful to improve performance on IPF where Intel compiler
-    translates volatile reads to "load with acquire semantics" (ld*.acq)
-    and volatile writes to "store with release semantics" (st*.rel). */
-template<typename T>
-static inline T volatile& volatile_cast(T& location) {
-    return const_cast<T volatile&>(location);
-}
-
-template<typename T>
-static inline T const volatile& volatile_cast(T const& location) {
-    return const_cast<T const volatile&>(location);
-}
 
 //! Class that implements exponential backoff.
 /** See implementation of SpinwaitWhileEq for an example. */

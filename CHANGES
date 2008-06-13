@@ -1,4 +1,24 @@
 ------------------------------------------------------------------------
+20080402 open-source release
+
+Changes:
+
+- Exception handling and cancellation support for tasks and algorithms 
+    fully enabled.  
+- Exception safety guaranties defined and fixed for all concurrent 
+    containers
+- User-defined memory allocator support added to all concurrent 
+    containers
+- Performance improvement of concurrent_hash_map, spin_rw_mutex
+- Critical fix for a rare race condition during scheduler 
+    initialization/de-initialization
+- New methods added for concurrent containers to be closer to STL, as 
+    well as automatic filters removal from pipeline and __TBB_AtomicAND 
+    function
+- The volatile keyword dropped from where it is not really needed.
+- A few more minor improvements.
+
+------------------------------------------------------------------------
 20080319 open-source release
 
 Changes:
