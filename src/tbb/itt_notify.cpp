@@ -134,7 +134,7 @@ void dummy_sync_releasing( volatile void* ptr ) {
 //! Executed on very first call throught ITT_Handler_sync_cancel
 void dummy_sync_cancel( volatile void* ptr ) {
     DoOneTimeInitializations();
-    __TBB_ASSERT( ITT_Handler_sync_releasing!=&dummy_sync_cancel, NULL );
+    __TBB_ASSERT( ITT_Handler_sync_cancel!=&dummy_sync_cancel, NULL );
     if (ITT_Handler_sync_cancel)
         (*ITT_Handler_sync_cancel) (ptr);
 }

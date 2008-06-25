@@ -274,6 +274,52 @@ public:
             return this;
         }
     } 
+
+    //! Auxiliary class for parallel_reduce; for internal use only.
+    /** The adaptor class that implements \ref parallel_reduce_body_req "parallel_reduce Body"
+        using given \ref parallel_reduce_lambda_req "anonymous function objects".
+     **/
+    /** @ingroup algorithms */
+    template<typename Range, typename Value, typename RealBody, typename Reduction>
+    class lambda_reduce_body {
+
+//FIXME: decide if my_real_body, my_reduction, and identity_element should be copied or referenced
+//       (might require some performance measurements)
+
+        const Value&     identity_element;
+        const RealBody&  my_real_body;
+        const Reduction& my_reduction;
+        Value            my_value;
+    public:
+        lambda_reduce_body( const Value& identity, const RealBody& body, const Reduction& reduction )
+            : identity_element(identity)
+            , my_real_body(body)
+            , my_reduction(reduction)
+            , my_value(identity)
+        { }
+        lambda_reduce_body( const lambda_reduce_body& other )
+            : identity_element(other.identity_element)
+            , my_real_body(other.my_real_body)
+            , my_reduction(other.my_reduction)
+            , my_value(other.my_value)
+        { }
+        lambda_reduce_body( lambda_reduce_body& other, tbb::split )
+            : identity_element(other.identity_element)
+            , my_real_body(other.my_real_body)
+            , my_reduction(other.my_reduction)
+            , my_value(other.identity_element)
+        { }
+        void operator()(Range& range) {
+            my_real_body(range, my_value);
+        }
+        void join( lambda_reduce_body& rhs ) {
+            my_value = my_reduction(my_value, rhs.my_value);
+        }
+        Value result() const {
+            return my_value;
+        }
+    };
+
 } // namespace internal
 //! @endcond
 
@@ -290,11 +336,15 @@ public:
                                                         The result in \c b should be merged into the result of \c this
 **/
 
+/** \page parallel_reduce_lambda_req Requirements on parallel_reduce anonymous function objects (lambda functions)
+    TO BE DOCUMENTED
+**/
+
 /** \name parallel_reduce
     See also requirements on \ref range_req "Range" and \ref parallel_reduce_body_req "parallel_reduce Body". **/
 //@{
 
-//! Parallel iteration with reduction and simple_partitioner, or default partitioner if no partitioner is specified.
+//! Parallel iteration with reduction and simple_partitioner, or no partitioner specified.
 /** @ingroup algorithms **/
 template<typename Range, typename Body>
 void parallel_reduce( const Range& range, Body& body, const simple_partitioner& partitioner = simple_partitioner() ) {
@@ -308,7 +358,7 @@ void parallel_reduce( const Range& range, Body& body, const auto_partitioner& pa
     internal::start_reduce<Range,Body,auto_partitioner>::run( range, body, partitioner );
 }
 
-//! Parallel iteration with reduction and auto_partitioner
+//! Parallel iteration with reduction and affinity_partitioner
 /** @ingroup algorithms **/
 template<typename Range, typename Body>
 void parallel_reduce( const Range& range, Body& body, affinity_partitioner& partitioner ) {
@@ -335,6 +385,77 @@ void parallel_reduce( const Range& range, Body& body, const auto_partitioner& pa
 template<typename Range, typename Body>
 void parallel_reduce( const Range& range, Body& body, affinity_partitioner& partitioner, task_group_context& context ) {
     internal::start_reduce_with_affinity<Range,Body>::run( range, body, partitioner, context );
+}
+#endif /* __TBB_EXCEPTIONS */
+
+/** parallel_reduce overloads that work with anonymous function objects
+    (see also \ref parallel_reduce_lambda_req "requirements on parallel_reduce anonymous function objects"). **/
+
+//! Parallel iteration with reduction and simple_partitioner, or no partitioner specified.
+/** @ingroup algorithms **/
+template<typename Range, typename Value, typename RealBody, typename Reduction>
+Value parallel_reduce( const Range& range, const Value& identity, const RealBody& real_body, const Reduction& reduction,
+                       const simple_partitioner& partitioner = simple_partitioner() ) {
+    internal::lambda_reduce_body<Range,Value,RealBody,Reduction> body(identity, real_body, reduction);
+    internal::start_reduce<Range,internal::lambda_reduce_body<Range,Value,RealBody,Reduction>,simple_partitioner>
+                          ::run(range, body, partitioner );
+    return body.result();
+}
+
+//! Parallel iteration with reduction and auto_partitioner
+/** @ingroup algorithms **/
+template<typename Range, typename Value, typename RealBody, typename Reduction>
+Value parallel_reduce( const Range& range, const Value& identity, const RealBody& real_body, const Reduction& reduction,
+                       const auto_partitioner& partitioner ) {
+    internal::lambda_reduce_body<Range,Value,RealBody,Reduction> body(identity, real_body, reduction);
+    internal::start_reduce<Range,internal::lambda_reduce_body<Range,Value,RealBody,Reduction>,auto_partitioner>
+                          ::run( range, body, partitioner );
+    return body.result();
+}
+
+//! Parallel iteration with reduction and affinity_partitioner
+/** @ingroup algorithms **/
+template<typename Range, typename Value, typename RealBody, typename Reduction>
+Value parallel_reduce( const Range& range, const Value& identity, const RealBody& real_body, const Reduction& reduction,
+                       affinity_partitioner& partitioner ) {
+    internal::lambda_reduce_body<Range,Value,RealBody,Reduction> body(identity, real_body, reduction);
+    internal::start_reduce_with_affinity<Range,internal::lambda_reduce_body<Range,Value,RealBody,Reduction> >
+                                        ::run( range, body, partitioner );
+    return body.result();
+}
+
+#if __TBB_EXCEPTIONS
+//! Parallel iteration with reduction, simple partitioner and user-supplied context.
+/** @ingroup algorithms **/
+template<typename Range, typename Value, typename RealBody, typename Reduction>
+Value parallel_reduce( const Range& range, const Value& identity, const RealBody& real_body, const Reduction& reduction,
+                       const simple_partitioner& partitioner, task_group_context& context ) {
+    internal::lambda_reduce_body<Range,Value,RealBody,Reduction> body(identity, real_body, reduction);
+    internal::start_reduce<Range,internal::lambda_reduce_body<Range,Value,RealBody,Reduction>,simple_partitioner>
+                          ::run( range, body, partitioner, context );
+    return body.result();
+}
+
+//! Parallel iteration with reduction, auto_partitioner and user-supplied context
+/** @ingroup algorithms **/
+template<typename Range, typename Value, typename RealBody, typename Reduction>
+Value parallel_reduce( const Range& range, const Value& identity, const RealBody& real_body, const Reduction& reduction,
+                       const auto_partitioner& partitioner, task_group_context& context ) {
+    internal::lambda_reduce_body<Range,Value,RealBody,Reduction> body(identity, real_body, reduction);
+    internal::start_reduce<Range,internal::lambda_reduce_body<Range,Value,RealBody,Reduction>,auto_partitioner>
+                          ::run( range, body, partitioner, context );
+    return body.result();
+}
+
+//! Parallel iteration with reduction, affinity_partitioner and user-supplied context
+/** @ingroup algorithms **/
+template<typename Range, typename Value, typename RealBody, typename Reduction>
+Value parallel_reduce( const Range& range, const Value& identity, const RealBody& real_body, const Reduction& reduction,
+                       affinity_partitioner& partitioner, task_group_context& context ) {
+    internal::lambda_reduce_body<Range,Value,RealBody,Reduction> body(identity, real_body, reduction);
+    internal::start_reduce_with_affinity<Range,internal::lambda_reduce_body<Range,Value,RealBody,Reduction> >
+                                        ::run( range, body, partitioner, context );
+    return body.result();
 }
 #endif /* __TBB_EXCEPTIONS */
 //@}

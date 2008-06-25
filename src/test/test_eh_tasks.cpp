@@ -217,7 +217,19 @@ inline void wait_for_exception_with_timeout ( int timeout = 50000 ) {
 
 #define ASSERT_TEST_POSTCOND()   \
     ASSERT (g_cur_stat.existed() >= g_cur_stat.executed(), "Total number of tasks is less than executed");  \
+    ASSERT (!g_cur_stat.existing(), "Not all task objects have been destroyed");
     
+#define TEST_PROLOGUE() \
+    TRACEP ("");    \
+    {   \
+    tbb::task_scheduler_init init (g_num_threads);  \
+    g_master = internal::GetThreadSpecific();       \
+    reset_globals();
+
+#define TEST_EPILOGUE() \
+    }   \
+    ASSERT_TEST_POSTCOND()
+
 
 class my_base_task : public tbb::task
 {
@@ -282,8 +294,7 @@ public:
 /** Allocates a root task that spawns a bunch of children, one or several of which throw 
     a test exception in a worker or master thread (depending on the global setting). **/
 void Test1 () {
-    TRACEP ("");
-    reset_globals();
+    TEST_PROLOGUE();
     tbb::empty_task &r = *new( tbb::task::allocate_root() ) tbb::empty_task;
     ASSERT (!g_cur_stat.existing() && !g_cur_stat.existed() && !g_cur_stat.executed(), 
             "something wrong with the task accounting");
@@ -302,8 +313,8 @@ void Test1 () {
     TRY();
         r.wait_for_all();
     CATCH_AND_ASSERT();
-    ASSERT_TEST_POSTCOND();
     r.destroy(r);
+    TEST_EPILOGUE();
 } // void Test1 ()
 
 //! Default exception behavior test. 
@@ -313,8 +324,7 @@ void Test1 () {
     of the test function body.) **/
 void Test2 ()
 {
-    TRACEP ("");
-    reset_globals();
+    TEST_PROLOGUE();
     my_simple_root_task &r = *new( tbb::task::allocate_root() ) my_simple_root_task;
     ASSERT (g_cur_stat.existing() == 1 && g_cur_stat.existed() == 1 && !g_cur_stat.executed(), 
             "something wrong with the task accounting");
@@ -322,7 +332,7 @@ void Test2 ()
         tbb::task::spawn_root_and_wait(r);
     CATCH_AND_ASSERT();
     ASSERT (!g_no_exception, "no exception occurred");
-    ASSERT_TEST_POSTCOND();
+    TEST_EPILOGUE();
 } // void Test2 ()
 
 //! The same as Test2() except the root task has explicit context.
@@ -330,8 +340,7 @@ void Test2 ()
     with a root task. **/
 void Test3 ()
 {
-    TRACEP ("");
-    reset_globals();
+    TEST_PROLOGUE();
     tbb::task_group_context  ctx(tbb::task_group_context::bound);
     my_simple_root_task &r = *new( tbb::task::allocate_root(ctx) ) my_simple_root_task;
     ASSERT (g_cur_stat.existing() == 1 && g_cur_stat.existed() == 1 && !g_cur_stat.executed(), 
@@ -340,7 +349,7 @@ void Test3 ()
         tbb::task::spawn_root_and_wait(r);
     CATCH_AND_ASSERT();
     ASSERT (!g_no_exception, "no exception occurred");
-    ASSERT_TEST_POSTCOND();
+    TEST_EPILOGUE();
 } // void Test2 ()
 
 class my_root_with_context_launcher_task : public my_base_task
@@ -367,8 +376,7 @@ public:
     isolated context, which at last spawns a bunch of children each, one of which 
     throws a test exception in a worker thread. **/
 void Test4 () {
-    TRACEP ("");
-    reset_globals();
+    TEST_PROLOGUE();
     tbb::task_list  tl;
     for ( size_t i = 0; i < NUM_ROOT_TASKS; ++i ) {
         my_root_with_context_launcher_task &r = *new( tbb::task::allocate_root() ) my_root_with_context_launcher_task;
@@ -383,8 +391,7 @@ void Test4 () {
     ASSERT (g_cur_stat.existed() == num_tasks_expected, "Wrong total number of tasks");
     if ( g_solitary_exception )
         ASSERT (g_cur_stat.executed() >= num_tasks_expected - NUM_CHILD_TASKS, "Unexpected number of executed tasks");
-    ASSERT_TEST_POSTCOND();
-
+    TEST_EPILOGUE();
 } // void Test4 ()
 
 class my_root_with_context_group_launcher_task : public my_base_task
@@ -409,8 +416,7 @@ class my_root_with_context_group_launcher_task : public my_base_task
     with an isolated context shared by all group members, which at last spawn a bunch 
     of children each, one of which throws a test exception in a worker thread. **/
 void Test5 () {
-    TRACEP ("");
-    reset_globals();
+    TEST_PROLOGUE();
     tbb::task_list  tl;
     for ( size_t i = 0; i < NUM_ROOTS_IN_GROUP; ++i ) {
         my_root_with_context_group_launcher_task &r = *new( tbb::task::allocate_root() ) my_root_with_context_group_launcher_task;
@@ -426,7 +432,7 @@ void Test5 () {
         intptr  min_num_tasks_executed = num_tasks_expected - NUM_ROOT_TASKS * (NUM_CHILD_TASKS + 1);
         ASSERT (g_cur_stat.executed() >= min_num_tasks_executed, "Too few tasks executed");
     }
-    ASSERT_TEST_POSTCOND();
+    TEST_EPILOGUE();
 } // void Test5 ()
 
 class my_throwing_root_with_context_launcher_task : public my_base_task
@@ -496,8 +502,7 @@ public:
     in the end. Leaves do not generate exceptions. The test exception is generated 
     by one of the 2nd level roots. **/
 void Test6 () {
-    TRACEP ("");
-    reset_globals();
+    TEST_PROLOGUE();
     my_bound_hierarchy_launcher_task &r = *new( tbb::task::allocate_root() ) my_bound_hierarchy_launcher_task;
     TRY();
         tbb::task::spawn_root_and_wait(r);
@@ -516,7 +521,7 @@ void Test6 () {
     ASSERT (g_cur_stat.existed() <= num_tasks_expected, "Number of expected tasks is calculated incorrectly");
     ASSERT (g_cur_stat.existed() >= min_num_tasks_created, "Too few tasks created");
     ASSERT (g_cur_stat.executed() >= min_num_tasks_executed, "Too few tasks executed");
-    ASSERT_TEST_POSTCOND();
+    TEST_EPILOGUE();
 } // void Test6 ()
 
 //! Tests task_group_context::unbind and task_group_context::reset methods.
@@ -526,14 +531,13 @@ void Test6 () {
     in the end. Leaves do not generate exceptions. The test exception is generated 
     by one of the 2nd level roots. **/
 void Test7 () {
-    TRACEP ("");
-    reset_globals();
+    TEST_PROLOGUE();
     my_bound_hierarchy_launcher_task &r = *new( tbb::task::allocate_root() ) my_bound_hierarchy_launcher_task;
     TRY();
         tbb::task::spawn_root_and_wait(r);
     CATCH_AND_ASSERT();
     ASSERT (no_exception, "unexpected exception intercepted");
-    ASSERT_TEST_POSTCOND();
+    TEST_EPILOGUE();
 } // void Test6 ()
 
 class my_bound_hierarchy_launcher_task_2 : public my_base_task
@@ -561,8 +565,7 @@ class my_bound_hierarchy_launcher_task_2 : public my_base_task
     root with  the bound context, and these 3rd level roots spawn bunches of leaves 
     in the end. The test exception is generated by one of the leaves. **/
 void Test8 () {
-    TRACEP ("");
-    reset_globals();
+    TEST_PROLOGUE();
     my_bound_hierarchy_launcher_task_2 &r = *new( tbb::task::allocate_root() ) my_bound_hierarchy_launcher_task_2;
     TRY();
         tbb::task::spawn_root_and_wait(r);
@@ -577,7 +580,7 @@ void Test8 () {
         ASSERT (g_cur_stat.existed() >= min_num_tasks_created, "Too few tasks created");
         ASSERT (g_cur_stat.executed() >= min_num_tasks_executed, "Too few tasks executed");
     }
-    ASSERT_TEST_POSTCOND();
+    TEST_EPILOGUE();
 } // void Test8 ()
 
 
@@ -614,8 +617,7 @@ public:
 
 //! Test for cancelling a task hierarchy from outside (from a task running in parallel with it).
 void Test9 () {
-    TRACEP ("");
-    reset_globals();
+    TEST_PROLOGUE();
     g_throw_exception = false;
     g_tasks_wait_limit = g_num_threads - 1;
     intptr  threshold = NUM_CHILD_TASKS / 4;
@@ -633,6 +635,7 @@ void Test9 () {
     //ASSERT_WARNING (g_exc_stat.executed() - threshold <= g_num_threads + 2, "too many tasks executed between reaching threshold and statistics cutoff");
     // 3 - all root tasks 
     ASSERT (g_cur_stat.executed() <= g_exc_stat.executed() + g_num_threads + 3, "Too many tasks were executed after cancellation");
+    TEST_EPILOGUE();
 } // void Test9 ()
 
 
@@ -698,8 +701,7 @@ class my_leaf_task_with_movable_exceptions : public my_base_task
 /** Allocates a root task that spawns a bunch of children, one or several of which throw 
     a movable exception in a worker or master thread (depending on the global settings). **/
 void Test10 () {
-    TRACEP ("");
-    reset_globals();
+    TEST_PROLOGUE();
     tbb::empty_task &r = *new( tbb::task::allocate_root() ) tbb::empty_task;
     ASSERT (!g_cur_stat.existing() && !g_cur_stat.existed() && !g_cur_stat.executed(), 
             "something wrong with the task accounting");
@@ -741,9 +743,9 @@ void Test10 () {
         g_no_exception = false;
         g_unknown_exception = unknown_exception = true;
     }
-    ASSERT_EXCEPTION();
-    ASSERT_TEST_POSTCOND();
     r.destroy(r);
+    ASSERT_EXCEPTION();
+    TEST_EPILOGUE();
 } // void Test10 ()
 
 
@@ -751,11 +753,7 @@ void Test10 () {
 void TestExceptionHandling ()
 {
     TRACE ("Number of threads %d", g_num_threads);
-    {
-    tbb::task_scheduler_init init (g_num_threads);
-    g_master = internal::GetThreadSpecific();
 
-    util::sleep(20);
     Test1();
     Test2();
     Test3();
@@ -766,12 +764,6 @@ void TestExceptionHandling ()
     Test8();
     Test9();
     Test10();
-    util::sleep(20);
-    }
-    ASSERT (!g_cur_stat.existing(), "Not all tasks objects have been destroyed");
-    // The following assertion must hold true because if the dummy context is not cleaned up 
-    // properly none of the tasks after Test1 completion will be executed.
-    ASSERT (g_cur_stat.executed(), "Scheduler's dummy task context has not been cleaned up properly");
 }
 
 #endif /* __TBB_EXCEPTIONS */

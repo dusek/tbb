@@ -74,35 +74,47 @@ public:
         return ptr;
     }
 
+    //! Publish segment so other threads can see it.
+    inline static void publish_segment( segment_t& s, void* rhs ) {
+        ITT_NOTIFY( sync_releasing, &s.array );
+        __TBB_store_with_release( s.array, rhs );
+    }
+
     inline static size_type enable_segment(concurrent_vector_base_v3 &v, size_type k, size_type element_size) {
         __TBB_ASSERT( !v.my_segment[k].array, "concurrent operation during growth?" );
         size_type m = segment_size(k);
         if( !k ) {
             assign_first_segment_if_neccessary(v, default_initial_segments-1, element_size);
             try {
-                __TBB_store_with_release(v.my_segment[0].array, allocate_segment(v, segment_size(v.my_first_block) ) );
+                publish_segment(v.my_segment[0], allocate_segment(v, segment_size(v.my_first_block) ) );
             } catch(...) { // intercept exception here, assign __TBB_BAD_ALLOC value, re-throw exception
-                __TBB_store_with_release(v.my_segment[0].array, __TBB_BAD_ALLOC); throw;
+                publish_segment(v.my_segment[0], __TBB_BAD_ALLOC); throw;
             }
             return 2;
         }
         if( !v.my_first_block )
             internal::SpinwaitWhileEq( v.my_first_block, segment_index_t(0) );
         if( k < v.my_first_block ) {
-            if( !v.my_segment[0].array )
-                internal::SpinwaitWhileEq( v.my_segment[0].array, (void*)0 );
-            void *array0 = v.my_segment[0].array;
+            segment_t* s = v.my_segment;
+            void *array0 = __TBB_load_with_acquire(s[0].array);
+            if( !array0 ) {
+                // sync_prepare called only if there is a wait
+                ITT_NOTIFY(sync_prepare, &s[0].array );
+                internal::SpinwaitWhileEq( s[0].array, (void*)0 );
+                array0 = __TBB_load_with_acquire(s[0].array);
+             }
+            ITT_NOTIFY(sync_acquired, &s[0].array);
             if( array0 <= __TBB_BAD_ALLOC ) { // check for __TBB_BAD_ALLOC of initial segment
-                __TBB_store_with_release(v.my_segment[k].array, __TBB_BAD_ALLOC); // and assign __TBB_BAD_ALLOC here
+                publish_segment(s[k], __TBB_BAD_ALLOC); // and assign __TBB_BAD_ALLOC here
                 throw bad_last_alloc(); // throw custom exception
             }
-            __TBB_store_with_release(v.my_segment[k].array, static_cast<void*>(
-                static_cast<char*>(array0) + segment_base(k)*element_size ) );
+            publish_segment(s[k], static_cast<void*>(
+                                static_cast<char*>(array0) + segment_base(k)*element_size ) );
         } else {
             try {
-                __TBB_store_with_release(v.my_segment[k].array, allocate_segment(v, m));
+                publish_segment(v.my_segment[k], allocate_segment(v, m));
             } catch(...) { // intercept exception here, assign __TBB_BAD_ALLOC value, re-throw exception
-                __TBB_store_with_release(v.my_segment[k].array, __TBB_BAD_ALLOC); throw;
+                publish_segment(v.my_segment[k], __TBB_BAD_ALLOC); throw;
             }
         }
         return m;
@@ -240,12 +252,13 @@ void* concurrent_vector_base_v3::internal_push_back( size_type element_size, siz
     if( !__TBB_load_with_acquire(s.array) ) { // do not check for __TBB_BAD_ALLOC because it's hard to recover after __TBB_BAD_ALLOC correctly
         if( base==tmp ) {
             helper::enable_segment(*this, k_old, element_size);
-            ITT_NOTIFY( sync_releasing, &s.array );
         } else {
             ITT_NOTIFY(sync_prepare, &s.array);
             internal::SpinwaitWhileEq( s.array, (void*)0 );
             ITT_NOTIFY(sync_acquired, &s.array);
         }
+    } else {
+        ITT_NOTIFY(sync_acquired, &s.array);
     }
     if( s.array <= __TBB_BAD_ALLOC ) // check for __TBB_BAD_ALLOC
         throw bad_last_alloc(); // throw custom exception
@@ -283,12 +296,13 @@ void concurrent_vector_base_v3::internal_grow( const size_type start, size_type 
         if( !__TBB_load_with_acquire(s.array) ) { // do not check for __TBB_BAD_ALLOC because it's hard to recover after __TBB_BAD_ALLOC correctly
             if( base==tmp ) {
                 helper::enable_segment(*this, k_old, element_size);
-                ITT_NOTIFY( sync_releasing, &s.array );
             } else {
                 ITT_NOTIFY(sync_prepare, &s.array);
                 internal::SpinwaitWhileEq( s.array, (void*)0 );
                 ITT_NOTIFY(sync_acquired, &s.array);
             }
+        } else {
+            ITT_NOTIFY(sync_acquired, &s.array);
         }
         if( s.array <= __TBB_BAD_ALLOC ) // check for __TBB_BAD_ALLOC
             throw bad_last_alloc(); // throw custom exception

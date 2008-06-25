@@ -189,7 +189,7 @@ int main(int argc, char **argv)
 void initialize_strings_vector(std::vector <string_pair>* vector)
 {
     vector->push_back(string_pair("TBB: VERSION\t\t2.1", required));          // check TBB_VERSION
-    vector->push_back(string_pair("TBB: INTERFACE VERSION\t3011", required)); // check TBB_INTERFACE_VERSION
+    vector->push_back(string_pair("TBB: INTERFACE VERSION\t3012", required)); // check TBB_INTERFACE_VERSION
     vector->push_back(string_pair("TBB: BUILD_DATE", required));
     vector->push_back(string_pair("TBB: BUILD_HOST", required));
 #if _WIN32||_WIN64

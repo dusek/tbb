@@ -1425,7 +1425,7 @@ inline void GenericScheduler::mark_pool_full() {
     // on every task pool release, even when stealing does not occur.  Since TBB allows parallelism, 
     // but never promises parallelism, the missed wakeup is not a correctness problem.
     Gate::state_t snapshot = arena->prefix().gate.get_state();
-    if( snapshot!=SNAPSHOT_FULL && snapshot!=SNAPSHOT_PERMANENTLY_OPEN ) 
+    if( snapshot!=SNAPSHOT_FULL ) 
         arena->prefix().gate.try_update( SNAPSHOT_FULL, SNAPSHOT_PERMANENTLY_OPEN, true );
 }
 
@@ -2901,7 +2901,7 @@ size_t get_initial_auto_partitioner_divisor() {
     Arena* arena = TheArena;
     __TBB_ASSERT( arena, "thread did not activate a task_scheduler_init object?" );
     const size_t X_FACTOR = 4;
-    return X_FACTOR * arena->prefix().number_of_workers+1;
+    return X_FACTOR * (arena->prefix().number_of_workers+1);
 }
 
 //------------------------------------------------------------------------

@@ -38,8 +38,10 @@
 #include "tbb/tbb_allocator.h"
 
 
-//! custom string
-typedef std::basic_string<char,std::char_traits<char>,tbb::tbb_allocator<char> > mystring;
+//! String type with scalable allocator.
+/** On platforms with non-scalable default memory allocators, the example scales 
+    better if the string allocator is changed to tbb::tbb_allocator<char>. */
+typedef std::basic_string<char,std::char_traits<char>,tbb::tbb_allocator<char> > MyString;
 
 using namespace tbb;
 using namespace std;
@@ -59,27 +61,27 @@ static bool is_number_of_threads_set = false;
 
 //! Structure that defines hashing and comparison operations for user's type.
 struct MyHashCompare {
-    static size_t hash( const mystring& x ) {
+    static size_t hash( const MyString& x ) {
         size_t h = 0;
         for( const char* s = x.c_str(); *s; s++ )
             h = (h*16777179)^*s;
         return h;
     }
     //! True if strings are equal
-    static bool equal( const mystring& x, const mystring& y ) {
+    static bool equal( const MyString& x, const MyString& y ) {
         return x==y;
     }
 };
 
 //! A concurrent hash table that maps strings to ints.
-typedef concurrent_hash_map<mystring,int,MyHashCompare> StringTable;
+typedef concurrent_hash_map<MyString,int,MyHashCompare> StringTable;
 
 //! Function object for counting occurrences of strings.
 struct Tally {
     StringTable& table;
     Tally( StringTable& table_ ) : table(table_) {}
-    void operator()( const blocked_range<mystring*> range ) const {
-        for( mystring* p=range.begin(); p!=range.end(); ++p ) {
+    void operator()( const blocked_range<MyString*> range ) const {
+        for( MyString* p=range.begin(); p!=range.end(); ++p ) {
             StringTable::accessor a;
             table.insert( a, *p );
             a->second += 1;
@@ -87,13 +89,13 @@ struct Tally {
     }
 };
 
-static mystring Data[N];
+static MyString Data[N];
 
 static void CountOccurrences(int nthreads) {
     StringTable table;
 
     tick_count t0 = tick_count::now();
-    parallel_for( blocked_range<mystring*>( Data, Data+N, 1000 ), Tally(table) );
+    parallel_for( blocked_range<MyString*>( Data, Data+N, 1000 ), Tally(table) );
     tick_count t1 = tick_count::now();
 
     int n = 0;
@@ -203,8 +205,8 @@ static void CreateData() {
             Data[i] += GetLetters(type++, 1);
         Data[i] += GetLetters(type, 2);
     }
-    mystring planet = Data[12]; planet[0] = toupper(planet[0]);
-    mystring helloworld = Data[0]; helloworld[0] = toupper(helloworld[0]);
+    MyString planet = Data[12]; planet[0] = toupper(planet[0]);
+    MyString helloworld = Data[0]; helloworld[0] = toupper(helloworld[0]);
     helloworld += ", "+Data[1]+" "+Data[2]+" "+Data[3]+" "+Data[4]+" "+Data[5];
     printf("Message from planet '%s': %s!\nAnalyzing whole text...\n", planet.c_str(), helloworld.c_str());
 }

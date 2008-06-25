@@ -868,7 +868,6 @@ int main( int argc, char* argv[] ) {
     if( MinThread<1 ) {
         std::printf("ERROR: MinThread=%d, but must be at least 1\n",MinThread); MinThread = 1;
     }
-    known_issue_verbose = !Verbose;
 
     TestIteratorTraits<tbb::concurrent_vector<Foo>::iterator,Foo>();
     TestIteratorTraits<tbb::concurrent_vector<Foo>::const_iterator,const Foo>();

@@ -33,17 +33,7 @@ namespace tbb {
 
 namespace internal {
 
-#if NO_GATE
-
-//! Dummy implementation for experiments
-class Gate {
-public:
-    void open() {}
-    void close() {}
-    void wait() {}
-};
-
-#elif __TBB_USE_FUTEX
+#if __TBB_USE_FUTEX
 
 //! Implementation of Gate based on futex.
 /** Use this futex-based implementation where possible, because it is the simplest and usually fastest. */
@@ -58,12 +48,23 @@ public:
     //! Update state=value if state==comparand (flip==false) or state!=comparand (flip==true)
     void try_update( intptr_t value, intptr_t comparand, bool flip=false ) {
         __TBB_ASSERT( comparand!=0 || value!=0, "either value or comparand must be non-zero" );
+retry:
         state_t old_state = state;
         // First test for condition without using atomic operation
         if( flip ? old_state!=comparand : old_state==comparand ) {
             // Now atomically retest condition and set.
-            if( state.compare_and_swap( value, old_state )==old_state && value!=0 )   
-                 futex_wakeup_all( &state );  // Update was successful and new state is not SNAPSHOT_EMPTY
+            state_t s = state.compare_and_swap( value, old_state );
+            if( s==old_state ) {
+                // compare_and_swap succeeded
+                if( value!=0 )   
+                    futex_wakeup_all( &state );  // Update was successful and new state is not SNAPSHOT_EMPTY
+            } else {
+                // compare_and_swap failed.  But for != case, failure may be spurious for our purposes if
+                // the value there is nonetheless not equal to value.  This is a fairly rare event, so
+                // there is no need for backoff.  In event of such a failure, we must retry.
+                if( flip && s!=value ) 
+                    goto retry;
+            }
         }
     }
     //! Wait for state!=0.

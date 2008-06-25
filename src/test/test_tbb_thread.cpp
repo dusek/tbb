@@ -63,6 +63,7 @@ public:
     int value;
 };
 
+
 class ThreadFunc: Base {
     ThreadFunc() {}
 

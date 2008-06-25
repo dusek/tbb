@@ -73,7 +73,7 @@ private:
 };
 
 MyInputFilter::MyInputFilter( FILE* input_file_ ) : 
-    filter(/*is_serial=*/true),
+    filter(serial),
     next_buffer(0),
     input_file(input_file_),
     last_char_of_previous_buffer(' ')
@@ -103,7 +103,7 @@ public:
 };
 
 MyTransformFilter::MyTransformFilter() : 
-    tbb::filter(/*ordered=*/false) 
+    tbb::filter(parallel) 
 {}  
 
 /*override*/void* MyTransformFilter::operator()( void* item ) {
@@ -126,7 +126,7 @@ public:
 };
 
 MyOutputFilter::MyOutputFilter( FILE* output_file ) : 
-    tbb::filter(/*is_serial=*/true),
+    tbb::filter(serial),
     my_output_file(output_file)
 {
 }
