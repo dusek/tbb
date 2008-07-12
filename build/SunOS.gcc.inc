@@ -24,7 +24,7 @@
 # invalidate any other reasons why the executable file might be covered by
 # the GNU General Public License.
 
-COMPILE_ONLY = -c -MMD 
+COMPILE_ONLY = -c -MMD
 PREPROC_ONLY = -E -x c
 INCLUDE_KEY = -I
 DEFINE_KEY = -D
@@ -68,6 +68,12 @@ endif
 ifeq (ia32,$(arch))
     CPLUS_FLAGS += -m32
     LIB_LINK_FLAGS += -m32
+endif 
+
+# for some gcc versions on Solaris, -m64 may imply V9, but perhaps not everywhere (TODO: verify)
+ifeq (sparc,$(arch))
+    CPLUS_FLAGS    += -mcpu=v9 -m64
+    LIB_LINK_FLAGS += -mcpu=v9 -m64
 endif 
 
 #------------------------------------------------------------------------------

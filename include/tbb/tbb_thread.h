@@ -119,7 +119,6 @@ namespace internal {
 
     //! Versioned thread class.
     class tbb_thread_v3 {
-        tbb_thread_v3& operator=(const tbb_thread_v3&); // Deny access
         tbb_thread_v3(const tbb_thread_v3&); // = delete;   // Deny access
     public:
 #if _WIN32||_WIN64
@@ -152,6 +151,16 @@ namespace internal {
             internal_start(closure_type::start_routine, new closure_type(f,x,y));
         }
 
+        tbb_thread_v3& operator=(tbb_thread_v3& x) {
+            if (joinable()) detach();
+            my_handle = x.my_handle;
+            x.my_handle = 0;
+#if _WIN32||_WIN64
+            my_thread_id = x.my_thread_id;
+            x.my_thread_id = 0;
+#endif // _WIN32||_WIN64
+            return *this;
+        }
         bool joinable() const {return my_handle!=0; }
         //! The completion of the thread represented by *this happens before join() returns.
         void join();

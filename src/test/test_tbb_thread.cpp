@@ -243,6 +243,16 @@ void RunTests() {
 
     CheckRelations(uniq_ids, THRDS, false);
 
+    for (int i=0; i<2; i++) {
+        AnotherThreadFunc empty_func;
+        tbb::tbb_thread thr_to(empty_func), thr_from(empty_func);
+        tbb::tbb_thread::id from_id = thr_from.get_id();
+        if (i) thr_to.join(); 
+        thr_to = thr_from;
+        ASSERT( thr_from.get_id() == tbb::tbb_thread::id(), NULL );
+        ASSERT( thr_to.get_id() == from_id, NULL );
+    }
+
     ASSERT( tbb::tbb_thread::hardware_concurrency() > 0, NULL);
 }
 

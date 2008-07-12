@@ -25,9 +25,17 @@
 # the GNU General Public License.
 
 ifndef arch
-        ifeq ($(shell arch),i86pc)
-                export arch:=ia32
+        arch:=$(shell uname -p)
+        ifeq ($(arch),i386)
+            ifeq ($(shell isainfo -b),64)
+                arch:=em64t
+            else
+                arch:=ia32
+            endif
         endif
+        export arch
+# For non-IA systems running Sun OS, 'arch' will contain whatever is printed by uname -p.
+# In particular, for SPARC architecture it will contain "sparc".
 endif
 
 ifndef runtime

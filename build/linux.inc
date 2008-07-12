@@ -25,14 +25,18 @@
 # the GNU General Public License.
 
 ifndef arch
-        ifeq ($(shell uname -m),i686)
+        uname_m:=$(shell uname -m)
+        ifeq ($(uname_m),i686)
                 export arch:=ia32
         endif
-        ifeq ($(shell uname -m),ia64)
+        ifeq ($(uname_m),ia64)
                 export arch:=itanium
         endif
-        ifeq ($(shell uname -m),x86_64)
+        ifeq ($(uname_m),x86_64)
                 export arch:=em64t
+        endif
+        ifeq ($(uname_m),sparc64)
+                export arch:=sparc
         endif
 endif
 

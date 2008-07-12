@@ -28,7 +28,7 @@
 
 # Script used to generate version info string
 echo "#define __TBB_VERSION_STRINGS \\"
-echo '"TBB:' "BUILD_HOST\t\t"`hostname -s`" ("`arch`")"'" ENDL \'
+echo '"TBB:' "BUILD_HOST\t\t"`hostname -s`" ("`uname -m`")"'" ENDL \'
 echo '"TBB:' "BUILD_OS\t\t"`head -1 /etc/issue | sed -e 's/\\\\//g'`'" ENDL \'
 echo '"TBB:' "BUILD_KERNEL\t"`uname -rv`'" ENDL \'
 echo '"TBB:' "BUILD_GCC\t\t"`g++ -v </dev/null 2>&1 | grep 'gcc.*version'`'" ENDL \'

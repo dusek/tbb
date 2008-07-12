@@ -1,0 +1,35 @@
+<?xml version="1.0"?>
+<!DOCTYPE HelpCollection>
+<HelpCollection
+  DTDVersion="1.0"
+  Id=""
+  FileVersion="0.0.0.0"
+  LangId=""
+  Font=""
+  FontSize=""
+  Charset=""
+  Title="Online Help"
+  Copyright="">
+
+  <AttributeDef File="tbbdocs.HxA"/>
+
+  <TOCDef File="tbbdocs.HxT"/>
+
+  <KeywordIndexDef File="tbbdocs_K.HxK"/>
+  <KeywordIndexDef File="tbbdocs_NamedUrlIndex.HxK"/>
+
+  <ItemMoniker Name="!DefaultFullTextSearch" ProgId="HxDs.HxFullTextSearch" InitData="FTS"/>
+  <ItemMoniker Name="!DefaultKeywordIndex" ProgId="HxDs.HxIndex" InitData="K"/>
+  <ItemMoniker Name="!DefaultNamedUrlIndex" ProgId="HxDs.HxIndex" InitData="NamedUrlIndex"/>
+  <ItemMoniker Name="!DefaultTOC" ProgId="HxDs.HxHierarchy" InitData="tbbdocs"/>
+  <ItemMoniker Name="!DefaultAssociativeIndex" ProgId="HxDs.HxIndex" InitData=""/>
+  <ItemMoniker Name="!DefaultContextWindowIndex" ProgId="HxDs.HxIndex" InitData=""/>
+
+  <ToolData Name="MSVHWLogLevel" Value="3"/>
+  <ToolData Name="MSVHWLogFile" Value="tbbdocs.log"/>
+  <ToolData Name="MSVHWNamespace" Value="intel.tbbdocs.en"/>
+  <ToolData Name="FAR.IncBuildNumber" Value="0"/>
+  <ToolData Name="MSVHWUniqueID" Value="tbbdocs"/>
+  <ToolData Name="FAR.CommandLine" Value="C:\Program Files\Helpware\FAR\FAR.exe"/>
+  <ToolData Name="FAR.CommandLineArgs" Value="ms-help://$NAMESPACE"/>
+</HelpCollection>

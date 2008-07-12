@@ -56,7 +56,7 @@ struct Hammer {
                 ++dummy;
             }
             if( lock.upgrade_to_writer() ) {
-                // The upgrade suceeded without any intervening writers
+                // The upgrade succeeded without any intervening writers
                 ASSERT( c==Count, "another thread modified Count while I held a read lock" );
             } else {
                 c = Count;

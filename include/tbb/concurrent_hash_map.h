@@ -98,6 +98,7 @@ namespace internal {
     {
         typedef typename Container::node node;
         typedef typename Container::chain chain;
+        typedef typename Container::segment segment;
 
         //! concurrent_hash_map over which we are iterating.
         Container* my_table;
@@ -129,8 +130,9 @@ namespace internal {
         void advance_to_next_node() {
             size_t i = my_array_index+1;
             do {
-                while( i<my_table->my_segment[my_segment_index].my_physical_size ) {
-                    my_node = my_table->my_segment[my_segment_index].my_array[i].node_list;
+                segment &s = my_table->my_segment[my_segment_index];
+                while( i<s.my_physical_size ) {
+                    my_node = s.my_array[i].node_list;
                     if( my_node ) goto done;
                     ++i;
                 }
@@ -188,8 +190,10 @@ namespace internal {
     {
         if( segment_index<my_table->n_segment ) {
             if( !my_node ) {
-                chain* first_chain = my_table->my_segment[segment_index].my_array;
-                if( first_chain ) my_node = first_chain[my_array_index].node_list;
+                segment &s = my_table->my_segment[segment_index];
+                chain* first_chain = s.my_array;
+                if( first_chain && my_array_index < s.my_physical_size)
+                    my_node = first_chain[my_array_index].node_list;
             }
             if( !my_node ) advance_to_next_node();
         }
@@ -246,6 +250,8 @@ namespace internal {
             my_grainsize(r.my_grainsize)
         {
             r.my_end = my_begin = r.my_midpoint;
+            __TBB_ASSERT( my_begin!=my_end, "Splitting despite the range is not divisible" );
+            __TBB_ASSERT( r.my_begin!=r.my_end, "Splitting despite the range is not divisible" );
             set_midpoint();
             r.set_midpoint();
         }
@@ -274,21 +280,31 @@ namespace internal {
 
     template<typename Iterator>
     void hash_map_range<Iterator>::set_midpoint() const {
-        size_t n = my_end.my_segment_index-my_begin.my_segment_index;
-        if( n>1 || (n==1 && my_end.my_array_index>0) ) {
+        size_t n = my_end.my_segment_index - my_begin.my_segment_index;
+        if( n > 1 || (n == 1 && my_end.my_array_index > my_grainsize/2) ) {
             // Split by groups of segments
-            my_midpoint = Iterator(*my_begin.my_table,(my_end.my_segment_index+my_begin.my_segment_index)/2u);
+            my_midpoint = Iterator(*my_begin.my_table,(my_end.my_segment_index+my_begin.my_segment_index+1)/2u);
         } else {
             // Split by groups of nodes
             size_t m = my_end.my_array_index-my_begin.my_array_index;
-            if( m>my_grainsize ) {
-                my_midpoint = Iterator(*my_begin.my_table,my_begin.my_segment_index,m/2u);
+            if( n ) m += my_begin.my_table->my_segment[my_begin.my_segment_index].my_physical_size;
+            if( m > my_grainsize ) {
+                my_midpoint = Iterator(*my_begin.my_table,my_begin.my_segment_index,my_begin.my_array_index + m/2u);
             } else {
                 my_midpoint = my_end;
             }
         }
-        __TBB_ASSERT( my_midpoint.my_segment_index<=my_begin.my_table->n_segment, NULL );
-    }  
+        __TBB_ASSERT( my_begin.my_segment_index < my_midpoint.my_segment_index
+            || (my_begin.my_segment_index == my_midpoint.my_segment_index
+            && my_begin.my_array_index <= my_midpoint.my_array_index),
+            "my_begin is after my_midpoint" );
+        __TBB_ASSERT( my_midpoint.my_segment_index < my_end.my_segment_index
+            || (my_midpoint.my_segment_index == my_end.my_segment_index
+            && my_midpoint.my_array_index <= my_end.my_array_index),
+            "my_midpoint is after my_end" );
+        __TBB_ASSERT( my_begin != my_midpoint || my_begin == my_end,
+            "[my_begin, my_midpoint) range should not be empty" );
+    }
 } // namespace internal
 //! @endcond
 

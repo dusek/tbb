@@ -36,21 +36,24 @@ template&lt;class F, class X, class Y&gt; </td></tr>
 <tr><td class="memTemplItemLeft" nowrap align="right" valign="top">&nbsp;</td><td class="memTemplItemRight" valign="bottom"><a class="el" href="a00238.html#a3">tbb_thread_v3</a> (F f, X x, Y y)</td></tr>
 
 <tr><td class="mdescLeft">&nbsp;</td><td class="mdescRight">Constructs an object and executes f(x,y) in a new thread. <br></td></tr>
-<tr><td class="memItemLeft" nowrap align="right" valign="top"><a class="anchor" name="a4" doxytag="tbb::internal::tbb_thread_v3::joinable"></a>
+<tr><td class="memItemLeft" nowrap align="right" valign="top"><a class="anchor" name="a4" doxytag="tbb::internal::tbb_thread_v3::operator="></a>
+<a class="el" href="a00238.html">tbb_thread_v3</a> &amp;&nbsp;</td><td class="memItemRight" valign="bottom"><b>operator=</b> (<a class="el" href="a00238.html">tbb_thread_v3</a> &amp;x)</td></tr>
+
+<tr><td class="memItemLeft" nowrap align="right" valign="top"><a class="anchor" name="a5" doxytag="tbb::internal::tbb_thread_v3::joinable"></a>
 bool&nbsp;</td><td class="memItemRight" valign="bottom"><b>joinable</b> () const </td></tr>
 
-<tr><td class="memItemLeft" nowrap align="right" valign="top"><a class="anchor" name="a5" doxytag="tbb::internal::tbb_thread_v3::join"></a>
-void&nbsp;</td><td class="memItemRight" valign="bottom"><a class="el" href="a00238.html#a5">join</a> ()</td></tr>
+<tr><td class="memItemLeft" nowrap align="right" valign="top"><a class="anchor" name="a6" doxytag="tbb::internal::tbb_thread_v3::join"></a>
+void&nbsp;</td><td class="memItemRight" valign="bottom"><a class="el" href="a00238.html#a6">join</a> ()</td></tr>
 
-<tr><td class="mdescLeft">&nbsp;</td><td class="mdescRight">The completion of the thread represented by *this happens before <a class="el" href="a00238.html#a5">join()</a> returns. <br></td></tr>
-<tr><td class="memItemLeft" nowrap align="right" valign="top"><a class="anchor" name="a6" doxytag="tbb::internal::tbb_thread_v3::detach"></a>
-void&nbsp;</td><td class="memItemRight" valign="bottom"><a class="el" href="a00238.html#a6">detach</a> ()</td></tr>
+<tr><td class="mdescLeft">&nbsp;</td><td class="mdescRight">The completion of the thread represented by *this happens before <a class="el" href="a00238.html#a6">join()</a> returns. <br></td></tr>
+<tr><td class="memItemLeft" nowrap align="right" valign="top"><a class="anchor" name="a7" doxytag="tbb::internal::tbb_thread_v3::detach"></a>
+void&nbsp;</td><td class="memItemRight" valign="bottom"><a class="el" href="a00238.html#a7">detach</a> ()</td></tr>
 
-<tr><td class="mdescLeft">&nbsp;</td><td class="mdescRight">When <a class="el" href="a00238.html#a6">detach()</a> returns, *this no longer represents the possibly continuing thread of execution. <br></td></tr>
-<tr><td class="memItemLeft" nowrap align="right" valign="top"><a class="anchor" name="a8" doxytag="tbb::internal::tbb_thread_v3::get_id"></a>
+<tr><td class="mdescLeft">&nbsp;</td><td class="mdescRight">When <a class="el" href="a00238.html#a7">detach()</a> returns, *this no longer represents the possibly continuing thread of execution. <br></td></tr>
+<tr><td class="memItemLeft" nowrap align="right" valign="top"><a class="anchor" name="a9" doxytag="tbb::internal::tbb_thread_v3::get_id"></a>
 id&nbsp;</td><td class="memItemRight" valign="bottom"><b>get_id</b> () const </td></tr>
 
-<tr><td class="memItemLeft" nowrap align="right" valign="top"><a class="anchor" name="a9" doxytag="tbb::internal::tbb_thread_v3::native_handle"></a>
+<tr><td class="memItemLeft" nowrap align="right" valign="top"><a class="anchor" name="a10" doxytag="tbb::internal::tbb_thread_v3::native_handle"></a>
 native_handle_type&nbsp;</td><td class="memItemRight" valign="bottom"><b>native_handle</b> ()</td></tr>
 
 <tr><td colspan="2"><br><h2>Static Public Member Functions</h2></td></tr>

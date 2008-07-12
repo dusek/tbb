@@ -72,25 +72,28 @@ else
         ifeq ($(arch),ppc32)
             export CXXFLAGS += -m32
         endif
+        ifeq ($(arch),sparc)
+	        export CXXFLAGS += -mcpu=v9 -m64
+        endif
     endif
     ifeq ($(compiler),suncc)
     	export CXXFLAGS += -I$(tbb_root)$(SLASH)include -library=stlport4 -M$(tbb_root)/build/suncc.map.pause
-    endif
-    ifeq ($(tbb_os),SunOS)
         ifeq ($(arch),em64t)
             export CXXFLAGS += -m64
         endif
         ifeq ($(arch),ia32)
             export CXXFLAGS += -m32
         endif
+        ifeq ($(arch),sparc)
+            export CXXFLAGS += -m64
+        endif
     endif
     ifeq ($(tbb_os),macos)
+        # GUI for examples does not support 64-bit platforms
         ifeq ($(arch),em64t)
-            # making GUI examples work in text console due to incompatible arch
             export UI=con
         endif
         ifeq ($(arch),ppc64)
-            # making GUI examples work in text console due to incompatible arch
             export UI=con
         endif
         export DYLD_LIBRARY_PATH := $(DYLD_LIBRARY_PATH):$(work_dir)_release:$(work_dir)_debug

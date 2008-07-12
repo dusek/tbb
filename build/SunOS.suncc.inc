@@ -69,6 +69,13 @@ ifeq (ia32,$(arch))
     LIB_LINK_FLAGS += -m32
 endif 
 
+# TODO: verify whether -m64 implies V9 on relevant Sun Studio versions
+#       (those that handle gcc assembler syntax)
+ifeq (sparc,$(arch))
+    CPLUS_FLAGS    += -m64
+    LIB_LINK_FLAGS += -m64
+endif 
+
 #------------------------------------------------------------------------------
 # Setting assembler data.
 #------------------------------------------------------------------------------

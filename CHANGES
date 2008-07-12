@@ -1,4 +1,22 @@
 -------------------------------------------------------------------------------
+20080709 open-source release
+
+Changes (w.r.t. previous open-source release):
+
+- operator=() was added to the tbb_thread class according to the current 
+    working draft for std::thread
+- recognizing SPARC* based systems in makefiles for Linux* and Sun Solaris*
+
+Bugs fixed:
+
+- 127 - concurrent_hash_map::range fixed to split correctly.
+
+Open-source contributions integrated:
+
+- fix_set_midpoint.diff by jyasskin
+- SPARC* support in makefiles by Raf Schietekat
+
+-------------------------------------------------------------------------------
 20080622 open-source release
 
 Changes (w.r.t. previous open-source release):
@@ -6,6 +24,27 @@ Changes (w.r.t. previous open-source release):
 - Fixed hang that rarely happened on Linux during the scheduler deinitialization
 - Improved support for Intel(R) Thread Checker
 - A few more improvements to the code
+
+-------------------------------------------------------------------------------
+20080605 open-source release
+
+Changes (w.r.t. previous open-source release):
+
+- Exported symbols now explicitly controlled with version scripts on Linux
+- Interfaces polished for exception handling & algorithm cancellation
+- Cache behavior improvements in the scalable allocator
+- Improvements in text_filter, polygon_overlay, and other examples
+- A lot of other stability improvements in code, tests, and makefiles
+
+Open-source contributions integrated:
+
+- atomics patch (partially).
+- tick_count warning patch
+
+Bugs fixed:
+
+- 118 - fix for boost compatibility.
+- 123 - fix for tbb_machine.h.
 
 ------------------------------------------------------------------------------
 20080512 open-source release
