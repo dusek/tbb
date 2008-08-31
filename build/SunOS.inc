@@ -42,7 +42,8 @@ ifndef runtime
         gcc_version:=$(shell gcc -v 2>&1 | grep 'gcc version' | sed -e 's/^gcc version //' | sed -e 's/ .*$$//')
         os_version:=$(shell uname -r)
         os_kernel_version:=$(shell uname -r | sed -e 's/-.*$$//')
-        export runtime:=cc$(gcc_version)_kernel$(os_kernel_version)
+        runtime:=cc$(gcc_version)_kernel$(os_kernel_version)
+        export runtime
 endif
 
 native_compiler := suncc
@@ -60,17 +61,21 @@ MAKE_VERSIONS=bash $(tbb_root)/build/version_info_sunos.sh $(CPLUS) $(CPLUS_FLAG
 MAKE_TBBVARS=bash $(tbb_root)/build/generate_tbbvars.sh
 
 ifeq ($(compiler),suncc)
-        export TBB_CUSTOM_VARS_SH=CXXFLAGS="-I$(CWD)/include -library=stlport4 $(CXXFLAGS) -M$(CWD)/build/suncc.map.pause"
-        export TBB_CUSTOM_VARS_CSH=CXXFLAGS "-I$(CWD)/include -library=stlport4 $(CXXFLAGS) -M$(CWD)/build/suncc.map.pause"
+        TBB_CUSTOM_VARS_SH=CXXFLAGS="-I$(CWD)/../include -library=stlport4 $(CXXFLAGS) -M$(CWD)/../build/suncc.map.pause"
+        export TBB_CUSTOM_VARS_SH
+        TBB_CUSTOM_VARS_CSH=CXXFLAGS "-I$(CWD)/../include -library=stlport4 $(CXXFLAGS) -M$(CWD)/../build/suncc.map.pause"
+        export TBB_CUSTOM_VARS_CSH
 endif
 	
 ifdef LD_LIBRARY_PATH
-        export LD_LIBRARY_PATH := .:$(LD_LIBRARY_PATH)
+        LD_LIBRARY_PATH := .:$(LD_LIBRARY_PATH)
+        export LD_LIBRARY_PATH
 else
-        export LD_LIBRARY_PATH := .
+        LD_LIBRARY_PATH := .
+        export LD_LIBRARY_PATH
 endif
 
-####### Build settigns ########################################################
+####### Build settings ########################################################
 
 OBJ = o
 DLL = so

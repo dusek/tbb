@@ -220,8 +220,6 @@ void TestTrivialPipeline( size_t nthread, int number_of_filters ) {
     }
 }
 
-#include "tbb/tick_count.h"
-#include "tbb/tbb_machine.h"
 #include "harness_cpu.h"
 
 static int nthread; // knowing number of threads is necessary to call TestCPUUserTime

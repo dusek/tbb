@@ -79,27 +79,27 @@ private:
     virtual void copy_item( page& dst, size_t index, const void* src ) = 0;
     virtual void assign_and_destroy_item( void* dst, page& src, size_t index ) = 0;
 protected:
-    concurrent_queue_base_v3( size_t item_size );
-    virtual ~concurrent_queue_base_v3();
+    __TBB_EXPORTED_METHOD concurrent_queue_base_v3( size_t item_size );
+    virtual __TBB_EXPORTED_METHOD ~concurrent_queue_base_v3();
 
     //! Enqueue item at tail of queue
-    void internal_push( const void* src );
+    void __TBB_EXPORTED_METHOD internal_push( const void* src );
 
     //! Dequeue item from head of queue
-    void internal_pop( void* dst );
+    void __TBB_EXPORTED_METHOD internal_pop( void* dst );
 
     //! Attempt to enqueue item onto queue.
-    bool internal_push_if_not_full( const void* src );
+    bool __TBB_EXPORTED_METHOD internal_push_if_not_full( const void* src );
 
     //! Attempt to dequeue item from queue.
     /** NULL if there was no item to dequeue. */
-    bool internal_pop_if_present( void* dst );
+    bool __TBB_EXPORTED_METHOD internal_pop_if_present( void* dst );
 
     //! Get size of queue
-    ptrdiff_t internal_size() const;
+    ptrdiff_t __TBB_EXPORTED_METHOD internal_size() const;
 
     //! set the queue capacity
-    void internal_set_capacity( ptrdiff_t capacity, size_t element_size );
+    void __TBB_EXPORTED_METHOD internal_set_capacity( ptrdiff_t capacity, size_t element_size );
 
     //! custom allocator
     virtual page *allocate_page() = 0;
@@ -108,10 +108,11 @@ protected:
     virtual void deallocate_page( page *p ) = 0;
 
     //! free any remaining pages
-    void internal_finish_clear() ;
+    /* note that the name may be misleading, but it remains so due to a historical accident. */
+    void __TBB_EXPORTED_METHOD internal_finish_clear() ;
 
     //! throw an exception
-    void internal_throw_exception() const;
+    void __TBB_EXPORTED_METHOD internal_throw_exception() const;
 };
 
 typedef concurrent_queue_base_v3 concurrent_queue_base ;
@@ -141,16 +142,16 @@ protected:
     }
 
     //! Construct iterator pointing to head of queue.
-    concurrent_queue_iterator_base_v3( const concurrent_queue_base& queue );
+    __TBB_EXPORTED_METHOD concurrent_queue_iterator_base_v3( const concurrent_queue_base& queue );
 
     //! Assignment
-    void assign( const concurrent_queue_iterator_base_v3& i );
+    void __TBB_EXPORTED_METHOD assign( const concurrent_queue_iterator_base_v3& i );
 
     //! Advance iterator one step towards tail of queue.
-    void advance();
+    void __TBB_EXPORTED_METHOD advance();
 
     //! Destructor
-    ~concurrent_queue_iterator_base_v3();
+    __TBB_EXPORTED_METHOD ~concurrent_queue_iterator_base_v3();
 };
 
 typedef concurrent_queue_iterator_base_v3 concurrent_queue_iterator_base;
@@ -349,7 +350,7 @@ public:
     //! return allocator object
     allocator_type get_allocator() const { return this->my_allocator; }
 
-    //! clear the queue and release all resources (i.e., pages)
+    //! clear the queue. not thread-safe.
     void clear() ;
 
     typedef internal::concurrent_queue_iterator<concurrent_queue,T> iterator;
@@ -368,6 +369,7 @@ public:
 template<typename T, class A>
 concurrent_queue<T,A>::~concurrent_queue() {
     clear();
+    internal_finish_clear();
 }
 
 template<typename T, class A>
@@ -376,7 +378,6 @@ void concurrent_queue<T,A>::clear() {
         T value;
         internal_pop_if_present(&value);
     }
-    internal_finish_clear();
 }
 
 } // namespace tbb

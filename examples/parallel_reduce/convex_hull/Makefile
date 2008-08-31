@@ -25,6 +25,8 @@
 # the GNU General Public License.
 
 # GNU Makefile that builds and runs example.
+PROG=convex_hull_bench
+ARGS=
 
 # The C++ compiler
 #CXX=g++
@@ -43,4 +45,4 @@ clean:
 	rm -f convex_hull_bench convex_hull_sample *.o *.d
 
 test:
-	./convex_hull_bench
+	./$(PROG) $(ARGS)

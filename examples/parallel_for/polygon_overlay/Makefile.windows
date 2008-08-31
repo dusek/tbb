@@ -28,6 +28,7 @@
 
 # Just specify your program basename
 PROG=Pover
+ARGS=
 
 # The C++ compiler options
 CXX = cl.exe
@@ -57,4 +58,4 @@ debug:
 clean:
 	@cmd.exe /C del $(PROG).exe *.obj *.?db *.manifest vc7.1\pover.res
 test:
-	$(PROG)
+	$(PROG) $(ARGS)

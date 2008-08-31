@@ -66,7 +66,6 @@ static double GetCPUUserTime() {
 }
 
 #include "tbb/tick_count.h"
-#include "tbb/tbb_machine.h"
 #include <cstdio>
 
 // The resolution of GetCPUUserTime is 10-15 ms or so; waittime should be a few times bigger.

@@ -25,6 +25,8 @@
 # the GNU General Public License.
 
 # Common Makefile that builds and runs examples.
+PROG=sub_string_finder_extended
+ARGS=
 
 # The C++ compiler options
 CXX = cl.exe
@@ -43,4 +45,4 @@ debug:
 clean:
 	@cmd.exe /C del sub_string_finder*.exe *.obj *.?db *.manifest
 test:
-	sub_string_finder_extended
+	$(PROG) $(ARGS)

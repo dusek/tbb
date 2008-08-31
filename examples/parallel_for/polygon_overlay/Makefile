@@ -26,6 +26,7 @@
 
 # GNU Makefile that builds and runs example.
 NAME=pover
+ARGS=
 
 # The C++ compiler
 #CXX=g++
@@ -93,7 +94,7 @@ endif
 
 test:
 ifeq ($(UI),mac)
-	export DYLD_LIBRARY_PATH="$(DYLD_LIBRARY_PATH):$(TBBLIBSPATH)"; $(EXE)
+	export DYLD_LIBRARY_PATH="$(DYLD_LIBRARY_PATH):$(TBBLIBSPATH)"; $(EXE) $(ARGS)
 else
-	$(EXE)
+	$(EXE) $(ARGS)
 endif

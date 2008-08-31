@@ -109,7 +109,7 @@ static inline int DetectNumberOfWorkers() {
    Design note: ADR put this routine off to the side in tbb_misc.cpp instead of
    Task.cpp because the throw generates a pathetic lot of code, and ADR wanted
    this large chunk of code to be placed on a cold page. */
-void handle_perror( int error_code, const char* what );
+void __TBB_EXPORTED_FUNC handle_perror( int error_code, const char* what );
 
 //! True if environment variable with given name is set and not 0; otherwise false.
 bool GetBoolEnvironmentVariable( const char * name );

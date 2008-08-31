@@ -117,7 +117,7 @@ public:
         set(name, info);
     }
 
-    ~captured_exception () throw() {
+    __TBB_EXPORTED_METHOD ~captured_exception () throw() {
         clear();
     }
 
@@ -139,10 +139,10 @@ public:
     void throw_self () { throw *this; }
 
     /*override*/ 
-    const char* name() const throw();
+    const char* __TBB_EXPORTED_METHOD name() const throw();
 
     /*override*/ 
-    const char* what() const throw();
+    const char* __TBB_EXPORTED_METHOD what() const throw();
 
 private:
     //! Used only by method clone().  

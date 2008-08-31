@@ -36,6 +36,7 @@
 //------------------------------------------------------------------------
 
 #include "tbb/blocked_range.h"
+#define HARNESS_NO_PARSE_COMMAND_LINE 1
 #include "harness.h"
 #include "harness_bad_expr.h"
 
@@ -110,10 +111,11 @@ void TestTaskAssertions() {
 
 //------------------------------------------------------------------------
 int main(int argc, char* argv[]) {
-    srand(2);
-    MinThread = 1;
-    ParseCommandLine( argc, argv );
+#if __GLIBC__==2&&__GLIBC_MINOR__==3
+    printf("skip\n");
+#else
     TestTaskAssertions();
     printf("done\n");
+#endif
     return 0;
 }

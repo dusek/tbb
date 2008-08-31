@@ -80,27 +80,27 @@ namespace internal {
         task_group_context& my_context;
     public:
         allocate_root_with_context_proxy ( task_group_context& ctx ) : my_context(ctx) {}
-        task& allocate( size_t size ) const;
-        void free( task& ) const;
+        task& __TBB_EXPORTED_METHOD allocate( size_t size ) const;
+        void __TBB_EXPORTED_METHOD free( task& ) const;
     };
 #endif /* __TBB_EXCEPTIONS */
 
     class allocate_root_proxy {
     public:
-        static task& allocate( size_t size );
-        static void free( task& );
+        static task& __TBB_EXPORTED_FUNC allocate( size_t size );
+        static void __TBB_EXPORTED_FUNC free( task& );
     };
 
     class allocate_continuation_proxy {
     public:
-        task& allocate( size_t size ) const;
-        void free( task& ) const;
+        task& __TBB_EXPORTED_METHOD allocate( size_t size ) const;
+        void __TBB_EXPORTED_METHOD free( task& ) const;
     };
 
     class allocate_child_proxy {
     public:
-        task& allocate( size_t size ) const;
-        void free( task& ) const;
+        task& __TBB_EXPORTED_METHOD allocate( size_t size ) const;
+        void __TBB_EXPORTED_METHOD free( task& ) const;
     };
 
     class allocate_additional_child_of_proxy {
@@ -108,8 +108,8 @@ namespace internal {
         task& parent;
     public:
         allocate_additional_child_of_proxy( task& self_, task& parent_ ) : self(self_), parent(parent_) {}
-        task& allocate( size_t size ) const;
-        void free( task& ) const;
+        task& __TBB_EXPORTED_METHOD allocate( size_t size ) const;
+        void __TBB_EXPORTED_METHOD free( task& ) const;
     };
 
     //! Memory prefix to a task object.
@@ -284,7 +284,7 @@ public:
         init();
     }
 
-    ~task_group_context ();
+    __TBB_EXPORTED_METHOD ~task_group_context ();
 
     //! Forcefully reinitializes context object after an algorithm it was used with finished.
     /** Because the method assumes that the all the tasks that used to be associated with 
@@ -294,7 +294,7 @@ public:
         IMPORTANT: It is assumed that this method is not used concurrently!
 
         The method does not change the context's parent if it is set. **/ 
-    void reset ();
+    void __TBB_EXPORTED_METHOD reset ();
 
     //! Initiates cancellation of all tasks in this cancellation group and its subordinate groups.
     /** \return false if cancellation has already been requested, true otherwise. 
@@ -304,15 +304,15 @@ public:
         context or to one of its ancestors (if this context is bound). It is guaranteed
         that when this method is called on the same context, true may be returned by 
         at most one invocation. **/
-    bool cancel_group_execution ();
+    bool __TBB_EXPORTED_METHOD cancel_group_execution ();
 
     //! Returns true if the context received cancellation request.
-    bool is_group_execution_cancelled () const;
+    bool __TBB_EXPORTED_METHOD is_group_execution_cancelled () const;
 
 protected:
     //! Out-of-line part of the constructor. 
     /** Separated to facilitate future support for backward binary compatibility. **/
-    void init ();
+    void __TBB_EXPORTED_METHOD init ();
 
 private:
     friend class task;
@@ -332,7 +332,7 @@ private:
 /** @ingroup task_scheduling */
 class task: internal::no_copy {
     //! Set reference count
-    void internal_set_ref_count( int count );
+    void __TBB_EXPORTED_METHOD internal_set_ref_count( int count );
 
 protected:
     //! Default constructor.
@@ -400,7 +400,7 @@ public:
         implicitly deleted after its execute() method runs.  However,
         sometimes a task needs to be explicitly deallocated, such as
         when a root task is used as the parent in spawn_and_wait_for_all. */
-    void destroy( task& victim );
+    void __TBB_EXPORTED_METHOD destroy( task& victim );
 
     //------------------------------------------------------------------------
     // Recycling of tasks
@@ -507,7 +507,7 @@ public:
     }
 
     //! Similar to spawn followed by wait_for_all, but more efficient.
-    void spawn_and_wait_for_all( task_list& list );
+    void __TBB_EXPORTED_METHOD spawn_and_wait_for_all( task_list& list );
 
     //! Spawn task allocated by allocate_root, wait for it to complete, and deallocate it.
     /** The thread that calls spawn_root_and_wait must be the same thread
@@ -530,7 +530,7 @@ public:
     }
 
     //! The task() currently being run by this thread.
-    static task& self();
+    static task& __TBB_EXPORTED_FUNC self();
 
     //! task on whose behalf this task is working, or NULL if this is a root.
     task* parent() const {return prefix().parent;}
@@ -559,7 +559,7 @@ public:
     }
 
     //! True if this task is owned by the calling thread; false otherwise.
-    bool is_owned_by_current_thread() const;
+    bool __TBB_EXPORTED_METHOD is_owned_by_current_thread() const;
 
     //------------------------------------------------------------------------
     // Affinity
@@ -580,7 +580,7 @@ public:
         affinity but will be executed on another thread. 
 
         The default action does nothing. */
-    virtual void note_affinity( affinity_id id );
+    virtual void __TBB_EXPORTED_METHOD note_affinity( affinity_id id );
 
 #if __TBB_EXCEPTIONS
     //! Initiates cancellation of all tasks in this cancellation group and its subordinate groups.

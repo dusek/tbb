@@ -43,13 +43,11 @@
 #include <new>
 #include "harness_assert.h"
 
-#if __linux__||__APPLE__||__FreeBSD__ || __sun
-    #include <pthread.h>
-#elif _WIN32||WIN64
+#if _WIN32||_WIN64
     #include <windows.h>
     #include <process.h>
 #else
-    #error unknown OS
+    #include <pthread.h>
 #endif
 
 static void ReportError( int line, const char* expression, const char * message, bool is_error ) {
@@ -120,38 +118,38 @@ static void ParseCommandLine( int argc, char* argv[] ) {
         exit(1);
     }
 }
-#endif /* HARNESS_NO_PARSE_COMMAND_LINE */\
+#endif /* HARNESS_NO_PARSE_COMMAND_LINE */
 
 //! For internal use by template function NativeParallelFor
 template<typename Range, typename Body>
-class NativeParalleForTask {
+class NativeParallelForTask {
 public:
-    NativeParalleForTask( const Range& range_, const Body& body_ ) :
+    NativeParallelForTask( const Range& range_, const Body& body_ ) :
         range(range_),
         body(body_)
     {}
 
     //! Start task
     void start() {
-#if __linux__||__APPLE__||__FreeBSD__ || __sun
-        int status = pthread_create(&thread_id, NULL, thread_function, this);
-        ASSERT(0==status, "NativeParallelFor: pthread_create failed");
-#else
+#if _WIN32||_WIN64
         unsigned thread_id;
         thread_handle = (HANDLE)_beginthreadex( NULL, 0, thread_function, this, 0, &thread_id );
         ASSERT( thread_handle!=0, "NativeParallelFor: _beginthreadex failed" );
+#else
+        int status = pthread_create(&thread_id, NULL, thread_function, this);
+        ASSERT(0==status, "NativeParallelFor: pthread_create failed");
 #endif
     }
 
     //! Wait for task to finish
     void wait_to_finish() {
-#if __linux__||__APPLE__||__FreeBSD__ || __sun
-        int status = pthread_join( thread_id, NULL );
-        ASSERT( !status, "pthread_join failed" );
-#else
+#if _WIN32||_WIN64
         DWORD status = WaitForSingleObject( thread_handle, INFINITE );
         ASSERT( status!=WAIT_FAILED, "WaitForSingleObject failed" );
         CloseHandle( thread_handle );
+#else
+        int status = pthread_join( thread_id, NULL );
+        ASSERT( !status, "pthread_join failed" );
 #endif 
     }
 
@@ -159,12 +157,12 @@ public:
     /** Computes number of of tasks required, plus index. 
         If array!=NULL, also constructs the necessary tasks, starting at array[index].
         Top-level caller should let index default to 0. */
-    static size_t build_task_array( const Range& range, const Body& body, NativeParalleForTask* array, size_t index ); 
+    static size_t build_task_array( const Range& range, const Body& body, NativeParallelForTask* array, size_t index ); 
 private:
-#if __linux__||__APPLE__||__FreeBSD__ || __sun
-    pthread_t thread_id;
-#else
+#if _WIN32||_WIN64
     HANDLE thread_handle;
+#else
+    pthread_t thread_id;
 #endif
 
     //! Range over which task will invoke the body.
@@ -173,13 +171,13 @@ private:
     //! Body to invoke over the range.
     const Body body;
 
-#if __linux__||__APPLE__||__FreeBSD__ || __sun
-    static void* thread_function(void* object)
-#else
+#if _WIN32||_WIN64
     static unsigned __stdcall thread_function( void* object )
+#else
+    static void* thread_function(void* object)
 #endif
     {
-        NativeParalleForTask& self = *static_cast<NativeParalleForTask*>(object);
+        NativeParallelForTask& self = *static_cast<NativeParallelForTask*>(object);
         (self.body)(self.range);
         return 0;
     }
@@ -188,10 +186,10 @@ private:
 #include "tbb/tbb_stddef.h"
 
 template<typename Range,typename Body>
-size_t NativeParalleForTask<Range,Body>::build_task_array( const Range& range, const Body& body, NativeParalleForTask* array, size_t index ) {
+size_t NativeParallelForTask<Range,Body>::build_task_array( const Range& range, const Body& body, NativeParallelForTask* array, size_t index ) {
     if( !range.is_divisible() ) { 
         if( array ) {
-            new( &array[index] ) NativeParalleForTask(range,body);
+            new( &array[index] ) NativeParallelForTask(range,body);
         }
         return index+1;
     } else { 
@@ -206,7 +204,7 @@ size_t NativeParalleForTask<Range,Body>::build_task_array( const Range& range, c
     that each iteration is performed by a separate thread */
 template <typename Range, typename Body>
 void NativeParallelFor(const Range& range, const Body& body) {
-    typedef NativeParalleForTask<Range,Body> task;
+    typedef NativeParallelForTask<Range,Body> task;
 
     if( !range.empty() ) {
         // Compute how many tasks are needed
@@ -243,7 +241,7 @@ void zero_fill(void* array, size_t N) {
 #ifndef min
     //! Utility template function returning lesser of the two values.
     /** Provided here to avoid including not strict safe <algorithm>.\n
-        In case operands cause sined/unsigned or size mismatch warnings it is caller's
+        In case operands cause signed/unsigned or size mismatch warnings it is caller's
         responsibility to do the appropriate cast before calling the function. **/
     template<typename T1, typename T2>
     const T1& min ( const T1& val1, const T2& val2 ) {
@@ -254,7 +252,7 @@ void zero_fill(void* array, size_t N) {
 #ifndef max
     //! Utility template function returning greater of the two values. Provided here to avoid including not strict safe <algorithm>.
     /** Provided here to avoid including not strict safe <algorithm>.\n
-        In case operands cause sined/unsigned or size mismatch warnings it is caller's
+        In case operands cause signed/unsigned or size mismatch warnings it is caller's
         responsibility to do the appropriate cast before calling the function. **/
     template<typename T1, typename T2>
     const T1& max ( const T1& val1, const T2& val2 ) {

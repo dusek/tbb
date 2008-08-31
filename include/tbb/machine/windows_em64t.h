@@ -48,13 +48,13 @@ extern "C" void _ReadWriteBarrier();
 // ATTENTION: if you ever change argument types in machine-specific primitives,
 // please take care of atomic_word<> specializations in tbb/atomic.h
 extern "C" {
-    __int8 __TBB_machine_cmpswp1 (volatile void *ptr, __int8 value, __int8 comparand );
-    __int8 __TBB_machine_fetchadd1 (volatile void *ptr, __int8 addend );
-    __int8 __TBB_machine_fetchstore1 (volatile void *ptr, __int8 value );
-    __int16 __TBB_machine_cmpswp2 (volatile void *ptr, __int16 value, __int16 comparand );
-    __int16 __TBB_machine_fetchadd2 (volatile void *ptr, __int16 addend );
-    __int16 __TBB_machine_fetchstore2 (volatile void *ptr, __int16 value );
-    void __TBB_machine_pause (__int32 delay );
+    __int8 __TBB_EXPORTED_FUNC __TBB_machine_cmpswp1 (volatile void *ptr, __int8 value, __int8 comparand );
+    __int8 __TBB_EXPORTED_FUNC __TBB_machine_fetchadd1 (volatile void *ptr, __int8 addend );
+    __int8 __TBB_EXPORTED_FUNC __TBB_machine_fetchstore1 (volatile void *ptr, __int8 value );
+    __int16 __TBB_EXPORTED_FUNC __TBB_machine_cmpswp2 (volatile void *ptr, __int16 value, __int16 comparand );
+    __int16 __TBB_EXPORTED_FUNC __TBB_machine_fetchadd2 (volatile void *ptr, __int16 addend );
+    __int16 __TBB_EXPORTED_FUNC __TBB_machine_fetchstore2 (volatile void *ptr, __int16 value );
+    void __TBB_EXPORTED_FUNC __TBB_machine_pause (__int32 delay );
 }
 
 

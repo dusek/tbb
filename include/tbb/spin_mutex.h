@@ -60,13 +60,13 @@ public:
         internal::uintptr my_unlock_value;
 
         //! Like acquire, but with ITT instrumentation.
-        void internal_acquire( spin_mutex& m );
+        void __TBB_EXPORTED_METHOD internal_acquire( spin_mutex& m );
 
         //! Like try_acquire, but with ITT instrumentation.
-        bool internal_try_acquire( spin_mutex& m );
+        bool __TBB_EXPORTED_METHOD internal_try_acquire( spin_mutex& m );
 
         //! Like release, but with ITT instrumentation.
-        void internal_release();
+        void __TBB_EXPORTED_METHOD internal_release();
 
     public:
         //! Construct without without acquiring a mutex.

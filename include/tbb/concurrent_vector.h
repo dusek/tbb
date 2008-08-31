@@ -113,7 +113,7 @@ namespace internal {
                 my_storage[i].array = NULL;
             my_segment = my_storage;
         }
-        ~concurrent_vector_base_v3();
+        __TBB_EXPORTED_METHOD ~concurrent_vector_base_v3();
 
         static segment_index_t segment_index_of( size_type index ) {
             return segment_index_t( __TBB_Log2( index|1 ) );
@@ -134,10 +134,10 @@ namespace internal {
         }
 
         //! An operation on an n-element array starting at begin.
-        typedef void(*internal_array_op1)(void* begin, size_type n );
+        typedef void (__TBB_EXPORTED_FUNC *internal_array_op1)(void* begin, size_type n );
 
         //! An operation on n-element destination array and n-element source array.
-        typedef void(*internal_array_op2)(void* dst, const void* src, size_type n );
+        typedef void (__TBB_EXPORTED_FUNC *internal_array_op2)(void* dst, const void* src, size_type n );
 
         //! Internal structure for compact()
         struct internal_segments_table {
@@ -145,19 +145,19 @@ namespace internal {
             void* table[pointers_per_long_table];
         };
 
-        void internal_reserve( size_type n, size_type element_size, size_type max_size );
-        size_type internal_capacity() const;
-        void internal_grow_to_at_least( size_type new_size, size_type element_size, internal_array_op2 init, const void *src );
+        void __TBB_EXPORTED_METHOD internal_reserve( size_type n, size_type element_size, size_type max_size );
+        size_type __TBB_EXPORTED_METHOD internal_capacity() const;
+        void __TBB_EXPORTED_METHOD internal_grow_to_at_least( size_type new_size, size_type element_size, internal_array_op2 init, const void *src );
         void internal_grow( size_type start, size_type finish, size_type element_size, internal_array_op2 init, const void *src );
-        size_type internal_grow_by( size_type delta, size_type element_size, internal_array_op2 init, const void *src );
-        void* internal_push_back( size_type element_size, size_type& index );
-        segment_index_t internal_clear( internal_array_op1 destroy );
-        void* internal_compact( size_type element_size, void *table, internal_array_op1 destroy, internal_array_op2 copy );
-        void internal_copy( const concurrent_vector_base_v3& src, size_type element_size, internal_array_op2 copy );
-        void internal_assign( const concurrent_vector_base_v3& src, size_type element_size,
+        size_type __TBB_EXPORTED_METHOD internal_grow_by( size_type delta, size_type element_size, internal_array_op2 init, const void *src );
+        void* __TBB_EXPORTED_METHOD internal_push_back( size_type element_size, size_type& index );
+        segment_index_t __TBB_EXPORTED_METHOD internal_clear( internal_array_op1 destroy );
+        void* __TBB_EXPORTED_METHOD internal_compact( size_type element_size, void *table, internal_array_op1 destroy, internal_array_op2 copy );
+        void __TBB_EXPORTED_METHOD internal_copy( const concurrent_vector_base_v3& src, size_type element_size, internal_array_op2 copy );
+        void __TBB_EXPORTED_METHOD internal_assign( const concurrent_vector_base_v3& src, size_type element_size,
                               internal_array_op1 destroy, internal_array_op2 assign, internal_array_op2 copy );
-        void internal_throw_exception(size_type) const;
-        void internal_swap(concurrent_vector_base_v3& v);
+        void __TBB_EXPORTED_METHOD internal_throw_exception(size_type) const;
+        void __TBB_EXPORTED_METHOD internal_swap(concurrent_vector_base_v3& v);
 
 private:
         //! Private functionality
@@ -737,19 +737,19 @@ private:
     void internal_assign_iterators(I first, I last);
 
     //! Construct n instances of T, starting at "begin".
-    static void initialize_array( void* begin, const void*, size_type n );
+    static void __TBB_EXPORTED_FUNC initialize_array( void* begin, const void*, size_type n );
 
     //! Construct n instances of T, starting at "begin".
-    static void initialize_array_by( void* begin, const void* src, size_type n );
+    static void __TBB_EXPORTED_FUNC initialize_array_by( void* begin, const void* src, size_type n );
 
     //! Construct n instances of T, starting at "begin".
-    static void copy_array( void* dst, const void* src, size_type n );
+    static void __TBB_EXPORTED_FUNC copy_array( void* dst, const void* src, size_type n );
 
     //! Assign n instances of T, starting at "begin".
-    static void assign_array( void* dst, const void* src, size_type n );
+    static void __TBB_EXPORTED_FUNC assign_array( void* dst, const void* src, size_type n );
 
     //! Destroy n instances of T, starting at "begin".
-    static void destroy_array( void* begin, size_type n );
+    static void __TBB_EXPORTED_FUNC destroy_array( void* begin, size_type n );
 
     //! Exception-aware helper class for filling a segment by exception-danger operators of user class
     class internal_loop_guide {

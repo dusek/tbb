@@ -26,6 +26,7 @@
 
 # GNU Makefile that builds and runs example.
 PROG=parallel_preorder
+ARGS=1:4
 
 # The C++ compiler
 #CXX=g++
@@ -42,4 +43,4 @@ clean:
 	rm -f $(PROG) *.o *.d
 
 test:
-	./$(PROG) 1:4
+	./$(PROG) $(ARGS)

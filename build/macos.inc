@@ -63,7 +63,7 @@ SLASH=/
 MAKE_VERSIONS=sh $(tbb_root)/build/version_info_macos.sh $(CPLUS) $(CPLUS_FLAGS) $(INCLUDES) >version_string.tmp
 MAKE_TBBVARS=sh $(tbb_root)/build/generate_tbbvars.sh
 
-####### Build settigns ########################################################
+####### Build settings ########################################################
 
 OBJ=o
 DLL=dylib

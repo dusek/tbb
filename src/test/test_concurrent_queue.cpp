@@ -350,6 +350,41 @@ void TestFullQueue() {
     }
 }
 
+void TestClear() {
+    FooConstructed = 0;
+    FooDestroyed = 0;
+    const int n=5;
+    const int q_capacity=10;
+        
+    tbb::concurrent_queue<Foo> queue;
+    queue.set_capacity(q_capacity);
+    for( int i=0; i<n; ++i ) {
+        Foo f;
+        f.serial = i;
+        bool result = queue.push_if_not_full( f );
+        ASSERT( result, NULL );
+    }
+    ASSERT( queue.size()==n, NULL );
+    queue.clear();
+    ASSERT( queue.size()==0, NULL );
+    for( int i=0; i<n; ++i ) {
+        Foo f;
+        f.serial = i;
+        bool result = queue.push_if_not_full( f );
+        ASSERT( result, NULL );
+    }
+    ASSERT( queue.size()==n, NULL );
+    queue.clear();
+    ASSERT( queue.size()==0, NULL );
+    for( int i=0; i<n; ++i ) {
+        Foo f;
+        f.serial = i;
+        bool result = queue.push_if_not_full( f );
+        ASSERT( result, NULL );
+    }
+    ASSERT( queue.size()==n, NULL );
+}
+
 template<typename T>
 struct TestNegativeQueueBody {
     tbb::concurrent_queue<T>& queue;
@@ -384,7 +419,6 @@ void TestNegativeQueue( int nthread ) {
     NativeParallelFor( tbb::blocked_range<int>(0,nthread,1), TestNegativeQueueBody<T>(queue,nthread) );
 }
 
-template<typename T>
 void TestExceptions() {
     typedef static_counting_allocator<std::allocator<FooEx>, size_t> allocator_t;
     typedef static_counting_allocator<std::allocator<char>, size_t> allocator_char_t;
@@ -395,6 +429,8 @@ void TestExceptions() {
         m_pop
     };  
 
+    if( Verbose )
+        printf("Testing exception safety\n");
     // verify 'clear()' on exception; queue's destructor calls its clear()
     {
         concur_queue_t queue_clear;
@@ -402,11 +438,13 @@ void TestExceptions() {
             allocator_char_t::init_counters();
             allocator_char_t::set_limits(N/2);
             for( int k=0; k<N; k++ )
-                queue_clear.push( T() );
+                queue_clear.push( FooEx() );
         } catch (...) {
             // TODO: some assert here?
         }
     }
+    if( Verbose )
+        printf("... queue destruction test passed\n");
 
     try {
         int n_pushed=0, n_popped=0;
@@ -424,14 +462,14 @@ void TestExceptions() {
                     switch(m) {
                     case m_push:
                             for( int k=0; k<N; k++ ) {
-                                queue_test.push( T() );
+                                queue_test.push( FooEx() );
                                 n_pushed++;
                             }
                             break;
                     case m_pop:
                             n_popped=0;
                             for( int k=0; k<n_pushed; k++ ) {
-                                T elt;
+                                FooEx elt;
                                 queue_test.pop( elt );
                                 n_popped++;
                             }
@@ -447,7 +485,7 @@ void TestExceptions() {
                                 long tc = MaxFooCount;
                                 MaxFooCount = 0;
                                 for( int k=0; k<(int)tc; k++ ) {
-                                    queue_test.push( T() );
+                                    queue_test.push( FooEx() );
                                     n_pushed++;
                                 }
                                 MaxFooCount = tc;
@@ -457,13 +495,13 @@ void TestExceptions() {
                             MaxFooCount = 0; // disable exception
                             n_pushed -= (n_popped+1); // including one that threw an exception
                             for( int k=0; k<1000; k++ ) {
-                                queue_test.push( T() );
+                                queue_test.push( FooEx() );
                                 n_pushed++;
                             }
                             ASSERT( !queue_test.empty(), "queue must not be empty" );
                             ASSERT( queue_test.size()==n_pushed, "queue size must be equal to n pushed" );
                             for( int k=0; k<n_pushed; k++ ) {
-                                T elt;
+                                FooEx elt;
                                 queue_test.pop( elt );
                             }
                             ASSERT( queue_test.empty(), "queue must be empty" );
@@ -482,6 +520,8 @@ void TestExceptions() {
                             break;
                     }
                 }
+                if( Verbose )
+                    printf("... for t=%d and m=%d, exception test passed\n", t, m);
             }
         }
     } catch(...) {
@@ -497,6 +537,7 @@ int main( int argc, char* argv[] ) {
     TestEmptyQueue<char>();
     TestEmptyQueue<Foo>();
     TestFullQueue();
+    TestClear();
     TestConcurrenetQueueType();
     TestIterator();
 
@@ -514,7 +555,7 @@ int main( int argc, char* argv[] ) {
 #if __GLIBC__==2&&__GLIBC_MINOR__==3
     printf("Warning: Exception safety test is skipped due to a known issue.\n");
 #else
-    TestExceptions<FooEx>();
+    TestExceptions();
 #endif
     printf("done\n");
     return 0;

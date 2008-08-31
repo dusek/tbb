@@ -233,7 +233,7 @@ struct UnconstructibleTask: public tbb::empty_task {
     {                                            \
         try {                                    \
             new(x) UnconstructibleTask<N>;       \
-        } catch( ConstructionFailure ) {         \
+        } catch( const ConstructionFailure& ) {                                                    \
             ASSERT( parent()==original_parent, NULL ); \
             ASSERT( ref_count()==original_ref_count, "incorrectly changed ref_count" );\
             ++TestUnconstructibleTaskCount;      \
@@ -345,6 +345,8 @@ int Fib( int n ) {
 }
 
 void TestLeftRecursion( int p ) {
+    if( Verbose ) 
+        printf("testing non-spawned roots for %d threads\n",p);
     tbb::task_scheduler_init init(p);
     int sum = 0; 
     for( int i=0; i<100; ++i )
@@ -354,7 +356,6 @@ void TestLeftRecursion( int p ) {
 
 //------------------------------------------------------------------------
 int main(int argc, char* argv[]) {
-    srand(2);
     MinThread = 1;
     ParseCommandLine( argc, argv );
     TestUnconstructibleTask<1>();

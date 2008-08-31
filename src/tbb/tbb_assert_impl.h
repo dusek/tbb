@@ -40,6 +40,12 @@
 #include <crtdbg.h>
 #endif
 
+#if _MSC_VER >= 1400
+#define __TBB_EXPORTED_FUNC   __cdecl
+#else
+#define __TBB_EXPORTED_FUNC
+#endif
+
 using namespace std;
 
 namespace tbb {
@@ -48,13 +54,13 @@ namespace tbb {
 
     static assertion_handler_type assertion_handler;
 
-    assertion_handler_type set_assertion_handler( assertion_handler_type new_handler ) {
+    assertion_handler_type __TBB_EXPORTED_FUNC set_assertion_handler( assertion_handler_type new_handler ) {
         assertion_handler_type old_handler = assertion_handler;
         assertion_handler = new_handler;
         return old_handler;
     }
 
-    void assertion_failure( const char* filename, int line, const char* expression, const char* comment ) {
+    void __TBB_EXPORTED_FUNC assertion_failure( const char* filename, int line, const char* expression, const char* comment ) {
         if( assertion_handler_type a = assertion_handler ) {
             (*a)(filename,line,expression,comment);
         } else {
@@ -81,7 +87,7 @@ namespace tbb {
 
     namespace internal {
         //! Report a runtime warning.
-        void runtime_warning( const char* format, ... )
+        void __TBB_EXPORTED_FUNC runtime_warning( const char* format, ... )
         {
             char str[1024]; memset(str, 0, 1024);
             va_list args; va_start(args, format);

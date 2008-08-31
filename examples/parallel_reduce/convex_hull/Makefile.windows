@@ -25,8 +25,8 @@
 # the GNU General Public License.
 
 # Common Makefile that builds and runs example.
-
-# Just specify your program basename
+PROG=convex_hull_bench
+ARGS=
 
 # The C++ compiler options
 CXX = cl.exe
@@ -43,4 +43,4 @@ debug:
 clean:
 	@cmd.exe /C del convex_hull*.exe *.obj *.?db *.manifest
 test:
-	convex_hull_bench
+	$(PROG) $(ARGS)

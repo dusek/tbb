@@ -60,8 +60,11 @@ void MallocInitializeITT() {
 #ifdef _WIN32
 #include <windows.h>
 
+
 BOOL WINAPI DllMain( HINSTANCE hInst, DWORD callReason, LPVOID )
 {
+
+
     if (callReason==DLL_THREAD_DETACH)
     {
         mallocThreadShutdownNotification(NULL);
@@ -72,6 +75,6 @@ BOOL WINAPI DllMain( HINSTANCE hInst, DWORD callReason, LPVOID )
     }
     return TRUE;
 }
+
+
 #endif //_WIN32
-
-

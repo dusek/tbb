@@ -72,9 +72,10 @@ native_examples: tbb tbbmalloc
 	$(MAKE) -C $(examples_root) -r -f Makefile tbb_root=.. $(subst examples/,,$(subst ../,,$@))
 
 debug_%:: cfg?=debug
+debug_%:: run_cmd=$(debugger)
 test_% stress_% time_%:: cfg?=release
 debug_% test_% stress_% time_%::
-	$(MAKE) -C "$(work_dir)_$(cfg)"  -r -f $(tbb_root)/build/Makefile.test cfg=$(cfg) tbb_root=$(tbb_root) $@
+	$(MAKE) -C "$(work_dir)_$(cfg)"  -r -f $(tbb_root)/build/Makefile.test cfg=$(cfg) run_cmd=$(run_cmd) tbb_root=$(tbb_root) $@
 
 clean_%::
 ifeq ($(cfg),)

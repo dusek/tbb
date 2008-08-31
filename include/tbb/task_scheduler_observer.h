@@ -45,7 +45,7 @@ class task_scheduler_observer_v3 {
     atomic<intptr> my_busy_count;
 public:
     //! Enable or disable observation
-    void observe( bool state=true );
+    void __TBB_EXPORTED_METHOD observe( bool state=true );
 
     //! True if observation is enables; false otherwise.
     bool is_observing() const {return my_proxy!=NULL;}

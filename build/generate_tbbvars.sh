@@ -35,8 +35,11 @@ cd "$bin_dir"   # to EOL encoding
 custom_exp="$CXXFLAGS" #
 if [ -z "$TBB_CUSTOM_VARS_SH" ]; then #
 custom_exp_sh="" #
+custom_var_sh="" #
 else #
-custom_exp_sh="export $TBB_CUSTOM_VARS_SH" #
+custom_exp_sh="$TBB_CUSTOM_VARS_SH" #
+custom_name_sh=`echo "$TBB_CUSTOM_VARS_SH" | sed 's/=.*$//'` # get variable name from assignment
+custom_var_sh="export ${custom_name_sh}" #  string must be complete command or empty
 fi #
 if [ -z "$TBB_CUSTOM_VARS_CSH" ]; then #
 custom_exp_csh="" #
@@ -45,25 +48,32 @@ custom_exp_csh="setenv $TBB_CUSTOM_VARS_CSH" #
 fi #
 if [ -z "$1" ]; then # custom tbb_build_dir, can't make with TBB_INSTALL_DIR
 [ -f ./tbbvars.sh ] || cat >./tbbvars.sh <<EOF
-#!/bin/sh
+#!/bin/bash
 tbb_root="${tbb_root}" #
 tbb_bin="${bin_dir}" #
 if [ -z "\$CPATH" ]; then #
-    export CPATH="\${tbb_root}/include" #
+    export CPATH #
+    CPATH="\${tbb_root}/include" #
 else #
-    export CPATH="\${tbb_root}/include:\$CPATH" #
+    export CPATH #
+    CPATH="\${tbb_root}/include:\$CPATH" #
 fi #
 if [ -z "\$LIBRARY_PATH" ]; then #
-    export LIBRARY_PATH="\${tbb_bin}" #
+    export LIBRARY_PATH #
+    LIBRARY_PATH="\${tbb_bin}" #
 else #
-    export LIBRARY_PATH="\${tbb_bin}:\$LIBRARY_PATH" #
+    export LIBRARY_PATH #
+    LIBRARY_PATH="\${tbb_bin}:\$LIBRARY_PATH" #
 fi #
 if [ -z "\$${dll_path}" ]; then #
-    export ${dll_path}="\${tbb_bin}" #
+    export ${dll_path} #
+    ${dll_path}="\${tbb_bin}" #
 else #
-    export ${dll_path}="\${tbb_bin}:\$${dll_path}" #
+    export ${dll_path} #
+    ${dll_path}="\${tbb_bin}:\$${dll_path}" #
 fi #
 ${custom_exp_sh} #
+${custom_var_sh} #
 EOF
 [ -f ./tbbvars.csh ] || cat >./tbbvars.csh <<EOF
 #!/bin/csh
@@ -88,25 +98,35 @@ ${custom_exp_csh} #
 EOF
 else # make with TBB_INSTALL_DIR
 [ -f ./tbbvars.sh ] || cat >./tbbvars.sh <<EOF
-#!/bin/sh
-[ -z "\${TBB21_INSTALL_DIR}" ] && export TBB21_INSTALL_DIR="${tbb_root}" #
+#!/bin/bash
+if [ -z "\${TBB21_INSTALL_DIR}" ]; then #
+  export TBB21_INSTALL_DIR #
+  TBB21_INSTALL_DIR="${tbb_root}" #
+fi
 tbb_bin="\${TBB21_INSTALL_DIR}/build/$1" #
 if [ -z "\$CPATH" ]; then #
-    export CPATH="\${TBB21_INSTALL_DIR}/include" #
+    export CPATH #
+    CPATH="\${TBB21_INSTALL_DIR}/include" #
 else #
-    export CPATH="\${TBB21_INSTALL_DIR}/include:\$CPATH" #
+    export CPATH #
+    CPATH="\${TBB21_INSTALL_DIR}/include:\$CPATH" #
 fi #
 if [ -z "\$LIBRARY_PATH" ]; then #
-    export LIBRARY_PATH="\${tbb_bin}" #
+    export LIBRARY_PATH #
+    LIBRARY_PATH="\${tbb_bin}" #
 else #
-    export LIBRARY_PATH="\${tbb_bin}:\$LIBRARY_PATH" #
+    export LIBRARY_PATH #
+    LIBRARY_PATH="\${tbb_bin}:\$LIBRARY_PATH" #
 fi #
 if [ -z "\$${dll_path}" ]; then #
-    export ${dll_path}="\${tbb_bin}" #
+    export ${dll_path} #
+    ${dll_path}="\${tbb_bin}" #
 else #
-    export ${dll_path}="\${tbb_bin}:\$${dll_path}" #
+    export ${dll_path} #
+    ${dll_path}="\${tbb_bin}:\$${dll_path}" #
 fi #
 ${custom_exp_sh} #
+${custom_var_sh} #
 EOF
 [ -f ./tbbvars.csh ] || cat >./tbbvars.csh <<EOF
 #!/bin/csh

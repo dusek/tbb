@@ -29,13 +29,9 @@
 #ifndef TBB_PERFORMANCE_WARNINGS
 #define TBB_PERFORMANCE_WARNINGS 1
 #endif
+
 #include "tbb/tbb_stddef.h"
-#include "tbb/parallel_for.h"
-#include "tbb/blocked_range.h"
-#include "tbb/atomic.h"
-#include "tbb/tick_count.h"
-#include "harness.h"
-#include "harness_allocator.h"
+#include "harness_assert.h"
 
 // hook performance warning
 #define runtime_warning hooked_warning
@@ -47,6 +43,17 @@ namespace tbb { namespace internal {
 }}// namespace tbb::internal
 
 #include "tbb/concurrent_hash_map.h"
+
+// test whether a complete set of headers were already included. OSS Bug #120 (& #130):
+// http://www.threadingbuildingblocks.org/bug_desc.php?id=120
+tbb::concurrent_hash_map<std::pair<std::pair<int,std::string>,const char*>,int> TestInstantiation;
+
+#include "tbb/parallel_for.h"
+#include "tbb/blocked_range.h"
+#include "tbb/atomic.h"
+#include "tbb/tick_count.h"
+#include "harness.h"
+#include "harness_allocator.h"
 
 class MyException : public std::bad_alloc {
 public:
@@ -502,7 +509,7 @@ public:
             // Now all threads attempt to simultaneously insert a key.
             int k;
             {
-                MyTable::accessor a, b;
+                MyTable::accessor a;
                 MyKey key = MyKey::make(i);
                 if( my_table.insert( a, key ) ) 
                     a->second.set_value( 1 );

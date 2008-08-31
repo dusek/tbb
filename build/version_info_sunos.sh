@@ -30,7 +30,7 @@
 echo "#define __TBB_VERSION_STRINGS \\"
 echo '"TBB:' "BUILD_HOST\t"`hostname`" ("`arch`")"'" ENDL \'
 echo '"TBB:' "BUILD_OS\t\t"`uname`'" ENDL \'
-echo '"TBB:' "BUILD_KERNEL\t"`uname -rv`'" ENDL \'
+echo '"TBB:' "BUILD_KERNEL\t"`uname -srv`'" ENDL \'
 echo '"TBB:' "BUILD_SUNCC\t"`CC -V </dev/null 2>&1 | grep 'C++'`'" ENDL \'
 [ -z "$COMPILER_VERSION" ] || echo '"TBB: ' "BUILD_COMPILER\t"$COMPILER_VERSION'" ENDL \'
 echo '"TBB:' "BUILD_TARGET\t$arch on $runtime"'" ENDL \'

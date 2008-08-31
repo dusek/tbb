@@ -58,9 +58,9 @@ void swap( internal::tbb_thread_v3& t1, internal::tbb_thread_v3& t2 );
 namespace internal {
 
     //! Allocate a closure
-    void* allocate_closure_v3( size_t size );
+    void* __TBB_EXPORTED_FUNC allocate_closure_v3( size_t size );
     //! Free a closure allocated by allocate_closure_v3
-    void free_closure_v3( void* );
+    void __TBB_EXPORTED_FUNC free_closure_v3( void* );
    
     struct thread_closure_base {
         void* operator new( size_t size ) {return allocate_closure_v3(size);}
@@ -163,15 +163,15 @@ namespace internal {
         }
         bool joinable() const {return my_handle!=0; }
         //! The completion of the thread represented by *this happens before join() returns.
-        void join();
+        void __TBB_EXPORTED_METHOD join();
         //! When detach() returns, *this no longer represents the possibly continuing thread of execution.
-        void detach();
+        void __TBB_EXPORTED_METHOD detach();
         ~tbb_thread_v3() {if( joinable() ) detach();}
         inline id get_id() const;
         native_handle_type native_handle() { return my_handle; }
     
         //! The number of hardware thread contexts.
-        static unsigned hardware_concurrency();
+        static unsigned __TBB_EXPORTED_FUNC hardware_concurrency();
     private:
         native_handle_type my_handle; 
 #if _WIN32||_WIN64
@@ -179,9 +179,9 @@ namespace internal {
 #endif // _WIN32||_WIN64
 
         /** Runs start_routine(closure) on another thread and sets my_handle to the handle of the created thread. */
-        void internal_start( __TBB_NATIVE_THREAD_ROUTINE_PTR(start_routine), 
+        void __TBB_EXPORTED_METHOD internal_start( __TBB_NATIVE_THREAD_ROUTINE_PTR(start_routine), 
                              void* closure );
-        friend void move_v3( tbb_thread_v3& t1, tbb_thread_v3& t2 );
+        friend void __TBB_EXPORTED_FUNC move_v3( tbb_thread_v3& t1, tbb_thread_v3& t2 );
         friend void tbb::swap( tbb_thread_v3& t1, tbb_thread_v3& t2 ); 
     };
         
@@ -212,7 +212,7 @@ namespace internal {
             out << id.my_id;
             return out;
         }
-        friend tbb_thread_v3::id thread_get_id_v3();
+        friend tbb_thread_v3::id __TBB_EXPORTED_FUNC thread_get_id_v3();
     }; // tbb_thread_v3::id
 
     tbb_thread_v3::id tbb_thread_v3::get_id() const {
@@ -222,10 +222,10 @@ namespace internal {
         return id(my_handle);
 #endif // _WIN32||_WIN64
     }
-    void move_v3( tbb_thread_v3& t1, tbb_thread_v3& t2 );
-    tbb_thread_v3::id thread_get_id_v3();
-    void thread_yield_v3();
-    void thread_sleep_v3(const tick_count::interval_t &i);
+    void __TBB_EXPORTED_FUNC move_v3( tbb_thread_v3& t1, tbb_thread_v3& t2 );
+    tbb_thread_v3::id __TBB_EXPORTED_FUNC thread_get_id_v3();
+    void __TBB_EXPORTED_FUNC thread_yield_v3();
+    void __TBB_EXPORTED_FUNC thread_sleep_v3(const tick_count::interval_t &i);
 
     inline bool operator==(tbb_thread_v3::id x, tbb_thread_v3::id y)
     {

@@ -26,6 +26,7 @@
 
 # GNU Makefile that builds and runs example.
 PROG=fibonacci
+ARGS=
 
 # The C++ compiler
 #CXX=g++
@@ -42,4 +43,4 @@ clean:
 	rm -f $(PROG) *.o *.d
 
 test:
-	./$(PROG)
+	./$(PROG) $(ARGS)

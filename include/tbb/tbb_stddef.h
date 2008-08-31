@@ -34,7 +34,7 @@
 #define TBB_VERSION_MINOR 1
 
 // Engineering-focused interface version
-#define TBB_INTERFACE_VERSION 3012
+#define TBB_INTERFACE_VERSION 3013
 #define TBB_INTERFACE_VERSION_MAJOR TBB_INTERFACE_VERSION/1000
 
 // The oldest major interface version still supported
@@ -124,7 +124,7 @@
 #endif
 
 #if _WIN32||_WIN64
-// define the parts of stdint.h that are needed, but put them inside tbb::internal 
+// define the parts of stdint.h that are needed, but put them inside tbb::internal
 namespace tbb {
 namespace internal {
     typedef __int8 int8_t;
@@ -139,6 +139,14 @@ namespace internal {
 } // namespace tbb
 #else
 #include <stdint.h>
+#endif
+
+#if _MSC_VER >=1400
+#define __TBB_EXPORTED_FUNC   __cdecl
+#define __TBB_EXPORTED_METHOD __thiscall
+#else
+#define __TBB_EXPORTED_FUNC
+#define __TBB_EXPORTED_METHOD
 #endif
 
 #include <cstddef>      /* Need size_t and ptrdiff_t (the latter on Windows only) from here. */
@@ -165,13 +173,13 @@ namespace tbb {
 
 namespace tbb {
     //! Set assertion handler and return previous value of it.
-    assertion_handler_type set_assertion_handler( assertion_handler_type new_handler ); 
+    assertion_handler_type __TBB_EXPORTED_FUNC set_assertion_handler( assertion_handler_type new_handler );
 
     //! Process an assertion failure.
     /** Normally called from __TBB_ASSERT macro.
         If assertion handler is null, print message for assertion failure and abort.
         Otherwise call the assertion handler. */
-    void assertion_failure( const char* filename, int line, const char* expression, const char* comment );
+    void __TBB_EXPORTED_FUNC assertion_failure( const char* filename, int line, const char* expression, const char* comment );
 } // namespace tbb
 
 #else
@@ -213,7 +221,7 @@ typedef size_t uintptr;
 typedef std::ptrdiff_t intptr;
 
 //! Report a runtime warning.
-void runtime_warning( const char* format, ... );
+void __TBB_EXPORTED_FUNC runtime_warning( const char* format, ... );
 
 #if TBB_DO_ASSERT
 //! Set p to invalid pointer value.

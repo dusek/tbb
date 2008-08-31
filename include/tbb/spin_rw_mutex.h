@@ -43,30 +43,30 @@ class spin_rw_mutex_v3 {
     //! @cond INTERNAL
 
     //! Internal acquire write lock.
-    bool internal_acquire_writer();
+    bool __TBB_EXPORTED_METHOD internal_acquire_writer();
 
     //! Out of line code for releasing a write lock.  
     /** This code is has debug checking and instrumentation for Intel(R) Thread Checker and Intel(R) Thread Profiler. */
-    void internal_release_writer();
+    void __TBB_EXPORTED_METHOD internal_release_writer();
 
     //! Internal acquire read lock.
-    void internal_acquire_reader();
+    void __TBB_EXPORTED_METHOD internal_acquire_reader();
 
     //! Internal upgrade reader to become a writer.
-    bool internal_upgrade();
+    bool __TBB_EXPORTED_METHOD internal_upgrade();
 
     //! Out of line code for downgrading a writer to a reader.   
     /** This code is has debug checking and instrumentation for Intel(R) Thread Checker and Intel(R) Thread Profiler. */
-    void internal_downgrade();
+    void __TBB_EXPORTED_METHOD internal_downgrade();
 
     //! Internal release read lock.
-    void internal_release_reader();
+    void __TBB_EXPORTED_METHOD internal_release_reader();
 
     //! Internal try_acquire write lock.
-    bool internal_try_acquire_writer();
+    bool __TBB_EXPORTED_METHOD internal_try_acquire_writer();
 
     //! Internal try_acquire read lock.
-    bool internal_try_acquire_reader();
+    bool __TBB_EXPORTED_METHOD internal_try_acquire_reader();
 
     //! @endcond
 public:
@@ -186,6 +186,6 @@ private:
     state_t state;
 };
 
-} // namespace ThreadingBuildingBlocks
+} // namespace tbb
 
 #endif /* __TBB_spin_rw_mutex_H */

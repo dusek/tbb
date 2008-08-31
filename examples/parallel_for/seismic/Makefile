@@ -26,6 +26,7 @@
 
 # GNU Makefile that builds and runs example.
 NAME=seismic
+ARGS=- 300
 
 # The C++ compiler
 #CXX=g++
@@ -91,7 +92,7 @@ endif
 
 test:
 ifeq ($(UI),mac)
-	export DYLD_LIBRARY_PATH="$(DYLD_LIBRARY_PATH):$(TBBLIBSPATH)"; $(EXE) - 300
+	export DYLD_LIBRARY_PATH="$(DYLD_LIBRARY_PATH):$(TBBLIBSPATH)"; $(EXE) $(ARGS)
 else
-	$(EXE) - 300
+	$(EXE) $(ARGS)
 endif

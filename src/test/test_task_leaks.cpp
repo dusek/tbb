@@ -191,7 +191,6 @@ void TestTaskReclamation() {
 //------------------------------------------------------------------------
 
 int main(int argc, char* argv[]) {
-    srand(2);
     MinThread = -1;
     ParseCommandLine( argc, argv );
     if( !GetMemoryUsage() ) {

@@ -180,7 +180,6 @@ done:;
         int64_t tmp = *(int64_t*)ptr;
         if( __TBB_machine_cmpswp8(ptr,value,tmp)==tmp ) 
             break;
-        b.pause();
     }
 }
 

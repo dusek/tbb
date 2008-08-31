@@ -275,7 +275,7 @@ static void padded_free( void* p ) {
 }
 #endif // #if __TBB_IS_SCALABLE_MALLOC_FIX_READY
 
-void* allocate_via_handler_v3( size_t n ) {    
+void* __TBB_EXPORTED_FUNC allocate_via_handler_v3( size_t n ) {    
     void* result;
     result = (*MallocHandler) (n);
     if (!result) {
@@ -285,13 +285,13 @@ void* allocate_via_handler_v3( size_t n ) {
     return result;
 }
 
-void deallocate_via_handler_v3( void *p ) {
+void __TBB_EXPORTED_FUNC deallocate_via_handler_v3( void *p ) {
     if( p ) {        
         (*FreeHandler)( p );
     }
 }
 
-bool is_malloc_used_v3() {
+bool __TBB_EXPORTED_FUNC is_malloc_used_v3() {
     if (MallocHandler == &DummyMalloc) {
         void* void_ptr = (*MallocHandler)(1);
         (*FreeHandler)(void_ptr);

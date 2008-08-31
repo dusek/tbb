@@ -80,12 +80,10 @@ static const DynamicLinkDescriptor ITT_HandlerTable[] = {
 // LIBITTNOTIFY_NAME is the name of the ITT notification library 
 # if _WIN32||_WIN64
 #  define LIBITTNOTIFY_NAME "libittnotify.dll"
-# elif __linux__ || __FreeBSD__ || __sun
+# elif __linux__
 #  define LIBITTNOTIFY_NAME "libittnotify.so"
-# elif __APPLE__
-#  define LIBITTNOTIFY_NAME "libittnotify.dylib"
 # else
-#  error Unknown OS
+#  error Intel(R) Threading Tools not provided for this OS
 # endif
 
 /** Caller is responsible for ensuring this routine is called exactly once. */

@@ -167,13 +167,13 @@ public:
         recursive_mutex* my_mutex;
 
         //! All checks from acquire using mutex.state were moved here
-        void internal_acquire( recursive_mutex& m );
+        void __TBB_EXPORTED_METHOD internal_acquire( recursive_mutex& m );
 
         //! All checks from try_acquire using mutex.state were moved here
-        bool internal_try_acquire( recursive_mutex& m );
+        bool __TBB_EXPORTED_METHOD internal_try_acquire( recursive_mutex& m );
 
         //! All checks from release using mutex.state were moved here
-        void internal_release();
+        void __TBB_EXPORTED_METHOD internal_release();
     };
 
     // Mutex traits
@@ -193,10 +193,10 @@ private:
 #endif /* _WIN32||_WIN64 */
 
     //! All checks from mutex constructor using mutex.state were moved here
-    void internal_construct();
+    void __TBB_EXPORTED_METHOD internal_construct();
 
     //! All checks from mutex destructor using mutex.state were moved here
-    void internal_destroy();
+    void __TBB_EXPORTED_METHOD internal_destroy();
 };
 
 } // namespace tbb 

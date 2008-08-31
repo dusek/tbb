@@ -28,6 +28,7 @@
 
 # Just specify your program basename
 PROG=Tree_sum
+ARGS=
 
 # The C++ compiler options
 CXX = cl.exe
@@ -42,5 +43,5 @@ debug:
 clean:
 	@cmd.exe /C del $(PROG).exe *.obj *.?db *.manifest
 test:
-	$(PROG)
-	$(PROG) -stdmalloc
+	$(PROG) $(ARGS)
+	$(PROG) -stdmalloc $(ARGS)

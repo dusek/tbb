@@ -32,7 +32,7 @@
 #include "TypeDefinitions.h"
 #include <string.h> // for memset()
 
-//! Checking the syncronization method
+//! Checking the synchronization method
 /** FINE_GRAIN_LOCKS is the only variant for now; should be defined for LifoQueue */
 #ifndef FINE_GRAIN_LOCKS
 #define FINE_GRAIN_LOCKS

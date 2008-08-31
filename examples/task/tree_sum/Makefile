@@ -26,6 +26,7 @@
 
 # GNU Makefile that builds and runs example.
 PROG=tree_sum
+ARGS=
 
 # The C++ compiler
 #CXX=g++
@@ -42,5 +43,5 @@ clean:
 	rm -f $(PROG) *.o *.d
 
 test:
-	./$(PROG)
-	./$(PROG) -stdmalloc
+	./$(PROG) $(ARGS)
+	./$(PROG) -stdmalloc $(ARGS)

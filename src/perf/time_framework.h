@@ -243,7 +243,7 @@ public:
         stat = stat_by_threads[threads];
         if(!stat) {
             stat_by_threads[threads] = stat = new StatisticsCollector((collection_name + Format("@%d", threads)).c_str(), StatisticsCollector::ByAlg);
-            stat->SetTitle("Detailed log of %s running with %d threads. Thread #0 is AVG across all threads", collection_name, threads);
+            stat->SetTitle("Detailed log of %s running with %d threads.", collection_name, threads);
         }
         spin_barrier barrier(threads);
         // init args

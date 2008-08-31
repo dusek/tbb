@@ -1461,7 +1461,7 @@ bool video::next_frame()
     return true;
 }
 
-//! Do standart loop
+//! Do standard loop
 void video::main_loop()
 {
     struct timezone tz; gettimeofday(&g_time, &tz);

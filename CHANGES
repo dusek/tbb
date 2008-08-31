@@ -1,3 +1,26 @@
+20080825 open-source release
+
+Changes (w.r.t. previous open-source release):
+
+- Added exception handling and cancellation support for parallel_do
+- Added default HashCompare template argument for concurrent_hash_map
+- Fixed concurrent_queue.clear() issues due to incorrect assumption that
+  clear() being private method.
+- Added the possibility to use TBB in applications that change default calling conventions (Windows* only)
+- Various improvements to code, tests, examples, makefiles and documentation. 
+
+Bugs fixed:
+
+- 120, 130 - memset declaration missed in concurrent_hash_map.h
+
+-------------------------------------------------------------------------------
+20080724 open-source release
+
+Changes (w.r.t. previous open-source release):
+
+- Inline assembly for atomic operations improved for gcc 4.3
+- A few more improvements to the code.
+
 -------------------------------------------------------------------------------
 20080709 open-source release
 
@@ -26,40 +49,49 @@ Changes (w.r.t. previous open-source release):
 - A few more improvements to the code
 
 -------------------------------------------------------------------------------
+TBB 2.1 GOLD commercial-aligned release
+
+Changes (w.r.t. TBB 2.0 U3 commercial-aligned release):
+
+- All open-source-release changes down to, and including, TBB 2.0 GOLD
+    below, were incorporated into this release.
+
+------------------------------------------------------------------------
 20080605 open-source release
 
 Changes (w.r.t. previous open-source release):
 
-- Exported symbols now explicitly controlled with version scripts on Linux
-- Interfaces polished for exception handling & algorithm cancellation
-- Cache behavior improvements in the scalable allocator
-- Improvements in text_filter, polygon_overlay, and other examples
-- A lot of other stability improvements in code, tests, and makefiles
+- Explicit control of exported symbols by version scripts added on Linux.
+- Interfaces polished for exception handling & algorithm cancellation.
+- Cache behavior improvements in the scalable allocator.
+- Improvements in text_filter, polygon_overlay, and other examples.
+- A lot of other stability improvements in code, tests, and makefiles.
 
 Open-source contributions integrated:
 
 - atomics patch (partially).
-- tick_count warning patch
+- tick_count warning patch.
 
 Bugs fixed:
 
 - 118 - fix for boost compatibility.
 - 123 - fix for tbb_machine.h.
 
-------------------------------------------------------------------------------
+------------------------------------------------------------------------
 20080512 open-source release
 
 Changes (w.r.t. previous open-source release):
 
-- Fixed problem with backward binary compatibility of debug Linux builds
-- Sun* Studio* support added
+- Fixed a problem with backward binary compatibility
+    of debug Linux builds.
+- Sun* Studio* support added.
 - soname support added on Linux via linker script. To restore backward 
-    binary compatibility *.so -> *.so.2 softlinks should be created
+    binary compatibility, *.so -> *.so.2 softlinks should be created.
 - concurrent_hash_map improvements - added few new forms of insert() 
     method and fixed precondition and guarantees of erase() methods.   
     Added runtime warning reporting about bad hash function used for 
     the container. Various improvements for performance and concurrency.
-- Cancellation mechanism reimplemented so that it does not hurt scalability
+- Cancellation mechanism reworked so that it does not hurt scalability.
 - Algorithm parallel_do reworked. Requirement for Body::argument_type 
     definition removed, and work item argument type can be arbitrarily 
     cv-qualified.
@@ -74,7 +106,7 @@ Bugs fixed:
 
 - 112 - fix for soname support.
 
--------------------------------------------------------------------------------
+------------------------------------------------------------------------
 TBB 2.0 U3 commercial-aligned release (package 017, April 20, 2008)
 
 Corresponds to commercial 019 (for Linux*, 020; for Mac OS* X, 018)
@@ -87,7 +119,7 @@ Changes (w.r.t. TBB 2.0 U2 commercial-aligned release):
 - Removed spin-waiting in pipeline and concurrent_queue.
 - A few more small bug fixes from open-source releases below.
 
--------------------------------------------------------------------------------
+------------------------------------------------------------------------
 20080408 open-source release
 
 Changes (w.r.t. previous open-source release):
@@ -104,27 +136,27 @@ Open-source contributions integrated:
 
 - Two sets of Sun patches for IA Solaris support.
 
--------------------------------------------------------------------------------
+------------------------------------------------------------------------
 20080402 open-source release
 
 Changes (w.r.t. previous open-source release):
 
 - Exception handling and cancellation support for tasks and algorithms 
-    fully enabled.  
+    fully enabled.
 - Exception safety guaranties defined and fixed for all concurrent 
-    containers
+    containers.
 - User-defined memory allocator support added to all concurrent 
-    containers
-- Performance improvement of concurrent_hash_map, spin_rw_mutex
+    containers.
+- Performance improvement of concurrent_hash_map, spin_rw_mutex.
 - Critical fix for a rare race condition during scheduler 
-    initialization/de-initialization
-- New methods added for concurrent containers to be closer to STL, as 
-    well as automatic filters removal from pipeline and __TBB_AtomicAND 
-    function
+    initialization/de-initialization.
+- New methods added for concurrent containers to be closer to STL,
+    as well as automatic filters removal from pipeline
+    and __TBB_AtomicAND function.
 - The volatile keyword dropped from where it is not really needed.
 - A few more minor improvements.
 
--------------------------------------------------------------------------------
+------------------------------------------------------------------------
 20080319 open-source release
 
 Changes (w.r.t. previous open-source release):
@@ -138,7 +170,7 @@ Bugs fixed:
 - 116 - fix for compilation issues with gcc version 4.2.1.
 - 120 - fix for compilation issues with gcc version 4.3.
  
--------------------------------------------------------------------------------
+------------------------------------------------------------------------
 20080311 open-source release
 
 Changes (w.r.t. previous open-source release):
@@ -150,7 +182,7 @@ Changes (w.r.t. previous open-source release):
     binary compatibility guaranteed with stable releases only.
 - Various improvements to code, tests, examples and Makefiles.
  
--------------------------------------------------------------------------------
+------------------------------------------------------------------------
 20080304 open-source release
 
 Changes (w.r.t. previous open-source release):
@@ -167,7 +199,7 @@ Bugs fixed:
 - TR575 - fixed a deadlock occurring on Windows in startup/shutdown
     under some conditions.
 
--------------------------------------------------------------------------------
+------------------------------------------------------------------------
 20080226 open-source release
 
 Changes (w.r.t. previous open-source release):
@@ -179,7 +211,7 @@ Changes (w.r.t. previous open-source release):
 - Improved support for Intel(R) Thread Checker.
 - Various improvements to code, tests, examples and Makefiles.
 
--------------------------------------------------------------------------------
+------------------------------------------------------------------------
 TBB 2.0 U2 commercial-aligned release (package 017, February 14, 2008)
 
 Corresponds to commercial 017 (for Linux*, 018; for Mac OS* X, 016)
@@ -199,7 +231,7 @@ Bugs fixed:
 
 - TR569 - Memory leak in concurrent_queue.
 
--------------------------------------------------------------------------------
+------------------------------------------------------------------------
 20080207 open-source release
 
 Changes (w.r.t. previous open-source release):
@@ -215,7 +247,7 @@ Bugs fixed:
     counterparts.
 - TR569 - Memory leak in concurrent_queue.
 
--------------------------------------------------------------------------------
+------------------------------------------------------------------------
 20080122 open-source release
 
 Changes (w.r.t. previous open-source release):
@@ -225,7 +257,7 @@ Changes (w.r.t. previous open-source release):
     performance.
 - Minor improvements to unittests and performance tests.
 
--------------------------------------------------------------------------------
+------------------------------------------------------------------------
 20080115 open-source release
 
 Changes (w.r.t. previous open-source release):
@@ -246,7 +278,7 @@ Bugs fixed:
 - 102 - Support for parallel build with gmake -j
 - 114 - /Wp64 build warning on Windows*.
 
--------------------------------------------------------------------------------
+------------------------------------------------------------------------
 20071218 open-source release
 
 Changes (w.r.t. previous open-source release):
@@ -257,7 +289,7 @@ Changes (w.r.t. previous open-source release):
 - Full support for 32-bit PowerMac including export files for builds.
 - Improvements to parallel_do.
 
--------------------------------------------------------------------------------
+------------------------------------------------------------------------
 20071206 open-source release
 
 Changes (w.r.t. previous open-source release):
@@ -270,7 +302,7 @@ Changes (w.r.t. previous open-source release):
 - Engineering work in progress on exception behavior.
 - Unittest improvements.
 
--------------------------------------------------------------------------------
+------------------------------------------------------------------------
 20071127 open-source release
 
 Changes (w.r.t. previous open-source release):
@@ -299,7 +331,7 @@ Bugs fixed:
 - 108 - Removed broken affinity.h reference.
 - 101 - Does not build on Debian Lenny (replaced arch with uname -m).
 
--------------------------------------------------------------------------------
+------------------------------------------------------------------------
 20071030 open-source release
 
 Changes (w.r.t. previous open-source release):
@@ -316,7 +348,7 @@ Changes (w.r.t. previous open-source release):
 - Engineering work in progress on a new parallel_do algorithm.
 - Unittest improvements.
 
--------------------------------------------------------------------------------
+------------------------------------------------------------------------
 20070927 open-source release
 
 Changes:
@@ -325,7 +357,7 @@ Changes:
 - Begin introduction of new concurrent_vector interfaces not released
     with TBB 2.0 U1.
 
--------------------------------------------------------------------------------
+------------------------------------------------------------------------
 TBB 2.0 U1 commercial-aligned release (package 014, October 1, 2007)
 
 Corresponds to commercial 014 (for Linux*, 016) packages.
@@ -337,13 +369,13 @@ Changes (w.r.t. previous commercial-aligned release):
 - Made a number of changes to the officially supported OS list:
     Added Linux* OSs:
 	Asianux* 3, Debian* 4.0, Fedora Core* 6, Fedora* 7,
-	Turbo Linux* 11, Ubuntu* 7.04
+	Turbo Linux* 11, Ubuntu* 7.04;
     Dropped Linux* OSs:
 	Asianux* 2, Fedora Core* 4, Haansoft* Linux 2006 Server,
 	Mandriva/Mandrake* 10.1, Miracle Linux* 4.0,
-	Red Flag* DC Server 5.0
+	Red Flag* DC Server 5.0;
     Only Mac OS* X 10.4.9 (and forward) and Xcode* tool suite 2.4.1 (and
-	forward) are now supported
+	forward) are now supported.
 - Commercial installers on Linux* fixed to recommend the correct
     binaries to use in more cases, with less unnecessary warnings.
 - Changes to eliminate spurious build warnings.
@@ -358,7 +390,7 @@ Bugs fixed:
 - 93 - Removed misleading comments in task.h.
 - 94 - See above.
 
--------------------------------------------------------------------------------
+------------------------------------------------------------------------
 20070815 open-source release
 
 Changes:
@@ -376,7 +408,7 @@ Bugs fixed:
 - 88 - Fixed TBB compilation errors if both VS2005 and Windows SDK are
     installed.
 
--------------------------------------------------------------------------------
+------------------------------------------------------------------------
 20070719 open-source release
 
 Changes:
@@ -384,12 +416,12 @@ Changes:
 - Minor update to TBB 2.0 GOLD below.
 - Changes to eliminate spurious build warnings.
 
--------------------------------------------------------------------------------
+------------------------------------------------------------------------
 TBB 2.0 GOLD commercial-aligned release (package 010, July 19, 2007)
 
 Corresponds to commercial 010 (for Linux*, 012) packages.
 
 - TBB open-source debut release.
 
--------------------------------------------------------------------------------
+------------------------------------------------------------------------
 * Other names and brands may be claimed as the property of others.

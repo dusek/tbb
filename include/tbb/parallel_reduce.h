@@ -40,10 +40,10 @@ namespace tbb {
 namespace internal {
 
     //! ITT instrumented routine that stores src into location pointed to by dst.
-    void itt_store_pointer_with_release_v3( void* dst, void* src );
+    void __TBB_EXPORTED_FUNC itt_store_pointer_with_release_v3( void* dst, void* src );
 
     //! ITT instrumented routine that loads pointer from location pointed to by src.
-    void* itt_load_pointer_with_acquire_v3( const void* src );
+    void* __TBB_EXPORTED_FUNC itt_load_pointer_with_acquire_v3( const void* src );
 
     template<typename T> inline void parallel_reduce_store_body( T*& dst, T* src ) {
 #if TBB_DO_THREADING_TOOLS||TBB_DO_ASSERT

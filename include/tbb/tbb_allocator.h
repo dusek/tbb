@@ -39,14 +39,14 @@ namespace internal {
 
     //! Deallocates memory using FreeHandler
     /** The function uses scalable_free if scalable allocator is available and free if not*/
-    void deallocate_via_handler_v3( void *p );
+    void __TBB_EXPORTED_FUNC deallocate_via_handler_v3( void *p );
 
     //! Allocates memory using MallocHandler
     /** The function uses scalable_malloc if scalable allocator is available and malloc if not*/
-    void* allocate_via_handler_v3( size_t n );
+    void* __TBB_EXPORTED_FUNC allocate_via_handler_v3( size_t n );
 
     //! Returns true if standard malloc/free are used to work with memory.
-    bool is_malloc_used_v3();
+    bool __TBB_EXPORTED_FUNC is_malloc_used_v3();
 }
 //! @endcond
 
@@ -76,15 +76,6 @@ public:
         standard
     };
 
-#if _WIN64
-    //! Non-ISO method required by Microsoft's STL containers 
-    /** Some versions of Microsoft's container classes seem to require that 
-        allocators supply this method. */
-    char* _Charalloc( size_type size ) {        
-        return (char*)(internal::allocate_via_handler_v3( size * sizeof(T)));
-    }
-#endif /* _WIN64 */
-
     tbb_allocator() throw() {}
     tbb_allocator( const tbb_allocator& ) throw() {}
     template<typename U> tbb_allocator(const tbb_allocator<U>&) throw() {}
@@ -92,12 +83,12 @@ public:
     pointer address(reference x) const {return &x;}
     const_pointer address(const_reference x) const {return &x;}
     
-    //! Allocate space for n objects, starting on a cache/sector line.
+    //! Allocate space for n objects.
     pointer allocate( size_type n, const void* /*hint*/ = 0) {
         return pointer(internal::allocate_via_handler_v3( n * sizeof(T) ));
     }
 
-    //! Free block of memory that starts on a cache line
+    //! Free previously allocated block of memory.
     void deallocate( pointer p, size_type ) {
         internal::deallocate_via_handler_v3(p);        
     }
@@ -139,6 +130,6 @@ inline bool operator==( const tbb_allocator<T>&, const tbb_allocator<U>& ) {retu
 template<typename T, typename U>
 inline bool operator!=( const tbb_allocator<T>&, const tbb_allocator<U>& ) {return false;}
 
-} // namespace ThreadBuildingBlocks 
+} // namespace tbb 
 
 #endif /* __TBB_tbb_allocator_H */

@@ -72,13 +72,13 @@ public:
         }
 
         //! Acquire lock on given mutex.
-        void acquire( queuing_mutex& m );
+        void __TBB_EXPORTED_METHOD acquire( queuing_mutex& m );
 
         //! Acquire lock on given mutex if free (i.e. non-blocking)
-        bool try_acquire( queuing_mutex& m );
+        bool __TBB_EXPORTED_METHOD try_acquire( queuing_mutex& m );
 
         //! Release lock.
-        void release();
+        void __TBB_EXPORTED_METHOD release();
 
     private:
         //! The pointer to the mutex owned, or NULL if not holding a mutex.

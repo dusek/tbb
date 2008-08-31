@@ -179,7 +179,8 @@ public:
 static void VerifySum( long start_index, long finish_index, int sum, int line ) {
     int expected = TriangularSum( finish_index ) - TriangularSum( start_index );
     if( expected!=sum ) {
-        printf("line %d: sum[%ld..%ld] should be = %d, but was computed as %d\n", line, start_index, finish_index, expected, sum );
+        fprintf( stderr, "line %d: sum[%ld..%ld] should be = %d, but was computed as %d\n",
+            line, start_index, finish_index, expected, sum );
         abort();
     }
 }

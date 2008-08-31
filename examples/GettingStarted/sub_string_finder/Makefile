@@ -25,6 +25,8 @@
 # the GNU General Public License.
 
 # GNU Makefile that builds and runs example.
+PROG=sub_string_finder_extended
+ARGS=
 
 # The C++ compiler
 #CXX=g++
@@ -45,4 +47,4 @@ clean:
 	rm -f sub_string_finder sub_string_finder_extended sub_string_finder_pretty *.o *.d
 
 test:
-	./sub_string_finder_extended
+	./$(PROG) $(ARGS)

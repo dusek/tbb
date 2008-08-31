@@ -37,7 +37,8 @@ tbb_root?=..
 BUILDING_PHASE:=0
 include ../build/common.inc
 
-ifneq ($(firstword is_abs_path$(subst /, ,$(tbb_root))),is_abs_path)
+#check, if tbb_root is not absolute path (the filter keeps only /* paths)
+ifeq ($(filter /% $(SLASH)%, $(subst :, ,$(tbb_root)) ),)
     # also changes related variables like work_dir
     override tbb_root := $(CWD)$(SLASH)..
     export TBB21_INSTALL_DIR := $(tbb_root)
@@ -57,35 +58,35 @@ else
     EXAMPLES := $(wildcard */*/$(EXAMPLE_MAKEFILE))
     # platform-specific settings
     ifeq ($(arch),itanium)
-        export CXXFLAGS += $(PIC_KEY)
+        override CXXFLAGS += $(PIC_KEY)
     endif
     ifeq ($(compiler),gcc)
         ifeq ($(arch),em64t)
-            export CXXFLAGS += -m64
+            override CXXFLAGS += -m64
         endif
         ifeq ($(arch),ia32)
-            export CXXFLAGS += -m32
+            override CXXFLAGS += -m32
         endif
         ifeq ($(arch),ppc64)
-            export CXXFLAGS += -m64
+            override CXXFLAGS += -m64
         endif
         ifeq ($(arch),ppc32)
-            export CXXFLAGS += -m32
+            override CXXFLAGS += -m32
         endif
         ifeq ($(arch),sparc)
-	        export CXXFLAGS += -mcpu=v9 -m64
+            override CXXFLAGS += -mcpu=v9 -m64
         endif
     endif
     ifeq ($(compiler),suncc)
-    	export CXXFLAGS += -I$(tbb_root)$(SLASH)include -library=stlport4 -M$(tbb_root)/build/suncc.map.pause
+        override CXXFLAGS += -I$(tbb_root)$(SLASH)include -library=stlport4 -M$(tbb_root)/build/suncc.map.pause
         ifeq ($(arch),em64t)
-            export CXXFLAGS += -m64
+            override CXXFLAGS += -m64
         endif
         ifeq ($(arch),ia32)
-            export CXXFLAGS += -m32
+            override CXXFLAGS += -m32
         endif
         ifeq ($(arch),sparc)
-            export CXXFLAGS += -m64
+            override CXXFLAGS += -m64
         endif
     endif
     ifeq ($(tbb_os),macos)
@@ -100,6 +101,7 @@ else
     else
         export LD_LIBRARY_PATH := $(LD_LIBRARY_PATH):$(work_dir)_release:$(work_dir)_debug
     endif
+    export LIBS
     export LIBRARY_PATH := $(LIBRARY_PATH):$(work_dir)_release:$(work_dir)_debug
     export CPATH := $(CPATH):$(tbb_root)/include
 endif
@@ -119,7 +121,7 @@ $(COMMON_TARGETS):: % : $(addsuffix %,$(EXAMPLES_DIRS))
 
 # proxy rule for calling appropriate example
 $(EXAMPLES_TARGETS)::
-	-$(MAKE) -C $(@D)  -f $(EXAMPLE_MAKEFILE) $(notdir $@) CXX="$(CPLUS)"
+	-$(MAKE) -C $(@D)  -f $(EXAMPLE_MAKEFILE) $(notdir $@) CXX="$(CPLUS)" CXXFLAGS="$(CXXFLAGS)"
 
 printenv:
 ifeq ($(tbb_os),windows)

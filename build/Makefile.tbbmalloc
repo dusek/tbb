@@ -103,16 +103,14 @@ MALLOC_C_TESTS = test_malloc_pure_c.exe
 $(MALLOC_MAIN_TESTS): %.exe: %.$(OBJ) $(call cross_suffix,$(MALLOC.LIB))
 	$(CPLUS) $(OUTPUT_KEY)$@ $(CPLUS_FLAGS) $^ $(LIBS) $(LINK_FLAGS)
 $(MALLOC_C_TESTS): %.exe: %.$(OBJ) $(call cross_suffix,$(MALLOC.LIB))
-	$(CPLUS) $(OUTPUT_KEY)$@ $(CPLUS_FLAGS) $(INCLUDES) $^ $(LIBS) $(LINK_FLAGS)
+	$(CPLUS) $(OUTPUT_KEY)$@ $(CPLUS_FLAGS) $^ $(LIBS) $(LINK_FLAGS)
 
+# run_cmd is usually empty
 malloc_test: $(call cross_suffix,$(MALLOC.DLL)) $(MALLOC_MAIN_TESTS) $(MALLOC_C_TESTS)
-ifndef norun
-malloc_test:
-	$(TEST_LAUNCHER) ./test_malloc_compliance.exe
-	./test_ScalableAllocator.exe
-	./test_ScalableAllocator_STL.exe
-	./test_malloc_pure_c.exe
-endif # norun
+	$(run_cmd) $(TEST_LAUNCHER) ./test_malloc_compliance.exe
+	$(run_cmd) ./test_ScalableAllocator.exe
+	$(run_cmd) ./test_ScalableAllocator_STL.exe
+	$(run_cmd) ./test_malloc_pure_c.exe
 
 #------------------------------------------------------
 # End of rules for making the TBBMalloc unit tests

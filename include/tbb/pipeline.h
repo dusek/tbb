@@ -98,7 +98,7 @@ public:
 
     //! Destroy filter.  
     /** If the filter was added to a pipeline, the pipeline must be destroyed first. */
-    virtual ~filter();
+    virtual __TBB_EXPORTED_METHOD ~filter();
 
 private:
     //! Pointer to next filter in the pipeline.
@@ -125,19 +125,20 @@ private:
 class pipeline {
 public:
     //! Construct empty pipeline.
-    pipeline();
+    __TBB_EXPORTED_METHOD pipeline();
 
-    //! Destroy pipeline.
-    virtual ~pipeline();
+    /** Though the current implementation declares the destructor virtual, do not rely on this 
+        detail.  The virtualness is deprecated and may disappear in future versions of TBB. */
+    virtual __TBB_EXPORTED_METHOD ~pipeline();
 
     //! Add filter to end of pipeline.
-    void add_filter( filter& filter_ );
+    void __TBB_EXPORTED_METHOD add_filter( filter& filter_ );
 
     //! Run the pipeline to completion.
-    void run( size_t max_number_of_live_tokens );
+    void __TBB_EXPORTED_METHOD run( size_t max_number_of_live_tokens );
 
     //! Remove all filters from the pipeline
-    void clear();
+    void __TBB_EXPORTED_METHOD clear();
 
 private:
     friend class internal::stage_task;
@@ -165,7 +166,7 @@ private:
     void remove_filter( filter& filter_ );
 
     //! Not used, but retained to satisfy old export files.
-    void inject_token( task& self );
+    void __TBB_EXPORTED_METHOD inject_token( task& self );
 };
 
 } // tbb

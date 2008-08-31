@@ -36,7 +36,7 @@ class affinity_partitioner;
 
 //! @cond INTERNAL
 namespace internal {
-size_t get_initial_auto_partitioner_divisor();
+size_t __TBB_EXPORTED_FUNC get_initial_auto_partitioner_divisor();
 
 //! Defines entry points into tbb run-time library;
 /** The entry points are the constructor and destructor. */
@@ -53,7 +53,7 @@ class affinity_partitioner_base_v3: no_copy {
     ~affinity_partitioner_base_v3() {resize(0);}
     //! Resize my_array.
     /** Retains values if resulting size is the same. */
-    void resize( unsigned factor );
+    void __TBB_EXPORTED_METHOD resize( unsigned factor );
     friend class affinity_partition_type;
 };
 

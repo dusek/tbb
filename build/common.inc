@@ -32,7 +32,8 @@ ifndef tbb_os
   ifeq ($(OS),)
    $(error "$(OS) is not supported")
   else
-   export tbb_os=$(OS)
+   tbb_os=$(OS)
+   export tbb_os
    ifeq ($(OS), Linux)
     export tbb_os=linux
    endif
@@ -81,8 +82,8 @@ ifneq ($(BUILDING_PHASE),1)
  work_dir=$(tbb_build_dir)$(SLASH)$(tbb_build_prefix)
  ifneq ($(BUILDING_PHASE),0)
   work_dir:=$(work_dir)
-  # assign new value for tbb_root
-  ifneq ($(firstword is_abs_path$(subst /, ,$(tbb_root))),is_abs_path)
+  # assign new value for tbb_root if path is not absolute (the filter keeps only /* paths)
+  ifeq ($(filter /% $(SLASH)%, $(subst :, ,$(tbb_root)) ),)
    ifeq ($(origin_build_dir),undefined)
     override tbb_root:=../..
    else

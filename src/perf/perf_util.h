@@ -228,7 +228,7 @@ double RunTestImpl ( const char* title, void (*pfn)(), char* histogramFileName =
         util::trace_histogram(t, histogramFileName);
     double clean_time = time - util::base;
     if ( title ) {
-        // Deviation (in percent) is calulated for the Gross time
+        // Deviation (in percent) is calculated for the Gross time
         printf ("\n%-34s %.2e  %5.1f      ", title, clean_time, deviation);
         if ( util::sequential_time != 0  )
             //printf ("% .2e  ", clean_time - util::sequential_time);
@@ -275,8 +275,9 @@ void Test();
 
 inline
 int test_main( int argc, char* argv[] ) {
+    MinThread = 1;
+    MaxThread = tbb::task_scheduler_init::default_num_threads();
     ParseCommandLine( argc, argv );
-    ASSERT (MinThread>=2, "Minimal number of threads must be 2 or more");
     char buf[128];
     util::rate_field_len = 2 + sprintf(buf, "%.1e", 1.1);
     for ( int i = MinThread; i <= MaxThread; ++i ) {

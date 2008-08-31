@@ -28,6 +28,7 @@
 
 # Just specify your program basename
 PROG=Primes
+ARGS=100000000 0:4
 
 # The C++ compiler options
 CXX = cl.exe
@@ -42,4 +43,4 @@ debug:
 clean:
 	@cmd.exe /C del $(PROG).exe *.obj *.?db *.manifest
 test:
-	$(PROG) 100000000 0:4
+	$(PROG) $(ARGS)

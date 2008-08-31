@@ -26,6 +26,7 @@
 
 # GNU Makefile that builds and runs example.
 PROG=text_filter
+ARGS=input.txt output.txt
 
 # The C++ compiler
 #CXX=g++
@@ -45,4 +46,4 @@ test:
 	@echo Constructing input.txt
 	@cat index.html > input.txt
 	@-csh -c "repeat 500 cat index.html >> input.txt" 2>/dev/null
-	./$(PROG) input.txt output.txt
+	./$(PROG) $(ARGS)

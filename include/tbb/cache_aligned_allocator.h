@@ -44,16 +44,16 @@ namespace internal {
 
     //! Cache/sector line size.
     /** @ingroup memory_allocation */
-    size_t NFS_GetLineSize();
+    size_t __TBB_EXPORTED_FUNC NFS_GetLineSize();
 
     //! Allocate memory on cache/sector line boundary.
     /** @ingroup memory_allocation */
-    void* NFS_Allocate( size_t n_element, size_t element_size, void* hint );
+    void* __TBB_EXPORTED_FUNC NFS_Allocate( size_t n_element, size_t element_size, void* hint );
 
     //! Free memory allocated by NFS_Allocate.
     /** Freeing a NULL pointer is allowed, but has no effect.
         @ingroup memory_allocation */
-    void NFS_Free( void* );
+    void __TBB_EXPORTED_FUNC NFS_Free( void* );
 }
 //! @endcond
 
@@ -74,15 +74,6 @@ public:
     template<typename U> struct rebind {
         typedef cache_aligned_allocator<U> other;
     };
-
-#if _WIN64
-    //! Non-ISO method required by Microsoft's STL containers 
-    /** Some versions of Microsoft's container classes seem to require that 
-        allocators supply this method. */
-    char* _Charalloc( size_type size ) {
-        return (char*)internal::NFS_Allocate( size, sizeof(T), 0 );
-    }
-#endif /* _WIN64 */
 
     cache_aligned_allocator() throw() {}
     cache_aligned_allocator( const cache_aligned_allocator& ) throw() {}
@@ -133,6 +124,6 @@ inline bool operator==( const cache_aligned_allocator<T>&, const cache_aligned_a
 template<typename T, typename U>
 inline bool operator!=( const cache_aligned_allocator<T>&, const cache_aligned_allocator<U>& ) {return false;}
 
-} // namespace ThreadBuildingBlocks 
+} // namespace tbb
 
 #endif /* __TBB_cache_aligned_allocator_H */

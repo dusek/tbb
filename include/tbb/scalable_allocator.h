@@ -28,31 +28,38 @@
 
 #ifndef __TBB_scalable_allocator_H
 #define __TBB_scalable_allocator_H
+/** @file */
 
-#include <stddef.h> // Need ptrdiff_t and size_t from here.
+#include <stddef.h> /* Need ptrdiff_t and size_t from here. */
 
 #ifdef __cplusplus
 extern "C" {
 #endif /* __cplusplus */
 
-//! The "malloc" analogue to allocate block of memory of size bytes.
-/** @ingroup memory_allocation */
-void * scalable_malloc (size_t size);
+#if _MSC_VER >= 1400
+#define __TBB_EXPORTED_FUNC   __cdecl
+#else
+#define __TBB_EXPORTED_FUNC
+#endif
 
-//! The "free" analogue to discard a previously allocated piece of memory
-/** @ingroup memory_allocation */
-void   scalable_free (void* ptr);
+/** The "malloc" analogue to allocate block of memory of size bytes.
+  * @ingroup memory_allocation */
+void * __TBB_EXPORTED_FUNC scalable_malloc (size_t size);
 
-//! The "realloc" analogue complementing scalable_malloc
-/** @ingroup memory_allocation */
-void * scalable_realloc (void* ptr, size_t size);
+/** The "free" analogue to discard a previously allocated piece of memory.
+    @ingroup memory_allocation */
+void   __TBB_EXPORTED_FUNC scalable_free (void* ptr);
 
-//! The "calloc" analogue complementing scalable_malloc
-/** @ingroup memory_allocation */
-void * scalable_calloc (size_t nobj, size_t size);
+/** The "realloc" analogue complementing scalable_malloc.
+    @ingroup memory_allocation */
+void * __TBB_EXPORTED_FUNC scalable_realloc (void* ptr, size_t size);
+
+/** The "calloc" analogue complementing scalable_malloc.
+    @ingroup memory_allocation */
+void * __TBB_EXPORTED_FUNC scalable_calloc (size_t nobj, size_t size);
 
 #ifdef __cplusplus
-} // extern "C"
+} /* extern "C" */
 #endif /* __cplusplus */
 
 #ifdef __cplusplus
@@ -86,12 +93,12 @@ public:
     pointer address(reference x) const {return &x;}
     const_pointer address(const_reference x) const {return &x;}
 
-    //! Allocate space for n objects, starting on a cache/sector line.
+    //! Allocate space for n objects.
     pointer allocate( size_type n, const void* /*hint*/ =0 ) {
         return static_cast<pointer>( scalable_malloc( n * sizeof(value_type) ) );
     }
 
-    //! Free block of memory that starts on a cache line
+    //! Free previously allocated block of memory
     void deallocate( pointer p, size_type ) {
         scalable_free( p );
     }
@@ -138,6 +145,8 @@ inline bool operator!=( const scalable_allocator<T>&, const scalable_allocator<U
             #pragma comment(lib, "tbbmalloc.lib")
         #endif
     #endif
+
+
 #endif
 
 #endif /* __cplusplus */

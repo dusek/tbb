@@ -33,6 +33,7 @@ OUTPUTOBJ_KEY = -o #
 PIC_KEY = -KPIC
 DYLIB_KEY = -G
 LIBDL = -ldl
+# WARNING_AS_ERROR_KEY = -errwarn=%all
 WARNING_AS_ERROR_KEY = Warning as error
 WARNING_SUPPRESS = -erroff=unassigned,attrskipunsup,badargtype2w,badbinaryopw,wbadasg
 tbb_strict=0

@@ -28,6 +28,7 @@
 
 # Just specify your program basename
 PROG=Seismic
+ARGS=- 300
 
 # The C++ compiler options
 CXX = cl.exe
@@ -57,4 +58,4 @@ debug:
 clean:
 	@cmd.exe /C del $(PROG).exe *.obj *.?db *.manifest vc7.1\SeismicSimulation.res
 test:
-	$(PROG) - 300
+	$(PROG) $(ARGS)

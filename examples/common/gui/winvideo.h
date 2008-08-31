@@ -219,7 +219,7 @@ static bool loop_once(video *v)
     return false;
 }
 
-//! Do standart event loop
+//! Do standard event loop
 void video::main_loop()
 {
     // let Windows draw and unroll the window

@@ -28,6 +28,7 @@
 
 # Just specify your program basename
 PROG=Text_Filter
+ARGS=input.txt output.txt
 
 # The C++ compiler options
 CXX = cl.exe
@@ -46,4 +47,4 @@ input.txt:
 	@cmd.exe /C "@type index.html >input.txt"
 	@-cmd.exe /C "for /L %%a in (1,1,500) do @type index.html >> input.txt"
 test: input.txt
-	$(PROG) input.txt output.txt
+	$(PROG) $(ARGS)

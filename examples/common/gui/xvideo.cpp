@@ -259,7 +259,7 @@ video::~video()
     g_video = 0;
 }
 
-//! Do standart event loop
+//! Do standard event loop
 void video::main_loop()
 {
     struct timezone tz; gettimeofday(&g_time, &tz);

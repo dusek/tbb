@@ -26,6 +26,7 @@
 
 # GNU Makefile that builds and runs example.
 PROG=primes
+ARGS=100000000 0:4
 
 # The C++ compiler
 #CXX=g++
@@ -42,4 +43,4 @@ clean:
 	rm -f $(PROG) *.o *.d
 
 test:
-	./$(PROG) 100000000 0:4
+	./$(PROG) $(ARGS)

@@ -28,6 +28,7 @@
 
 # Just specify your program basename
 PROG=Count_Strings
+ARGS=
 
 # The C++ compiler options
 CXX = cl.exe
@@ -42,4 +43,4 @@ debug:
 clean:
 	@cmd.exe /C del $(PROG).exe *.obj *.?db *.manifest
 test:
-	$(PROG)
+	$(PROG) $(ARGS)
