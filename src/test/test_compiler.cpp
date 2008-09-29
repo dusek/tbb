@@ -47,7 +47,7 @@ int test_bool_representation() {
         unsigned char x = (unsigned char)u.b;
         if( x != i ) {
             if( Verbose )
-                fprintf(stderr, "Test failed at %d iteration\n",i);
+                printf("Test failed at %d iteration\n",i);
             return 1;
         }
     }
@@ -57,7 +57,7 @@ int test_bool_representation() {
 int main( int argc, char* argv[] ) {
     ParseCommandLine(argc, argv);
     if( test_bool_representation()!=0 )
-        fprintf(stderr, "ERROR: bool representation test failed\n");
+        printf("ERROR: bool representation test failed\n");
     else
         printf("done\n");
     return 0;

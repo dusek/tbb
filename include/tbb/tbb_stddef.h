@@ -34,7 +34,7 @@
 #define TBB_VERSION_MINOR 1
 
 // Engineering-focused interface version
-#define TBB_INTERFACE_VERSION 3013
+#define TBB_INTERFACE_VERSION 3014
 #define TBB_INTERFACE_VERSION_MAJOR TBB_INTERFACE_VERSION/1000
 
 // The oldest major interface version still supported
@@ -262,7 +262,6 @@ typedef version_tag_v3 version_tag;
 #ifndef __TBB_EXCEPTIONS
 #define __TBB_EXCEPTIONS 1
 #endif /* __TBB_EXCEPTIONS */
-
 #endif
 
 #ifndef __TBB_SCHEDULER_OBSERVER
@@ -272,6 +271,7 @@ typedef version_tag_v3 version_tag;
 #ifndef TBB_PERFORMANCE_WARNINGS
 #define TBB_PERFORMANCE_WARNINGS TBB_DO_ASSERT
 #endif /* TBB_PERFORMANCE_WARNINGS */
+
 
 #endif /* RC_INVOKED */
 #endif /* __TBB_tbb_stddef_H */

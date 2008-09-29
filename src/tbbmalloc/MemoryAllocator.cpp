@@ -68,9 +68,6 @@ static inline int TRACEF(const char *arg, ...)
 #include <string.h>
 #include <errno.h>
 
-#if __linux__||__APPLE__ || __FreeBSD__ || __sun
-#include <fcntl.h>
-#endif
 
 /**
 *** Define various compile-time options
@@ -90,6 +87,7 @@ static inline int TRACEF(const char *arg, ...)
 // Otherwise large allocations are done using the scalable allocator's block allocator.
 // As of 06.Jun.17, using malloc is about 10x faster on Linux.
 #define USE_MALLOC_FOR_LARGE_OBJECT 1
+
 
 #if USE_MALLOC_FOR_LARGE_OBJECT
 #include <stdlib.h>
@@ -218,13 +216,17 @@ typedef struct Block* BlockPtr;
  * some bin allocation sizes, in particular "fitting" sizes (see above).
  */
 
+/* define to make sure that memory is allocated by scalable_malloc*/
+static const uint64_t tbbmallocUniqueID=0xE3C7AF89A1E2D8C1ULL; 
+
 struct LocalBlockFields {
-    BlockPtr     next;     /* This field needs to be on a 16K boundary and the first field in the block
-                              so non-blocking LifoQueues will work. */
-    BlockPtr     previous; /* Use double linked list to speed up removal */
+    BlockPtr     next;            /* This field needs to be on a 16K boundary and the first field in the block
+                                     so non-blocking LifoQueues will work. */
+    uint64_t     mallocUniqueID;  /* The field to identify memory allocated by scalable_malloc */
+    BlockPtr     previous;        /* Use double linked list to speed up removal */
     unsigned int objectSize;
     unsigned int owner;
-    FreeObject  *bumpPtr;         /* bump pointer moves from the end to the beginning of a block */
+    FreeObject  *bumpPtr;         /* Bump pointer moves from the end to the beginning of a block */
     FreeObject  *freeList;
     unsigned int allocatedCount;  /* Number of objects allocated (obviously by the owning thread) */
     unsigned int isFull;
@@ -498,37 +500,51 @@ static int mallocBigBlock()
 static void initEmptyBlock(Block *block, size_t size);
 static Block *getEmptyBlock(size_t size);
 
-static MallocMutex bootStrapBlockLock;
+static MallocMutex bootStrapLock;
 
-static Block *bootStrapBlock = NULL;
-static Block *bootStrapBlockUsed = NULL;
+static Block      *bootStrapBlock = NULL;
+static Block      *bootStrapBlockUsed = NULL;
+static FreeObject *bootStrapObjectList = NULL; 
 
 static void *bootStrapMalloc(size_t size)
 {
-    void *result;
+    FreeObject *result;
 
     MALLOC_ASSERT( size == tlsSize, ASSERT_TEXT );
 
     { // Lock with acquire
-        MallocMutex::scoped_lock scoped_cs(bootStrapBlockLock);
+        MallocMutex::scoped_lock scoped_cs(bootStrapLock);
 
-        if (!bootStrapBlock) {
-            bootStrapBlock = getEmptyBlock(size);
+        if( bootStrapObjectList) {
+            result = bootStrapObjectList;
+            bootStrapObjectList = bootStrapObjectList->next;
+        } else {
+            if (!bootStrapBlock) {
+                bootStrapBlock = getEmptyBlock(size);
+            }
+            result = bootStrapBlock->bumpPtr;
+            bootStrapBlock->bumpPtr = (FreeObject *)((uintptr_t)bootStrapBlock->bumpPtr - bootStrapBlock->objectSize);
+            if ((uintptr_t)bootStrapBlock->bumpPtr < (uintptr_t)bootStrapBlock+sizeof(Block)) {
+                bootStrapBlock->bumpPtr = NULL;
+                bootStrapBlock->next = bootStrapBlockUsed;
+                bootStrapBlockUsed = bootStrapBlock;
+                bootStrapBlock = NULL;
+            }
         }
-
-        result = bootStrapBlock->bumpPtr;
-        bootStrapBlock->bumpPtr = (FreeObject *)((uintptr_t)bootStrapBlock->bumpPtr - bootStrapBlock->objectSize);
-        if ((uintptr_t)bootStrapBlock->bumpPtr < (uintptr_t)bootStrapBlock+sizeof(Block)) {
-            bootStrapBlock->bumpPtr = NULL;
-            bootStrapBlock->next = bootStrapBlockUsed;
-            bootStrapBlockUsed = bootStrapBlock;
-            bootStrapBlock = NULL;
-        }
-
     } // Unlock with release
 
     memset (result, 0, size);
-    return result;
+    return (void*)result;
+}
+
+static void bootStrapFree(void* ptr)
+{
+    MALLOC_ASSERT( ptr, ASSERT_TEXT );
+    { // Lock with acquire
+        MallocMutex::scoped_lock scoped_cs(bootStrapLock);
+        ((FreeObject*)ptr)->next = bootStrapObjectList;
+        bootStrapObjectList = (FreeObject*)ptr;
+    } // Unlock with release
 }
 
 /********* End rough utilitiy code  **************/
@@ -548,11 +564,13 @@ static void verifyTLSBin (Bin* bin, size_t size)
     MALLOC_ASSERT( bin == tls+index, ASSERT_TEXT );
 
     if (tls[index] && tls[index].activeBlk) {
+        MALLOC_ASSERT( tls[index].activeBlk->mallocUniqueID==tbbmallocUniqueID, ASSERT_TEXT );
         MALLOC_ASSERT( tls[index].activeBlk->owner == getThreadId(), ASSERT_TEXT );
         MALLOC_ASSERT( tls[index].activeBlk->objectSize == objSize, ASSERT_TEXT );
 
         for (temp = tls[index].activeBlk->next; temp; temp=temp->next) {
             MALLOC_ASSERT( temp!=tls[index].activeBlk, ASSERT_TEXT );
+            MALLOC_ASSERT( temp->mallocUniqueID==tbbmallocUniqueID, ASSERT_TEXT );
             MALLOC_ASSERT( temp->owner == getThreadId(), ASSERT_TEXT );
             MALLOC_ASSERT( temp->objectSize == objSize, ASSERT_TEXT );
             MALLOC_ASSERT( temp->previous->next == temp, ASSERT_TEXT );
@@ -562,6 +580,7 @@ static void verifyTLSBin (Bin* bin, size_t size)
         }
         for (temp = tls[index].activeBlk->previous; temp; temp=temp->previous) {
             MALLOC_ASSERT( temp!=tls[index], ASSERT_TEXT );
+            MALLOC_ASSERT( temp->mallocUniqueID==tbbmallocUniqueID, ASSERT_TEXT );
             MALLOC_ASSERT( temp->owner == getThreadId(), ASSERT_TEXT );
             MALLOC_ASSERT( temp->objectSize == objSize, ASSERT_TEXT );
             MALLOC_ASSERT( temp->next->previous == temp, ASSERT_TEXT );
@@ -639,38 +658,25 @@ static void outofTLSBin (Bin* bin, Block* block)
 }
 
 /*
- * init the TLS bins and return the bin,
- * an array of *blocks initialized to NULL.
+ * Return the bin for the given size. If the TLS bin structure is absent, create it.
  */
-static Bin* initMallocTLS (void)
-{
-    Bin* tls;
-    int i;
-    MALLOC_ASSERT( tlsSize >= sizeof(Bin) * numBlockBins, ASSERT_TEXT );
-    tls = (Bin*) bootStrapMalloc(tlsSize);
-    /* the block contains zeroes after bootStrapMalloc, so bins are initialized */
-#ifdef MALLOC_DEBUG
-    for (i = 0; i < numBlockBinLimit; i++) {
-        MALLOC_ASSERT( tls[i].activeBlk == 0, ASSERT_TEXT );
-        MALLOC_ASSERT( tls[i].mailbox == 0, ASSERT_TEXT );
-    }
-#endif
-    setThreadMallocTLS(tls);
-    return tls;
-}
-
 static Bin* getAllocationBin(size_t size)
 {
-    uint32_t index;
-    Bin*   tls;
-
-    index = getIndex(size);
-    tls = (Bin*)getThreadMallocTLS();
+    Bin* tls = (Bin*)getThreadMallocTLS();
     if( !tls ) {
-        tls = initMallocTLS();
+        MALLOC_ASSERT( tlsSize >= sizeof(Bin) * numBlockBins, ASSERT_TEXT );
+        tls = (Bin*) bootStrapMalloc(tlsSize);
+        /* the block contains zeroes after bootStrapMalloc, so bins are initialized */
+#ifdef MALLOC_DEBUG
+        for (int i = 0; i < numBlockBinLimit; i++) {
+            MALLOC_ASSERT( tls[i].activeBlk == 0, ASSERT_TEXT );
+            MALLOC_ASSERT( tls[i].mailbox == 0, ASSERT_TEXT );
+        }
+#endif
+        setThreadMallocTLS(tls);
     }
     MALLOC_ASSERT(tls, ASSERT_TEXT);
-    return tls+index;
+    return tls+getIndex(size);
 }
 
 static const float emptyEnoughRatio = 1.0 / 4.0; /* "Reactivate" a block if this share of its objects is free. */
@@ -851,6 +857,7 @@ static Block *getPartialBlock(Bin* bin, unsigned int size)
     unsigned int index = getIndex(size);
     result = (Block *) globalSizeBins[index].pop();
     if (result) {
+        MALLOC_ASSERT( result->mallocUniqueID==tbbmallocUniqueID, ASSERT_TEXT );
         result->next = NULL;
         result->previous = NULL;
         MALLOC_ASSERT( result->publicFreeList!=NULL, ASSERT_TEXT );
@@ -931,19 +938,21 @@ static void initEmptyBlock(Block *block, size_t size)
 #ifdef MALLOC_DEBUG
     memset (block, 0x0e5, blockSize);
 #endif
+    block->mallocUniqueID = tbbmallocUniqueID;
     block->next = NULL;
     block->previous = NULL;
+    block->objectSize = allocatedSize;
+    block->owner = getThreadId();
     // bump pointer should be prepared for first allocation - thus mode it down to allocatedSize
     block->bumpPtr = (FreeObject *)((uintptr_t)block + blockSize - allocatedSize);
+    block->freeList = NULL;
+    block->allocatedCount = 0;
+    block->isFull = 0;
+    block->publicFreeList = NULL;
+
     // each block should have the address where the head of the list of "privatizable" blocks is kept
     // the only exception is a block for boot strap which is initialized when TLS is yet NULL
     block->nextPrivatizable = tls? (Block*)(tls + getIndex(size)) : NULL;
-    block->allocatedCount = 0;
-    block->freeList = NULL;
-    block->publicFreeList = NULL;
-    block->isFull = 0;
-    block->objectSize = allocatedSize;
-    block->owner = getThreadId();
     TRACEF ("Empty block %p is initialized, owner is %d, objectSize is %d, bumpPtr is %p\n",
         block, block->owner, block->objectSize, block->bumpPtr);
   }
@@ -998,17 +1007,19 @@ static void returnEmptyBlock (Block *block, bool keepTheBin = true)
     }
     STAT_increment(block->owner, getIndex(block->objectSize), freeBlockBack);
 
-    block->allocatedCount = 0;
-    // for an empty block, bump pointer should point right after the end of the block
-    block->bumpPtr = (FreeObject *)((uintptr_t)block + blockSize);
-    block->nextPrivatizable = NULL;
-    block->freeList = NULL;
     block->publicFreeList = NULL;
+    block->nextPrivatizable = NULL;
+
+    block->mallocUniqueID=0;
     block->next = NULL;
     block->previous = NULL;
-    block->owner = (unsigned)-1;
-    block->isFull = 0;
     block->objectSize = 0;
+    block->owner = (unsigned)-1;
+    // for an empty block, bump pointer should point right after the end of the block
+    block->bumpPtr = (FreeObject *)((uintptr_t)block + blockSize);
+    block->freeList = NULL;
+    block->allocatedCount = 0;
+    block->isFull = 0;
     freeBlockQueue.push((void **)block);
 }
 
@@ -1053,6 +1064,7 @@ static unsigned int isLargeObject(void *object); /* Forward Ref */
 
 struct LargeObjectHeader {
     void        *unalignedResult;   /* The base of the memory returned from getMemory, this is what is used to return this to the OS */
+    uint64_t     mallocUniqueID;    /* The field to check whether the memory was allocated by scalable_malloc */
     size_t       unalignedSize;     /* The size that was requested from getMemory */
     size_t       objectSize;        /* The size originally requested by a client */
 };
@@ -1078,6 +1090,7 @@ static inline void *mallocLargeObject (size_t size)
     alignedArea = (void *)( ((uintptr_t)unalignedArea + blockSize - 1) & ~(blockSize - 1) );
     header = (LargeObjectHeader *)alignedArea;
     header->unalignedResult = unalignedArea;
+    header->mallocUniqueID=tbbmallocUniqueID;
     header->unalignedSize = requestedSize;
     header->objectSize = size;
     result = (void *)((uintptr_t)alignedArea + sizeof(LargeObjectHeader));
@@ -1091,6 +1104,7 @@ static inline void freeLargeObject(void *object)
     LargeObjectHeader *header;
     STAT_increment(getThreadId(), ThreadCommonCounters, freeLargeSize);
     header = (LargeObjectHeader *)((uintptr_t)object - sizeof(LargeObjectHeader));
+    header->mallocUniqueID = 0;
 #if USE_MALLOC_FOR_LARGE_OBJECT
     free(header->unalignedResult);
 #else
@@ -1102,13 +1116,6 @@ static inline void freeLargeObject(void *object)
 static inline unsigned int isLargeObject(void *object)
 {
     return ((uintptr_t)object & (blockSize - 1)) == sizeof(LargeObjectHeader);
-}
-
-static inline unsigned int getLargeObjectSize(void *object)
-{
-    LargeObjectHeader *header;
-    header = (LargeObjectHeader *)((uintptr_t)object & ~(blockSize - 1));
-    return header->objectSize;
 }
 
 static FreeObject *allocateFromFreeList(Block *mallocBlock)
@@ -1219,8 +1226,8 @@ static void initMemoryManager()
     TRACEF("Asking for a mallocBigBlock\n");
     result = mallocBigBlock();
     if (!result) {
-        printf ("The memory manager cannot access sufficient memory to initialize; aborting \n");
-        exit(0);
+        fprintf (stderr, "The memory manager cannot access sufficient memory to initialize; exiting \n");
+        exit(1);
     }
 }
 
@@ -1302,7 +1309,8 @@ extern "C" void mallocThreadShutdownNotification(void* arg)
             }
             tls[index].activeBlk = 0;
         }
-        // TODO - Free up this tls stuff.....         somehow free the tls structure... then call setThreadMallocTLS(0);
+        bootStrapFree((void*)tls);
+        setThreadMallocTLS(NULL);
     }
 
 #ifndef USE_WINTHREAD
@@ -1445,6 +1453,7 @@ extern "C" void scalable_free (void *object) {
     myTid = getThreadId();
 
     block = (Block *) ((uintptr_t)object & ~(blockSize - 1));/* mask low bits to get the block */
+    MALLOC_ASSERT (block->mallocUniqueID == tbbmallocUniqueID, ASSERT_TEXT);
     MALLOC_ASSERT (block->allocatedCount, ASSERT_TEXT);
 
     if (myTid == block->owner) {
@@ -1507,6 +1516,8 @@ extern "C" void* scalable_realloc(void* ptr, size_t sz)
         return NULL;
     }
     block = (Block *) ((uintptr_t)ptr & ~(blockSize - 1)); /* mask low bits to get the block */
+    MALLOC_ASSERT( block->mallocUniqueID==tbbmallocUniqueID, ASSERT_TEXT );
+
     if (isLargeObject(ptr)) {
         LargeObjectHeader* loh = (LargeObjectHeader*)block;
         copySize = loh->unalignedSize-((uintptr_t)ptr-(uintptr_t)loh->unalignedResult);
@@ -1546,8 +1557,9 @@ extern "C" void* scalable_realloc(void* ptr, size_t sz)
 
 /*
  * From K&R
- * calloc returns a pointer to space for an array of nobj objects, each of size size,
- * or NULL if the request cannot be satisfied. The sapce is initialized to zero bytes.
+ * calloc returns a pointer to space for an array of nobj objects, 
+ * each of size size, or NULL if the request cannot be satisfied. 
+ * The space is initialized to zero bytes.
  *
  */
 

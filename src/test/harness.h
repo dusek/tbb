@@ -52,7 +52,7 @@
 
 static void ReportError( int line, const char* expression, const char * message, bool is_error ) {
     if ( is_error ) {
-        fprintf(stderr,"Line %d, assertion %s: %s\n", line, expression, message ? message : "failed" );
+        printf("Line %d, assertion %s: %s\n", line, expression, message ? message : "failed" );
 #if TBB_EXIT_ON_ASSERT
         exit(1);
 #else
@@ -60,7 +60,7 @@ static void ReportError( int line, const char* expression, const char * message,
 #endif /* TBB_EXIT_ON_ASSERT */
     }
     else
-        printf("WARNING: at line %d, assertion %s: %s\n", line, expression, message ? message : "failed" );
+        printf("Warning: at line %d, assertion %s: %s\n", line, expression, message ? message : "failed" );
 }
 
 #if !HARNESS_NO_PARSE_COMMAND_LINE
@@ -100,21 +100,21 @@ static void ParseCommandLine( int argc, char* argv[] ) {
         else if( *endptr=='\0' ) 
             MaxThread = MinThread;
         if( *endptr!='\0' ) {
-            fprintf(stderr,"garbled nthread range\n");
+            printf("garbled nthread range\n");
             exit(1);
         }    
         if( MinThread<0 ) {
-            fprintf(stderr,"nthread must be nonnegative\n");
+            printf("nthread must be nonnegative\n");
             exit(1);
         }
         if( MaxThread<MinThread ) {
-            fprintf(stderr,"nthread range is backwards\n");
+            printf("nthread range is backwards\n");
             exit(1);
         }
         ++i;
     }
     if( i!=argc ) {
-        fprintf(stderr,"Usage: %s [-v] [nthread|minthread:maxthread]\n", argv[0] );
+        printf("Usage: %s [-v] [nthread|minthread:maxthread]\n", argv[0] );
         exit(1);
     }
 }
@@ -136,8 +136,15 @@ public:
         thread_handle = (HANDLE)_beginthreadex( NULL, 0, thread_function, this, 0, &thread_id );
         ASSERT( thread_handle!=0, "NativeParallelFor: _beginthreadex failed" );
 #else
+#if __ICC==1100
+    #pragma warning (push)
+    #pragma warning (disable: 2193)
+#endif /* __ICC==1100 */
         int status = pthread_create(&thread_id, NULL, thread_function, this);
         ASSERT(0==status, "NativeParallelFor: pthread_create failed");
+#if __ICC==1100
+    #pragma warning (pop)
+#endif /* __ICC==1100 */
 #endif
     }
 

@@ -121,11 +121,22 @@
     reinterpret_cast<class_name*>((char*)member_addr - __TBB_offsetof(class_name, member_name))
 #endif /* __TBB_EXCEPTIONS */
 
+// Macro __TBB_EXC_AND_DEQUE_ARGS is an attempt to get rid of the monstrously nested 
+// ifdefs in the main part of the code. It drops some of its arguments depending on
+// wether the corresponding controlling macros are defined. 
+// The first argument is just a convenience allowing to keep comma before the macro usages.
+#if __TBB_EXCEPTIONS
+    #define __TBB_EXC_AND_DEQUE_ARGS(arg1, depth, context) arg1, depth, context
+#else /* !__TBB_EXCEPTIONS */
+    #define __TBB_EXC_AND_DEQUE_ARGS(arg1, depth, context) arg1, depth
+#endif /* !__TBB_EXCEPTIONS */
+
 namespace tbb {
 
 using namespace std;
 
 namespace internal {
+
 
 //! Alignment for a task object
 const size_t task_alignment = 16;
@@ -317,6 +328,7 @@ public:
 // TaskPool
 //------------------------------------------------------------------------
 
+
 //! Prefix to a TaskPool
 class TaskPoolPrefix {
     static const unsigned null_arena_index = ~0u;
@@ -372,7 +384,7 @@ class TaskPool {
         return true;
     }
 #endif /* TBB_DO_ASSERT */
-};
+}; // class TaskPool
 
 //------------------------------------------------------------------------
 // Arena
@@ -464,6 +476,7 @@ public:
     {
     }
 };
+
 
 struct UnpaddedArenaSlot {
     //! Holds copy of task_pool->deepest and a lock bit
@@ -755,8 +768,9 @@ extern void initialize_cache_aligned_allocator();
 //! Perform lazy one-time initializations. */
 void DoOneTimeInitializations() {
 #if USE_PTHREAD
-    int status = 0;
-    pthread_mutex_lock( &OneTimeInitializationMutex );
+    int status = pthread_mutex_lock( &OneTimeInitializationMutex );
+    if( status )
+        handle_perror(status,"pthread_mutex_lock");
 #else
     EnterCriticalSection( &OneTimeInitializationCriticalSection );
 #endif /* USE_PTHREAD */
@@ -781,9 +795,9 @@ void DoOneTimeInitializations() {
         OneTimeInitializationsDone = true;
     }
 #if USE_PTHREAD
-    pthread_mutex_unlock( &OneTimeInitializationMutex );
+    status = pthread_mutex_unlock( &OneTimeInitializationMutex );
     if( status )
-        handle_perror(status,"pthread_key_create");
+        handle_perror(status,"pthread_mutex_unlock");
 #else
     LeaveCriticalSection( &OneTimeInitializationCriticalSection );
 #endif /* USE_PTHREAD */
@@ -975,6 +989,7 @@ class GenericScheduler: public scheduler {
         return (t.prefix().extra_state & 0x3F)==0x1;
     }
 
+    
     //! Deepest non-empty level.
     /** Not read by thieves. -1 if array is empty. */
     depth_type deepest;
@@ -1081,18 +1096,21 @@ class GenericScheduler: public scheduler {
     long proxy_bypass_count;
 #endif /* STATISTICS */
 
+
     //! Try to enter the arena
-    /** On return, guaranteess that task pool has been acquired. */
+    /** On return, guarantees that task pool has been acquired. */
     void try_enter_arena();
 
     //! Leave the arena
     void leave_arena( bool compress );
 
+    //! Locks the local task pool
     void acquire_task_pool() const;
 
+    //! Unlocks the local task pool
     void release_task_pool() const;
 
-    //! Get task from ready pool.
+    //! Get task from the ready pool.
     /** Called only by the thread that owns *this.
         Gets task only if there is one at depth d or deeper in the pool.
         If successful, unlinks the task and returns a pointer to it.
@@ -1111,6 +1129,7 @@ class GenericScheduler: public scheduler {
         return t.prefix().extra_state==es_task_proxy;
     }
 
+    //! Extracts task pointer during the local task retrieval or while stealing, and frees the proxy
     /** Return NULL if underlying task was claimed by mailbox. */
     task* strip_proxy( task_proxy* result );
 
@@ -1118,8 +1137,6 @@ class GenericScheduler: public scheduler {
     task* steal_task( UnpaddedArenaSlot& arena_slot, depth_type d );
 
     //! Grow "array" to at least "minimum_size" elements.
-    /** Does nothing if array is already that big.
-        Returns &array[minimum_size-1] */
     void grow( TaskPool::size_type minimum_size );
 
     //! Call destructor for a task and put it on the free list (or free it if it is big).
@@ -1168,11 +1185,8 @@ public:
 
     //! Allocate task object, either from the heap or a free list.
     /** Returns uninitialized task object with initialized prefix. */
-#if __TBB_EXCEPTIONS
-    task& allocate_task( size_t number_of_bytes, depth_type depth, task* parent, task_group_context* context );
-#else
-    task& allocate_task( size_t number_of_bytes, depth_type depth, task* parent );
-#endif /* __TBB_EXCEPTIONS */
+    task& allocate_task( size_t number_of_bytes, 
+                       __TBB_EXC_AND_DEQUE_ARGS(task* parent, depth_type depth, task_group_context* context) );
 
     //! Optimization hint to free_task that enables it omit unnecessary tests and code.
     enum hint {
@@ -1297,13 +1311,8 @@ class auto_empty_task {
     task* my_task;
     GenericScheduler* my_scheduler;
 public:
-#if __TBB_EXCEPTIONS
-    auto_empty_task ( GenericScheduler *s, int depth, task_group_context* context ) 
-        : my_task( new(&s->allocate_task(sizeof(empty_task), depth, NULL, context)) empty_task )
-#else
-    auto_empty_task ( GenericScheduler *s, int depth )
-        : my_task( new(&s->allocate_task(sizeof(empty_task), depth, NULL)) empty_task )
-#endif /* __TBB_EXCEPTIONS */
+    auto_empty_task ( __TBB_EXC_AND_DEQUE_ARGS(GenericScheduler *s, int depth, task_group_context* context) ) 
+        : my_task( new(&s->allocate_task(sizeof(empty_task), __TBB_EXC_AND_DEQUE_ARGS(NULL, depth, context))) empty_task )
         , my_scheduler(s)
     {}
     // empty_task has trivial destructor, so call free_task directly instead of going through destroy_task.
@@ -1319,11 +1328,8 @@ public:
 // GenericScheduler implementation
 //------------------------------------------------------------------------
 
-#if __TBB_EXCEPTIONS
-inline task& GenericScheduler::allocate_task( size_t number_of_bytes, depth_type depth, task* parent, task_group_context* context ) {
-#else
-inline task& GenericScheduler::allocate_task( size_t number_of_bytes, depth_type depth, task* parent ) {
-#endif /* __TBB_EXCEPTIONS */
+inline task& GenericScheduler::allocate_task( size_t number_of_bytes, 
+                                            __TBB_EXC_AND_DEQUE_ARGS(task* parent, depth_type depth, task_group_context* context) ) {
     GATHER_STATISTIC(current_active+=1);
     task* t = free_list;
     if( number_of_bytes<=quick_task_size ) {
@@ -1680,12 +1686,10 @@ GenericScheduler::GenericScheduler( Arena* arena_ ) :
     dummy_slot.steal_end = -2;
     dummy_slot.owner_waits = false;
     array_size = TaskPool::min_array_size;
+    dummy_task = &allocate_task( sizeof(task), __TBB_EXC_AND_DEQUE_ARGS(NULL, -1, NULL) );
 #if __TBB_EXCEPTIONS
-    dummy_task = &allocate_task( sizeof(task), -1, NULL, NULL );
     context_list_head.my_prev = &context_list_head;
     context_list_head.my_next = &context_list_head;
-#else
-    dummy_task = &allocate_task( sizeof(task), -1, NULL );
 #endif /* __TBB_EXCEPTIONS */
     dummy_task->prefix().ref_count = 2;
     __TBB_ASSERT( assert_okay(), "constructor error" );
@@ -1780,10 +1784,8 @@ void GenericScheduler::grow( TaskPool::size_type minimum_size ) {
     TBB_TRACE(("%p.grow(minimum_size=%lx)\n", this, minimum_size ));
     __TBB_ASSERT( assert_okay(), NULL );
 
-    // Might need to resize the underlying array.
-    // Get a fresh zeroed array before acquiring the old array.
     TaskPool::size_type b_size = 2*minimum_size;
-    __TBB_ASSERT( b_size>=TaskPool::min_array_size, NULL );
+    __TBB_ASSERT( b_size > array_size, "ready task pool cannot shrink" );
     TaskPool* new_pool = TaskPool::allocate_task_pool( b_size );
     __TBB_ASSERT( assert_okay(), NULL );
     acquire_task_pool();
@@ -1857,6 +1859,8 @@ void GenericScheduler::free_scheduler() {
         NFS_Free( this );
 }
 
+
+
 inline void GenericScheduler::acquire_task_pool() const {
     __TBB_ASSERT( arena_slot, "arena_slot not set" );
     __TBB_ASSERT( deepest>=-1, NULL );
@@ -1895,7 +1899,7 @@ inline void GenericScheduler::acquire_task_pool() const {
     __TBB_ASSERT( arena_slot->steal_end>>1 <= depth_type(array_size), NULL );
     __TBB_ASSERT( dummy_slot.task_pool->prefix().steal_begin<=depth_type(array_size), NULL );
     __TBB_ASSERT( deepest<=depth_type(array_size), NULL );
-}
+} // GenericScheduler::acquire_task_pool
 
 inline void GenericScheduler::release_task_pool() const {
     __TBB_ASSERT( arena_slot->steal_end>>1 <= depth_type(array_size), NULL );
@@ -1905,17 +1909,18 @@ inline void GenericScheduler::release_task_pool() const {
     __TBB_store_with_release( arena_slot->steal_end, 2*deepest );
 }
 
+
 /** Conceptually, this method should be a member of class scheduler.
     But doing so would force us to publish class scheduler in the headers. */
 void GenericScheduler::spawn( task& first, task*& next ) {
     __TBB_ASSERT( assert_okay(), NULL );
     TBB_TRACE(("%p.internal_spawn enter\n", this ));
+
     task* first_ptr = &first;
     task** link = &first_ptr;
-    for( task* t = first_ptr; ; t=*link )
-    {
-        __TBB_ASSERT( t->state()==task::allocated, "attempt to spawn task that is not in 'allocated' state" );
+    for( task* t = first_ptr; ; t=*link ) {
         __TBB_ASSERT( t->prefix().depth==first.prefix().depth, "tasks must have same depth" );
+        __TBB_ASSERT( t->state()==task::allocated, "attempt to spawn task that is not in 'allocated' state" );
         t->prefix().owner = this;
         t->prefix().state = task::ready;
 #if TBB_DO_ASSERT
@@ -1929,11 +1934,8 @@ void GenericScheduler::spawn( task& first, task*& next ) {
         affinity_id dst_thread=t->prefix().affinity;
         __TBB_ASSERT( dst_thread==0 || is_version_3_task(*t), "backwards compatibility to TBB 2.0 tasks is broken" );
         if( dst_thread!=0 && dst_thread!=my_affinity_id ) {
-#if __TBB_EXCEPTIONS
-            task_proxy& proxy = (task_proxy&)allocate_task( sizeof(task_proxy), t->depth(), NULL, NULL );
-#else
-            task_proxy& proxy = (task_proxy&)allocate_task( sizeof(task_proxy), t->depth(), NULL );
-#endif /* __TBB_EXCEPTIONS */
+            task_proxy& proxy = (task_proxy&)allocate_task( sizeof(task_proxy), 
+                                                          __TBB_EXC_AND_DEQUE_ARGS(NULL, t->depth(), NULL) );
             // Mark as a proxy
             proxy.prefix().extra_state = es_task_proxy;
             proxy.outbox = &arena->mailbox(dst_thread);
@@ -1946,10 +1948,10 @@ void GenericScheduler::spawn( task& first, task*& next ) {
             ITT_NOTIFY( sync_releasing, proxy.outbox );
             // Mail the proxy - after this point, t->prefix().next may be changed by another thread.
             proxy.outbox->push(proxy);
-            goto advance;
         }
-        link = &t->prefix().next;
-advance:
+        else {
+            link = &t->prefix().next;
+        }
         if( &t->prefix().next==&next )
             break;
     }
@@ -1976,6 +1978,7 @@ advance:
         tp->prefix().steal_begin = d;
 
     release_task_pool();
+
     mark_pool_full();
     __TBB_ASSERT( assert_okay(), NULL );
 
@@ -1984,11 +1987,7 @@ advance:
 
 void GenericScheduler::spawn_root_and_wait( task& first, task*& next ) {
     __TBB_ASSERT( &first, NULL );
-#if __TBB_EXCEPTIONS
-    auto_empty_task dummy(this, first.prefix().depth-1, first.prefix().context);
-#else
-    empty_task& dummy = *new(&allocate_task( sizeof(empty_task), first.prefix().depth-1, NULL )) empty_task;
-#endif /* __TBB_EXCEPTIONS */
+    auto_empty_task dummy( __TBB_EXC_AND_DEQUE_ARGS(this, first.prefix().depth-1, first.prefix().context) );
     internal::reference_count n = 0;
     for( task* t=&first; ; t=t->prefix().next ) {
         ++n;
@@ -2006,10 +2005,6 @@ void GenericScheduler::spawn_root_and_wait( task& first, task*& next ) {
         spawn( *first.prefix().next, next );
     TBB_TRACE(("spawn_root_and_wait((task_list*)%p): calling %p.loop\n",&first,this));
     wait_for_all( dummy, &first );
-#if !__TBB_EXCEPTIONS
-    // empty_task has trivial destructor, so call free_task directly instead of going through destroy_task.
-    free_task<is_small_local>( dummy );
-#endif /* __TBB_EXCEPTIONS */
     TBB_TRACE(("spawn_root_and_wait((task_list*)%p): return\n",&first));
 }
 
@@ -2020,7 +2015,7 @@ inline task* GenericScheduler::get_mailbox_task() {
         intptr tat = __TBB_load_with_acquire(t->task_and_tag);
         __TBB_ASSERT( tat==task_proxy::mailbox_bit || tat==(tat|3)&&tat!=3, NULL );
         if( tat!=task_proxy::mailbox_bit && __TBB_CompareAndSwapW( &t->task_and_tag, task_proxy::pool_bit, tat )==tat ) {
-            // Sucessfully grabbed the task, and left pool seeker with job of freeing the proxy.
+            // Successfully grabbed the task, and left pool seeker with job of freeing the proxy.
             ITT_NOTIFY( sync_acquired, inbox.outbox() );
             result = (task*)(tat & ~3);
             result->prefix().owner = this;
@@ -2039,23 +2034,22 @@ inline task* GenericScheduler::strip_proxy( task_proxy* tp ) {
         // Attempt to transition it to "empty proxy in mailbox" state.
         if( __TBB_CompareAndSwapW( &tp->task_and_tag, task_proxy::mailbox_bit, tat )==tat ) {
             // Successfully grabbed the task, and left the mailbox with the job of freeing the proxy.
-            goto success;
+            return (task*)(tat&~3);
         }
         __TBB_ASSERT( tp->task_and_tag==task_proxy::pool_bit, NULL );
-        tat = task_proxy::pool_bit;
     } else {
         // We have exclusive access to the proxy
         __TBB_ASSERT( (tat&3)==task_proxy::pool_bit, "task did not come from pool?" );
+        __TBB_ASSERT ( !(tat&~3), "Empty proxy in the pool contains non-zero task pointer" );
     }
+#if TBB_DO_ASSERT
     tp->prefix().state = task::allocated;
+#endif
     free_task_proxy( *tp );
-    if(!(tat&~3)) {
-        // Another thread grabbed the underlying task via their mailbox
-        return NULL;
-    }
-success:
-    return (task*)(tat&~3);
+    // Another thread grabbed the underlying task via their mailbox
+    return NULL;
 }
+
 
 inline task* GenericScheduler::get_task( depth_type d ) {
     task* result = NULL;
@@ -2094,7 +2088,7 @@ retry:
         }
     }
     return result;
-}
+} // GenericScheduler::get_task
 
 task* GenericScheduler::steal_task( UnpaddedArenaSlot& arena_slot, depth_type d ) {
     task* result = NULL;
@@ -2302,7 +2296,7 @@ exception_was_caught:
                     }
 
                     case task::reexecute: // set by recycle_to_reexecute()
-                        __TBB_ASSERT( t_next, "reexecution requires that method 'execute' return a task" );
+                        __TBB_ASSERT( t_next && t_next != t, "reexecution requires that method 'execute' return another task" );
                         TBB_TRACE(("%p.wait_for_all: put task %p back into array",this,t));
                         t->prefix().state = task::allocated;
                         CustomScheduler<SchedulerTraits>::spawn( *t, t->prefix().next );
@@ -2338,8 +2332,7 @@ exception_was_caught:
         } while( t ); // end of local task array processing loop
 
         inbox.set_is_idle( true );
-        __TBB_ASSERT( arena->prefix().number_of_workers>0||parent.prefix().ref_count==1,
-                    "deadlock detected" );
+        __TBB_ASSERT( arena->prefix().number_of_workers>0||parent.prefix().ref_count==1, "deadlock detected" );
         // The state "failure_count==-1" is used only when itt_possible is true,
         // and denotes that a sync_prepare has not yet been issued.
         for( int failure_count = -static_cast<int>(SchedulerTraits::itt_possible);; ++failure_count) {
@@ -2477,11 +2470,11 @@ done:
     TBB_TRACE(("%p.wait_for_all(parent=%p): return\n",this,&parent));
 }
 
+
 void GenericScheduler::try_enter_arena() {
     __TBB_ASSERT( arena, NULL );
     __TBB_ASSERT( arena_slot, "arena_slot not set" );
     __TBB_ASSERT( arena_slot==&dummy_slot, "already in arena?" );
-    // Sync up the local cancellation state with the global one.
     unsigned n = arena->prefix().number_of_slots;
     unsigned j = unsigned(arena->prefix().limit);
     for( unsigned k=j; k<n; ++k ) {
@@ -2579,11 +2572,12 @@ GenericScheduler* GenericScheduler::create_worker( WorkerDescriptor& w ) {
     slot.steal_end = -2;
     slot.owner_waits = false;
 
+
 #if USE_WINTHREAD
     HANDLE cur_process = GetCurrentProcess();
     BOOL bRes = DuplicateHandle(cur_process, GetCurrentThread(), cur_process, &w.thread_handle, 0, FALSE, DUPLICATE_SAME_ACCESS);
     if( !bRes ) {
-        printf("ERROR: DuplicateHandle failed with status 0x%08X", GetLastError());
+        fprintf(stderr, "ERROR: DuplicateHandle failed with status 0x%08X", GetLastError());
         w.thread_handle = INVALID_HANDLE_VALUE;
     }
 #else /* USE_PTHREAD */
@@ -2630,7 +2624,9 @@ GenericScheduler* GenericScheduler::create_master( Arena* arena ) {
         node.my_prev = &the_scheduler_list_head;
         the_scheduler_list_head.my_next->my_prev = &node;
         the_scheduler_list_head.my_next = &node;
+
     }
+
     // Sync up the local cancellation state with the global one. No need for fence here.
     s->local_cancel_count = global_cancel_count;
 #endif /* __TBB_EXCEPTIONS */
@@ -2749,13 +2745,9 @@ void WorkerDescriptor::start_one_worker_thread() {
 task& allocate_root_proxy::allocate( size_t size ) {
     internal::GenericScheduler* v = GetThreadSpecific();
     __TBB_ASSERT( v, "thread did not activate a task_scheduler_init object?" );
-#if __TBB_EXCEPTIONS
     task_prefix& p = v->innermost_running_task->prefix();
     // New root task becomes part of the currently running task's cancellation context
-    return v->allocate_task( size, p.depth+1, NULL, p.context );
-#else
-    return v->allocate_task( size, v->innermost_running_task->prefix().depth+1, NULL );
-#endif /* __TBB_EXCEPTIONS */
+    return v->allocate_task( size, __TBB_EXC_AND_DEQUE_ARGS(NULL, p.depth+1, p.context) );
 }
 
 void allocate_root_proxy::free( task& task ) {
@@ -2775,7 +2767,7 @@ task& allocate_root_with_context_proxy::allocate( size_t size ) const {
     internal::GenericScheduler* v = GetThreadSpecific();
     __TBB_ASSERT( v, "thread did not activate a task_scheduler_init object?" );
     task_prefix& p = v->innermost_running_task->prefix();
-    task& t = v->allocate_task( size, p.depth+1, NULL, &my_context );
+    task& t = v->allocate_task( size, __TBB_EXC_AND_DEQUE_ARGS(NULL, p.depth+1, &my_context) );
     // The supported usage model prohibits concurrent initial binding. Thus we 
     // do not need interlocked operations or fences here.
     if ( my_context.my_kind == task_group_context::binding_required ) {
@@ -2830,11 +2822,7 @@ task& allocate_continuation_proxy::allocate( size_t size ) const {
     __TBB_ASSERT( GetThreadSpecific()==v, "thread does not own this" );
     task* parent = t.parent();
     t.prefix().parent = NULL;
-#if __TBB_EXCEPTIONS
-    return v->allocate_task( size, t.prefix().depth, parent, t.prefix().context );
-#else
-    return v->allocate_task( size, t.prefix().depth, parent );
-#endif /* __TBB_EXCEPTIONS */
+    return v->allocate_task( size, __TBB_EXC_AND_DEQUE_ARGS(parent, t.prefix().depth, t.prefix().context) );
 }
 
 void allocate_continuation_proxy::free( task& mytask ) const {
@@ -2852,11 +2840,7 @@ task& allocate_child_proxy::allocate( size_t size ) const {
     __TBB_ASSERT( AssertOkay(t), NULL );
     GenericScheduler* v = static_cast<GenericScheduler*>(t.prefix().owner);
     __TBB_ASSERT( GetThreadSpecific()==v, "thread does not own parent" );
-#if __TBB_EXCEPTIONS
-    return v->allocate_task( size, t.prefix().depth+1, &t, t.prefix().context );
-#else
-    return v->allocate_task( size, t.prefix().depth+1, &t );
-#endif /* __TBB_EXCEPTIONS */
+    return v->allocate_task( size, __TBB_EXC_AND_DEQUE_ARGS(&t, t.prefix().depth+1, t.prefix().context) );
 }
 
 void allocate_child_proxy::free( task& mytask ) const {
@@ -2872,11 +2856,7 @@ task& allocate_additional_child_of_proxy::allocate( size_t size ) const {
     __TBB_ASSERT( AssertOkay(self), NULL );
     __TBB_FetchAndIncrementWacquire( &parent.prefix().ref_count );
     GenericScheduler* v = static_cast<GenericScheduler*>(self.prefix().owner);
-#if __TBB_EXCEPTIONS
-    return v->allocate_task( size, parent.prefix().depth+1, &parent, parent.prefix().context );
-#else
-    return v->allocate_task( size, parent.prefix().depth+1, &parent );
-#endif /* __TBB_EXCEPTIONS */
+    return v->allocate_task( size, __TBB_EXC_AND_DEQUE_ARGS(&parent, parent.prefix().depth+1, parent.prefix().context) );
 }
 
 void allocate_additional_child_of_proxy::free( task& task ) const {

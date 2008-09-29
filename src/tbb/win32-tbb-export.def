@@ -95,6 +95,7 @@ __TBB_machine_trylockbyte
 ; itt_notify.cpp
 ?itt_load_pointer_with_acquire_v3@internal@tbb@@YAPAXPBX@Z
 ?itt_store_pointer_with_release_v3@internal@tbb@@YAXPAX0@Z
+?itt_load_pointer_v3@internal@tbb@@YAPAXPBX@Z
 
 ; pipeline.cpp
 ??0pipeline@tbb@@QAE@XZ

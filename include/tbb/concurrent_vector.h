@@ -59,6 +59,9 @@ class concurrent_vector;
 //! @cond INTERNAL
 namespace internal {
 
+    //! Routine that loads pointer from location pointed to by src without any fence, without causing ITT to report a race.
+    void* __TBB_EXPORTED_FUNC itt_load_pointer_v3( const void* src );
+
     //! Base class of concurrent vector implementation.
     /** @ingroup containers */
     class concurrent_vector_base_v3 {
@@ -808,7 +811,11 @@ T& concurrent_vector<T, A>::internal_subscript( size_type index ) const {
     size_type j = index;
     segment_index_t k = segment_base_index_of( j );
     // no need in __TBB_load_with_acquire since thread works in own space or gets 
+#if TBB_DO_THREADING_TOOLS||TBB_DO_ASSERT
+    return static_cast<T*>( tbb::internal::itt_load_pointer_v3(&my_segment[k].array))[j];
+#else
     return static_cast<T*>(my_segment[k].array)[j];
+#endif /* TBB_DO_THREADING_TOOLS||TBB_DO_ASSERT */
 }
 
 template<typename T, class A>

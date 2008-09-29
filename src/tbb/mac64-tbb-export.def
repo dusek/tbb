@@ -116,6 +116,7 @@ __ZN3tbb8internal15runtime_warningEPKcz
 # itt_notify.cpp
 __ZN3tbb8internal32itt_load_pointer_with_acquire_v3EPKv
 __ZN3tbb8internal33itt_store_pointer_with_release_v3EPvS1_
+__ZN3tbb8internal19itt_load_pointer_v3EPKv
 
 # pipeline.cpp
 __ZTIN3tbb6filterE

@@ -53,10 +53,10 @@ public:
 };
 
 void GenericScheduler::test_assembly_routines() {
+    ASSERT( assert_okay(), NULL );
     try_enter_arena();
     mark_pool_full();
     release_task_pool();
-    ASSERT( assert_okay(), NULL );
     long steal_count = 0;
     long get_count = 0;
     const depth_type n = 5;

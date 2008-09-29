@@ -112,6 +112,7 @@ __TBB_machine_store8_slow;
 /* itt_notify.cpp */
 _ZN3tbb8internal32itt_load_pointer_with_acquire_v3EPKv;
 _ZN3tbb8internal33itt_store_pointer_with_release_v3EPvS1_;
+_ZN3tbb8internal19itt_load_pointer_v3EPKv;
 
 /* pipeline.cpp */
 _ZTIN3tbb6filterE;

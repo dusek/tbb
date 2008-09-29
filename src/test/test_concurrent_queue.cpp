@@ -308,7 +308,7 @@ void TestIterator() {
     TestIteratorAssignment<tbb::concurrent_queue<Foo>::iterator>( queue.begin() );
 }
 
-void TestConcurrenetQueueType() {
+void TestConcurrentQueueType() {
     AssertSameType( tbb::concurrent_queue<Foo>::value_type(), Foo() );
     Foo f;
     const Foo g;
@@ -538,7 +538,7 @@ int main( int argc, char* argv[] ) {
     TestEmptyQueue<Foo>();
     TestFullQueue();
     TestClear();
-    TestConcurrenetQueueType();
+    TestConcurrentQueueType();
     TestIterator();
 
     // Test concurrent operations

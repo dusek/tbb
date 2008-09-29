@@ -1,19 +1,41 @@
+------------------------------------------------------------------------
+20080925 open-source release
+
+Changes (w.r.t. previous open-source release):
+
+- Improved support for lambda functions.
+- Fixed more concurrent_queue issues.
+- A number of other improvements to code, tests, makefiles, examples 
+    and documents.
+
+------------------------------------------------------------------------
+TBB 2.1 U1 commercial-aligned release
+
+Changes (w.r.t. TBB 2.1 Gold commercial-aligned release):
+
+- Fixed small memory leak in the memory allocator.
+- Open-source-release changes down to TBB 2.1 GOLD below,
+    were incorporated into this release, except for:
+    - 20080825 changes for parallel_do;
+
+------------------------------------------------------------------------
 20080825 open-source release
 
 Changes (w.r.t. previous open-source release):
 
-- Added exception handling and cancellation support for parallel_do
-- Added default HashCompare template argument for concurrent_hash_map
-- Fixed concurrent_queue.clear() issues due to incorrect assumption that
-  clear() being private method.
-- Added the possibility to use TBB in applications that change default calling conventions (Windows* only)
-- Various improvements to code, tests, examples, makefiles and documentation. 
+- Added exception handling and cancellation support for parallel_do.
+- Added default HashCompare template argument for concurrent_hash_map.
+- Fixed concurrent_queue.clear() issues due to incorrect assumption
+    about clear() being private method.
+- Added the possibility to use TBB in applications that change
+    default calling conventions (Windows* only).
+- Many improvements to code, tests, examples, makefiles and documents.
 
 Bugs fixed:
 
 - 120, 130 - memset declaration missed in concurrent_hash_map.h
 
--------------------------------------------------------------------------------
+------------------------------------------------------------------------
 20080724 open-source release
 
 Changes (w.r.t. previous open-source release):
@@ -21,14 +43,14 @@ Changes (w.r.t. previous open-source release):
 - Inline assembly for atomic operations improved for gcc 4.3
 - A few more improvements to the code.
 
--------------------------------------------------------------------------------
+------------------------------------------------------------------------
 20080709 open-source release
 
 Changes (w.r.t. previous open-source release):
 
-- operator=() was added to the tbb_thread class according to the current 
-    working draft for std::thread
-- recognizing SPARC* based systems in makefiles for Linux* and Sun Solaris*
+- operator=() was added to the tbb_thread class according to
+    the current working draft for std::thread.
+- Recognizing SPARC* in makefiles for Linux* and Sun Solaris*.
 
 Bugs fixed:
 
@@ -39,16 +61,17 @@ Open-source contributions integrated:
 - fix_set_midpoint.diff by jyasskin
 - SPARC* support in makefiles by Raf Schietekat
 
--------------------------------------------------------------------------------
+------------------------------------------------------------------------
 20080622 open-source release
 
 Changes (w.r.t. previous open-source release):
 
-- Fixed hang that rarely happened on Linux during the scheduler deinitialization
-- Improved support for Intel(R) Thread Checker
-- A few more improvements to the code
+- Fixed a hang that rarely happened on Linux
+    during deinitialization of the TBB scheduler.
+- Improved support for Intel(R) Thread Checker.
+- A few more improvements to the code.
 
--------------------------------------------------------------------------------
+------------------------------------------------------------------------
 TBB 2.1 GOLD commercial-aligned release
 
 Changes (w.r.t. TBB 2.0 U3 commercial-aligned release):

@@ -87,7 +87,7 @@ void plugin_call(int maxthread)
         CModel model;
         model.init_and_terminate(maxthread);
     } catch( std::runtime_error& error ) {
-        fprintf(stderr, "ERROR: %s\n", error.what());
+        printf("ERROR: %s\n", error.what());
     }
 }
 
@@ -111,9 +111,7 @@ void report_error_in(const char* function_name)
     char* message = (char*)dlerror();
     int code = 0;
 #endif
-    fprintf(stderr,
-        "%s failed with error %d: %s\n",
-        function_name, code, message);
+    printf( "%s failed with error %d: %s\n", function_name, code, message);
 
 #if _WIN32 || _WIN64
     LocalFree(message);

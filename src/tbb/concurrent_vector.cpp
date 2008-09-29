@@ -27,6 +27,7 @@
 */
 
 #include "tbb/concurrent_vector.h"
+#include "tbb/cache_aligned_allocator.h"
 #include "tbb/tbb_exception.h"
 #include "tbb_misc.h"
 #include "itt_notify.h"
@@ -82,7 +83,6 @@ public:
 
     inline static size_type enable_segment(concurrent_vector_base_v3 &v, size_type k, size_type element_size) {
         __TBB_ASSERT( !v.my_segment[k].array, "concurrent operation during growth?" );
-        size_type m = segment_size(k);
         if( !k ) {
             assign_first_segment_if_neccessary(v, default_initial_segments-1, element_size);
             try {
@@ -92,10 +92,13 @@ public:
             }
             return 2;
         }
+        size_type m = segment_size(k);
         if( !v.my_first_block )
             internal::SpinwaitWhileEq( v.my_first_block, segment_index_t(0) );
         if( k < v.my_first_block ) {
             segment_t* s = v.my_segment;
+            // TODO: __TBB_load_with_acquire is not necessary here and below due to following spinwait and
+            // because s[0].array is changed only once ( 0 -> !0 ) and points to uninitialized memory
             void *array0 = __TBB_load_with_acquire(s[0].array);
             if( !array0 ) {
                 // sync_prepare called only if there is a wait
@@ -419,7 +422,6 @@ void concurrent_vector_base_v3::internal_swap(concurrent_vector_base_v3& v)
     }
     my_early_size = v_sz; v.my_early_size = my_sz;
 }
-
 
 } // namespace internal
 

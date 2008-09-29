@@ -38,7 +38,7 @@
 				Name="VCCustomBuildTool"/>
 			<Tool
 				Name="VCLinkerTool"
-				AdditionalDependencies="tbb_debug.lib"
+				AdditionalDependencies="$(OutDir)/tachyon.common.lib tbb_debug.lib"
 				LinkIncremental="1"
 				AdditionalLibraryDirectories="$(TBB21_INSTALL_DIR)\ia32\vc7.1\lib"
 				GenerateDebugInformation="TRUE"
@@ -94,7 +94,7 @@
 				Name="VCCustomBuildTool"/>
 			<Tool
 				Name="VCLinkerTool"
-				AdditionalDependencies="tbb.lib"
+				AdditionalDependencies="$(OutDir)/tachyon.common.lib tbb.lib"
 				LinkIncremental="1"
 				AdditionalLibraryDirectories="$(TBB21_INSTALL_DIR)\ia32\vc7.1\lib"
 				SubSystem="2"
@@ -150,7 +150,7 @@
 				Name="VCCustomBuildTool"/>
 			<Tool
 				Name="VCLinkerTool"
-				AdditionalDependencies="tbb.lib"
+				AdditionalDependencies="$(OutDir)/tachyon.common.lib tbb.lib"
 				LinkIncremental="1"
 				AdditionalLibraryDirectories="&quot;$(TBB21_INSTALL_DIR)\ia32\vc7.1\lib&quot;;&quot;$(DXSDK_DIR)\lib\x86&quot;"
 				SubSystem="2"
@@ -208,7 +208,7 @@
 				Name="VCCustomBuildTool"/>
 			<Tool
 				Name="VCLinkerTool"
-				AdditionalDependencies="tbb_debug.lib"
+				AdditionalDependencies="$(OutDir)/tachyon.common.lib tbb_debug.lib"
 				LinkIncremental="1"
 				AdditionalLibraryDirectories="&quot;$(TBB21_INSTALL_DIR)\ia32\vc7.1\lib&quot;;&quot;$(DXSDK_DIR)\lib\x86&quot;"
 				GenerateDebugInformation="TRUE"

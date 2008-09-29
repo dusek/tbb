@@ -159,32 +159,31 @@ void PrintExtraVersionInfo( const char* category, const char* description ) {
 
 #include "tbb/atomic.h"
 
-namespace tbb {
-namespace internal {
+#if _WIN32||_WIN64 //on windows int64_t defined in tbb::internal namespace only
+using tbb::internal::int64_t;
+#endif
 
 //! Handle 8-byte store that crosses a cache line.
 extern "C" void __TBB_machine_store8_slow( volatile void *ptr, int64_t value ) {
 #if TBB_DO_ASSERT
     // Report run-time warning unless we have already recently reported warning for that address.
     const unsigned n = 4;
-    static atomic<void*> cache[n];
-    static atomic<unsigned> k;
+    static tbb::atomic<void*> cache[n];
+    static tbb::atomic<unsigned> k;
     for( unsigned i=0; i<n; ++i ) 
         if( ptr==cache[i] ) 
             goto done;
     cache[(k++)%n] = const_cast<void*>(ptr);
-    runtime_warning( "atomic store on misaligned 8-byte location %p is slow", ptr );
+    tbb::internal::runtime_warning( "atomic store on misaligned 8-byte location %p is slow", ptr );
 done:;
 #endif /* TBB_DO_ASSERT */
-    for( AtomicBackoff b;; b.pause() ) {
+    for( tbb::internal::AtomicBackoff b;; b.pause() ) {
         int64_t tmp = *(int64_t*)ptr;
         if( __TBB_machine_cmpswp8(ptr,value,tmp)==tmp ) 
             break;
     }
 }
 
-} // namespace internal
-} // namespace tbb
 #endif /* __TBB_x86_32 */
 
 #if __TBB_ipf

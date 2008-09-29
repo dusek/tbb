@@ -39,7 +39,6 @@
 #include "tbb_allocator.h"
 #include "spin_rw_mutex.h"
 #include "atomic.h"
-#include "aligned_space.h"
 #if TBB_PERFORMANCE_WARNINGS
 #include <typeinfo>
 #endif
@@ -403,7 +402,7 @@ public:
 
     //! Combines data access, locking, and garbage collection.
     class const_accessor {
-        friend class concurrent_hash_map;
+        friend class concurrent_hash_map<Key,T,HashCompare,A>;
         friend class accessor;
         void operator=( const accessor& ) const; // Deny access
         const_accessor( const accessor& );       // Deny access

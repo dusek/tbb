@@ -205,6 +205,10 @@ template<typename M> const long Work<M>::chunk = 100;
 
 typedef void* thread_func( void* );
 
+#if __ICC==1100
+    #pragma warning (disable: 2193)
+#endif /* __ICC==1100 */
+
 //! Generic test of a TBB mutex type M.
 /** Does not test features specific to reader-writer locks. */
 template<typename M>

@@ -115,7 +115,7 @@ void RunTaskGenerators( int i ) {
     else
         dummy_root->spawn( *new( dummy_root->allocate_child() ) ChangeProducer );
     if( i==260 && !Producer ) {
-        fprintf(stderr, "Warning: producer has not changed after 10 attempts; running on a single core?\n");
+        printf("Warning: producer has not changed after 10 attempts; running on a single core?\n");
     }
     for( int j=0; j<100; ++j ) {
         tbb::task& t = *new( tbb::task::allocate_root() ) TaskGenerator(/*child_count=*/4, /*depth=*/6);

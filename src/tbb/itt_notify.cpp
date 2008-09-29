@@ -161,6 +161,11 @@ void* itt_load_pointer_with_acquire_v3( const void* src ) {
     return result;
 }
 
+void* itt_load_pointer_v3( const void* src ) {
+    void* result = *static_cast<void*const*>(src);
+    return result;
+}
+
 } // namespace internal 
 
 } // namespace tbb

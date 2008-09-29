@@ -35,6 +35,8 @@
 // Test for task::spawn_children and task_list
 //------------------------------------------------------------------------
 
+
+
 tbb::atomic<int> Count;
 
 class RecursiveTask: public tbb::task {
@@ -80,6 +82,7 @@ static int Expected( int child_count, int depth ) {
 
 #include "tbb/task_scheduler_init.h"
 #include "harness.h"
+
 
 //! Test task::spawn( task_list& )
 void TestSpawnChildren( int nthread ) {
@@ -367,6 +370,9 @@ int main(int argc, char* argv[]) {
         TestSafeContinuation( p );
         TestLeftRecursion( p );
         TestAffinity( p );
+#if __TBB_TASK_DEQUE && __TBB_STEAL_LIMITING_HEURISTICS && !(__TBB_ipf || __linux__ && __TBB_x86_32)
+        TestStealLimit( p );
+#endif /* __TBB_TASK_DEQUE && __TBB_STEAL_LIMITING_HEURISTICS */
     }
     printf("done\n");
     return 0;

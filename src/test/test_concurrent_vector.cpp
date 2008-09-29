@@ -548,7 +548,7 @@ void TestConcurrentGrowBy( int nthread ) {
         }
         delete[] found;
         if( nthread>1 && inversions<m/10 )
-            std::printf("WARNING: not much concurrency in TestConcurrentGrowBy\n");
+            std::printf("Warning: not much concurrency in TestConcurrentGrowBy\n");
     }
     size_t items_allocated = MyAllocator::items_allocated, items_freed = MyAllocator::items_freed;
     size_t allocations = MyAllocator::allocations, frees = MyAllocator::frees;

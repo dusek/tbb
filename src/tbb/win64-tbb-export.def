@@ -91,6 +91,7 @@ __TBB_machine_pause
 ; itt_notify.cpp
 ?itt_load_pointer_with_acquire_v3@internal@tbb@@YAPEAXPEBX@Z
 ?itt_store_pointer_with_release_v3@internal@tbb@@YAXPEAX0@Z
+?itt_load_pointer_v3@internal@tbb@@YAPEAXPEBX@Z
 
 ; pipeline.cpp
 ??_7pipeline@tbb@@6B@

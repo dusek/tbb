@@ -32,6 +32,11 @@
 
 #include <stddef.h> /* Need ptrdiff_t and size_t from here. */
 
+#if !defined(__cplusplus) && __ICC==1100
+    #pragma warning (push)
+    #pragma warning (disable: 991)
+#endif /* !defined(__cplusplus) && __ICC==1100 */
+
 #ifdef __cplusplus
 extern "C" {
 #endif /* __cplusplus */
@@ -64,7 +69,7 @@ void * __TBB_EXPORTED_FUNC scalable_calloc (size_t nobj, size_t size);
 
 #ifdef __cplusplus
 
-#include <new>      // To use new with the placement argument
+#include <new>      /* To use new with the placement argument */
 
 namespace tbb {
 
@@ -150,5 +155,9 @@ inline bool operator!=( const scalable_allocator<T>&, const scalable_allocator<U
 #endif
 
 #endif /* __cplusplus */
+
+#if !defined(__cplusplus) && __ICC==1100
+    #pragma warning (pop)
+#endif /* !defined(__cplusplus) && __ICC==1100 */
 
 #endif /* __TBB_scalable_allocator_H */

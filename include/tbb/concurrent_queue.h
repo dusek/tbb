@@ -31,7 +31,6 @@
 
 #include "tbb_stddef.h"
 #include "cache_aligned_allocator.h"
-#include "tbb_allocator.h"
 #include <new>
 
 namespace tbb {

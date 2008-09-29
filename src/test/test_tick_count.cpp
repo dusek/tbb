@@ -93,7 +93,7 @@ void TestSimpleDelay( int ntrial, double duration, double tolerance ) {
     if( delta<0 ) 
         printf("ERROR: delta=%g < 0\n",delta); 
     if( delta>tolerance )
-        printf("%s: delta=%g > %g=tolerance where duration=%g\n",delta>3*tolerance?"ERROR":"WARNING",delta,tolerance,duration);
+        printf("%s: delta=%g > %g=tolerance where duration=%g\n",delta>3*tolerance?"ERROR":"Warning",delta,tolerance,duration);
 }
 
 //------------------------------------------------------------------------
@@ -131,7 +131,7 @@ void Testtick_countDifference( int n ) {
                 if( diff<0 ) diff = -diff;
                 if( diff>tolerance ) {
                     printf("%s: cross-thread tick_count difference = %g > %g = tolerance\n",
-                           diff>3*tolerance?"ERROR":"WARNING",diff,tolerance);
+                           diff>3*tolerance?"ERROR":"Warning",diff,tolerance);
                 }
             }
     }

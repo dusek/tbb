@@ -161,25 +161,25 @@ public:
     atomic<ticket> head_counter;
     waitvar_t  var_wait_for_items;
     mutexvar_t mtx_items_avail;
-    uint16_t n_waiting_consumers;
+    atomic<uint32_t> n_waiting_consumers;
 #if _WIN32||_WIN64
-    uint16_t consumer_wait_generation;
-    uint16_t n_consumers_to_wakeup;
-    char pad1[NFS_MaxLineSize-((sizeof(atomic<ticket>)+sizeof(waitvar_t)+sizeof(mutexvar_t)+sizeof(uint16_t)+sizeof(uint16_t)+sizeof(uint16_t))&(NFS_MaxLineSize-1))];
+    uint32_t consumer_wait_generation;
+    uint32_t n_consumers_to_wakeup;
+    char pad1[NFS_MaxLineSize-((sizeof(atomic<ticket>)+sizeof(waitvar_t)+sizeof(mutexvar_t)+sizeof(uint32_t)+sizeof(uint32_t)+sizeof(uint32_t))&(NFS_MaxLineSize-1))];
 #else
-    char pad1[NFS_MaxLineSize-((sizeof(atomic<ticket>)+sizeof(waitvar_t)+sizeof(mutexvar_t)+sizeof(uint16_t))&(NFS_MaxLineSize-1))];
+    char pad1[NFS_MaxLineSize-((sizeof(atomic<ticket>)+sizeof(waitvar_t)+sizeof(mutexvar_t)+sizeof(uint32_t))&(NFS_MaxLineSize-1))];
 #endif
 
     atomic<ticket> tail_counter;
     waitvar_t  var_wait_for_slots;
     mutexvar_t mtx_slots_avail;
-    uint16_t n_waiting_producers;
+    atomic<uint32_t> n_waiting_producers;
 #if _WIN32||_WIN64
-    uint16_t producer_wait_generation;
-    uint16_t n_producers_to_wakeup;
-    char pad2[NFS_MaxLineSize-((sizeof(atomic<ticket>)+sizeof(waitvar_t)+sizeof(mutexvar_t)+sizeof(uint16_t)+sizeof(uint16_t)+sizeof(uint16_t))&(NFS_MaxLineSize-1))];
+    uint32_t producer_wait_generation;
+    uint32_t n_producers_to_wakeup;
+    char pad2[NFS_MaxLineSize-((sizeof(atomic<ticket>)+sizeof(waitvar_t)+sizeof(mutexvar_t)+sizeof(uint32_t)+sizeof(uint32_t)+sizeof(uint32_t))&(NFS_MaxLineSize-1))];
 #else
-    char pad2[NFS_MaxLineSize-((sizeof(atomic<ticket>)+sizeof(waitvar_t)+sizeof(mutexvar_t)+sizeof(uint16_t))&(NFS_MaxLineSize-1))];
+    char pad2[NFS_MaxLineSize-((sizeof(atomic<ticket>)+sizeof(waitvar_t)+sizeof(mutexvar_t)+sizeof(uint32_t))&(NFS_MaxLineSize-1))];
 #endif
 #else /* !__TBB_NO_BUSY_WAIT_IN_CONCURRENT_QUEUE */
     atomic<ticket> head_counter;
@@ -400,6 +400,7 @@ void concurrent_queue_base_v3::internal_push( const void* src ) {
                 if( --r.n_producers_to_wakeup == 0 )
                     ResetEvent( r.var_wait_for_slots );
             }
+            --r.n_waiting_producers;
             LeaveCriticalSection( &r.mtx_slots_avail );
             break;
         }
@@ -504,6 +505,7 @@ void concurrent_queue_base_v3::internal_pop( void* dst ) {
                     if( --r.n_consumers_to_wakeup == 0 )
                         ResetEvent( r.var_wait_for_items );
                 }
+                --r.n_waiting_consumers;
                 LeaveCriticalSection( &r.mtx_items_avail );
                 backoff.reset();
                 break; // break from inner while

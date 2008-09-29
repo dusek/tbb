@@ -310,10 +310,10 @@ public:
             , my_value(other.identity_element)
         { }
         void operator()(Range& range) {
-            my_real_body(range, my_value);
+            my_value = my_real_body(range, const_cast<const Value&>(my_value));
         }
         void join( lambda_reduce_body& rhs ) {
-            my_value = my_reduction(my_value, rhs.my_value);
+            my_value = my_reduction(const_cast<const Value&>(my_value), const_cast<const Value&>(rhs.my_value));
         }
         Value result() const {
             return my_value;
