@@ -119,17 +119,15 @@ void DoFib( FlagType flags ) {
 }
 
 #include "tbb/task_scheduler_init.h"
-#include "tbb/blocked_range.h"
 #include "harness.h"
 
 class DoTest {
     int nthread;
 public:
     DoTest( int n ) : nthread(n) {}
-    void operator()( tbb::blocked_range<int> r ) const {
+    void operator()( int i ) const {
         TLS& tls = GetTLS();
         tls.IsMaster = true;
-        int i = r.begin(); 
         if( i==0 ) {   
             tbb::task_scheduler_init(nthread);
             DoFib(0);
@@ -143,7 +141,7 @@ public:
 };
 
 void TestObserver( int p, int q ) {
-    NativeParallelFor( tbb::blocked_range<int>(0,p,1), DoTest(q) );
+    NativeParallelFor( p, DoTest(q) );
 }
 
 int main(int argc, char* argv[]) {

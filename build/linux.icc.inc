@@ -45,7 +45,7 @@ CPLUS = icpc
 ifeq (release,$(cfg))
 CPLUS_FLAGS = -O2 -strict_ansi -DUSE_PTHREAD
 else
-CPLUS_FLAGS = -O0 -g -strict_ansi -DUSE_PTHREAD -DTBB_DO_ASSERT
+CPLUS_FLAGS = -O0 -g -strict_ansi -DUSE_PTHREAD -DTBB_USE_DEBUG
 endif
 
 ifneq (,$(codecov))

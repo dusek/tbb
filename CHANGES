@@ -1,4 +1,26 @@
 ------------------------------------------------------------------------
+20081019 open-source release
+
+Changes (w.r.t. previous open-source release):
+
+- Introduced enumerable_thread_specific<T>.  This new class provides a 
+    wrapper around native thread local storage as well as iterators and 
+    ranges for accessing the thread local copies.
+- Improved support for Intel(R) Threading Analysis Tools on Intel(R) 64 
+    Architecture.
+- Dependency from Microsoft* CRT was integrated to the libraries using 
+    manifests for better support of calls from code different from 
+    Visual C++* runtime.
+- Introduced new defines TBB_USE_ASSERT, TBB_USE_DEBUG, 
+    TBB_USE_PERFORMANCE_WARNINGS, TBB_USE_THREADING_TOOLS
+- A number of other improvements to code, tests, makefiles, examples 
+    and documents.
+
+Open-source contributions integrated:
+
+- linker optimization (partially).
+
+------------------------------------------------------------------------
 20080925 open-source release
 
 Changes (w.r.t. previous open-source release):

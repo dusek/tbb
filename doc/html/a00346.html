@@ -89,17 +89,17 @@
 00095     result.<a class="code" href="a00265.html#r0">my_count</a> = qpcnt.QuadPart;
 00096 <span class="preprocessor">#elif __linux__</span>
 00097 <span class="preprocessor"></span>    <span class="keyword">struct </span>timespec ts;
-00098 <span class="preprocessor">#if TBB_DO_ASSERT</span>
+00098 <span class="preprocessor">#if TBB_USE_ASSERT</span>
 00099 <span class="preprocessor"></span>    <span class="keywordtype">int</span> status = 
-00100 <span class="preprocessor">#endif </span><span class="comment">/* TBB_DO_ASSERT */</span>
+00100 <span class="preprocessor">#endif </span><span class="comment">/* TBB_USE_ASSERT */</span>
 00101         clock_gettime( CLOCK_REALTIME, &amp;ts );
 00102     __TBB_ASSERT( status==0, <span class="stringliteral">"CLOCK_REALTIME not supported"</span> );
 00103     result.<a class="code" href="a00265.html#r0">my_count</a> = static_cast&lt;long long&gt;(1000000000UL)*static_cast&lt;long long&gt;(ts.tv_sec) + static_cast&lt;long long&gt;(ts.tv_nsec);
 00104 <span class="preprocessor">#else </span><span class="comment">/* generic Unix */</span>
 00105     <span class="keyword">struct </span>timeval tv;
-00106 <span class="preprocessor">#if TBB_DO_ASSERT</span>
+00106 <span class="preprocessor">#if TBB_USE_ASSERT</span>
 00107 <span class="preprocessor"></span>    <span class="keywordtype">int</span> status = 
-00108 <span class="preprocessor">#endif </span><span class="comment">/* TBB_DO_ASSERT */</span>
+00108 <span class="preprocessor">#endif </span><span class="comment">/* TBB_USE_ASSERT */</span>
 00109         gettimeofday(&amp;tv, NULL);
 00110     __TBB_ASSERT( status==0, <span class="stringliteral">"gettimeofday failed"</span> );
 00111     result.<a class="code" href="a00265.html#r0">my_count</a> = static_cast&lt;long long&gt;(1000000)*static_cast&lt;long long&gt;(tv.tv_sec) + static_cast&lt;long long&gt;(tv.tv_usec);

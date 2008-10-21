@@ -83,11 +83,11 @@ namespace internal {
         // Segment pointer. Can be zero-initialized
         struct segment_t {
             void* array;
-#if TBB_DO_ASSERT
+#if TBB_USE_ASSERT
             ~segment_t() {
                 __TBB_ASSERT( array <= __TBB_BAD_ALLOC, "should have been freed by clear" );
             }
-#endif /* TBB_DO_ASSERT */
+#endif /* TBB_USE_ASSERT */
         };
  
         // Data fields
@@ -232,7 +232,7 @@ public: // workaround for MSVC
         vector_iterator operator+( ptrdiff_t offset ) const {
             return vector_iterator( *my_vector, my_index+offset );
         }
-        vector_iterator operator+=( ptrdiff_t offset ) {
+        vector_iterator &operator+=( ptrdiff_t offset ) {
             my_index+=offset;
             my_item = NULL;
             return *this;
@@ -240,7 +240,7 @@ public: // workaround for MSVC
         vector_iterator operator-( ptrdiff_t offset ) const {
             return vector_iterator( *my_vector, my_index-offset );
         }
-        vector_iterator operator-=( ptrdiff_t offset ) {
+        vector_iterator &operator-=( ptrdiff_t offset ) {
             my_index-=offset;
             my_item = NULL;
             return *this;
@@ -811,11 +811,11 @@ T& concurrent_vector<T, A>::internal_subscript( size_type index ) const {
     size_type j = index;
     segment_index_t k = segment_base_index_of( j );
     // no need in __TBB_load_with_acquire since thread works in own space or gets 
-#if TBB_DO_THREADING_TOOLS||TBB_DO_ASSERT
+#if TBB_USE_THREADING_TOOLS
     return static_cast<T*>( tbb::internal::itt_load_pointer_v3(&my_segment[k].array))[j];
 #else
     return static_cast<T*>(my_segment[k].array)[j];
-#endif /* TBB_DO_THREADING_TOOLS||TBB_DO_ASSERT */
+#endif /* TBB_USE_THREADING_TOOLS */
 }
 
 template<typename T, class A>

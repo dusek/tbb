@@ -59,7 +59,7 @@ class recursive_mutex {
 public:
     //! Construct unacquired recursive_mutex.
     recursive_mutex() {
-#if TBB_DO_ASSERT
+#if TBB_USE_ASSERT
         internal_construct();
 #else
   #if _WIN32||_WIN64
@@ -77,11 +77,11 @@ public:
 
         pthread_mutexattr_destroy( &mtx_attr );
   #endif /* _WIN32||_WIN64*/
-#endif /* TBB_DO_ASSERT */
+#endif /* TBB_USE_ASSERT */
     };
 
     ~recursive_mutex() {
-#if TBB_DO_ASSERT
+#if TBB_USE_ASSERT
         internal_destroy();
 #else
   #if _WIN32||_WIN64
@@ -90,7 +90,7 @@ public:
         pthread_mutex_destroy(&impl); 
 
   #endif /* _WIN32||_WIN64 */
-#endif /* TBB_DO_ASSERT */
+#endif /* TBB_USE_ASSERT */
     };
 
     class scoped_lock;
@@ -118,7 +118,7 @@ public:
 
         //! Acquire lock on given mutex.
         void acquire( recursive_mutex& mutex ) {
-#if TBB_DO_ASSERT
+#if TBB_USE_ASSERT
             internal_acquire( mutex );
 #else
             my_mutex = &mutex;
@@ -127,12 +127,12 @@ public:
   #else
             pthread_mutex_lock( &mutex.impl );
   #endif /* _WIN32||_WIN64 */
-#endif /* TBB_DO_ASSERT */
+#endif /* TBB_USE_ASSERT */
         }
 
         //! Try acquire lock on given recursive_mutex.
         bool try_acquire( recursive_mutex& mutex ) {
-#if TBB_DO_ASSERT
+#if TBB_USE_ASSERT
             return internal_try_acquire( mutex );
 #else
             bool result;
@@ -145,12 +145,12 @@ public:
                 my_mutex = &mutex;
 
             return result;
-#endif /* TBB_DO_ASSERT */
+#endif /* TBB_USE_ASSERT */
         }
 
         //! Release lock
         void release() {
-#if TBB_DO_ASSERT
+#if TBB_USE_ASSERT
             internal_release ();
 #else
   #if _WIN32||_WIN64
@@ -159,7 +159,7 @@ public:
             pthread_mutex_unlock(&my_mutex->impl);
   #endif /* _WIN32||_WIN64 */
             my_mutex = NULL;
-#endif /* TBB_DO_ASSERT */
+#endif /* TBB_USE_ASSERT */
         }
 
     private:

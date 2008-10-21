@@ -38,7 +38,7 @@
 00031 <span class="preprocessor">#include "tbb_allocator.h"</span>
 00032 <span class="preprocessor">#include "spin_rw_mutex.h"</span>
 00033 <span class="preprocessor">#include "atomic.h"</span>
-00034 <span class="preprocessor">#if TBB_PERFORMANCE_WARNINGS</span>
+00034 <span class="preprocessor">#if TBB_USE_PERFORMANCE_WARNINGS</span>
 00035 <span class="preprocessor"></span><span class="preprocessor">#include &lt;typeinfo&gt;</span>
 00036 <span class="preprocessor">#endif</span>
 00037 <span class="preprocessor"></span>
@@ -50,24 +50,24 @@
 00043 
 00045 <span class="keyword">namespace </span>internal {
 <a name="l00047"></a><a class="code" href="a00309.html#a2">00047</a>     <span class="keyword">typedef</span> size_t hashcode_t;
-<a name="l00049"></a><a class="code" href="a00217.html">00049</a>     <span class="keyword">class </span><a class="code" href="a00217.html">hash_map_base</a> {
+<a name="l00049"></a><a class="code" href="a00218.html">00049</a>     <span class="keyword">class </span><a class="code" href="a00218.html">hash_map_base</a> {
 00050     <span class="keyword">public</span>:
 00051         <span class="comment">// Mutex types for each layer of the container</span>
-00052         <span class="keyword">typedef</span> <a class="code" href="a00244.html">spin_rw_mutex</a> <a class="code" href="a00244.html">node_mutex_t</a>;
-00053         <span class="keyword">typedef</span> <a class="code" href="a00244.html">spin_rw_mutex</a> <a class="code" href="a00244.html">chain_mutex_t</a>;
-00054         <span class="keyword">typedef</span> <a class="code" href="a00244.html">spin_rw_mutex</a> <a class="code" href="a00244.html">segment_mutex_t</a>;
+00052         <span class="keyword">typedef</span> <a class="code" href="a00245.html">spin_rw_mutex</a> <a class="code" href="a00245.html">node_mutex_t</a>;
+00053         <span class="keyword">typedef</span> <a class="code" href="a00245.html">spin_rw_mutex</a> <a class="code" href="a00245.html">chain_mutex_t</a>;
+00054         <span class="keyword">typedef</span> <a class="code" href="a00245.html">spin_rw_mutex</a> <a class="code" href="a00245.html">segment_mutex_t</a>;
 00055 
-<a name="l00057"></a><a class="code" href="a00217.html#w3">00057</a>         <span class="keyword">typedef</span> <a class="code" href="a00309.html#a2">internal::hashcode_t</a> hashcode_t;
-<a name="l00059"></a><a class="code" href="a00217.html#s0">00059</a>         <span class="keyword">static</span> <span class="keyword">const</span> size_t n_segment_bits = 6;
-<a name="l00061"></a><a class="code" href="a00217.html#s1">00061</a>         <span class="keyword">static</span> <span class="keyword">const</span> size_t n_segment = size_t(1)&lt;&lt;n_segment_bits; 
-<a name="l00063"></a><a class="code" href="a00217.html#s2">00063</a>         <span class="keyword">static</span> <span class="keyword">const</span> size_t max_physical_size = size_t(1)&lt;&lt;(8*<span class="keyword">sizeof</span>(hashcode_t)-n_segment_bits);
+<a name="l00057"></a><a class="code" href="a00218.html#w3">00057</a>         <span class="keyword">typedef</span> <a class="code" href="a00309.html#a2">internal::hashcode_t</a> hashcode_t;
+<a name="l00059"></a><a class="code" href="a00218.html#s0">00059</a>         <span class="keyword">static</span> <span class="keyword">const</span> size_t n_segment_bits = 6;
+<a name="l00061"></a><a class="code" href="a00218.html#s1">00061</a>         <span class="keyword">static</span> <span class="keyword">const</span> size_t n_segment = size_t(1)&lt;&lt;n_segment_bits; 
+<a name="l00063"></a><a class="code" href="a00218.html#s2">00063</a>         <span class="keyword">static</span> <span class="keyword">const</span> size_t max_physical_size = size_t(1)&lt;&lt;(8*<span class="keyword">sizeof</span>(hashcode_t)-n_segment_bits);
 00064     };
 00065 
 00066     <span class="keyword">template</span>&lt;<span class="keyword">typename</span> Iterator&gt;
-00067     <span class="keyword">class </span><a class="code" href="a00218.html">hash_map_range</a>;
+00067     <span class="keyword">class </span><a class="code" href="a00219.html">hash_map_range</a>;
 00068 
 00069     <span class="keyword">struct </span>hash_map_segment_base {
-00071         <a class="code" href="a00244.html">hash_map_base::segment_mutex_t</a> my_mutex;
+00071         <a class="code" href="a00245.html">hash_map_base::segment_mutex_t</a> my_mutex;
 00072 
 00073         <span class="comment">// Number of nodes</span>
 00074         <a class="code" href="a00186.html">atomic&lt;size_t&gt;</a> my_logical_size;
@@ -112,7 +112,7 @@
 00121         <span class="keyword">friend</span> <span class="keyword">class </span>internal::hash_map_iterator;
 00122 
 00123         <span class="keyword">template</span>&lt;<span class="keyword">typename</span> I&gt;
-00124         <span class="keyword">friend</span> <span class="keyword">class </span><a class="code" href="a00218.html">internal::hash_map_range</a>;
+00124         <span class="keyword">friend</span> <span class="keyword">class </span><a class="code" href="a00219.html">internal::hash_map_range</a>;
 00125 
 00126         <span class="keywordtype">void</span> advance_to_next_node() {
 00127             size_t i = my_array_index+1;
@@ -203,45 +203,45 @@
 00214 
 00216 
 00217     <span class="keyword">template</span>&lt;<span class="keyword">typename</span> Iterator&gt;
-<a name="l00218"></a><a class="code" href="a00218.html">00218</a>     <span class="keyword">class </span><a class="code" href="a00218.html">hash_map_range</a> {
+<a name="l00218"></a><a class="code" href="a00219.html">00218</a>     <span class="keyword">class </span><a class="code" href="a00219.html">hash_map_range</a> {
 00219     <span class="keyword">private</span>:
 00220         Iterator my_begin;
 00221         Iterator my_end;
 00222         <span class="keyword">mutable</span> Iterator my_midpoint;
 00223         size_t my_grainsize;
 00225         <span class="keywordtype">void</span> set_midpoint() <span class="keyword">const</span>;
-00226         <span class="keyword">template</span>&lt;<span class="keyword">typename</span> U&gt; <span class="keyword">friend</span> <span class="keyword">class </span><a class="code" href="a00218.html">hash_map_range</a>;
+00226         <span class="keyword">template</span>&lt;<span class="keyword">typename</span> U&gt; <span class="keyword">friend</span> <span class="keyword">class </span><a class="code" href="a00219.html">hash_map_range</a>;
 00227     <span class="keyword">public</span>:
-<a name="l00229"></a><a class="code" href="a00218.html#w0">00229</a>         <span class="keyword">typedef</span> std::size_t size_type;
+<a name="l00229"></a><a class="code" href="a00219.html#w0">00229</a>         <span class="keyword">typedef</span> std::size_t size_type;
 00230         <span class="keyword">typedef</span> <span class="keyword">typename</span> Iterator::value_type value_type;
 00231         <span class="keyword">typedef</span> <span class="keyword">typename</span> Iterator::reference reference;
 00232         <span class="keyword">typedef</span> <span class="keyword">typename</span> Iterator::const_reference const_reference;
 00233         <span class="keyword">typedef</span> <span class="keyword">typename</span> Iterator::difference_type difference_type;
 00234         <span class="keyword">typedef</span> Iterator iterator;
 00235 
-<a name="l00237"></a><a class="code" href="a00218.html#a0">00237</a>         <span class="keywordtype">bool</span> empty()<span class="keyword"> const </span>{<span class="keywordflow">return</span> my_begin==my_end;}
+<a name="l00237"></a><a class="code" href="a00219.html#a0">00237</a>         <span class="keywordtype">bool</span> empty()<span class="keyword"> const </span>{<span class="keywordflow">return</span> my_begin==my_end;}
 00238 
-<a name="l00240"></a><a class="code" href="a00218.html#a1">00240</a>         <span class="keywordtype">bool</span> is_divisible()<span class="keyword"> const </span>{
+<a name="l00240"></a><a class="code" href="a00219.html#a1">00240</a>         <span class="keywordtype">bool</span> is_divisible()<span class="keyword"> const </span>{
 00241             <span class="keywordflow">return</span> my_midpoint!=my_end;
 00242         }
-<a name="l00244"></a><a class="code" href="a00218.html#a2">00244</a>         <a class="code" href="a00218.html">hash_map_range</a>( <a class="code" href="a00218.html">hash_map_range</a>&amp; r, <a class="code" href="a00246.html">split</a> ) : 
+<a name="l00244"></a><a class="code" href="a00219.html#a2">00244</a>         <a class="code" href="a00219.html">hash_map_range</a>( <a class="code" href="a00219.html">hash_map_range</a>&amp; r, <a class="code" href="a00247.html">split</a> ) : 
 00245             my_end(r.my_end),
 00246             my_grainsize(r.my_grainsize)
 00247         {
-00248             r.<a class="code" href="a00218.html#r1">my_end</a> = my_begin = r.<a class="code" href="a00218.html#r2">my_midpoint</a>;
+00248             r.<a class="code" href="a00219.html#r1">my_end</a> = my_begin = r.<a class="code" href="a00219.html#r2">my_midpoint</a>;
 00249             __TBB_ASSERT( my_begin!=my_end, <span class="stringliteral">"Splitting despite the range is not divisible"</span> );
-00250             __TBB_ASSERT( r.<a class="code" href="a00218.html#r0">my_begin</a>!=r.<a class="code" href="a00218.html#r1">my_end</a>, <span class="stringliteral">"Splitting despite the range is not divisible"</span> );
+00250             __TBB_ASSERT( r.<a class="code" href="a00219.html#r0">my_begin</a>!=r.<a class="code" href="a00219.html#r1">my_end</a>, <span class="stringliteral">"Splitting despite the range is not divisible"</span> );
 00251             set_midpoint();
-00252             r.<a class="code" href="a00218.html#d0">set_midpoint</a>();
+00252             r.<a class="code" href="a00219.html#d0">set_midpoint</a>();
 00253         }
 00255         <span class="keyword">template</span>&lt;<span class="keyword">typename</span> U&gt;
-<a name="l00256"></a><a class="code" href="a00218.html#a3">00256</a>         <a class="code" href="a00218.html">hash_map_range</a>( <a class="code" href="a00218.html">hash_map_range&lt;U&gt;</a>&amp; r) : 
+<a name="l00256"></a><a class="code" href="a00219.html#a3">00256</a>         <a class="code" href="a00219.html">hash_map_range</a>( <a class="code" href="a00219.html">hash_map_range&lt;U&gt;</a>&amp; r) : 
 00257             my_begin(r.my_begin),
 00258             my_end(r.my_end),
 00259             my_midpoint(r.my_midpoint),
 00260             my_grainsize(r.my_grainsize)
 00261         {}
-<a name="l00263"></a><a class="code" href="a00218.html#a4">00263</a>         <a class="code" href="a00218.html">hash_map_range</a>( <span class="keyword">const</span> Iterator&amp; begin_, <span class="keyword">const</span> Iterator&amp; end_, size_type grainsize = 1 ) : 
+<a name="l00263"></a><a class="code" href="a00219.html#a4">00263</a>         <a class="code" href="a00219.html">hash_map_range</a>( <span class="keyword">const</span> Iterator&amp; begin_, <span class="keyword">const</span> Iterator&amp; end_, size_type grainsize = 1 ) : 
 00264             my_begin(begin_), 
 00265             my_end(end_), 
 00266             my_grainsize(grainsize) 
@@ -251,7 +251,7 @@
 00270         }
 00271         <span class="keyword">const</span> Iterator&amp; begin()<span class="keyword"> const </span>{<span class="keywordflow">return</span> my_begin;}
 00272         <span class="keyword">const</span> Iterator&amp; end()<span class="keyword"> const </span>{<span class="keywordflow">return</span> my_end;}
-<a name="l00274"></a><a class="code" href="a00218.html#a7">00274</a>         size_type grainsize()<span class="keyword"> const </span>{<span class="keywordflow">return</span> my_grainsize;}
+<a name="l00274"></a><a class="code" href="a00219.html#a7">00274</a>         size_type grainsize()<span class="keyword"> const </span>{<span class="keywordflow">return</span> my_grainsize;}
 00275     };
 00276 
 00277     <span class="keyword">template</span>&lt;<span class="keyword">typename</span> Iterator&gt;
@@ -305,7 +305,7 @@
 00327 } <span class="comment">// namespace internal</span>
 00329 <span class="comment"></span>
 00331 <span class="keyword">template</span>&lt;<span class="keyword">typename</span> T&gt;
-<a name="l00332"></a><a class="code" href="a00261.html">00332</a> <span class="keyword">struct </span><a class="code" href="a00261.html">tbb_hash_compare</a> {
+<a name="l00332"></a><a class="code" href="a00262.html">00332</a> <span class="keyword">struct </span><a class="code" href="a00262.html">tbb_hash_compare</a> {
 00333     <span class="keyword">static</span> <a class="code" href="a00309.html#a2">internal::hashcode_t</a> hash( <span class="keyword">const</span> T&amp; t ) { <span class="keywordflow">return</span> internal::hasher(t); }
 00334     <span class="keyword">static</span> <span class="keywordtype">bool</span> equal( <span class="keyword">const</span> T&amp; a, <span class="keyword">const</span> T&amp; b ) { <span class="keywordflow">return</span> a == b; }
 00335 };
@@ -317,7 +317,7 @@
 00366     <span class="keyword">friend</span> <span class="keyword">class </span>internal::hash_map_iterator;
 00367 
 00368     <span class="keyword">template</span>&lt;<span class="keyword">typename</span> I&gt;
-00369     <span class="keyword">friend</span> <span class="keyword">class </span><a class="code" href="a00218.html">internal::hash_map_range</a>;
+00369     <span class="keyword">friend</span> <span class="keyword">class </span><a class="code" href="a00219.html">internal::hash_map_range</a>;
 00370 
 00371     <span class="keyword">struct </span>node;
 00372     <span class="keyword">friend</span> <span class="keyword">struct </span>node;
@@ -339,8 +339,8 @@
 00388     <span class="keyword">typedef</span> <span class="keyword">const</span> value_type &amp;const_reference;
 00389     <span class="keyword">typedef</span> internal::hash_map_iterator&lt;concurrent_hash_map,value_type&gt; iterator;
 00390     <span class="keyword">typedef</span> internal::hash_map_iterator&lt;concurrent_hash_map,const value_type&gt; const_iterator;
-00391     <span class="keyword">typedef</span> <a class="code" href="a00218.html">internal::hash_map_range&lt;iterator&gt;</a> <a class="code" href="a00218.html">range_type</a>;
-00392     <span class="keyword">typedef</span> <a class="code" href="a00218.html">internal::hash_map_range&lt;const_iterator&gt;</a> <a class="code" href="a00218.html">const_range_type</a>;
+00391     <span class="keyword">typedef</span> <a class="code" href="a00219.html">internal::hash_map_range&lt;iterator&gt;</a> <a class="code" href="a00219.html">range_type</a>;
+00392     <span class="keyword">typedef</span> <a class="code" href="a00219.html">internal::hash_map_range&lt;const_iterator&gt;</a> <a class="code" href="a00219.html">const_range_type</a>;
 00393     <span class="keyword">typedef</span> A allocator_type;
 00394 
 <a name="l00396"></a><a class="code" href="a00198.html">00396</a>     <span class="keyword">class </span><a class="code" href="a00198.html">const_accessor</a> {
@@ -525,7 +525,7 @@
 00610 <span class="keyword">private</span>:
 00612     <span class="keyword">struct </span>node {
 00614         node* next;
-00615         node_mutex_t <a class="code" href="a00221.html">mutex</a>;
+00615         node_mutex_t <a class="code" href="a00222.html">mutex</a>;
 00616         value_type item;
 00617         node( <span class="keyword">const</span> Key&amp; key ) : item(key, T()) {}
 00618         node( <span class="keyword">const</span> Key&amp; key, <span class="keyword">const</span> T&amp; t ) : item(key, t) {}
@@ -557,11 +557,11 @@
 00645 
 00647 
 00649     <span class="keyword">struct </span>segment: internal::hash_map_segment_base {
-00650 <span class="preprocessor">#if TBB_DO_ASSERT</span>
+00650 <span class="preprocessor">#if TBB_USE_ASSERT</span>
 00651 <span class="preprocessor"></span>        ~segment() {
 00652             __TBB_ASSERT( !my_array, <span class="stringliteral">"should have been cleared earlier"</span> );
 00653         }
-00654 <span class="preprocessor">#endif </span><span class="comment">/* TBB_DO_ASSERT */</span>
+00654 <span class="preprocessor">#endif </span><span class="comment">/* TBB_USE_ASSERT */</span>
 00655 
 00656         <span class="comment">// Pointer to array of chains</span>
 00657         chain* my_array;
@@ -664,12 +664,12 @@
 00762 restart:
 00763     <span class="keywordtype">bool</span> return_value = <span class="keyword">false</span>;
 00764     <span class="comment">// first check in double-check sequence</span>
-00765 <span class="preprocessor">#if TBB_DO_THREADING_TOOLS||TBB_DO_ASSERT</span>
+00765 <span class="preprocessor">#if TBB_USE_THREADING_TOOLS</span>
 00766 <span class="preprocessor"></span>    <span class="keyword">const</span> <span class="keywordtype">bool</span> grow = op_insert &amp;&amp; s.internal_grow_predicate();
 00767 <span class="preprocessor">#else</span>
 00768 <span class="preprocessor"></span>    <span class="keyword">const</span> <span class="keywordtype">bool</span> grow = op_insert &amp;&amp; s.my_logical_size &gt;= s.my_physical_size
 00769         &amp;&amp; s.my_physical_size &lt; max_physical_size; <span class="comment">// check whether there are free bits</span>
-00770 <span class="preprocessor">#endif </span><span class="comment">/* TBB_DO_THREADING_TOOLS||TBB_DO_ASSERT */</span>
+00770 <span class="preprocessor">#endif </span><span class="comment">/* TBB_USE_THREADING_TOOLS */</span>
 00771     segment_mutex_t::scoped_lock segment_lock( s.my_mutex, <span class="comment">/*write=*/</span>grow );
 00772     <span class="keywordflow">if</span>( grow ) { <span class="comment">// Load factor is too high  </span>
 00773         grow_segment( segment_lock, s );
@@ -727,8 +727,8 @@
 00825 <span class="keyword">template</span>&lt;<span class="keyword">typename</span> Key, <span class="keyword">typename</span> T, <span class="keyword">typename</span> HashCompare, <span class="keyword">typename</span> A&gt;
 00826 <span class="keyword">template</span>&lt;<span class="keyword">typename</span> I&gt;
 00827 std::pair&lt;I, I&gt; concurrent_hash_map&lt;Key,T,HashCompare,A&gt;::internal_equal_range( <span class="keyword">const</span> Key&amp; key, I end )<span class="keyword"> const </span>{
-00828     <a class="code" href="a00217.html#w3">hashcode_t</a> h = my_hash_compare.hash( key );
-00829     size_t segment_index = h&amp;(<a class="code" href="a00217.html#s1">n_segment</a>-1);
+00828     <a class="code" href="a00218.html#w3">hashcode_t</a> h = my_hash_compare.hash( key );
+00829     size_t segment_index = h&amp;(<a class="code" href="a00218.html#s1">n_segment</a>-1);
 00830     segment&amp; s = my_segment[segment_index ];
 00831     size_t chain_index = (h&gt;&gt;n_segment_bits)&amp;(s.my_physical_size-1);
 00832     <span class="keywordflow">if</span>( !s.my_array )
@@ -816,7 +816,7 @@
 00914 
 00915 <span class="keyword">template</span>&lt;<span class="keyword">typename</span> Key, <span class="keyword">typename</span> T, <span class="keyword">typename</span> HashCompare, <span class="keyword">typename</span> A&gt;
 <a name="l00916"></a><a class="code" href="a00196.html#a4">00916</a> <span class="keywordtype">void</span> <a class="code" href="a00196.html">concurrent_hash_map&lt;Key,T,HashCompare,A&gt;::clear</a>() {
-00917 <span class="preprocessor">#if TBB_PERFORMANCE_WARNINGS</span>
+00917 <span class="preprocessor">#if TBB_USE_PERFORMANCE_WARNINGS</span>
 00918 <span class="preprocessor"></span>    size_t total_physical_size = 0, min_physical_size = size_t(-1L), max_physical_size = 0; <span class="comment">//&lt; usage statistics</span>
 00919     <span class="keyword">static</span> <span class="keywordtype">bool</span> reported = <span class="keyword">false</span>;
 00920 <span class="preprocessor">#endif</span>
@@ -835,7 +835,7 @@
 00933             }
 00934             <a class="code" href="a00193.html">cache_aligned_allocator&lt;chain&gt;</a>().deallocate( array, n );
 00935         }
-00936 <span class="preprocessor">#if TBB_PERFORMANCE_WARNINGS</span>
+00936 <span class="preprocessor">#if TBB_USE_PERFORMANCE_WARNINGS</span>
 00937 <span class="preprocessor"></span>        total_physical_size += n;
 00938         <span class="keywordflow">if</span>(min_physical_size &gt; n) min_physical_size = n;
 00939         <span class="keywordflow">if</span>(max_physical_size &lt; n) max_physical_size = n;

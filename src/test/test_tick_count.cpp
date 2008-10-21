@@ -101,16 +101,13 @@ void TestSimpleDelay( int ntrial, double duration, double tolerance ) {
 //------------------------------------------------------------------------
 
 #include "tbb/atomic.h"
-#include "tbb/blocked_range.h"
 const int MAX_NTHREAD = 1000;
 static tbb::atomic<int> Counter;
 static volatile bool Flag;
 static tbb::tick_count tick_countArray[MAX_NTHREAD];
 
 struct tick_countDifferenceBody {
-    void operator()( const tbb::blocked_range<int>& range ) const {
-        ASSERT( range.begin()+1==range.end(), "grainsize must be 1" );
-        int id = range.begin();
+    void operator()( int id ) const {
         if( --Counter==0 ) Flag = true;
         while( !Flag ) continue;
         tick_countArray[id] = tbb::tick_count::now();
@@ -123,7 +120,7 @@ void Testtick_countDifference( int n ) {
     for( int trial=0; trial<10; ++trial ) {
         Counter = n;
         Flag = false;
-        NativeParallelFor( tbb::blocked_range<int>(0,n,1), tick_countDifferenceBody() ); 
+        NativeParallelFor( n, tick_countDifferenceBody() ); 
         ASSERT( Counter==0, NULL ); 
         for( int i=0; i<n; ++i )
             for( int j=0; j<i; ++j ) {

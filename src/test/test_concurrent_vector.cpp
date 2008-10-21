@@ -356,8 +356,10 @@ void TestSequentialFor() {
     ASSERT( (*cp).is_const(), NULL );
     ASSERT( cp->is_const(), NULL );
     ASSERT( *cp == v.front(), NULL);
-    for( int i=0; size_t(i)<u.size(); ++i, ++cp ) {
+    for( int i=0; size_t(i)<u.size(); ++i ) {
         CheckConstIterator(u,i,cp);
+        V::const_iterator &cpr = ++cp;
+        ASSERT( &cpr == &cp, "preincrement not returning a reference?");
     }
     tbb::tick_count t2 = tbb::tick_count::now();
     if( Verbose )
@@ -368,7 +370,8 @@ void TestSequentialFor() {
     cp = u.end();
     for( int i=int(u.size()); i>0; ) {
         --i;
-        --cp;
+        V::const_iterator &cpr = --cp;
+        ASSERT( &cpr == &cp, "predecrement not returning a reference?");
         if( i>0 ) {
             typename V::const_iterator cp_old = cp--;
             int here = (*cp_old).bar();
@@ -379,7 +382,7 @@ void TestSequentialFor() {
         }
         CheckConstIterator(u,i,cp);
     }
-
+  
     // Now go forwards and backwards
     ptrdiff_t j = 0;
     cp = u.begin();
@@ -387,14 +390,16 @@ void TestSequentialFor() {
         CheckConstIterator(u,int(j),cp);
         typename V::difference_type delta = i*3 % u.size();
         if( 0<=j+delta && size_t(j+delta)<u.size() ) {
-            cp += delta;
+            V::const_iterator &cpr = (cp += delta);
+            ASSERT( &cpr == &cp, "+= not returning a reference?");
             j += delta; 
         } 
         delta = i*7 % u.size();
         if( 0<=j-delta && size_t(j-delta)<u.size() ) {
-            if( i&1 ) 
-                cp -= delta;            // Test operator-=
-            else
+            if( i&1 ) { 
+                V::const_iterator &cpr = (cp -= delta);
+                ASSERT( &cpr == &cp, "-= not returning a reference?");
+            } else
                 cp = cp - delta;        // Test operator-
             j -= delta; 
         } 

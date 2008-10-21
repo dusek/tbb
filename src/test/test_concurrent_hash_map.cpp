@@ -26,8 +26,8 @@
     the GNU General Public License.
 */
 
-#ifndef TBB_PERFORMANCE_WARNINGS
-#define TBB_PERFORMANCE_WARNINGS 1
+#ifndef TBB_USE_PERFORMANCE_WARNINGS
+#define TBB_USE_PERFORMANCE_WARNINGS 1
 #endif
 
 #include "tbb/tbb_stddef.h"
@@ -493,7 +493,7 @@ class AddToTable {
     const int my_m;
 public:
     AddToTable( MyTable& table, int nthread, int m ) : my_table(table), my_nthread(nthread), my_m(m) {}
-    void operator()( const  tbb::blocked_range<int>& r ) const {
+    void operator()( int ) const {
         for( int i=0; i<my_m; ++i ) {
             // Busy wait to synchronize threads
             int j = 0;
@@ -529,7 +529,7 @@ class RemoveFromTable {
     const int my_m;
 public:
     RemoveFromTable( MyTable& table, int nthread, int m ) : my_table(table), my_nthread(nthread), my_m(m) {}
-    void operator()( const  tbb::blocked_range<int>& r ) const {
+    void operator()(int) const {
         for( int i=0; i<my_m; ++i ) {
             bool b;
             if(i&4) {
@@ -557,7 +557,7 @@ void TestConcurrency( int nthread ) {
         const int m = 1000;
         Counter = 0;
         tbb::tick_count t0 = tbb::tick_count::now();
-        NativeParallelFor( tbb::blocked_range<int>(0,nthread,1), AddToTable(table,nthread,m) );
+        NativeParallelFor( nthread, AddToTable(table,nthread,m) );
         tbb::tick_count t1 = tbb::tick_count::now();
         if( Verbose )
             printf("time for %u insertions = %g with %d threads\n",unsigned(MyDataCount),(t1-t0).seconds(),nthread);
@@ -565,7 +565,7 @@ void TestConcurrency( int nthread ) {
 
         EraseCount = 0;
         t0 = tbb::tick_count::now();
-        NativeParallelFor( tbb::blocked_range<int>(0,nthread,1), RemoveFromTable(table,nthread,m) );
+        NativeParallelFor( nthread, RemoveFromTable(table,nthread,m) );
         t1 = tbb::tick_count::now();
         if( Verbose )
             printf("time for %u deletions = %g with %d threads\n",unsigned(EraseCount),(t1-t0).seconds(),nthread);

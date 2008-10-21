@@ -34,7 +34,7 @@
 #------------------------------------------------------------------------------
 CPLUS = cl /nologo
 LINK_FLAGS = /link /nologo
-LIB_LINK_FLAGS=/link /nologo /DLL /MAP /DEBUG /fixed:no
+LIB_LINK_FLAGS=/link /nologo /DLL /MAP /DEBUG /fixed:no /INCREMENTAL:NO
 MS_CRT_KEY = /MD$(if $(findstring debug,$(cfg)),d)
 EH_FLAGS = /EHsc /GR
                
@@ -47,7 +47,7 @@ endif
 endif
 ifeq ($(cfg), debug)
         CPLUS_FLAGS = $(MS_CRT_KEY) /Od /Ob0 /Zi $(EH_FLAGS) /Zc:forScope \
-                      /DTBB_DO_ASSERT
+                      /DTBB_USE_DEBUG
         ASM_FLAGS = /DUSE_FRAME_POINTER
 endif
 

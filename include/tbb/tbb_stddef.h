@@ -44,6 +44,7 @@
 #define __TBB_STRING_AUX(x) #x
 #define __TBB_STRING(x) __TBB_STRING_AUX(x)
 
+
 // We do not need defines below for resource processing on windows
 #if !defined RC_INVOKED
 
@@ -157,12 +158,46 @@ namespace internal {
 #undef __TBB_tbb_windef_H
 #endif /* _WIN32||_WIN64 */
 
+#ifndef TBB_USE_DEBUG
+#ifdef TBB_DO_ASSERT
+#define TBB_USE_DEBUG TBB_DO_ASSERT
+#else
+#define TBB_USE_DEBUG 0
+#endif /* TBB_DO_ASSERT */
+#else
+#define TBB_DO_ASSERT TBB_USE_DEBUG
+#endif /* TBB_USE_DEBUG */
+
+#ifndef TBB_USE_ASSERT
+#ifdef TBB_DO_ASSERT
+#define TBB_USE_ASSERT TBB_DO_ASSERT
+#else 
+#define TBB_USE_ASSERT TBB_USE_DEBUG
+#endif /* TBB_DO_ASSERT */
+#endif /* TBB_USE_ASSERT */
+
+#ifndef TBB_USE_THREADING_TOOLS
+#ifdef TBB_DO_THREADING_TOOLS
+#define TBB_USE_THREADING_TOOLS TBB_DO_THREADING_TOOLS
+#else 
+#define TBB_USE_THREADING_TOOLS TBB_USE_DEBUG
+#endif /* TBB_DO_THREADING_TOOLS */
+#endif /* TBB_USE_THREADING_TOOLS */
+
+#ifndef TBB_USE_PERFORMANCE_WARNINGS
+#ifdef TBB_PERFORMANCE_WARNINGS
+#define TBB_USE_PERFORMANCE_WARNINGS TBB_PERFORMANCE_WARNINGS
+#else 
+#define TBB_USE_PERFORMANCE_WARNINGS TBB_USE_DEBUG
+#endif /* TBB_PEFORMANCE_WARNINGS */
+#endif /* TBB_USE_PERFORMANCE_WARNINGS */
+
 namespace tbb {
     //! Type for an assertion handler
     typedef void(*assertion_handler_type)( const char* filename, int line, const char* expression, const char * comment );
 }
 
-#if TBB_DO_ASSERT
+#if TBB_USE_ASSERT
 
 //! Assert that x is true.
 /** If x is false, print assertion failure message.  
@@ -189,7 +224,7 @@ namespace tbb {
 //! "Extended" version is useful to suppress warnings if a variable is only used with an assert
 #define __TBB_ASSERT_EX(predicate,comment) ((void)(1 && (predicate)))
 
-#endif /* TBB_DO_ASSERT */
+#endif /* TBB_USE_ASSERT */
 
 //! The namespace tbb contains all components of the library.
 namespace tbb {
@@ -223,7 +258,7 @@ typedef std::ptrdiff_t intptr;
 //! Report a runtime warning.
 void __TBB_EXPORTED_FUNC runtime_warning( const char* format, ... );
 
-#if TBB_DO_ASSERT
+#if TBB_USE_ASSERT
 //! Set p to invalid pointer value.
 template<typename T>
 inline void poison_pointer( T* & p ) {
@@ -232,7 +267,7 @@ inline void poison_pointer( T* & p ) {
 #else
 template<typename T>
 inline void poison_pointer( T* ) {/*do nothing*/}
-#endif /* TBB_DO_ASSERT */
+#endif /* TBB_USE_ASSERT */
 
 //! Base class for types that should not be copied or assigned.
 class no_copy {
@@ -267,10 +302,6 @@ typedef version_tag_v3 version_tag;
 #ifndef __TBB_SCHEDULER_OBSERVER
 #define __TBB_SCHEDULER_OBSERVER 1
 #endif /* __TBB_SCHEDULER_OBSERVER */
-
-#ifndef TBB_PERFORMANCE_WARNINGS
-#define TBB_PERFORMANCE_WARNINGS TBB_DO_ASSERT
-#endif /* TBB_PERFORMANCE_WARNINGS */
 
 
 #endif /* RC_INVOKED */

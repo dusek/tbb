@@ -213,7 +213,8 @@ void initialize_strings_vector(std::vector <string_pair>* vector)
 #endif
     vector->push_back(string_pair("TBB: BUILD_TARGET", required));
     vector->push_back(string_pair("TBB: BUILD_COMMAND", required));
-    vector->push_back(string_pair("TBB: TBB_DO_ASSERT", required));
+    vector->push_back(string_pair("TBB: TBB_USE_DEBUG", required));
+    vector->push_back(string_pair("TBB: TBB_USE_ASSERT", required));
     vector->push_back(string_pair("TBB: DO_ITT_NOTIFY", required));
     vector->push_back(string_pair("TBB: ITT", not_required)); //#ifdef DO_ITT_NOTIFY
     vector->push_back(string_pair("TBB: ALLOCATOR", required));

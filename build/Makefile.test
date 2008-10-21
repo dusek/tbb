@@ -54,6 +54,7 @@ ifeq (1,$(TBB_NOSTRICT))
 KNOWN_NOSTRICT += \
 	test_concurrent_hash_map.o	\
 	test_concurrent_vector.o	\
+	test_enumerable_thread_specific.o \
 	test_handle_perror.o		\
 	test_cache_aligned_allocator_STL.o	\
 	test_task_scheduler_init.o	\
@@ -120,6 +121,7 @@ TEST_TBB_PLAIN.EXE = test_assembly.exe 	\
 	test_concurrent_queue.exe	\
 	test_concurrent_vector.exe	\
 	test_concurrent_hash_map.exe	\
+	test_enumerable_thread_specific.exe		\
 	test_handle_perror.exe		\
 	test_halt.exe 			\
 	test_model_plugin.exe		\
@@ -189,9 +191,7 @@ test_tbb_plain: $(TEST_TBB_PLAIN.EXE)
 	$(run_cmd) ./test_mutex.exe 1
 	$(run_cmd) ./test_mutex.exe 2
 	$(run_cmd) ./test_mutex.exe 4
-	$(run_cmd) ./test_mutex_native_threads.exe 1
-	$(run_cmd) ./test_mutex_native_threads.exe 2
-	$(run_cmd) ./test_mutex_native_threads.exe 4
+	$(run_cmd) ./test_mutex_native_threads.exe 1:4
 	$(run_cmd) ./test_rwm_upgrade_downgrade.exe 4
         # Yes, 4:8 is intended on the next line. 
 	$(run_cmd) ./test_halt.exe 4:8	
@@ -200,6 +200,7 @@ test_tbb_plain: $(TEST_TBB_PLAIN.EXE)
 	$(run_cmd) ./test_concurrent_queue.exe 1:4
 	$(run_cmd) ./test_concurrent_vector.exe 1:4
 	$(run_cmd) ./test_concurrent_hash_map.exe 1:4
+	$(run_cmd) ./test_enumerable_thread_specific.exe 0:4
 	$(run_cmd) ./test_model_plugin.exe 4
 	$(run_cmd) ./test_tbb_version.exe
 	$(run_cmd) ./test_eh_tasks.exe 2:4

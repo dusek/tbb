@@ -28,6 +28,7 @@
 
 #include "tbb/task_scheduler_init.h"
 #include <cstdlib>
+#include "harness_assert.h"
 
 //! Test that task::initialize and task::terminate work when doing nothing else.
 /** maxthread is treated as the "maximum" number of worker threads. */
@@ -36,20 +37,26 @@ void InitializeAndTerminate( int maxthread ) {
         switch( i&3 ) {
             default: {
                 tbb::task_scheduler_init init( std::rand() % maxthread + 1 );
+                ASSERT(init.is_active(), NULL);
                 break;
             }
             case 0: {   
                 tbb::task_scheduler_init init;
+                ASSERT(init.is_active(), NULL);
                 break;
             }
             case 1: {
                 tbb::task_scheduler_init init( tbb::task_scheduler_init::automatic );
+                ASSERT(init.is_active(), NULL);
                 break;
             }
             case 2: {
                 tbb::task_scheduler_init init( tbb::task_scheduler_init::deferred );
+                ASSERT(!init.is_active(), "init should not be active; initialization was deferred");
                 init.initialize( std::rand() % maxthread + 1 );
+                ASSERT(init.is_active(), NULL);
                 init.terminate();
+                ASSERT(!init.is_active(), "init should not be active; it was terminated");
                 break;
             }
         }
@@ -59,7 +66,6 @@ void InitializeAndTerminate( int maxthread ) {
 #include <cstdio>
 #include <stdexcept>
 #include "harness.h"
-#include "tbb/blocked_range.h"
 
 #if _WIN64
 namespace std {      // 64-bit Windows compilers have not caught up with 1998 ISO C++ standard
@@ -69,7 +75,7 @@ namespace std {      // 64-bit Windows compilers have not caught up with 1998 IS
 #endif /* _WIN64 */
 
 struct ThreadedInit {
-    void operator()( const tbb::blocked_range<long>& r ) const {
+    void operator()( int ) const {
         try {
             InitializeAndTerminate(MaxThread);
         } catch( std::runtime_error& error ) {
@@ -105,7 +111,7 @@ int main(int argc, char* argv[]) {
     }
     for( int p=MinThread; p<=MaxThread; ++p ) {
         if( Verbose ) printf("testing with %d threads\n", p );
-        NativeParallelFor( tbb::blocked_range<long>(0,p,1), ThreadedInit() );
+        NativeParallelFor( p, ThreadedInit() );
     }
     std::printf("done\n");
     return 0;

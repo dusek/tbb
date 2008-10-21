@@ -75,9 +75,6 @@ static int MinThread = 0;
 //! Maximum number of threads
 static int MaxThread = 2;
 
-//! NThread exists for backwards compatibility.  Eventually it will be removed.
-#define NThread (MaxThread==MinThread?MaxThread : (ReportError(__LINE__,"NThread","thread range not supported"),-1))
-
 //! Parse command line of the form "name [-v] [nthread]"
 /** Sets Verbose, MinThread, and MaxThread accordingly.
     The nthread argument can be a single number or a range of the form m:n.
@@ -121,11 +118,11 @@ static void ParseCommandLine( int argc, char* argv[] ) {
 #endif /* HARNESS_NO_PARSE_COMMAND_LINE */
 
 //! For internal use by template function NativeParallelFor
-template<typename Range, typename Body>
+template<typename Index, typename Body>
 class NativeParallelForTask {
 public:
-    NativeParallelForTask( const Range& range_, const Body& body_ ) :
-        range(range_),
+    NativeParallelForTask( Index index_, const Body& body_ ) :
+        index(index_),
         body(body_)
     {}
 
@@ -160,11 +157,6 @@ public:
 #endif 
     }
 
-    //! Build (or precompute size of) array of tasks.
-    /** Computes number of of tasks required, plus index. 
-        If array!=NULL, also constructs the necessary tasks, starting at array[index].
-        Top-level caller should let index default to 0. */
-    static size_t build_task_array( const Range& range, const Body& body, NativeParallelForTask* array, size_t index ); 
 private:
 #if _WIN32||_WIN64
     HANDLE thread_handle;
@@ -173,7 +165,7 @@ private:
 #endif
 
     //! Range over which task will invoke the body.
-    const Range range;
+    const Index index;
 
     //! Body to invoke over the range.
     const Body body;
@@ -185,53 +177,33 @@ private:
 #endif
     {
         NativeParallelForTask& self = *static_cast<NativeParallelForTask*>(object);
-        (self.body)(self.range);
+        (self.body)(self.index);
         return 0;
     }
 };
 
-#include "tbb/tbb_stddef.h"
+//! Execute body(i) in parallel for i in the interval [0,n).
+/** Each iteartion is performed by a separate thread. */
+template<typename Index, typename Body>
+void NativeParallelFor( Index n, const Body& body ) {
+    typedef NativeParallelForTask<Index,Body> task;
 
-template<typename Range,typename Body>
-size_t NativeParallelForTask<Range,Body>::build_task_array( const Range& range, const Body& body, NativeParallelForTask* array, size_t index ) {
-    if( !range.is_divisible() ) { 
-        if( array ) {
-            new( &array[index] ) NativeParallelForTask(range,body);
-        }
-        return index+1;
-    } else { 
-        Range r1 = range;
-        Range r2(r1,tbb::split());
-        return build_task_array( r2, body, array, build_task_array(r1,body,array,index) );
-    }                
-}
-
-//! NativeParallelFor is like a TBB parallel_for.h, but with each invocation of Body in a separate thread.
-/** By using a blocked_range with a grainsize of 1, you can guarantee 
-    that each iteration is performed by a separate thread */
-template <typename Range, typename Body>
-void NativeParallelFor(const Range& range, const Body& body) {
-    typedef NativeParallelForTask<Range,Body> task;
-
-    if( !range.empty() ) {
-        // Compute how many tasks are needed
-        size_t n = task::build_task_array(range,body,NULL,0);
-
+    if( n>0 ) {
         // Allocate array to hold the tasks
         task* array = static_cast<task*>(operator new( n*sizeof(task) ));
 
         // Construct the tasks
-        size_t m = task::build_task_array(range,body,array,0);
-        ASSERT( m==n, "range splitting not deterministic" );
+        for( Index i=0; i!=n; ++i ) 
+            new( &array[i] ) task(i,body);
 
         // Start the tasks
-        for( size_t j=0; j<n; ++j )
-            array[j].start();
+        for( Index i=0; i!=n; ++i )
+            array[i].start();
 
-        // Wait for the tasks
-        for( size_t j=n; j>0; --j ) {
-            array[j-1].wait_to_finish();
-            array[j-1].~task();
+        // Wait for the tasks to finish and destroy each one.
+        for( Index i=n; i; --i ) {
+            array[i-1].wait_to_finish();
+            array[i-1].~task();
         }
 
         // Deallocate the task array

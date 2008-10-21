@@ -96,6 +96,9 @@ public:
         doing I/O operations. The optimal number of additional threads depends on how
         much time your tasks spend in the blocked state. */
     static int __TBB_EXPORTED_FUNC default_num_threads ();
+
+    //! Returns true if scheduler is active (initialized); false otherwise
+    bool is_active() const { return my_scheduler != NULL; }
 };
 
 } // namespace tbb

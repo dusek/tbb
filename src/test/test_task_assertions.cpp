@@ -35,7 +35,6 @@
 // Test that important assertions in class task fail as expected.
 //------------------------------------------------------------------------
 
-#include "tbb/blocked_range.h"
 #define HARNESS_NO_PARSE_COMMAND_LINE 1
 #include "harness.h"
 #include "harness_bad_expr.h"
@@ -48,7 +47,7 @@ int AbuseOneTaskRan;
 
 //! Body used to create task in thread 0 and abuse it in thread 1.
 struct AbuseOneTask {
-    void operator()( const tbb::blocked_range<int>& r ) const {
+    void operator()( int ) const {
         tbb::task_scheduler_init init;
         // Thread 1 attempts to incorrectly use the task created by thread 0.
         TRY_BAD_EXPR(AbusedTask->spawn(*AbusedTask),"owne");
@@ -95,18 +94,18 @@ struct AbuseOneTask {
 
 //! Test various __TBB_ASSERT assertions related to class tbb::task.
 void TestTaskAssertions() {
-#if TBB_DO_ASSERT
+#if TBB_USE_ASSERT
     // Catch assertion failures
     tbb::set_assertion_handler( AssertionFailureHandler );
     tbb::task_scheduler_init init;
     // Create task to be abused
     AbusedTask = new( tbb::task::allocate_root() ) tbb::empty_task;
-    NativeParallelFor( tbb::blocked_range<int>(0,1,1), AbuseOneTask() );
+    NativeParallelFor( 1, AbuseOneTask() );
     ASSERT( AbuseOneTaskRan==1, NULL );
     AbusedTask->destroy(*AbusedTask);
     // Restore normal assertion handling
     tbb::set_assertion_handler( NULL );
-#endif /* TBB_DO_ASSERT */
+#endif /* TBB_USE_ASSERT */
 }
 
 //------------------------------------------------------------------------

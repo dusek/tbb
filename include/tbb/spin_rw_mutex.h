@@ -73,12 +73,12 @@ public:
     //! Construct unacquired mutex.
     spin_rw_mutex_v3() : state(0) {}
 
-#if TBB_DO_ASSERT
+#if TBB_USE_ASSERT
     //! Destructor asserts if the mutex is acquired, i.e. state is zero.
     ~spin_rw_mutex_v3() {
         __TBB_ASSERT( !state, "destruction of an acquired mutex");
     };
-#endif /* TBB_DO_ASSERT */
+#endif /* TBB_USE_ASSERT */
 
     //! The scoped locking pattern
     /** It helps to avoid the common problem of forgetting to release lock.
@@ -123,24 +123,24 @@ public:
             __TBB_ASSERT( mutex, "lock is not acquired" );
             spin_rw_mutex *m = mutex; 
             mutex = NULL;
-#if TBB_DO_THREADING_TOOLS||TBB_DO_ASSERT
+#if TBB_USE_THREADING_TOOLS||TBB_USE_ASSERT
             if( is_writer ) m->internal_release_writer();
             else            m->internal_release_reader();
 #else
             if( is_writer ) __TBB_AtomicAND( &m->state, READERS ); 
             else            __TBB_FetchAndAddWrelease( &m->state, -(intptr_t)ONE_READER);
-#endif /* TBB_DO_THREADING_TOOLS||TBB_DO_ASSERT */
+#endif /* TBB_USE_THREADING_TOOLS||TBB_USE_ASSERT */
         }
 
         //! Downgrade writer to become a reader.
         bool downgrade_to_reader() {
-#if TBB_DO_THREADING_TOOLS||TBB_DO_ASSERT
+#if TBB_USE_THREADING_TOOLS||TBB_USE_ASSERT
             __TBB_ASSERT( mutex, "lock is not acquired" );
             __TBB_ASSERT( is_writer, "not a writer" );
             mutex->internal_downgrade();
 #else
 	     __TBB_FetchAndAddW( &mutex->state, ((intptr_t)ONE_READER-WRITER));
-#endif /* TBB_DO_THREADING_TOOLS||TBB_DO_ASSERT */
+#endif /* TBB_USE_THREADING_TOOLS||TBB_USE_ASSERT */
             is_writer = false;
 
             return true;

@@ -230,6 +230,29 @@ inline void wait_for_exception_with_timeout ( int timeout = 50000 ) {
     }   \
     ASSERT_TEST_POSTCOND()
 
+class my_throwing_task : public tbb::task {
+public:
+    tbb::task* execute () { throw 0; }
+    ~my_throwing_task() {
+        ASSERT( tbb::task::self().is_owned_by_current_thread(), NULL );
+    }
+};
+
+//! Checks if innermost running task information is updated correctly during cancellation processing
+void Test0 () {
+    tbb::task_scheduler_init init (1);
+    tbb::empty_task &r = *new( tbb::task::allocate_root() ) tbb::empty_task;
+    tbb::task_list tl;
+    tl.push_back( *new( r.allocate_child() ) my_throwing_task );
+    tl.push_back( *new( r.allocate_child() ) my_throwing_task );
+    r.set_ref_count( 3 );
+    try {
+        r.spawn_and_wait_for_all( tl );
+    }
+    catch (...) {
+    }
+    r.destroy( r );
+}
 
 class my_base_task : public tbb::task
 {
@@ -780,6 +803,8 @@ int main(int argc, char* argv[]) {
     MinThread = std::min<int>(MinThread, MaxThread);
     ASSERT (MinThread>=2, "Minimal number of threads must be 2 or more");
 #if __TBB_EXCEPTIONS
+    // Test0 always runs with one thread
+    Test0();
     int step = max(MaxThread - MinThread, 1);
     for ( g_num_threads = MinThread; g_num_threads <= MaxThread; g_num_threads += step ) {
         g_max_concurrency = min(g_num_threads, tbb::task_scheduler_init::default_num_threads());

@@ -77,11 +77,11 @@
 00075         <span class="comment">// Segment pointer. Can be zero-initialized</span>
 00076         <span class="keyword">struct </span>segment_t {
 00077             <span class="keywordtype">void</span>* array;
-00078 <span class="preprocessor">#if TBB_DO_ASSERT</span>
+00078 <span class="preprocessor">#if TBB_USE_ASSERT</span>
 00079 <span class="preprocessor"></span>            ~segment_t() {
 00080                 __TBB_ASSERT( array &lt;= __TBB_BAD_ALLOC, <span class="stringliteral">"should have been freed by clear"</span> );
 00081             }
-00082 <span class="preprocessor">#endif </span><span class="comment">/* TBB_DO_ASSERT */</span>
+00082 <span class="preprocessor">#endif </span><span class="comment">/* TBB_USE_ASSERT */</span>
 00083         };
 00084  
 00085         <span class="comment">// Data fields</span>
@@ -211,7 +211,7 @@
 00224         vector_iterator operator+( ptrdiff_t offset )<span class="keyword"> const </span>{
 00225             <span class="keywordflow">return</span> vector_iterator( *my_vector, my_index+offset );
 00226         }
-00227         vector_iterator operator+=( ptrdiff_t offset ) {
+00227         vector_iterator &amp;operator+=( ptrdiff_t offset ) {
 00228             my_index+=offset;
 00229             my_item = NULL;
 00230             <span class="keywordflow">return</span> *<span class="keyword">this</span>;
@@ -219,7 +219,7 @@
 00232         vector_iterator operator-( ptrdiff_t offset )<span class="keyword"> const </span>{
 00233             <span class="keywordflow">return</span> vector_iterator( *my_vector, my_index-offset );
 00234         }
-00235         vector_iterator operator-=( ptrdiff_t offset ) {
+00235         vector_iterator &amp;operator-=( ptrdiff_t offset ) {
 00236             my_index-=offset;
 00237             my_item = NULL;
 00238             <span class="keywordflow">return</span> *<span class="keyword">this</span>;
@@ -355,7 +355,7 @@
 00428         generic_range_type( I begin_, I end_, size_t grainsize = 1) : <a class="code" href="a00190.html">blocked_range&lt;I&gt;</a>(begin_,end_,grainsize) {} 
 00429         <span class="keyword">template</span>&lt;<span class="keyword">typename</span> U&gt;
 00430         generic_range_type( <span class="keyword">const</span> generic_range_type&lt;U&gt;&amp; r) : <a class="code" href="a00190.html">blocked_range&lt;I&gt;</a>(r.begin(),r.end(),r.grainsize()) {} 
-00431         generic_range_type( generic_range_type&amp; r, <a class="code" href="a00246.html">split</a> ) : <a class="code" href="a00190.html">blocked_range&lt;I&gt;</a>(r,<a class="code" href="a00246.html">split</a>()) {}
+00431         generic_range_type( generic_range_type&amp; r, <a class="code" href="a00247.html">split</a> ) : <a class="code" href="a00190.html">blocked_range&lt;I&gt;</a>(r,<a class="code" href="a00247.html">split</a>()) {}
 00432     };
 00433 
 00434     <span class="keyword">template</span>&lt;<span class="keyword">typename</span> C, <span class="keyword">typename</span> U&gt;
@@ -671,11 +671,11 @@
 00803     size_type j = index;
 00804     segment_index_t k = segment_base_index_of( j );
 00805     <span class="comment">// no need in __TBB_load_with_acquire since thread works in own space or gets </span>
-00806 <span class="preprocessor">#if TBB_DO_THREADING_TOOLS||TBB_DO_ASSERT</span>
+00806 <span class="preprocessor">#if TBB_USE_THREADING_TOOLS</span>
 00807 <span class="preprocessor"></span>    <span class="keywordflow">return</span> static_cast&lt;T*&gt;( <a class="code" href="a00309.html#a47">tbb::internal::itt_load_pointer_v3</a>(&amp;my_segment[k].array))[j];
 00808 <span class="preprocessor">#else</span>
 00809 <span class="preprocessor"></span>    <span class="keywordflow">return</span> static_cast&lt;T*&gt;(my_segment[k].array)[j];
-00810 <span class="preprocessor">#endif </span><span class="comment">/* TBB_DO_THREADING_TOOLS||TBB_DO_ASSERT */</span>
+00810 <span class="preprocessor">#endif </span><span class="comment">/* TBB_USE_THREADING_TOOLS */</span>
 00811 }
 00812 
 00813 <span class="keyword">template</span>&lt;<span class="keyword">typename</span> T, <span class="keyword">class</span> A&gt;

@@ -100,11 +100,11 @@ static void (*padded_free_handler)( void* p ) = &dummy_padded_free;
 #endif // #if __TBB_IS_SCALABLE_MALLOC_FIX_READY 
 
 
-#if TBB_DO_ASSERT
+#if TBB_USE_DEBUG
 #define DEBUG_SUFFIX "_debug"
 #else
 #define DEBUG_SUFFIX
-#endif /* TBB_DO_ASSERT */
+#endif /* TBB_USE_DEBUG */
 
 // MALLOCLIB_NAME is the name of the TBB memory allocator library.
 #if _WIN32||_WIN64

@@ -479,11 +479,11 @@ public:
 
     //! Set reference count
     void set_ref_count( int count ) {
-#if TBB_DO_ASSERT
+#if TBB_USE_THREADING_TOOLS||TBB_USE_ASSERT
         internal_set_ref_count(count);
 #else
         prefix().ref_count = count;
-#endif /* TBB_DO_ASSERT */
+#endif /* TBB_USE_THREADING_TOOLS||TBB_USE_ASSERT */
     }
 
     //! Schedule task for execution when a worker becomes available.
@@ -529,7 +529,7 @@ public:
         prefix().owner->wait_for_all( *this, NULL );
     }
 
-    //! The task() currently being run by this thread.
+    //! The innermost task being executed or destroyed by the current thread at the moment.
     static task& __TBB_EXPORTED_FUNC self();
 
     //! task on whose behalf this task is working, or NULL if this is a root.
@@ -551,7 +551,7 @@ public:
 
     //! The internal reference count.
     int ref_count() const {
-#if TBB_DO_ASSERT
+#if TBB_USE_ASSERT
         internal::reference_count ref_count = prefix().ref_count;
         __TBB_ASSERT( ref_count==int(ref_count), "integer overflow error");
 #endif

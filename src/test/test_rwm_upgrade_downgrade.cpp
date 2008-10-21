@@ -30,21 +30,16 @@
 #include "tbb/spin_rw_mutex.h"
 #include "harness.h"
 #include "tbb/blocked_range.h"
-
-#define USE_TBB_PFOR 1
-
-#if USE_TBB_PFOR
 #include "tbb/task.h"
 #include "tbb/parallel_for.h"
-#endif
 
 using namespace tbb;
 
-volatile int Count = 0;
+volatile int Count;
 
 template<typename RWMutex>
 struct Hammer {
-	RWMutex &MutexProtectingCount;
+    RWMutex &MutexProtectingCount;
     mutable volatile int dummy;
 
     Hammer(RWMutex &m): MutexProtectingCount(m) {}
@@ -79,14 +74,13 @@ spin_rw_mutex SRW_mutex;
 
 int main( int argc, char* argv[]) {
     ParseCommandLine( argc, argv );
-#if USE_TBB_PFOR
-    task_scheduler_init init(NThread);
-    parallel_for( blocked_range<int>( 0, NThread, 1 ), Hammer<queuing_rw_mutex>(QRW_mutex) ); Count = 0;
-    parallel_for( blocked_range<int>( 0, NThread, 1 ), Hammer<spin_rw_mutex>(SRW_mutex) );
-#else
-    NativeParallelFor( blocked_range<int>( 0, NThread, 1 ), Hammer<queuing_rw_mutex>(QRW_mutex) ); Count = 0;
-    NativeParallelFor( blocked_range<int>( 0, NThread, 1 ), Hammer<spin_rw_mutex>(SRW_mutex) );
-#endif
+    for( int p=MinThread; p<=MaxThread; ++p ) {
+        task_scheduler_init init(p);
+        Count = 0;
+        parallel_for( blocked_range<int>( 0, p, 1 ), Hammer<queuing_rw_mutex>(QRW_mutex) ); 
+        Count = 0;
+        parallel_for( blocked_range<int>( 0, p, 1 ), Hammer<spin_rw_mutex>(SRW_mutex) );
+    }
     printf("done\n");
     return 0;
 }

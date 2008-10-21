@@ -67,12 +67,20 @@ TBB.LIB = tbb$(DEBUG_SUFFIX).$(LIBEXT)
 TBB.RES = tbb_resource.res
 #On Windows we specify appropriate tbb library using #pragma comment
 LINK_TBB.LIB =
+TBB.MANIFEST = 
+
+ifneq ($(runtime),vc7.1)
+TBB.MANIFEST = tbbmanifest.exe.manifest
+endif
 
 MALLOC.DEF = $(MALLOC_ROOT)/$(def_prefix)-tbbmalloc-export.def
 MALLOC.DLL = tbbmalloc$(DEBUG_SUFFIX).$(DLL)
 MALLOC.LIB = tbbmalloc$(DEBUG_SUFFIX).$(LIBEXT)
 MALLOC.RES = tbbmalloc.res
+MALLOC.MANIFEST =
+ifneq ($(runtime),vc7.1)
+MALLOC.MANIFEST = tbbmanifest.exe.manifest
+endif
 
 MAKE_VERSIONS = cmd /C cscript /nologo /E:jscript $(subst \,/,$(tbb_root))/build/version_info_windows.js $(compiler) $(arch) $(subst \,/,"$(CPLUS) $(CPLUS_FLAGS) $(INCLUDES)") > version_string.tmp
 MAKE_TBBVARS  = cmd /C "$(subst /,\,$(tbb_root))\build\generate_tbbvars.bat"
-

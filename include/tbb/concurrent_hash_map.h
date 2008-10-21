@@ -39,7 +39,7 @@
 #include "tbb_allocator.h"
 #include "spin_rw_mutex.h"
 #include "atomic.h"
-#if TBB_PERFORMANCE_WARNINGS
+#if TBB_USE_PERFORMANCE_WARNINGS
 #include <typeinfo>
 #endif
 
@@ -655,11 +655,11 @@ private:
     /** The table is partioned into disjoint segments to reduce conflicts.
         A segment should be zero-initialized before use. */
     struct segment: internal::hash_map_segment_base {
-#if TBB_DO_ASSERT
+#if TBB_USE_ASSERT
         ~segment() {
             __TBB_ASSERT( !my_array, "should have been cleared earlier" );
         }
-#endif /* TBB_DO_ASSERT */
+#endif /* TBB_USE_ASSERT */
 
         // Pointer to array of chains
         chain* my_array;
@@ -770,12 +770,12 @@ bool concurrent_hash_map<Key,T,HashCompare,A>::lookup( const_accessor* result, c
 restart:
     bool return_value = false;
     // first check in double-check sequence
-#if TBB_DO_THREADING_TOOLS||TBB_DO_ASSERT
+#if TBB_USE_THREADING_TOOLS
     const bool grow = op_insert && s.internal_grow_predicate();
 #else
     const bool grow = op_insert && s.my_logical_size >= s.my_physical_size
         && s.my_physical_size < max_physical_size; // check whether there are free bits
-#endif /* TBB_DO_THREADING_TOOLS||TBB_DO_ASSERT */
+#endif /* TBB_USE_THREADING_TOOLS */
     segment_mutex_t::scoped_lock segment_lock( s.my_mutex, /*write=*/grow );
     if( grow ) { // Load factor is too high  
         grow_segment( segment_lock, s );
@@ -922,7 +922,7 @@ void concurrent_hash_map<Key,T,HashCompare,A>::swap(concurrent_hash_map<Key,T,Ha
 
 template<typename Key, typename T, typename HashCompare, typename A>
 void concurrent_hash_map<Key,T,HashCompare,A>::clear() {
-#if TBB_PERFORMANCE_WARNINGS
+#if TBB_USE_PERFORMANCE_WARNINGS
     size_t total_physical_size = 0, min_physical_size = size_t(-1L), max_physical_size = 0; //< usage statistics
     static bool reported = false;
 #endif
@@ -941,7 +941,7 @@ void concurrent_hash_map<Key,T,HashCompare,A>::clear() {
             }
             cache_aligned_allocator<chain>().deallocate( array, n );
         }
-#if TBB_PERFORMANCE_WARNINGS
+#if TBB_USE_PERFORMANCE_WARNINGS
         total_physical_size += n;
         if(min_physical_size > n) min_physical_size = n;
         if(max_physical_size < n) max_physical_size = n;

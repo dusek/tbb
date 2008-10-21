@@ -97,9 +97,9 @@
 #define TBB_TRACE(x) ((void)(0))
 #endif /* DO_TBB_TRACE */
 
-#if TBB_DO_ASSERT
+#if TBB_USE_ASSERT
 #define COUNT_TASK_NODES 1
-#endif /* TBB_DO_ASSERT */
+#endif /* TBB_USE_ASSERT */
 
 /* If nonzero, then gather statistics */
 #ifndef STATISTICS
@@ -232,7 +232,7 @@ public:
         // Fence required because caller is sending the task_proxy to another thread.
         __TBB_store_with_release( my_last, &t );
     }
-#if TBB_DO_ASSERT
+#if TBB_USE_ASSERT
     //! Verify that *this is initialized empty mailbox.
     /** Raise assertion if *this is not in initialized state, or sizeof(this) is wrong.
         Instead of providing a constructor, we provide this assertion, because for
@@ -243,7 +243,7 @@ public:
         __TBB_ASSERT( !my_last, NULL );
         __TBB_ASSERT( !my_is_idle, NULL );
     }
-#endif /* TBB_DO_ASSERT */
+#endif /* TBB_USE_ASSERT */
 
     //! Drain the mailbox 
     intptr drain() {
@@ -377,13 +377,13 @@ class TaskPool {
     friend class GenericScheduler;
     template<typename SchedulerTraits> friend class internal::CustomScheduler;
 
-#if TBB_DO_ASSERT
+#if TBB_USE_ASSERT
     bool assert_okay() const {
         __TBB_ASSERT( this!=NULL, NULL );
         __TBB_ASSERT( prefix().steal_begin>=-4, NULL );
         return true;
     }
-#endif /* TBB_DO_ASSERT */
+#endif /* TBB_USE_ASSERT */
 }; // class TaskPool
 
 //------------------------------------------------------------------------
@@ -823,21 +823,21 @@ void __TBB_InitOnce::acquire_resources() {
     if( TLS_Index!=TLS_OUT_OF_INDEXES ) {
         InitializeCriticalSection(&OneTimeInitializationCriticalSection);
     } else {
-#if TBB_DO_ASSERT
+#if TBB_USE_ASSERT
         // Issue diagnostic here, not failing assertion, because client
         // might want to test graceful recovery from this problem.
         fprintf( stderr, "TBB failed to initialize: TLS is out of indices\n" );
-#endif /* TBB_DO_ASSERT */
+#endif /* TBB_USE_ASSERT */
     }
 }
 
 void __TBB_InitOnce::release_resources() {
     DeleteCriticalSection(&OneTimeInitializationCriticalSection);
-#if TBB_DO_ASSERT
+#if TBB_USE_ASSERT
     if( TlsGetValue(TLS_Index) ) {
         fprintf( stderr, "TBB is unloaded while tbb::task_scheduler_init object is alive?" );
     }
-#endif /* TBB_DO_ASSERT */
+#endif /* TBB_USE_ASSERT */
     TlsFree(TLS_Index);
     TLS_Index = 0;
 }
@@ -1167,11 +1167,11 @@ class GenericScheduler: public scheduler {
 protected:
     GenericScheduler( Arena* arena );
 
-#if TBB_DO_ASSERT || TEST_ASSEMBLY_ROUTINES
+#if TBB_USE_ASSERT || TEST_ASSEMBLY_ROUTINES
     //! Check that internal data structures are in consistent state.
     /** Raises __TBB_ASSERT failure if inconsistency is found. */
     bool assert_okay() const;
-#endif /* TBB_DO_ASSERT || TEST_ASSEMBLY_ROUTINES */
+#endif /* TBB_USE_ASSERT || TEST_ASSEMBLY_ROUTINES */
 
 public:
     /*override*/ void spawn( task& first, task*& next );
@@ -1208,22 +1208,22 @@ public:
     void free_task( task& t );
 
     void free_task_proxy( task_proxy& tp ) {
-#if TBB_DO_ASSERT
+#if TBB_USE_ASSERT
         poison_pointer( tp.outbox );
         poison_pointer( tp.next_in_mailbox );
         tp.task_and_tag = 0xDEADBEEF;
-#endif /* TBB_DO_ASSERT */
+#endif /* TBB_USE_ASSERT */
         free_task<is_small>(tp);
     }
 
     //! Return task object to the memory allocator.
     void deallocate_task( task& t ) {
-#if TBB_DO_ASSERT
+#if TBB_USE_ASSERT
         task_prefix& p = t.prefix();
         p.state = 0xFF;
         p.extra_state = 0xFF; 
         poison_pointer(p.next);
-#endif /* TBB_DO_ASSERT */
+#endif /* TBB_USE_ASSERT */
         NFS_Free((char*)&t-task_prefix_reservation_size);
 #if COUNT_TASK_NODES
         task_node_count -= 1;
@@ -1383,11 +1383,11 @@ inline void GenericScheduler::free_task( task& t ) {
     // Verify that optimization hints are correct.
     __TBB_ASSERT( h!=is_small_local || p.origin==this, NULL );
     __TBB_ASSERT( !(h&is_small) || p.origin, NULL );
-#if TBB_DO_ASSERT
+#if TBB_USE_ASSERT
     p.depth = 0xDEADBEEF;
     p.ref_count = 0xDEADBEEF;
     poison_pointer(p.owner);
-#endif /* TBB_DO_ASSERT */
+#endif /* TBB_USE_ASSERT */
     __TBB_ASSERT( 1L<<t.state() & (1L<<task::executing|1L<<task::allocated), NULL );
     p.state = task::freed;
     if( h==is_small_local || p.origin==this ) {
@@ -1504,7 +1504,7 @@ public:
 //------------------------------------------------------------------------
 // AssertOkay
 //------------------------------------------------------------------------
-#if TBB_DO_ASSERT
+#if TBB_USE_ASSERT
 /** Logically, this method should be a member of class task.
     But we do not want to publish it, so it is here instead. */
 static bool AssertOkay( const task& task ) {
@@ -1514,7 +1514,7 @@ static bool AssertOkay( const task& task ) {
     __TBB_ASSERT( task.prefix().depth<1L<<30, "corrupt task (absurd depth)" );
     return true;
 }
-#endif /* TBB_DO_ASSERT */
+#endif /* TBB_USE_ASSERT */
 
 //------------------------------------------------------------------------
 // Methods of Arena
@@ -1536,11 +1536,11 @@ Arena* Arena::allocate_arena( unsigned number_of_slots, unsigned number_of_worke
     memset( w, 0, sizeof(WorkerDescriptor)*(number_of_workers));
     a->prefix().worker_list = w;
 
-#if TBB_DO_ASSERT
+#if TBB_USE_ASSERT
     // Verify that earlier memset initialized the mailboxes.
     for( unsigned j=1; j<=number_of_slots; ++j )
         a->mailbox(j).assert_is_initialized();
-#endif /* TBB_DO_ASSERT */
+#endif /* TBB_USE_ASSERT */
 
     size_t k;
     // Mark each worker slot as locked and unused
@@ -1695,10 +1695,10 @@ GenericScheduler::GenericScheduler( Arena* arena_ ) :
     __TBB_ASSERT( assert_okay(), "constructor error" );
 }
 
-#if TBB_DO_ASSERT||TEST_ASSEMBLY_ROUTINES
+#if TBB_USE_ASSERT||TEST_ASSEMBLY_ROUTINES
 bool GenericScheduler::assert_okay() const {
     __TBB_ASSERT( array_size>=TaskPool::min_array_size, NULL );
-#if TBB_DO_ASSERT>=2||TEST_ASSEMBLY_ROUTINES
+#if TBB_USE_ASSERT>=2||TEST_ASSEMBLY_ROUTINES
     acquire_task_pool();
     TaskPool* tp = dummy_slot.task_pool;
     __TBB_ASSERT( tp, NULL );
@@ -1710,10 +1710,10 @@ bool GenericScheduler::assert_okay() const {
         }
     }
     release_task_pool();
-#endif /* TBB_DO_ASSERT>=2||TEST_ASSEMBLY_ROUTINES */
+#endif /* TBB_USE_ASSERT>=2||TEST_ASSEMBLY_ROUTINES */
     return true;
 }
-#endif /* TBB_DO_ASSERT||TEST_ASSEMBLY_ROUTINES */
+#endif /* TBB_USE_ASSERT||TEST_ASSEMBLY_ROUTINES */
 
 #if __TBB_EXCEPTIONS
 
@@ -1923,14 +1923,14 @@ void GenericScheduler::spawn( task& first, task*& next ) {
         __TBB_ASSERT( t->state()==task::allocated, "attempt to spawn task that is not in 'allocated' state" );
         t->prefix().owner = this;
         t->prefix().state = task::ready;
-#if TBB_DO_ASSERT
+#if TBB_USE_ASSERT
         if( task* parent = t->parent() ) {
             internal::reference_count ref_count = parent->prefix().ref_count;
             __TBB_ASSERT( ref_count>=0, "attempt to spawn task whose parent has a ref_count<0" );
             __TBB_ASSERT( ref_count!=0, "attempt to spawn task whose parent has a ref_count==0 (forgot to set_ref_count?)" );
             parent->prefix().extra_state |= es_ref_count_active;
         }
-#endif /* TBB_DO_ASSERT */
+#endif /* TBB_USE_ASSERT */
         affinity_id dst_thread=t->prefix().affinity;
         __TBB_ASSERT( dst_thread==0 || is_version_3_task(*t), "backwards compatibility to TBB 2.0 tasks is broken" );
         if( dst_thread!=0 && dst_thread!=my_affinity_id ) {
@@ -2042,7 +2042,7 @@ inline task* GenericScheduler::strip_proxy( task_proxy* tp ) {
         __TBB_ASSERT( (tat&3)==task_proxy::pool_bit, "task did not come from pool?" );
         __TBB_ASSERT ( !(tat&~3), "Empty proxy in the pool contains non-zero task pointer" );
     }
-#if TBB_DO_ASSERT
+#if TBB_USE_ASSERT
     tp->prefix().state = task::allocated;
 #endif
     free_task_proxy( *tp );
@@ -2169,7 +2169,7 @@ done:
 template<typename SchedulerTraits>
 void CustomScheduler<SchedulerTraits>::wait_for_all( task& parent, task* child ) {
     TBB_TRACE(("%p.wait_for_all(parent=%p,child=%p) enter\n", this, &parent, child));
-#if TBB_DO_ASSERT
+#if TBB_USE_ASSERT
     __TBB_ASSERT( assert_okay(), NULL );
     if( child ) {
         __TBB_ASSERT( child->prefix().owner==this, NULL );
@@ -2178,7 +2178,7 @@ void CustomScheduler<SchedulerTraits>::wait_for_all( task& parent, task* child )
         __TBB_ASSERT( parent.ref_count()>=1, "ref_count must be at least 1" );
     }
     __TBB_ASSERT( assert_okay(), NULL );
-#endif /* TBB_DO_ASSERT */
+#endif /* TBB_USE_ASSERT */
 #if __TBB_EXCEPTIONS
     __TBB_ASSERT( parent.prefix().context || (is_worker() && &parent == dummy_task), "parent task does not have context" );
 #endif /* __TBB_EXCEPTIONS */
@@ -2203,17 +2203,21 @@ exception_was_caught:
         do {
             // Inner loop evaluates tasks that are handed directly to us by other tasks.
             while(t) {
+#if TBB_USE_ASSERT
                 __TBB_ASSERT(!is_proxy(*t),"unexpected proxy");
-                task_prefix& pref = t->prefix();
-                __TBB_ASSERT( pref.owner==this, NULL );
-                task* t_next = NULL;
+                __TBB_ASSERT( t->prefix().owner==this, NULL );
 #if __TBB_EXCEPTIONS
-                if ( !pref.context->my_cancellation_requested ) {
+                if ( !t->prefix().context->my_cancellation_requested ) 
 #endif /* __TBB_EXCEPTIONS */
-                __TBB_ASSERT( 1L<<t->state() & (1L<<task::allocated|1L<<task::ready|1L<<task::reexecute), NULL );
-                pref.state = task::executing;
-                innermost_running_task = t;
+                    __TBB_ASSERT( 1L<<t->state() & (1L<<task::allocated|1L<<task::ready|1L<<task::reexecute), NULL );
                 __TBB_ASSERT(assert_okay(),NULL);
+#endif /* TBB_USE_ASSERT */
+                task* t_next = NULL;
+                innermost_running_task = t;
+                t->prefix().state = task::executing;
+#if __TBB_EXCEPTIONS
+                if ( !t->prefix().context->my_cancellation_requested ) {
+#endif /* __TBB_EXCEPTIONS */
                 TBB_TRACE(("%p.wait_for_all: %p.execute\n",this,t));
                 GATHER_STATISTIC( ++execute_count );
                 t_next = t->execute();
@@ -2222,13 +2226,10 @@ exception_was_caught:
                     affinity_id next_affinity=t_next->prefix().affinity;
                     if (next_affinity != 0 && next_affinity != my_affinity_id)
                         GATHER_STATISTIC( ++proxy_bypass_count );
-                 }
+                }
 #endif
-
 #if __TBB_EXCEPTIONS
                 }
-                else
-                    pref.state = task::executing;
 #endif /* __TBB_EXCEPTIONS */
                 if( t_next ) {
                     __TBB_ASSERT( t_next->state()==task::allocated,
@@ -2248,9 +2249,9 @@ exception_was_caught:
                                 if( SchedulerTraits::itt_possible )
                                     ITT_NOTIFY(sync_acquired, &s->prefix().ref_count);
                                 depth_type s_depth = __TBB_load_with_acquire(s->prefix().depth);
-#if TBB_DO_ASSERT
+#if TBB_USE_ASSERT
                                 s->prefix().extra_state &= ~es_ref_count_active;
-#endif /* TBB_DO_ASSERT */
+#endif /* TBB_USE_ASSERT */
                                 s->prefix().owner = this;
                                 if( !t_next && s_depth>=deepest && s_depth>=d ) {
                                     // Eliminate spawn/get_task pair.
@@ -2264,6 +2265,7 @@ exception_was_caught:
                                 }
                             }
                         }
+                        __TBB_ASSERT( innermost_running_task==t, NULL );
                         destroy_task( *t );
                         break;
 
@@ -2280,11 +2282,11 @@ exception_was_caught:
                                 ITT_NOTIFY(sync_acquired, &s->prefix().ref_count);
                             // Unused load is put here for sake of inserting an "acquire" fence.
                             (void)__TBB_load_with_acquire(s->prefix().depth);
-#if TBB_DO_ASSERT
+#if TBB_USE_ASSERT
                             s->prefix().extra_state &= ~es_ref_count_active;
                             __TBB_ASSERT( s->prefix().owner==this, "ownership corrupt?" );
                             __TBB_ASSERT( s->prefix().depth>=d, NULL );
-#endif /* TBB_DO_ASSERT */
+#endif /* TBB_USE_ASSERT */
                             if( !t_next ) {
                                 t_next = s;
                             } else {
@@ -2302,7 +2304,7 @@ exception_was_caught:
                         CustomScheduler<SchedulerTraits>::spawn( *t, t->prefix().next );
                         __TBB_ASSERT(assert_okay(),NULL);
                         break;
-#if TBB_DO_ASSERT
+#if TBB_USE_ASSERT
                     case task::allocated:
                         break;
                     case task::ready:
@@ -2313,7 +2315,7 @@ exception_was_caught:
 #else
                     default: // just to shut up some compilation warnings
                         break;
-#endif /* TBB_DO_ASSERT */
+#endif /* TBB_USE_ASSERT */
                 }
                 __TBB_ASSERT( !t_next||t_next->prefix().depth>=d, NULL );
                 t = t_next;
@@ -2322,13 +2324,13 @@ exception_was_caught:
 
             t = get_task( d );
             __TBB_ASSERT(!t || !is_proxy(*t),"unexpected proxy");
-#if TBB_DO_ASSERT
+#if TBB_USE_ASSERT
             __TBB_ASSERT(assert_okay(),NULL);
             if(t) {
                 AssertOkay(*t);
                 __TBB_ASSERT( t->prefix().owner==this, "thread got task that it does not own" );
             }
-#endif /* TBB_DO_ASSERT */
+#endif /* TBB_USE_ASSERT */
         } while( t ); // end of local task array processing loop
 
         inbox.set_is_idle( true );
@@ -2438,9 +2440,9 @@ fail:
 #endif /* __TBB_EXCEPTIONS */
 done:
     parent.prefix().ref_count = 0;
-#if TBB_DO_ASSERT
+#if TBB_USE_ASSERT
     parent.prefix().extra_state &= ~es_ref_count_active;
-#endif /* TBB_DO_ASSERT */
+#endif /* TBB_USE_ASSERT */
     innermost_running_task = old_innermost_running_task;
     if( deepest<0 && innermost_running_task==dummy_task && arena_slot!=&dummy_slot ) {
         leave_arena(/*compress=*/true);
@@ -2500,10 +2502,10 @@ void GenericScheduler::leave_arena( bool compress ) {
     __TBB_ASSERT( arena_slot!=&dummy_slot, "not in arena" );
     // Remove myself from the arena.
     acquire_task_pool();
-#if TBB_DO_ASSERT
+#if TBB_USE_ASSERT
     for( depth_type i=0; i<deepest; ++i )
         __TBB_ASSERT( !dummy_slot.task_pool->array[i], "leaving arena, but have tasks to do" );
-#endif /* TBB_DO_ASSERT */
+#endif /* TBB_USE_ASSERT */
     size_t k = dummy_slot.task_pool->prefix().arena_index;
     __TBB_ASSERT( &arena->slot[k]==arena_slot, NULL );
     arena_slot->task_pool = NULL;
@@ -3083,6 +3085,7 @@ void task::internal_set_ref_count( int count ) {
 task& task::self() {
     GenericScheduler* v = GetThreadSpecific();
     __TBB_ASSERT( v->assert_okay(), NULL );
+    __TBB_ASSERT( v->innermost_running_task, NULL );
     return *v->innermost_running_task;
 }
 
@@ -3218,7 +3221,7 @@ int task_scheduler_init::default_num_threads() {
 //------------------------------------------------------------------------
 namespace internal {
 
-#if TBB_DO_ASSERT
+#if TBB_USE_ASSERT
 static atomic<int> observer_proxy_count;
 
 struct check_observer_proxy_count {
@@ -3230,12 +3233,12 @@ struct check_observer_proxy_count {
 };
 
 static check_observer_proxy_count the_check_observer_proxy_count;
-#endif /* TBB_DO_ASSERT */
+#endif /* TBB_USE_ASSERT */
 
 observer_proxy::observer_proxy( task_scheduler_observer_v3& tso ) : next(NULL), observer(&tso) {
-#if TBB_DO_ASSERT
+#if TBB_USE_ASSERT
     ++observer_proxy_count;
-#endif /* TBB_DO_ASSERT */
+#endif /* TBB_USE_ASSERT */
     // 1 for observer
     gc_ref_count = 1;
     {
@@ -3261,11 +3264,11 @@ void observer_proxy::remove_from_list() {
         prev->next = next;
     else 
         global_first_observer_proxy = next;
-#if TBB_DO_ASSERT
+#if TBB_USE_ASSERT
     poison_pointer(prev);
     poison_pointer(next);
     gc_ref_count = -666;
-#endif /* TBB_DO_ASSERT */
+#endif /* TBB_USE_ASSERT */
 }
 
 void observer_proxy::remove_ref_slow() {
@@ -3290,9 +3293,9 @@ void observer_proxy::remove_ref_slow() {
     }
     if( !r ) {
         __TBB_ASSERT( gc_ref_count == -666, NULL );
-#if TBB_DO_ASSERT
+#if TBB_USE_ASSERT
         --observer_proxy_count;
-#endif /* TBB_DO_ASSERT */
+#endif /* TBB_USE_ASSERT */
         delete this;
     }
 }
@@ -3355,9 +3358,9 @@ observer_proxy* observer_proxy::process_list( observer_proxy* local_last, bool i
         } catch(...) {
             // Suppress exception, because user routines are supposed to be observing, not changing
             // behavior of a master or worker thread.
-#if __TBB_DO_ASSERT
+#if TBB_USE_ASSERT
             fprintf(stderr,"warning: %s threw exception\n",is_entry?"on_scheduler_entry":"on_scheduler_exit"); 
-#endif /* __TBB_DO_ASSERT */        
+#endif /* __TBB_USE_ASSERT */        
         }
         intptr bc = --tso->my_busy_count;
         __TBB_ASSERT_EX( bc>=0, "my_busy_count underflowed" );

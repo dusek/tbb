@@ -31,7 +31,6 @@
 
 #include "tbb/tbb_machine.h"
 #include "harness.h"
-#include "tbb/blocked_range.h"
 #include "tbb/tick_count.h"
 
 static volatile long CyclicCounter;
@@ -41,8 +40,7 @@ double SingleThreadTime;
 struct RoundRobin {
     const int number_of_threads;
     RoundRobin( long p ) : number_of_threads(p) {}
-    void operator()( const tbb::blocked_range<long>& r ) const {
-        const long k = r.begin();
+    void operator()( long k ) const {
         tbb::tick_count t0 = tbb::tick_count::now();
         for( long i=0; i<10000; ++i ) {
             // Wait for previous thread to notify us 
@@ -71,7 +69,7 @@ int main( int argc, char* argv[] ) {
         if( Verbose ) printf("testing with %d threads\n", p );
         CyclicCounter = 0;
         Quit = false;
-        NativeParallelFor( tbb::blocked_range<long>(0,p,1), RoundRobin(p) );
+        NativeParallelFor( long(p), RoundRobin(p) );
     }
     printf("done\n");
     return 0;

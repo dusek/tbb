@@ -31,7 +31,6 @@
 #include "tbb/tbb_exception.h"
 #include "tbb_misc.h"
 #include "itt_notify.h"
-#include "tbb/task.h"
 #include <cstring>
 
 #if defined(_MSC_VER) && defined(_Wp64)
@@ -77,6 +76,7 @@ public:
 
     //! Publish segment so other threads can see it.
     inline static void publish_segment( segment_t& s, void* rhs ) {
+    //TODO: see also itt_store_pointer_with_release_v3()
         ITT_NOTIFY( sync_releasing, &s.array );
         __TBB_store_with_release( s.array, rhs );
     }
@@ -97,15 +97,14 @@ public:
             internal::SpinwaitWhileEq( v.my_first_block, segment_index_t(0) );
         if( k < v.my_first_block ) {
             segment_t* s = v.my_segment;
-            // TODO: __TBB_load_with_acquire is not necessary here and below due to following spinwait and
-            // because s[0].array is changed only once ( 0 -> !0 ) and points to uninitialized memory
+            // s[0].array is changed only once ( 0 -> !0 ) and points to uninitialized memory
             void *array0 = __TBB_load_with_acquire(s[0].array);
             if( !array0 ) {
                 // sync_prepare called only if there is a wait
                 ITT_NOTIFY(sync_prepare, &s[0].array );
                 internal::SpinwaitWhileEq( s[0].array, (void*)0 );
                 array0 = __TBB_load_with_acquire(s[0].array);
-             }
+            }
             ITT_NOTIFY(sync_acquired, &s[0].array);
             if( array0 <= __TBB_BAD_ALLOC ) { // check for __TBB_BAD_ALLOC of initial segment
                 publish_segment(s[k], __TBB_BAD_ALLOC); // and assign __TBB_BAD_ALLOC here
@@ -245,8 +244,8 @@ void concurrent_vector_base_v3::internal_assign( const concurrent_vector_base_v3
 }
 
 void* concurrent_vector_base_v3::internal_push_back( size_type element_size, size_type& index ) {
-    __TBB_ASSERT( sizeof(my_early_size)==sizeof(reference_count), NULL );
-    size_type tmp = __TBB_FetchAndIncrementWacquire((tbb::internal::reference_count*)&my_early_size);
+    __TBB_ASSERT( sizeof(my_early_size)==sizeof(uintptr), NULL );
+    size_type tmp = __TBB_FetchAndIncrementWacquire(&my_early_size);
     index = tmp;
     segment_index_t k_old = segment_index_of( tmp );
     size_type base = segment_base(k_old);

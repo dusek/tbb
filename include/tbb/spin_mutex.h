@@ -74,28 +74,28 @@ public:
 
         //! Construct and acquire lock on a mutex.
         scoped_lock( spin_mutex& m ) { 
-#if TBB_DO_THREADING_TOOLS||TBB_DO_ASSERT
+#if TBB_USE_THREADING_TOOLS||TBB_USE_ASSERT
             my_mutex=NULL;
             internal_acquire(m);
 #else
             my_unlock_value = __TBB_LockByte(m.flag);
             my_mutex=&m;
-#endif /* TBB_DO_THREADING_TOOLS||TBB_DO_ASSERT*/
+#endif /* TBB_USE_THREADING_TOOLS||TBB_USE_ASSERT*/
         }
 
         //! Acquire lock.
         void acquire( spin_mutex& m ) {
-#if TBB_DO_THREADING_TOOLS||TBB_DO_ASSERT
+#if TBB_USE_THREADING_TOOLS||TBB_USE_ASSERT
             internal_acquire(m);
 #else
             my_unlock_value = __TBB_LockByte(m.flag);
             my_mutex = &m;
-#endif /* TBB_DO_THREADING_TOOLS||TBB_DO_ASSERT*/
+#endif /* TBB_USE_THREADING_TOOLS||TBB_USE_ASSERT*/
         }
 
         //! Try acquiring lock (non-blocking)
         bool try_acquire( spin_mutex& m ) {
-#if TBB_DO_THREADING_TOOLS||TBB_DO_ASSERT
+#if TBB_USE_THREADING_TOOLS||TBB_USE_ASSERT
             return internal_try_acquire(m);
 #else
             bool result = __TBB_TryLockByte(m.flag);
@@ -104,27 +104,27 @@ public:
                 my_mutex = &m;
             }
             return result;
-#endif /* TBB_DO_THREADING_TOOLS||TBB_DO_ASSERT*/
+#endif /* TBB_USE_THREADING_TOOLS||TBB_USE_ASSERT*/
         }
 
         //! Release lock
         void release() {
-#if TBB_DO_THREADING_TOOLS||TBB_DO_ASSERT
+#if TBB_USE_THREADING_TOOLS||TBB_USE_ASSERT
             internal_release();
 #else
             __TBB_store_with_release(my_mutex->flag, static_cast<unsigned char>(my_unlock_value));
             my_mutex = NULL;
-#endif /* TBB_DO_THREADING_TOOLS||TBB_DO_ASSERT */
+#endif /* TBB_USE_THREADING_TOOLS||TBB_USE_ASSERT */
         }
 
         //! Destroy lock.  If holding a lock, releases the lock first.
         ~scoped_lock() {
             if( my_mutex ) {
-#if TBB_DO_THREADING_TOOLS||TBB_DO_ASSERT
+#if TBB_USE_THREADING_TOOLS||TBB_USE_ASSERT
                 internal_release();
 #else
                 __TBB_store_with_release(my_mutex->flag, static_cast<unsigned char>(my_unlock_value));
-#endif /* TBB_DO_THREADING_TOOLS||TBB_DO_ASSERT */
+#endif /* TBB_USE_THREADING_TOOLS||TBB_USE_ASSERT */
             }
         }
     };

@@ -63,8 +63,10 @@ void limitMem( int limit )
 #define __TBB_NO_IMPLICIT_LINKAGE 1
 #include "../tbb/tbb_assert_impl.h"
 
-#include "tbb/blocked_range.h"
 #include "harness.h"
+#if __linux__
+#include <stdint.h> // uintptr_t
+#endif
 
 #pragma pack(1)
 
@@ -96,8 +98,7 @@ TestMalloc* Tmalloc;
 TestCalloc* Tcalloc;
 TestRealloc* Trealloc;
 TestFree* Tfree;
-
-
+bool        error_occurred = false;
 
 struct MemStruct
 {
@@ -108,6 +109,7 @@ struct MemStruct
 class CMemTest
 {
   UINT CountErrors;
+  static bool firstTime;
 public:
   bool FullLog;
 
@@ -118,6 +120,7 @@ public:
   void NULLReturn(UINT MinSize, UINT MaxSize); // NULL pointer + check errno
   void UniquePointer(); // unique pointer - check with padding
   void AddrArifm(); // unique pointer - check with pointer arithmetic
+  bool ReportError();
   void Free_NULL(); // 
   void Zerofilling(); // check if arrays are zero-filled
   void RunAllTests();
@@ -129,23 +132,23 @@ char** argV;
 
 struct RoundRobin {
     const long number_of_threads;
-	mutable CMemTest test;
+    mutable CMemTest test;
     RoundRobin( long p ) : number_of_threads(p) ,test() {}
 
-    void operator()( const tbb::blocked_range<long> &r ) const 
+    void operator()( int ) const 
     {
         test.FullLog=Verbose;
         test.RunAllTests();
     }
 };
 
-
+bool CMemTest::firstTime = true;
 
 int main(int argc, char* argv[])
 {
-	argC=argc;
-	argV=argv;
-	MaxThread = MinThread = 1;
+  argC=argc;
+  argV=argv;
+  MaxThread = MinThread = 1;
   Tmalloc=scalable_malloc;
   Trealloc=scalable_realloc;
   Tcalloc=scalable_calloc;
@@ -165,12 +168,12 @@ int main(int argc, char* argv[])
   ParseCommandLine( argC, argV );
   limitMem( 500*MaxThread );
   //-------------------------------------
-   for( int p=MaxThread; p>=MinThread; --p ) {
+    for( int p=MaxThread; p>=MinThread; --p ) {
         limitMem( 500*p );
         if( Verbose ) printf("testing with %d threads\n", p );
-        NativeParallelFor( tbb::blocked_range<long>(0,p,1), RoundRobin(p) );
+        NativeParallelFor( p, RoundRobin(p) );
     }
-    printf("done\n");
+  if( !error_occurred ) printf("done\n");
   return 0;
 }
 
@@ -230,7 +233,7 @@ void CMemTest::InvariantDataRealloc()
       if (pchar[k] != (UCHAR)k%255+1)
       {
         CountErrors++;
-        if (FullLog)
+        if (ReportError())
         {
           printf("stand '%c', must stand '%c'\n",pchar[k],(UCHAR)k%255+1);
           printf("error: data changed (at %d, SizeMin=%d)\n",k,sizeMin);
@@ -240,6 +243,7 @@ void CMemTest::InvariantDataRealloc()
   Trealloc(pchar,0);
   if (CountErrors) printf("%s\n",strError);
   else if (FullLog) printf("%s\n",strOk);
+  error_occurred |= ( CountErrors>0 ) ;
   //printf("end check\n");
 }
 void CMemTest::ReallocParam()
@@ -278,11 +282,12 @@ void CMemTest::ReallocParam()
     else
     {
       CountErrors++;
-      if (FullLog) printf("realloc error");
+      if (ReportError()) printf("realloc error");
     }
   }
   if (CountErrors) printf("%s\n",strError);
   else if (FullLog) printf("%s\n",strOk);
+  error_occurred |= ( CountErrors>0 ) ;
 }
 
 void CMemTest::AddrArifm()
@@ -320,12 +325,13 @@ void CMemTest::AddrArifm()
     if ((uintptr_t)MasPointer[i]+MasCountElem[i] > (uintptr_t)MasPointer[i+1])
     {
       CountErrors++;
-//      if (FullLog) printf("intersection detect at 0x%x between %d element(int) and 0x%x\n"
-//      ,(MasPointer+i),MasCountElem[i],(MasPointer+i+1));
+      if (ReportError()) printf("intersection detect at 0x%p between %d element(int) and 0x%p\n"
+                                ,(MasPointer+i),MasCountElem[i],(MasPointer+i+1));
     }
   }
   if (CountErrors) printf("%s\n",strError);
   else if (FullLog) printf("%s\n",strOk);
+  error_occurred |= ( CountErrors>0 ) ;
   //----------------------------------------------------------------
   CountErrors=0;
   if (FullLog) printf("realloc....");
@@ -355,12 +361,13 @@ void CMemTest::AddrArifm()
     if ((uintptr_t)MasPointer[i]+MasCountElem[i] > (uintptr_t)MasPointer[i+1])
     {
       CountErrors++;
-//      if (FullLog) printf("intersection detect at 0x%x between %d element(int) and 0x%x\n"
-//      ,(MasPointer+i),MasCountElem[i],(MasPointer+i+1));
+      if (ReportError()) printf("intersection detect at 0x%p between %d element(int) and 0x%p\n"
+                          ,(MasPointer+i),MasCountElem[i],(MasPointer+i+1));
     }
   }
   if (CountErrors) printf("%s\n",strError);
   else if (FullLog) printf("%s\n",strOk);
+  error_occurred |= ( CountErrors>0 ) ;
   for (int i=0; i<COUNT_ELEM; i++)
   {
     Tfree(MasPointer[i]);
@@ -394,12 +401,13 @@ void CMemTest::AddrArifm()
     if ((uintptr_t)MasPointer[i]+MasCountElem[i] > (uintptr_t)MasPointer[i+1])
     {
       CountErrors++;
-//      if (FullLog) printf("intersection detect at 0x%x between %d element(int) and 0x%x\n"
-//      ,(MasPointer+i),MasCountElem[i],(MasPointer+i+1));
+      if (ReportError()) printf("intersection detect at 0x%p between %d element(int) and 0x%p\n"
+                          ,(MasPointer+i),MasCountElem[i],(MasPointer+i+1));
     }
   }
   if (CountErrors) printf("%s\n",strError);
   else if (FullLog) printf("%s\n",strOk);
+  error_occurred |= ( CountErrors>0 ) ;
   for (int i=0; i<COUNT_ELEM; i++)
   {
     Tfree(MasPointer[i]);
@@ -422,16 +430,15 @@ void CMemTest::Zerofilling()
       if (!TSMas->IzZero())
       {
         CountErrors++;
-        if (FullLog) printf("detect nonzero element at TestStruct\n");
+        if (ReportError()) printf("detect nonzero element at TestStruct\n");
       }
     }
     Tfree(TSMas);
   }
   if (CountErrors) printf("%s\n",strError);
   else if (FullLog) printf("%s\n",strOk);
+  error_occurred |= ( CountErrors>0 ) ;
 }
-
-
 
 void CMemTest::NULLReturn(UINT MinSize, UINT MaxSize)
 {
@@ -494,21 +501,27 @@ void CMemTest::NULLReturn(UINT MinSize, UINT MaxSize)
    for (int j=0; j<COUNT_TESTS; j++)
   {
     Size=rand()%(MaxSize-MinSize)+MinSize;
-    errno = 0;
+    errno = ENOMEM+j+1;
     tmp=Tmalloc(Size);
     if (tmp == NULL)
     {
       CountNULL++;
       if (errno != ENOMEM) {
         CountErrors++;
-        if (FullLog) printf("NULL returned, error: errno != ENOMEM\n");
+        if (ReportError()) printf("NULL returned, error: errno != ENOMEM\n");
       }
     }
     else
     {
-      if (errno != 0) {
+      // Technically, if malloc returns a non-NULL pointer, it is allowed to set errno anyway.
+      // However, on most systems it does not set errno.
+      bool known_issue = false;
+#if __linux__
+      if( errno==ENOMEM ) known_issue = true;
+#endif /* __linux__ */
+      if (errno != ENOMEM+j+1 && !known_issue) {
         CountErrors++;
-        if (FullLog) printf("valid pointer returned, error: errno not kept\n");
+        if (ReportError()) printf("error: errno changed to %d though valid pointer was returned\n", errno);
       }      
       zer=(BYTE*)tmp;
       for (UINT k=0; k<Size; k++)
@@ -522,6 +535,8 @@ void CMemTest::NULLReturn(UINT MinSize, UINT MaxSize)
   if (FullLog) printf("end malloc\n");
   if (CountErrors) printf("%s\n",strError);
   else if (FullLog) printf("%s\n",strOk);
+  error_occurred |= ( CountErrors>0 ) ;
+
   CountErrors=0;
   //calloc
   if (FullLog) printf("calloc....");
@@ -530,21 +545,27 @@ void CMemTest::NULLReturn(UINT MinSize, UINT MaxSize)
    for (int j=0; j<COUNT_TESTS; j++)
   {
     Size=rand()%(MaxSize-MinSize)+MinSize;
-    errno = 0;
-    tmp=Tcalloc(COUNT_ELEM_CALLOC,Size);
+    errno = ENOMEM+j+1;
+    tmp=Tcalloc(COUNT_ELEM_CALLOC,Size);  
     if (tmp == NULL)
     {
       CountNULL++;
       if (errno != ENOMEM) {
         CountErrors++;
-        if (FullLog) printf("NULL returned, error: errno != ENOMEM\n");
+        if (ReportError()) printf("NULL returned, error: errno != ENOMEM\n");
       }
     }
     else
     {
-      if (errno != 0) {
+      // Technically, if calloc returns a non-NULL pointer, it is allowed to set errno anyway.
+      // However, on most systems it does not set errno.
+      bool known_issue = false;
+#if __linux__
+      if( errno==ENOMEM ) known_issue = true;
+#endif /* __linux__ */
+      if (errno != ENOMEM+j+1 && !known_issue) {
         CountErrors++;
-        if (FullLog) printf("valid pointer returned, error: errno not kept\n");
+        if (ReportError()) printf("error: errno changed to %d though valid pointer was returned\n", errno);
       }      
       MStruct.Pointer=tmp;
       MStruct.Size=Size;
@@ -555,6 +576,7 @@ void CMemTest::NULLReturn(UINT MinSize, UINT MaxSize)
   if (FullLog) printf("end calloc\n");
   if (CountErrors) printf("%s\n",strError);
   else if (FullLog) printf("%s\n",strOk);
+  error_occurred |= ( CountErrors>0 ) ;
   CountErrors=0;
   if (FullLog) printf("realloc....");
   CountNULL = 0;
@@ -567,7 +589,7 @@ void CMemTest::NULLReturn(UINT MinSize, UINT MaxSize)
     {
       if (errno != 0) {
         CountErrors++;
-        if (FullLog) printf("valid pointer returned, error: errno not kept\n");
+        if (ReportError()) printf("valid pointer returned, error: errno not kept\n");
       }      
       PointerList[i].Size *= 2;
     }
@@ -575,7 +597,7 @@ void CMemTest::NULLReturn(UINT MinSize, UINT MaxSize)
     {
       if (errno != 0) {
         CountErrors++;
-        if (FullLog) printf("valid pointer returned, error: errno not kept\n");
+        if (ReportError()) printf("valid pointer returned, error: errno not kept\n");
       }      
       PointerList[i].Pointer = tmp;
       PointerList[i].Size *= 2;
@@ -586,7 +608,7 @@ void CMemTest::NULLReturn(UINT MinSize, UINT MaxSize)
       if (errno != ENOMEM)
       {
         CountErrors++;
-        if (FullLog) printf("NULL returned, error: errno != ENOMEM\n");
+        if (ReportError()) printf("NULL returned, error: errno != ENOMEM\n");
       }
       // check data integrity
       zer=(BYTE*)PointerList[i].Pointer;
@@ -594,13 +616,14 @@ void CMemTest::NULLReturn(UINT MinSize, UINT MaxSize)
         if (zer[k] != 0)
         {
           CountErrors++;
-          if (FullLog) printf("NULL returned, error: data changed\n");
+          if (ReportError()) printf("NULL returned, error: data changed\n");
         }
     }
   }
   if (FullLog) printf("realloc end\n");
   if (CountErrors) printf("%s\n",strError);
   else if (FullLog) printf("%s\n",strOk);
+  error_occurred |= ( CountErrors>0 ) ;
   for (UINT i=0; i<PointerList.size(); i++)
   {
     Tfree(PointerList[i].Pointer);
@@ -632,13 +655,14 @@ void CMemTest::UniquePointer()
       if (*(*(MasPointer+i)+j)!=0)
       {
         CountErrors++;
-//        if (FullLog) printf("error, detect 1 with 0x%x\n",(*(MasPointer+i)+j));
+        if (ReportError()) printf("error, detect 1 with 0x%p\n",(*(MasPointer+i)+j));
       }
       *(*(MasPointer+i)+j)+=1;
     }
   }
   if (CountErrors) printf("%s\n",strError);
   else if (FullLog) printf("%s\n",strOk);
+  error_occurred |= ( CountErrors>0 ) ;
   //----------------------------------------------------------
   //calloc
   for (int i=0; i<COUNT_ELEM; i++)
@@ -656,13 +680,14 @@ void CMemTest::UniquePointer()
       if (*(*(MasPointer+i)+j)!=0)
       {
         CountErrors++;
-//        if (FullLog) printf("error, detect 1 with 0x%x\n",(*(MasPointer+i)+j));
+        if (ReportError()) printf("error, detect 1 with 0x%p\n",(*(MasPointer+i)+j));
       }
       *(*(MasPointer+i)+j)+=1;
     }
   }
   if (CountErrors) printf("%s\n",strError);
   else if (FullLog) printf("%s\n",strOk);
+  error_occurred |= ( CountErrors>0 ) ;
   //---------------------------------------------------------
   //realloc
   CountErrors=0;
@@ -687,8 +712,21 @@ void CMemTest::UniquePointer()
   }
   if (CountErrors) printf("%s\n",strError);
   else if (FullLog) printf("%s\n",strOk);
+  error_occurred |= ( CountErrors>0 ) ;
   for (int i=0; i<COUNT_ELEM; i++)
     Tfree(MasPointer[i]);
+}
+
+bool CMemTest::ReportError()
+{
+    if (FullLog)
+        return true;
+    else
+        if (firstTime) {
+            firstTime = false;
+            return true;
+        } else
+            return false;
 }
 
 void CMemTest::Free_NULL()
@@ -701,11 +739,12 @@ void CMemTest::Free_NULL()
     if (errno != 0)
     {
       CountErrors++;
-      if (FullLog) printf("error is found by a call free with parameter NULL\n");
+      if (ReportError()) printf("error is found by a call free with parameter NULL\n");
     }
   }
   if (CountErrors) printf("%s\n",strError);
   else if (FullLog) printf("%s\n",strOk);
+  error_occurred |= ( CountErrors>0 ) ;
 }
 
 void CMemTest::RunAllTests()

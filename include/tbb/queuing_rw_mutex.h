@@ -47,7 +47,7 @@ public:
 
     //! Destructor asserts if the mutex is acquired, i.e. q_tail is non-NULL
     ~queuing_rw_mutex() {
-#if TBB_DO_ASSERT
+#if TBB_USE_ASSERT
         __TBB_ASSERT( !q_tail, "destruction of an acquired mutex");
 #endif
     };
@@ -72,19 +72,19 @@ public:
             STATE_UPGRADE_WAITING = 1<<5,
             STATE_UPGRADE_LOSER = 1<<6,
             STATE_COMBINED_UPGRADING = STATE_UPGRADE_WAITING | STATE_UPGRADE_LOSER
-#if TBB_DO_ASSERT
+#if TBB_USE_ASSERT
            ,STATE_INVALID
-#endif /* TBB_DO_ASSERT */
+#endif /* TBB_USE_ASSERT */
         };
 
         //! Initialize fields
         void initialize() {
             mutex = NULL;
-#if TBB_DO_ASSERT
+#if TBB_USE_ASSERT
             state = STATE_INVALID;
             internal::poison_pointer(next);
             internal::poison_pointer(prev);
-#endif /* TBB_DO_ASSERT */
+#endif /* TBB_USE_ASSERT */
         }
     public:
         //! Construct lock that has not acquired a mutex.

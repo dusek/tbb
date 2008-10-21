@@ -52,25 +52,25 @@ if [ -z "$1" ]; then # custom tbb_build_dir, can't make with TBB_INSTALL_DIR
 tbb_root="${tbb_root}" #
 tbb_bin="${bin_dir}" #
 if [ -z "\$CPATH" ]; then #
-    export CPATH #
     CPATH="\${tbb_root}/include" #
+    export CPATH #    
 else #
-    export CPATH #
     CPATH="\${tbb_root}/include:\$CPATH" #
+    export CPATH #    
 fi #
 if [ -z "\$LIBRARY_PATH" ]; then #
-    export LIBRARY_PATH #
     LIBRARY_PATH="\${tbb_bin}" #
+    export LIBRARY_PATH #    
 else #
-    export LIBRARY_PATH #
     LIBRARY_PATH="\${tbb_bin}:\$LIBRARY_PATH" #
+    export LIBRARY_PATH #    
 fi #
 if [ -z "\$${dll_path}" ]; then #
-    export ${dll_path} #
     ${dll_path}="\${tbb_bin}" #
+    export ${dll_path} #    
 else #
-    export ${dll_path} #
     ${dll_path}="\${tbb_bin}:\$${dll_path}" #
+    export ${dll_path} #    
 fi #
 ${custom_exp_sh} #
 ${custom_var_sh} #
@@ -99,40 +99,36 @@ EOF
 else # make with TBB_INSTALL_DIR
 [ -f ./tbbvars.sh ] || cat >./tbbvars.sh <<EOF
 #!/bin/bash
-if [ -z "\${TBB21_INSTALL_DIR}" ]; then #
-  export TBB21_INSTALL_DIR #
-  TBB21_INSTALL_DIR="${tbb_root}" #
-fi
+TBB21_INSTALL_DIR="${tbb_root}" #
+export TBB21_INSTALL_DIR #
 tbb_bin="\${TBB21_INSTALL_DIR}/build/$1" #
 if [ -z "\$CPATH" ]; then #
-    export CPATH #
     CPATH="\${TBB21_INSTALL_DIR}/include" #
+    export CPATH #    
 else #
-    export CPATH #
     CPATH="\${TBB21_INSTALL_DIR}/include:\$CPATH" #
+    export CPATH #    
 fi #
 if [ -z "\$LIBRARY_PATH" ]; then #
-    export LIBRARY_PATH #
     LIBRARY_PATH="\${tbb_bin}" #
+    export LIBRARY_PATH #    
 else #
-    export LIBRARY_PATH #
     LIBRARY_PATH="\${tbb_bin}:\$LIBRARY_PATH" #
+    export LIBRARY_PATH #    
 fi #
 if [ -z "\$${dll_path}" ]; then #
-    export ${dll_path} #
     ${dll_path}="\${tbb_bin}" #
+    export ${dll_path} #    
 else #
-    export ${dll_path} #
     ${dll_path}="\${tbb_bin}:\$${dll_path}" #
+    export ${dll_path} #    
 fi #
 ${custom_exp_sh} #
 ${custom_var_sh} #
 EOF
 [ -f ./tbbvars.csh ] || cat >./tbbvars.csh <<EOF
 #!/bin/csh
-if (! \$?TBB21_INSTALL_DIR) then #
-    setenv TBB21_INSTALL_DIR "${tbb_root}" #
-endif #
+setenv TBB21_INSTALL_DIR "${tbb_root}" #
 setenv tbb_bin "\${TBB21_INSTALL_DIR}/build/$1" #
 if (! \$?CPATH) then #
     setenv CPATH "\${TBB21_INSTALL_DIR}/include" #

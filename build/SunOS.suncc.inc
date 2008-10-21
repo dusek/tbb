@@ -51,7 +51,7 @@ ifeq ($(cfg), release)
         CPLUS_FLAGS = -xO2 -library=stlport4 -DUSE_PTHREAD 
 endif
 ifeq ($(cfg), debug)
-        CPLUS_FLAGS = -DTBB_DO_ASSERT -g -library=stlport4 -DUSE_PTHREAD 
+        CPLUS_FLAGS = -DTBB_USE_DEBUG -g -library=stlport4 -DUSE_PTHREAD 
 endif
 
 ASM=

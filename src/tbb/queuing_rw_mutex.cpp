@@ -429,8 +429,7 @@ waiting:
     pred = tricky_pointer::fetch_and_add<tbb::acquire>(&(this->prev), FLAG);
     if( pred ) {
         bool success = pred->try_acquire_internal_lock();
-        //unsigned short pred_state = // keep the variable in code just in case
-		pred->state.compare_and_swap<tbb::release>(STATE_UPGRADE_WAITING, STATE_UPGRADE_REQUESTED);
+        pred->state.compare_and_swap<tbb::release>(STATE_UPGRADE_WAITING, STATE_UPGRADE_REQUESTED);
         if( !success ) {
             tmp = tricky_pointer::compare_and_swap<tbb::release>(&(this->prev), pred, tricky_pointer(pred)|FLAG );
             if( tricky_pointer(tmp)&FLAG ) {

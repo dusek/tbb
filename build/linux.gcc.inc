@@ -48,7 +48,7 @@ ifeq ($(cfg), release)
         CPLUS_FLAGS = -DDO_ITT_NOTIFY -O2 -DUSE_PTHREAD
 endif
 ifeq ($(cfg), debug)
-        CPLUS_FLAGS = -DTBB_DO_ASSERT -DDO_ITT_NOTIFY -g -O0 -DUSE_PTHREAD
+        CPLUS_FLAGS = -DTBB_USE_DEBUG -DDO_ITT_NOTIFY -g -O0 -DUSE_PTHREAD
 endif
 
 ASM=

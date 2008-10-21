@@ -51,20 +51,20 @@
 00044 <span class="preprocessor">#define __TBB_STRING_AUX(x) #x</span>
 00045 <span class="preprocessor"></span><span class="preprocessor">#define __TBB_STRING(x) __TBB_STRING_AUX(x)</span>
 00046 <span class="preprocessor"></span>
-00047 <span class="comment">// Default setting of TBB_DO_ASSERT</span>
-00048 <span class="preprocessor">#ifdef TBB_DO_ASSERT</span>
-00049 <span class="preprocessor"></span><span class="preprocessor">#    if TBB_DO_ASSERT </span>
+00047 <span class="comment">// Default setting of TBB_USE_DEBUG</span>
+00048 <span class="preprocessor">#ifdef TBB_USE_DEBUG</span>
+00049 <span class="preprocessor"></span><span class="preprocessor">#    if TBB_USE_DEBUG </span>
 00050 <span class="preprocessor"></span><span class="preprocessor">#        if !defined(_DEBUG)</span>
-00051 <span class="preprocessor"></span><span class="preprocessor">#            pragma message(__FILE__ "(" __TBB_STRING(__LINE__) ") : Warning: Recommend using /MDd if compiling with TBB_DO_ASSERT!=0")</span>
+00051 <span class="preprocessor"></span><span class="preprocessor">#            pragma message(__FILE__ "(" __TBB_STRING(__LINE__) ") : Warning: Recommend using /MDd if compiling with TBB_USE_DEBUG!=0")</span>
 00052 <span class="preprocessor"></span><span class="preprocessor">#        endif</span>
 00053 <span class="preprocessor"></span><span class="preprocessor">#    else</span>
 00054 <span class="preprocessor"></span><span class="preprocessor">#        if defined(_DEBUG)</span>
-00055 <span class="preprocessor"></span><span class="preprocessor">#            pragma message(__FILE__ "(" __TBB_STRING(__LINE__) ") : Warning: Recommend using /MD if compiling with TBB_DO_ASSERT==0")</span>
+00055 <span class="preprocessor"></span><span class="preprocessor">#            pragma message(__FILE__ "(" __TBB_STRING(__LINE__) ") : Warning: Recommend using /MD if compiling with TBB_USE_DEBUG==0")</span>
 00056 <span class="preprocessor"></span><span class="preprocessor">#        endif</span>
 00057 <span class="preprocessor"></span><span class="preprocessor">#    endif</span>
 00058 <span class="preprocessor"></span><span class="preprocessor">#else</span>
 00059 <span class="preprocessor"></span><span class="preprocessor">#    ifdef _DEBUG</span>
-00060 <span class="preprocessor"></span><span class="preprocessor">#        define TBB_DO_ASSERT 1</span>
+00060 <span class="preprocessor"></span><span class="preprocessor">#        define TBB_USE_DEBUG 1</span>
 00061 <span class="preprocessor"></span><span class="preprocessor">#    endif</span>
 00062 <span class="preprocessor"></span><span class="preprocessor">#endif </span>
 00063 <span class="preprocessor"></span>

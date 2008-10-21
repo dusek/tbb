@@ -46,19 +46,19 @@ namespace internal {
     void* __TBB_EXPORTED_FUNC itt_load_pointer_with_acquire_v3( const void* src );
 
     template<typename T> inline void parallel_reduce_store_body( T*& dst, T* src ) {
-#if TBB_DO_THREADING_TOOLS||TBB_DO_ASSERT
+#if TBB_USE_THREADING_TOOLS
         itt_store_pointer_with_release_v3(&dst,src);
 #else
         __TBB_store_with_release(dst,src);
-#endif /* TBB_DO_THREADING_TOOLS||TBB_DO_ASSERT */
+#endif /* TBB_USE_THREADING_TOOLS */
     }
 
     template<typename T> inline T* parallel_reduce_load_body( T*& src ) {
-#if TBB_DO_THREADING_TOOLS||TBB_DO_ASSERT
+#if TBB_USE_THREADING_TOOLS
         return static_cast<T*>(itt_load_pointer_with_acquire_v3(&src));
 #else
         return __TBB_load_with_acquire(src);
-#endif /* TBB_DO_THREADING_TOOLS||TBB_DO_ASSERT */
+#endif /* TBB_USE_THREADING_TOOLS */
     }
 
     //! Task type use to combine the partial results of parallel_reduce.

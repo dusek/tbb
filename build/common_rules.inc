@@ -93,12 +93,17 @@ tbb_misc.$(OBJ): tbb_misc.cpp version_string.tmp
 tbb_misc.E: tbb_misc.cpp version_string.tmp
 	$(CPLUS) $(CPLUS_FLAGS_NOSTRICT) $(INCLUDE_KEY). $(INCLUDES) $(PREPROC_ONLY) $< >$@
 
-%.res: %.rc version_string.tmp
+%.res: %.rc version_string.tmp $(TBB.MANIFEST)
 	rc /Fo$@ $(INCLUDES) $(filter /D%,$(CPLUS_FLAGS)) $<
 
-version_string.tmp: 
+version_string.tmp:
 	$(MAKE_VERSIONS)
 
 tbbvars:
 	$(MAKE_TBBVARS)
+
+tbbmanifest.exe.manifest: version_string.tmp
+	cmd /C "echo int main(){return 0;} >tbbmanifest.c"
+	cl $(C_FLAGS) tbbmanifest.c
+	cmd /C echo #define TBB_MANIFEST 1 >> version_string.tmp
 

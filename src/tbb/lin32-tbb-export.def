@@ -107,6 +107,7 @@ _ZN3tbb21set_assertion_handlerEPFvPKciS1_S1_E;
 _ZN3tbb8internal36get_initial_auto_partitioner_divisorEv;
 _ZN3tbb8internal13handle_perrorEiPKc;
 _ZN3tbb8internal15runtime_warningEPKcz;
+__TBB_machine_store8_slow_perf_warning;
 __TBB_machine_store8_slow;
 
 /* itt_notify.cpp */

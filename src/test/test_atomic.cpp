@@ -340,11 +340,6 @@ int main( int argc, char* argv[] ) {
     return 0;
 }
 
-// Portions dependent on blocked_range.h are down here, so that preceding tests do not
-// accidentally depend upon it.
-
-#include "tbb/blocked_range.h"
-
 template<typename T>
 struct FlagAndMessage {
     //! 0 if message not set yet, 1 if message is set.
@@ -388,9 +383,8 @@ class HammerLoadAndStoreFence {
     mutable T accum;
 public:
     HammerLoadAndStoreFence( FlagAndMessage<T>* fam_, int n_, int p_, const char* name_, int trial_ ) : fam(fam_), n(n_), p(p_), trial(trial_), name(name_) {}
-    void operator()( const tbb::blocked_range<int>& range ) const {
+    void operator()( int k ) const {
         int one = One;
-        int k = range.begin();
         FlagAndMessage<T>* s = fam+k;
         FlagAndMessage<T>* s_next = fam + (k+1)%p;
         for( int i=0; i<n; ++i ) {
@@ -455,7 +449,7 @@ void TestLoadAndStoreFences( const char* name ) {
             memset( fam, 0, p*sizeof(FlagAndMessage<T>) );
             fam->message = (T)-1;
             fam->flag = (T)-1;
-            NativeParallelFor( tbb::blocked_range<int>(0,p,1), HammerLoadAndStoreFence<T>( fam, 100, p, name, trial ) );
+            NativeParallelFor( p, HammerLoadAndStoreFence<T>( fam, 100, p, name, trial ) );
             for( int k=0; k<p; ++k ) {
                 ASSERT( fam[k].message==(k==0 ? (T)-1 : 0), "incomplete round-robin?" ); 
                 ASSERT( fam[k].flag==(k==0 ? (T)-1 : 0), "incomplete round-robin?" ); 
@@ -519,9 +513,9 @@ class HammerAssignment {
     SparseValueSet<T> set;
 public:   
     HammerAssignment( tbb::atomic<T>& x_, const char* name_ ) : x(x_), name(name_) {}
-    void operator()( const tbb::blocked_range<int>& range ) const {
+    void operator()( int k ) const {
         const int n = 1000000;
-        if( range.begin() ) {
+        if( k ) {
             tbb::atomic<T> z;
             AssertSameType( z=x, z );    // Check that return type from assignment is correct
             for( int i=0; i<n; ++i ) {
@@ -549,7 +543,7 @@ template<typename T>
 void TestAssignment( const char* name ) {
     tbb::atomic<T> x;
     x = 0;
-    NativeParallelFor( tbb::blocked_range<int>(0,2,1), HammerAssignment<T>( x, name ) );
+    NativeParallelFor( 2, HammerAssignment<T>( x, name ) );
 #if __TBB_x86_32 && (__linux__ || __FreeBSD__ || _WIN32)
     if( sizeof(T)==8 ) {
         // Some compilers for IA-32 fail to provide 8-byte alignment of objects on the stack, 
@@ -569,7 +563,7 @@ void TestAssignment( const char* name ) {
         __TBB_ASSERT( raw_space<=reinterpret_cast<char*>(&y), "y starts before raw_space" );
         __TBB_ASSERT( reinterpret_cast<char*>(&y+1) <= raw_space+sizeof(raw_space), "y starts after raw_space" );
         y = 0;
-        NativeParallelFor( tbb::blocked_range<int>(0,2,1), HammerAssignment<T>( y, name ) );
+        NativeParallelFor( 2, HammerAssignment<T>( y, name ) );
     }
 #endif /* __TBB_x86_32 && (__linux__ || __FreeBSD__ || _WIN32) */
 }

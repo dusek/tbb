@@ -285,7 +285,7 @@ void pipeline::clear() {
 }
 
 void pipeline::add_filter( filter& filter_ ) {
-#if TBB_DO_ASSERT
+#if TBB_USE_ASSERT
     if ( (filter_.my_filter_mode & internal::VERSION_MASK) >= __TBB_PIPELINE_VERSION(3) ) 
         __TBB_ASSERT( filter_.prev_filter_in_pipeline==filter::not_in_pipeline(), "filter already part of pipeline?" );
     __TBB_ASSERT( filter_.next_filter_in_pipeline==filter::not_in_pipeline(), "filter already part of pipeline?" );

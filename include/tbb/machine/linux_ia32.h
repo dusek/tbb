@@ -147,6 +147,7 @@ static inline int64_t __TBB_machine_load8 (const volatile void *ptr) {
 //! Handles misaligned 8-byte store
 /** Defined in tbb_misc.cpp */
 extern "C" void __TBB_machine_store8_slow( volatile void *ptr, int64_t value );
+extern "C" void __TBB_machine_store8_slow_perf_warning( volatile void *ptr );
 
 static inline void __TBB_machine_store8(volatile void *ptr, int64_t value) {
     if( ((uint32_t)ptr&7u)==0 ) {
@@ -155,6 +156,9 @@ static inline void __TBB_machine_store8(volatile void *ptr, int64_t value) {
                                "fistpq %0" :  "=m"(*(int64_t *)ptr) : "m"(value) : "memory" );
     } else {
         // Unaligned store
+#if TBB_USE_PERFORMANCE_WARNINGS
+        __TBB_machine_store8_slow_perf_warning(ptr);
+#endif /* TBB_USE_PERFORMANCE_WARNINGS */
         __TBB_machine_store8_slow(ptr,value);
     }
 }

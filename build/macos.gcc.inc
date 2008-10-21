@@ -46,7 +46,7 @@ C_FLAGS = $(CPLUS_FLAGS) -x c
 ifeq ($(cfg), release)
     CPLUS_FLAGS = -O2
 else
-    CPLUS_FLAGS = -g -O0 -DTBB_DO_ASSERT
+    CPLUS_FLAGS = -g -O0 -DTBB_USE_DEBUG
 endif
 
 CPLUS_FLAGS += -DUSE_PTHREAD

@@ -57,7 +57,7 @@ class mutex {
 public:
     //! Construct unacquired mutex.
     mutex() {
-#if TBB_DO_ASSERT
+#if TBB_USE_ASSERT
     internal_construct();
 #else
   #if _WIN32||_WIN64
@@ -67,11 +67,11 @@ public:
         if( error_code )
             tbb::internal::handle_perror(error_code,"mutex: pthread_mutex_init failed");
   #endif /* _WIN32||_WIN64*/
-#endif /* TBB_DO_ASSERT */
+#endif /* TBB_USE_ASSERT */
     };
 
     ~mutex() {
-#if TBB_DO_ASSERT
+#if TBB_USE_ASSERT
         internal_destroy();
 #else
   #if _WIN32||_WIN64
@@ -80,7 +80,7 @@ public:
         pthread_mutex_destroy(&impl); 
 
   #endif /* _WIN32||_WIN64 */
-#endif /* TBB_DO_ASSERT */
+#endif /* TBB_USE_ASSERT */
     };
 
     class scoped_lock;
@@ -108,7 +108,7 @@ public:
 
         //! Acquire lock on given mutex.
         void acquire( mutex& mutex ) {
-#if TBB_DO_ASSERT
+#if TBB_USE_ASSERT
             internal_acquire(mutex);
 #else
             my_mutex = &mutex;
@@ -117,12 +117,12 @@ public:
   #else
             pthread_mutex_lock(&mutex.impl);
   #endif /* _WIN32||_WIN64 */
-#endif /* TBB_DO_ASSERT */
+#endif /* TBB_USE_ASSERT */
         }
 
         //! Try acquire lock on given mutex.
         bool try_acquire( mutex& mutex ) {
-#if TBB_DO_ASSERT
+#if TBB_USE_ASSERT
             return internal_try_acquire (mutex);
 #else
             bool result;
@@ -134,12 +134,12 @@ public:
             if( result )
                 my_mutex = &mutex;
             return result;
-#endif /* TBB_DO_ASSERT */
+#endif /* TBB_USE_ASSERT */
         }
 
         //! Release lock
         void release() {
-#if TBB_DO_ASSERT
+#if TBB_USE_ASSERT
             internal_release ();
 #else
   #if _WIN32||_WIN64
@@ -148,7 +148,7 @@ public:
             pthread_mutex_unlock(&my_mutex->impl);
   #endif /* _WIN32||_WIN64 */
             my_mutex = NULL;
-#endif /* TBB_DO_ASSERT */
+#endif /* TBB_USE_ASSERT */
         }
 
     private:

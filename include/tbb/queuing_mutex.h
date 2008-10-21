@@ -50,9 +50,9 @@ public:
         //! Initialize fields to mean "no lock held".
         void initialize() {
             mutex = NULL;
-#if TBB_DO_ASSERT
+#if TBB_USE_ASSERT
             internal::poison_pointer(next);
-#endif /* TBB_DO_ASSERT */
+#endif /* TBB_USE_ASSERT */
         }
     public:
         //! Construct lock that has not acquired a mutex.

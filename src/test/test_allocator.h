@@ -170,11 +170,8 @@ struct Body {
         array[i] = 0;
     }
 
-    void operator()( const tbb::blocked_range<size_t>& r ) const {
-        ASSERT( r.begin()+1==r.end(), NULL );
-
+    void operator()( size_t thread_id ) const {
         typename A::pointer array[256];
-        size_t thread_id = r.begin();
 
         for( size_t k=0; k<256; ++k )
             array[k] = 0;
@@ -200,7 +197,7 @@ void Test() {
 
     // thread safety
     int n = NumberOfFoo;
-    NativeParallelFor( tbb::blocked_range<size_t>(0,4,1), Body<A>(a) );
+    NativeParallelFor( 4, Body<A>(a) );
     ASSERT( NumberOfFoo==n, "Allocate/deallocate count mismatched" );
  
     ASSERT( a==b, NULL );
