@@ -226,10 +226,6 @@ public:
         return __TBB_load_with_acquire( this->my_value );
     }
 
-    value_type& _internal_reference() const {
-        return static_cast<value_type&>(this->my_value);
-    }
-
 protected:
     value_type store_with_release( value_type rhs ) {
         __TBB_store_with_release(this->my_value,rhs);
@@ -315,10 +311,28 @@ __TBB_DECL_ATOMIC(unsigned __TBB_LONG_LONG)
 #else
 // Some old versions of MVSC cannot correctly compile templates with "long long".
 #endif /* defined(__INTEL_COMPILER)||!defined(_MSC_VER)||_MSC_VER>=1400 */
+
 __TBB_DECL_ATOMIC(long)
 __TBB_DECL_ATOMIC(unsigned long)
-__TBB_DECL_ATOMIC(unsigned int)
+
+#if defined(_MSC_VER) && __TBB_WORDSIZE==4
+/* Special version of __TBB_DECL_ATOMIC that avoids gratuitous warnings from cl /Wp64 option. 
+   It is identical to __TBB_DECL_ATOMIC(unsigned) except that it replaces operator=(T) 
+   with an operator=(U) that explicitly converts the U to a T.  Types T and U should be
+   type synonyms on the platform.  Type U should be the wider variant of T from the
+   perspective of /Wp64. */
+#define __TBB_DECL_ATOMIC_ALT(T,U) \
+    template<> struct atomic<T>: internal::atomic_impl<T,T,1> {  \
+        T operator=( U rhs ) {return store_with_release(T(rhs));}  \
+        atomic<T>& operator=( const atomic<T>& rhs ) {store_with_release(rhs); return *this;}  \
+    };
+__TBB_DECL_ATOMIC_ALT(unsigned,size_t)
+__TBB_DECL_ATOMIC_ALT(int,ptrdiff_t)
+#else
+__TBB_DECL_ATOMIC(unsigned)
 __TBB_DECL_ATOMIC(int)
+#endif /* defined(_MSC_VER) && __TBB_WORDSIZE==4 */
+
 __TBB_DECL_ATOMIC(unsigned short)
 __TBB_DECL_ATOMIC(short)
 __TBB_DECL_ATOMIC(char)
@@ -334,7 +348,7 @@ template<typename T> struct atomic<T*>: internal::atomic_impl<T*,ptrdiff_t,sizeo
         // "this" required here in strict ISO C++ because store_with_release is a dependent name
         return this->store_with_release(rhs);
     }
-    atomic<T*>& operator=( const atomic<T*> rhs ) {this->store_with_release(rhs); return *this;}
+    atomic<T*>& operator=( const atomic<T*>& rhs ) {this->store_with_release(rhs); return *this;}
     T* operator->() const {
         return (*this);
     }

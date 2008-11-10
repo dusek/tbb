@@ -44,6 +44,12 @@ namespace tbb {
 
 namespace internal {
 
+enum target_tool {
+    NONE,
+    ITC,
+    ITP
+};
+
 //! Initialize support for __itt_notify handlers
 /** It is the callers responsibility to ensure that this routine is called only once. 
     Returns true if ITT hooks were installed; false otherwise. */
@@ -54,6 +60,7 @@ typedef void (*PointerToITT_Handler)(volatile void*);
 
 //! A pointer to __itt_thr_set_name call.
 typedef int (*PointerToITT_Name_Set)(const char*, int);
+
 
 //! Dummy routine used for first indirect call via ITT_Handler_sync_prepare
 void dummy_sync_prepare(volatile void*);
@@ -76,12 +83,16 @@ PointerToITT_Handler ITT_Handler_sync_acquired = &dummy_sync_acquired;
 PointerToITT_Handler ITT_Handler_sync_releasing = &dummy_sync_releasing;
 PointerToITT_Handler ITT_Handler_sync_cancel = &dummy_sync_cancel;
 PointerToITT_Name_Set ITT_Handler_thr_name_set = &dummy_thr_name_set;
+
+target_tool current_tool;
 #else
 extern PointerToITT_Handler ITT_Handler_sync_prepare;
 extern PointerToITT_Handler ITT_Handler_sync_acquired;
 extern PointerToITT_Handler ITT_Handler_sync_releasing;
 extern PointerToITT_Handler ITT_Handler_sync_cancel;
 extern PointerToITT_Name_Set ITT_Handler_thr_name_set;
+
+extern target_tool current_tool;
 #endif
 
 } // namespace internal 
@@ -96,12 +107,14 @@ extern PointerToITT_Name_Set ITT_Handler_thr_name_set;
     Ordinarily, preprocessor token gluing games should be avoided.
     But here, it seemed to be the best way to handle the issue. */
 #define ITT_NOTIFY(name,pointer) ( ITT_GLUE(ITT_Handler_,name) ? ITT_GLUE(ITT_Handler_,name)(pointer) : (void)0 )
+#define ITT_TARGET_TOOL(tool,name,pointer) ( ITT_GLUE(ITT_Handler_,name) && tool==current_tool ? ITT_GLUE(ITT_Handler_,name)(pointer) : (void)0 )
 
 #define ITT_NAME_SET(name,pointer,length) ( ITT_GLUE(ITT_Handler_,name) ? ITT_GLUE(ITT_Handler_,name)(pointer,length) : 0 )
 
 #else
 
 #define ITT_NOTIFY(name,pointer) ((void)0)
+#define ITT_TARGET_TOOL(tool,name,pointer) ((void)0)
  
 #define ITT_NAME_SET(name,pointer,length) ((void)0)
  
@@ -112,5 +125,7 @@ extern PointerToITT_Name_Set ITT_Handler_thr_name_set;
 #else
 #define ITT_QUIET(x) ((void)0)
 #endif /* DO_ITT_QUIET */
+
+
 
 #endif /* _TBB_ITT_NOTIFY */

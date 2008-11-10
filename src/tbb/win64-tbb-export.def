@@ -229,3 +229,9 @@ __TBB_machine_pause
 ?thread_get_id_v3@internal@tbb@@YA?AVid@tbb_thread_v3@12@XZ
 ?thread_sleep_v3@internal@tbb@@YAXAEBVinterval_t@tick_count@2@@Z
 ?thread_yield_v3@internal@tbb@@YAXXZ
+
+; enumerable_thread_specific
+?create_key@tls_single_key_manager_v4@internal@tbb@@SAXAEA_K@Z
+?destroy_key@tls_single_key_manager_v4@internal@tbb@@SAXAEA_K@Z
+?set_tls@tls_single_key_manager_v4@internal@tbb@@SAXAEA_KPEAX@Z
+?get_tls@tls_single_key_manager_v4@internal@tbb@@SAPEAXAEA_K@Z

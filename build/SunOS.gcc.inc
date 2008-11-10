@@ -32,7 +32,7 @@ OUTPUT_KEY = -o #
 OUTPUTOBJ_KEY = -o #
 PIC_KEY = -fPIC
 WARNING_AS_ERROR_KEY = -Werror
-WARNING_KEY =
+WARNING_KEY = -Wall
 DYLIB_KEY = -shared
 LIBDL = -ldl
 

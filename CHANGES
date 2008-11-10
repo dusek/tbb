@@ -1,4 +1,19 @@
 ------------------------------------------------------------------------
+20081109 open-source release
+
+Changes (w.r.t. previous open-source release):
+
+- New serial out of order filter for tbb::pipeline was added
+- Fixed the issue with tbb::atomic<T*>::operator= reported at the forum 
+- Fixed the issue with using tbb::task::self() in task destructor 
+    reported at the forum
+- A number of other improvements to code, tests, makefiles, examples 
+    and documents.
+
+Open-source contributions integrated: 
+- Changes in the allocator were partially integrated
+
+------------------------------------------------------------------------
 20081019 open-source release
 
 Changes (w.r.t. previous open-source release):
@@ -111,6 +126,8 @@ Changes (w.r.t. previous open-source release):
 - Cache behavior improvements in the scalable allocator.
 - Improvements in text_filter, polygon_overlay, and other examples.
 - A lot of other stability improvements in code, tests, and makefiles.
+- First release where binary packages include headers/docs/examples, so
+    binary packages are now self-sufficient for using TBB.
 
 Open-source contributions integrated:
 

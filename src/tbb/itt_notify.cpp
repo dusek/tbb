@@ -34,6 +34,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include "tbb/tbb_machine.h"
+#include "tbb/atomic.h"
 
 #if _WIN32||_WIN64
     #include <windows.h>
@@ -60,6 +61,7 @@ namespace internal {
 
 #if DO_ITT_NOTIFY
 
+
 //! Table describing the __itt_notify handlers.
 static const DynamicLinkDescriptor ITT_HandlerTable[] = {
     DLD( __itt_notify_sync_prepare, ITT_Handler_sync_prepare),
@@ -77,6 +79,9 @@ static const DynamicLinkDescriptor ITT_HandlerTable[] = {
 # endif /* _WIN32 || _WIN64 */
 };
 
+static const int ITT_HandlerTable_size = 
+    sizeof(ITT_HandlerTable)/sizeof(DynamicLinkDescriptor);
+
 // LIBITTNOTIFY_NAME is the name of the ITT notification library 
 # if _WIN32||_WIN64
 #  define LIBITTNOTIFY_NAME "libittnotify.dll"
@@ -92,11 +97,18 @@ bool InitializeITT() {
     // Check if we are running under control of VTune.
     if( GetBoolEnvironmentVariable("KMP_FOR_TCHECK") || GetBoolEnvironmentVariable("KMP_FOR_TPROFILE") ) {
         // Yes, we are under control of VTune.  Check for libittnotify library.
-        result = FillDynamicLinks( LIBITTNOTIFY_NAME, ITT_HandlerTable, 5 );
+        result = FillDynamicLinks( LIBITTNOTIFY_NAME, ITT_HandlerTable, ITT_HandlerTable_size );
     }
-    if (!result){
-        for (int i = 0; i < 5; i++)
+    if (result){
+        if( GetBoolEnvironmentVariable("KMP_FOR_TCHECK") ) {
+            current_tool = ITC;
+        } else if( GetBoolEnvironmentVariable("KMP_FOR_TPROFILE") ) {
+            current_tool = ITP;
+        }
+    } else {
+        for (int i = 0; i < ITT_HandlerTable_size; i++)
             *ITT_HandlerTable[i].handler = NULL;
+        current_tool = NONE;
     }
     PrintExtraVersionInfo( "ITT", result?"yes":"no" );
     return result;
@@ -147,6 +159,7 @@ int dummy_thr_name_set( const char* str, int number ) {
         return -1;
     }
 }
+
 
 #endif /* DO_ITT_NOTIFY */
 

@@ -31,6 +31,7 @@
 
 #include "tbb_stddef.h"
 #include "cache_aligned_allocator.h"
+#include <iterator>
 #include <new>
 
 namespace tbb {
@@ -159,7 +160,8 @@ typedef concurrent_queue_iterator_base_v3 concurrent_queue_iterator_base;
 /** Value is either the T or const T type of the container.
     @ingroup containers */
 template<typename Container, typename Value>
-class concurrent_queue_iterator: public concurrent_queue_iterator_base_v3 {
+class concurrent_queue_iterator: public concurrent_queue_iterator_base,
+        public std::iterator<std::forward_iterator_tag,Value> {
 #if !defined(_MSC_VER) || defined(__INTEL_COMPILER)
     template<typename T, class A>
     friend class ::tbb::concurrent_queue;

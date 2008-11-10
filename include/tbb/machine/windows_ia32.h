@@ -30,8 +30,6 @@
 #error Do not include this file directly; include tbb_machine.h instead
 #endif
 
-#include <windows.h>
-
 #if defined(__INTEL_COMPILER)
 #define __TBB_fence_for_acquire() __asm { __asm nop }
 #define __TBB_fence_for_release() __asm { __asm nop }
@@ -99,12 +97,16 @@ inline void __TBB_machine_store_with_release(T& location, V value) {
     __TBB_machine_load_store<T,sizeof(T)>::store_with_release(location,value);
 }
 
+//! Overload that exists solely to avoid /Wp64 warnings.
+inline void __TBB_machine_store_with_release(size_t& location, size_t value) {
+    __TBB_machine_load_store<size_t,sizeof(size_t)>::store_with_release(location,value);
+} 
+
 #define __TBB_load_with_acquire(L) __TBB_machine_load_with_acquire((L))
 #define __TBB_store_with_release(L,V) __TBB_machine_store_with_release((L),(V))
 
-
-#define DEFINE_ATOMICS(S,T,A,C) \
-static inline T __TBB_machine_cmpswp##S ( volatile void * ptr, T value, T comparand ) { \
+#define __TBB_DEFINE_ATOMICS(S,T,U,A,C) \
+static inline T __TBB_machine_cmpswp##S ( volatile void * ptr, U value, U comparand ) { \
     T result; \
     volatile T *p = (T *)ptr; \
     __asm \
@@ -119,7 +121,7 @@ static inline T __TBB_machine_cmpswp##S ( volatile void * ptr, T value, T compar
     return result; \
 } \
 \
-static inline T __TBB_machine_fetchadd##S ( volatile void * ptr, T addend ) { \
+static inline T __TBB_machine_fetchadd##S ( volatile void * ptr, U addend ) { \
     T result; \
     volatile T *p = (T *)ptr; \
     __asm \
@@ -133,7 +135,7 @@ static inline T __TBB_machine_fetchadd##S ( volatile void * ptr, T addend ) { \
     return result; \
 }\
 \
-static inline T __TBB_machine_fetchstore##S ( volatile void * ptr, T value ) { \
+static inline T __TBB_machine_fetchstore##S ( volatile void * ptr, U value ) { \
     T result; \
     volatile T *p = (T *)ptr; \
     __asm \
@@ -147,9 +149,9 @@ static inline T __TBB_machine_fetchstore##S ( volatile void * ptr, T value ) { \
     return result; \
 }
 
-DEFINE_ATOMICS(1, __int8, al, cl)
-DEFINE_ATOMICS(2, __int16, ax, cx)
-DEFINE_ATOMICS(4, __int32, eax, ecx)
+__TBB_DEFINE_ATOMICS(1, __int8, __int8, al, cl)
+__TBB_DEFINE_ATOMICS(2, __int16, __int16, ax, cx)
+__TBB_DEFINE_ATOMICS(4, __int32, size_t, eax, ecx)
 
 static inline __int32 __TBB_machine_lg( unsigned __int64 i ) {
     unsigned __int32 j;
@@ -216,9 +218,7 @@ static inline void __TBB_machine_pause (__int32 delay ) {
 #define __TBB_AtomicAND(P,V) __TBB_machine_AND(P,V)
 
 // Definition of other functions
-#if !defined(_WIN32_WINNT)
-extern "C" BOOL WINAPI SwitchToThread(void);
-#endif
+extern "C" __declspec(dllimport) int __stdcall SwitchToThread( void );
 #define __TBB_Yield()  SwitchToThread()
 #define __TBB_Pause(V) __TBB_machine_pause(V)
 #define __TBB_Log2(V)    __TBB_machine_lg(V)

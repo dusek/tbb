@@ -90,7 +90,7 @@ bool FillDynamicLinks( const char* /*library*/, const DynamicLinkDescriptor desc
 
 bool FillDynamicLinks( void* module, const DynamicLinkDescriptor descriptors[], size_t n )
 {
-    const size_t max_n = 5;
+    const size_t max_n = 8;
     __TBB_ASSERT( 0<n && n<=max_n, NULL );
     PointerToHandler h[max_n];
     size_t k = 0;

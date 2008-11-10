@@ -52,6 +52,8 @@ ifeq (1,$(TBB_NOSTRICT))
 # The files below need the -strict_ansi flag downgraded to -ansi to compile
 
 KNOWN_NOSTRICT = concurrent_hash_map.o \
+	concurrent_queue.o    \
+	enumerable_thread_specific.o    \
 	concurrent_vector_v2.o \
 	concurrent_vector.o
 
@@ -72,7 +74,8 @@ TBB_CPLUS.OBJ = concurrent_hash_map.$(OBJ) \
 		tbb_misc.$(OBJ) \
 		mutex.$(OBJ) \
 		recursive_mutex.$(OBJ) \
-		tbb_thread.$(OBJ)
+		tbb_thread.$(OBJ) \
+		enumerable_thread_specific.$(OBJ)
 
 # OLD/Legacy object files for backward binary compatibility
 ifeq (,$(findstring $(DEFINE_KEY)TBB_NO_LEGACY,$(CPLUS_FLAGS)))

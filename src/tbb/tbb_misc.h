@@ -32,7 +32,9 @@
 #include "tbb/tbb_stddef.h"
 #include "tbb/tbb_machine.h"
 
-#if defined(__linux__)
+#if _WIN32||_WIN64
+#include <windows.h>
+#elif defined(__linux__)
 #include <sys/sysinfo.h>
 #elif defined(__sun)
 #include <sys/sysinfo.h>

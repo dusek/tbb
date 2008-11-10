@@ -323,7 +323,8 @@ value ParallelQueueFib(int n)
     task_list list;
     list.push_back(*new(task::allocate_root()) QueueInsertTask( n, stream ));
     list.push_back(*new(task::allocate_root()) QueueProcessTask( stream ));
-    // last runs first - scheduler is as LIFO
+    // If there is only a single thread, the first task in the list runs to completion
+    // before the second task in the list starts.
     task::spawn_root_and_wait(list);
     assert(stream.Queue.size() == 1); // it is easy to lose some work
     Matrix2x2 M; stream.Queue.pop( M ); // get last matrix

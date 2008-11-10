@@ -2084,6 +2084,7 @@ retry:
             // Following assertion should be true because TBB 2.0 tasks never specify affinity, and hence are not proxied.
             __TBB_ASSERT( is_version_3_task(*result), "backwards compatibility with TBB 2.0 broken" );
             // Task affinity has changed.
+            innermost_running_task = result;
             result->note_affinity(my_affinity_id);
         }
     }
@@ -2366,8 +2367,10 @@ exception_was_caught:
                         GATHER_STATISTIC( ++proxy_steal_count );
                     }
                     GATHER_STATISTIC( ++steal_count );
-                    if( is_version_3_task(*t) )
+                    if( is_version_3_task(*t) ) {
+                        innermost_running_task = t;
                         t->note_affinity( my_affinity_id );
+                    }
                 } else {
                     GATHER_STATISTIC( ++mail_received_count );
                 }

@@ -170,16 +170,11 @@ private:
     
     typedef concurrent_vector_base_v3 concurrent_vector_base;
 
-    //TODO[?]: deal with _Range_checked_iterator_tag of MSVC
     //! Meets requirements of a forward iterator for STL and a Value for a blocked_range.*/
     /** Value is either the T or const T type of the container.
         @ingroup containers */
     template<typename Container, typename Value>
     class vector_iterator 
-#if defined(_WIN64) && defined(_MSC_VER) 
-        // Ensure that Microsoft's internal template function _Val_type works correctly.
-        : public std::iterator<std::random_access_iterator_tag,Value>
-#endif /* defined(_WIN64) && defined(_MSC_VER) */
     {
         //! concurrent_vector over which we are iterating.
         Container* my_vector;

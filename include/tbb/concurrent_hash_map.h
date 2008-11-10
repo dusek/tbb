@@ -95,10 +95,7 @@ namespace internal {
         @ingroup containers */ 
     template<typename Container, typename Value>
     class hash_map_iterator
-#if defined(_WIN64) && defined(_MSC_VER) 
-        // Ensure that Microsoft's internal template function _Val_type works correctly.
         : public std::iterator<std::forward_iterator_tag,Value>
-#endif /* defined(_WIN64) && defined(_MSC_VER) */
     {
         typedef typename Container::node node;
         typedef typename Container::chain chain;
@@ -174,15 +171,6 @@ namespace internal {
             operator++();
             return result;
         }
-
-        // STL support
-
-        typedef ptrdiff_t difference_type;
-        typedef Value value_type;
-        typedef Value* pointer;
-        typedef Value& reference;
-        typedef const Value& const_reference;
-        typedef std::forward_iterator_tag iterator_category;
     };
 
     template<typename Container, typename Value>
@@ -237,7 +225,6 @@ namespace internal {
         typedef std::size_t size_type;
         typedef typename Iterator::value_type value_type;
         typedef typename Iterator::reference reference;
-        typedef typename Iterator::const_reference const_reference;
         typedef typename Iterator::difference_type difference_type;
         typedef Iterator iterator;
 

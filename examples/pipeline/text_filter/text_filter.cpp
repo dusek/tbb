@@ -73,7 +73,7 @@ private:
 };
 
 MyInputFilter::MyInputFilter( FILE* input_file_ ) : 
-    filter(serial),
+    filter(serial_in_order),
     next_buffer(0),
     input_file(input_file_),
     last_char_of_previous_buffer(' ')
@@ -126,7 +126,7 @@ public:
 };
 
 MyOutputFilter::MyOutputFilter( FILE* output_file ) : 
-    tbb::filter(serial),
+    tbb::filter(serial_in_order),
     my_output_file(output_file)
 {
 }
@@ -210,7 +210,7 @@ int run_pipeline( int nthreads )
         printf("threads = %d time = %g\n", nthreads, (t1-t0).seconds());
     } else {
         if ( nthreads == 1 ){
-            printf("serial run   time = %g\n", (t1-t0).seconds());
+            printf("single thread run time = %g\n", (t1-t0).seconds());
         } else {
             printf("parallel run time = %g\n", (t1-t0).seconds());
         }
@@ -226,8 +226,8 @@ int main( int argc, char* argv[] ) {
         tbb::task_scheduler_init init( NThread );
         if(!run_pipeline (NThread))
             return 1;
-    } else { // Number of threads wasn't set explicitly. Run serial and parallel version
-        { // serial run
+    } else { // Number of threads wasn't set explicitly. Run single-thread and fully subscribed parallel versions
+        { // single-threaded run
             tbb::task_scheduler_init init_serial(1);
             if(!run_pipeline (1))
                 return 1;

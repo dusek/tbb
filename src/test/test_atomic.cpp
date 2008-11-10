@@ -539,8 +539,13 @@ public:
     }
 };
 
+// Compile-time check that a class method has the required signature.
+// Intended to check the assignment operator of tbb::atomic
+template<typename T> void TestAssignmentSignature( T& (T::*)(const T&) ) {}
+
 template<typename T>
 void TestAssignment( const char* name ) {
+    TestAssignmentSignature( &tbb::atomic<T>::operator= );
     tbb::atomic<T> x;
     x = 0;
     NativeParallelFor( 2, HammerAssignment<T>( x, name ) );

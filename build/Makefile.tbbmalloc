@@ -41,6 +41,8 @@ VPATH += $(MALLOC_ROOT) $(MALLOC_SOURCE_ROOT)
 KNOWN_NOSTRICT = test_ScalableAllocator_STL.$(OBJ) #test_malloc_compliance.$(OBJ)
 KNOWN_WARNINGS = test_malloc_compliance.$(OBJ)
 
+CPLUS_FLAGS += $(if $(crosstest),$(DEFINE_KEY)__TBBMALLOC_NO_IMPLICIT_LINKAGE=1)
+
 include $(tbb_root)/build/common_rules.inc
 
 #------------------------------------------------------

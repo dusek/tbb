@@ -63,9 +63,15 @@ class ordered_buffer {
     //! Initial size for "array"
     /** Must be a power of 2 */
     static const size_type initial_buffer_size = 4;
+
+    //! Used only for out of order buffer.
+    Token high_token;
+
+    //! True for ordered filter, false otherwise. 
+    bool is_ordered;
 public:
     //! Construct empty buffer.
-    ordered_buffer() : array(NULL), array_size(0), low_token(0) {
+    ordered_buffer( bool is_ordered_ ) : array(NULL), array_size(0), low_token(0), high_token(0), is_ordered(is_ordered_) {
         grow(initial_buffer_size);
         __TBB_ASSERT( array, NULL );
     }
@@ -87,7 +93,7 @@ public:
         task* result = &putter;
         {
             spin_mutex::scoped_lock lock( array_mutex );
-            Token token = putter.next_token_number();
+            Token token = is_ordered ? putter.next_token_number() : high_token++;
             if( token!=low_token ) {
                 // Trying to put token that is beyond low_token.
                 // Need to wait until low_token catches up before dispatching.
@@ -108,7 +114,7 @@ public:
         task* wakee=NULL;
         {
             spin_mutex::scoped_lock lock( array_mutex );
-            if( token==low_token ) {
+            if( !is_ordered || token==low_token ) {
                 // Wake the next task
                 task*& item = array[++low_token & array_size-1];
                 ITT_NOTIFY( sync_acquired, this );
@@ -276,7 +282,7 @@ void pipeline::clear() {
         }
         next=f->next_filter_in_pipeline;
         f->next_filter_in_pipeline = filter::not_in_pipeline();
-        if ( (f->my_filter_mode & internal::VERSION_MASK) >= __TBB_PIPELINE_VERSION(3) ) {
+        if ( (f->my_filter_mode & filter::version_mask) >= __TBB_PIPELINE_VERSION(3) ) {
             f->prev_filter_in_pipeline = filter::not_in_pipeline();
             f->my_pipeline = NULL;
         }
@@ -286,15 +292,15 @@ void pipeline::clear() {
 
 void pipeline::add_filter( filter& filter_ ) {
 #if TBB_USE_ASSERT
-    if ( (filter_.my_filter_mode & internal::VERSION_MASK) >= __TBB_PIPELINE_VERSION(3) ) 
+    if ( (filter_.my_filter_mode & filter::version_mask) >= __TBB_PIPELINE_VERSION(3) ) 
         __TBB_ASSERT( filter_.prev_filter_in_pipeline==filter::not_in_pipeline(), "filter already part of pipeline?" );
     __TBB_ASSERT( filter_.next_filter_in_pipeline==filter::not_in_pipeline(), "filter already part of pipeline?" );
     __TBB_ASSERT( !end_counter, "invocation of add_filter on running pipeline" );
 #endif    
     if( filter_.is_serial() ) {
-        filter_.input_buffer = new internal::ordered_buffer();
+        filter_.input_buffer = new internal::ordered_buffer( filter_.is_ordered() );
     }
-    if ( (filter_.my_filter_mode & internal::VERSION_MASK) >= __TBB_PIPELINE_VERSION(3) ) {
+    if ( (filter_.my_filter_mode & filter::version_mask) >= __TBB_PIPELINE_VERSION(3) ) {
         filter_.my_pipeline = this;
         filter_.prev_filter_in_pipeline = filter_end;
         if ( filter_list == NULL)
@@ -360,7 +366,7 @@ void pipeline::run( size_t max_number_of_live_tokens ) {
 }
 
 filter::~filter() {
-    if ( (my_filter_mode & internal::VERSION_MASK) >= __TBB_PIPELINE_VERSION(3) ) {
+    if ( (my_filter_mode & version_mask) >= __TBB_PIPELINE_VERSION(3) ) {
         if ( next_filter_in_pipeline != filter::not_in_pipeline() ) { 
             __TBB_ASSERT( prev_filter_in_pipeline != filter::not_in_pipeline(), "probably filter list is broken" );
             my_pipeline->remove_filter(*this);

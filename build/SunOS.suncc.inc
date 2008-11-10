@@ -35,7 +35,7 @@ DYLIB_KEY = -G
 LIBDL = -ldl
 # WARNING_AS_ERROR_KEY = -errwarn=%all
 WARNING_AS_ERROR_KEY = Warning as error
-WARNING_SUPPRESS = -erroff=unassigned,attrskipunsup,badargtype2w,badbinaryopw,wbadasg
+WARNING_SUPPRESS = -erroff=unassigned,attrskipunsup,badargtype2w,badbinaryopw,wbadasg,wvarhidemem
 tbb_strict=0
 
 TBB_NOSTRICT = 1
@@ -48,10 +48,10 @@ LIBS = -lpthread -lrt -R .
 C_FLAGS = $(CPLUS_FLAGS)
 
 ifeq ($(cfg), release)
-        CPLUS_FLAGS = -xO2 -library=stlport4 -DUSE_PTHREAD 
+        CPLUS_FLAGS = -xO2 -library=stlport4 -DUSE_PTHREAD $(WARNING_SUPPRESS)
 endif
 ifeq ($(cfg), debug)
-        CPLUS_FLAGS = -DTBB_USE_DEBUG -g -library=stlport4 -DUSE_PTHREAD 
+        CPLUS_FLAGS = -DTBB_USE_DEBUG -g -library=stlport4 -DUSE_PTHREAD $(WARNING_SUPPRESS)
 endif
 
 ASM=

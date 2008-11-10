@@ -27,7 +27,7 @@
 tbb_root?=..
 examples_root:=$(tbb_root)/examples
 include $(tbb_root)/build/common.inc
-.PHONY: all tbb tbbmalloc test debug examples clean info
+.PHONY: all tbb tbbmalloc test test_no_depends release debug examples clean
 
 all: release debug examples
 
@@ -85,7 +85,7 @@ else
 	@$(MAKE) -C "$(work_dir)_$(cfg)"  -r -f $(tbb_root)/build/Makefile.test cfg=$(cfg) tbb_root=$(tbb_root) $@
 endif
 
-.PHONY: tbb_release tbb_debug test_release test_debug
+.PHONY: tbb_release tbb_debug test_release test_debug test_release_no_depends test_debug_no_depends
 
 # do not delete double-space after -C option
 tbb_release: mkdir_release
@@ -103,6 +103,7 @@ test_debug_no_depends:
 	-$(MAKE) -C "$(call cross_cfg,$(work_dir)_debug)"  -r -f $(tbb_root)/build/Makefile.test cfg=debug tbb_root=$(tbb_root)
 
 .PHONY: tbbmalloc_release tbbmalloc_debug tbbmalloc_test_release tbbmalloc_test_debug
+.PHONY: tbbmalloc_test_release_no_depends tbbmalloc_test_debug_no_depends
 
 tbbmalloc_release: mkdir_release
 	$(MAKE) -C "$(work_dir)_release"  -r -f $(tbb_root)/build/Makefile.tbbmalloc cfg=release malloc tbb_root=$(tbb_root)
@@ -139,7 +140,7 @@ clean_debug:
 clean_examples:
 	$(shell $(MAKE) -s -i -r -C $(examples_root) -f Makefile tbb_root=.. clean >$(NUL) 2>$(NUL))
 
-.PHONY: mkdir_release mkdir_debug
+.PHONY: mkdir_release mkdir_debug codecov do_codecov info
 
 mkdir_release:
 	$(shell $(MD) "$(work_dir)_release" >$(NUL) 2>$(NUL))
@@ -148,6 +149,14 @@ mkdir_release:
 mkdir_debug:
 	$(shell $(MD) "$(work_dir)_debug" >$(NUL) 2>$(NUL))
 	$(if $(subst undefined,,$(origin_build_dir)),,cd "$(work_dir)_debug" && $(MAKE_TBBVARS) $(tbb_build_prefix)_debug)
+
+codecov:
+	$(MAKE) tbb_root=.. compiler=$(if $(findstring windows,$(tbb_os)),icl,icc) codecov=yes do_codecov
+
+do_codecov:
+	$(MAKE) tbbmalloc_test_release test_release
+	$(RM) $(work_dir)_release$(SLASH)test_*.* >$(NUL) 2>$(NUL)
+	$(MAKE) crosstest=yes tbbmalloc_test_debug test_debug
 
 info:
 	@echo OS: $(tbb_os)

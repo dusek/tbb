@@ -65,10 +65,10 @@ TBB.DEF = $(tbb_root)/src/tbb/$(def_prefix)-tbb-export.def
 TBB.DLL = tbb$(DEBUG_SUFFIX).$(DLL)
 TBB.LIB = tbb$(DEBUG_SUFFIX).$(LIBEXT)
 TBB.RES = tbb_resource.res
-#On Windows we specify appropriate tbb library using #pragma comment
-LINK_TBB.LIB =
+# On Windows, we use #pragma comment to set the proper TBB lib to link with
+# But for cross-configuration testing, need to link explicitly
+LINK_TBB.LIB = $(if $(crosstest),$(TBB.LIB))
 TBB.MANIFEST = 
-
 ifneq ($(runtime),vc7.1)
 TBB.MANIFEST = tbbmanifest.exe.manifest
 endif

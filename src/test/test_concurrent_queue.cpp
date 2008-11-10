@@ -291,6 +291,18 @@ void TestIteratorAssignment( Iterator2 j ) {
     ASSERT( !(k!=j), NULL );
 }
 
+template<typename Iterator, typename T>
+void TestIteratorTraits() {
+    AssertSameType( static_cast<typename Iterator::difference_type*>(0), static_cast<ptrdiff_t*>(0) );
+    AssertSameType( static_cast<typename Iterator::value_type*>(0), static_cast<T*>(0) );
+    AssertSameType( static_cast<typename Iterator::pointer*>(0), static_cast<T**>(0) );
+    AssertSameType( static_cast<typename Iterator::iterator_category*>(0), static_cast<std::forward_iterator_tag*>(0) );
+    T x;
+    typename Iterator::reference xr = x;
+    typename Iterator::pointer xp = &x;
+    ASSERT( &xr==xp, NULL );
+}
+
 //! Test the iterators for concurrent_queue
 void TestIterator() {
     tbb::concurrent_queue<Foo> queue;
@@ -307,6 +319,8 @@ void TestIterator() {
     TestIteratorAssignment<tbb::concurrent_queue<Foo>::const_iterator>( const_queue.begin() );
     TestIteratorAssignment<tbb::concurrent_queue<Foo>::const_iterator>( queue.begin() );
     TestIteratorAssignment<tbb::concurrent_queue<Foo>::iterator>( queue.begin() );
+    TestIteratorTraits<tbb::concurrent_queue<Foo>::const_iterator, const Foo>();
+    TestIteratorTraits<tbb::concurrent_queue<Foo>::iterator, Foo>();
 }
 
 void TestConcurrentQueueType() {

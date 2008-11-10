@@ -270,6 +270,12 @@ _ZN3tbb8internal7move_v3ERNS0_13tbb_thread_v3ES2_;
 _ZN3tbb8internal15thread_yield_v3Ev;
 _ZN3tbb8internal15thread_sleep_v3ERKNS_10tick_count10interval_tE;
 
+/* enumerable_thread_specific */
+_ZN3tbb8internal25tls_single_key_manager_v410create_keyERm;
+_ZN3tbb8internal25tls_single_key_manager_v411destroy_keyERm;
+_ZN3tbb8internal25tls_single_key_manager_v47get_tlsERm;
+_ZN3tbb8internal25tls_single_key_manager_v47set_tlsERmPv;
+
 local:
 
 /* TBB symbols */

@@ -52,7 +52,6 @@
 #include "test/OpenMP_Mutex.h"
 #endif /* _OPENMP */
 
-
 // This test deliberately avoids a "using tbb" statement,
 // so that the error of putting types in the wrong namespace will be caught.
 

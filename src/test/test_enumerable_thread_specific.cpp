@@ -37,6 +37,10 @@
 
 #include <cstring>
 #include <vector>
+#include <deque>
+#include <list>
+#include <map>
+#include <utility>
 
 #include "harness_assert.h"
 #include "harness.h"
@@ -258,6 +262,7 @@ template< typename T >
 void run_parallel_vector_tests(const char *test_name) {
     tbb::tick_count t0;
     tbb::task_scheduler_init init(tbb::task_scheduler_init::deferred);
+    typedef std::vector<T, tbb::tbb_allocator<T> > container_type;
 
     for (int p = MinThread; p <= MaxThread; ++p) { 
 
@@ -270,7 +275,8 @@ void run_parallel_vector_tests(const char *test_name) {
 
         for (int t = -1; t < REPETITIONS; ++t) {
             if (Verbose && t == 0) t0 = tbb::tick_count::now(); 
-            tbb::enumerable_thread_specific< std::vector<T, tbb::tbb_allocator<T> > > vs;
+            typedef typename tbb::enumerable_thread_specific< container_type > ets_type;
+            ets_type vs;
 
             ASSERT( vs.empty(), NULL);
             tbb::parallel_for ( tbb::blocked_range<int> (0, N, 10000), parallel_vector_for_body<T>( vs ) );
@@ -282,6 +288,20 @@ void run_parallel_vector_tests(const char *test_name) {
             test_helper<T>::sum(sum, pvrb.sum);
 
             ASSERT( vs.size() == pvrb.count, NULL);
+
+            tbb::flattened2d<ets_type> fvs = flatten2d(vs);
+            int ccount = fvs.size();
+            int elem_cnt = 0;
+            for(typename tbb::flattened2d<ets_type>::const_iterator i = fvs.begin(); i != fvs.end(); ++i) {
+                ++elem_cnt;
+            };
+            ASSERT(ccount == elem_cnt, NULL);
+
+            elem_cnt = 0;
+            for(typename tbb::flattened2d<ets_type>::iterator i = fvs.begin(); i != fvs.end(); ++i) {
+                ++elem_cnt;
+            };
+            ASSERT(ccount == elem_cnt, NULL);
         }
 
         double result_value = test_helper<T>::get(sum);
@@ -366,7 +386,7 @@ void do_tbb_threads( int max_threads, minimal_ptr *a ) {
 void
 flog_key_creation_and_deletion() {
 
-    const int FLOG_REPETITIONS = 1000;
+    const int FLOG_REPETITIONS = 100;
     minimal_ptr a[VALID_NUMBER_OF_KEYS];
     tbb::task_scheduler_init init(tbb::task_scheduler_init::deferred);
 
@@ -440,8 +460,168 @@ flog_key_creation_and_deletion() {
 
 }
 
+template <typename inner_container>
+void 
+flog_segmented_interator() {
+
+    bool found_error = false;
+    typedef typename inner_container::value_type T;
+    typedef std::vector< inner_container > nested_vec;
+    inner_container my_inner_container;
+    my_inner_container.clear();
+    nested_vec my_vec;
+
+    // simple nested vector (neither level empty)
+    const int maxval = 10;
+    for(int i=0; i < maxval; i++) {
+        my_vec.push_back(my_inner_container);
+        for(int j = 0; j < maxval; j++) {
+            my_vec.at(i).push_back((T)(maxval * i + j));
+        }
+    }
+
+    tbb::internal::segmented_iterator<nested_vec, T> my_si(my_vec);
+
+    T ii;
+    for(my_si=my_vec.begin(), ii=0; my_si != my_vec.end(); ++my_si, ++ii) {
+        if((*my_si) != ii) {
+            found_error = true;
+            if(Verbose) printf( "*my_si=%d\n", int(*my_si));
+        }
+    }
+
+    // outer level empty
+    my_vec.clear();
+    for(my_si=my_vec.begin(); my_si != my_vec.end(); ++my_si) {
+        found_error = true;
+    }
+
+    // inner levels empty
+    my_vec.clear();
+    for(int i =0; i < maxval; ++i) {
+        my_vec.push_back(my_inner_container);
+    }
+    for(my_si = my_vec.begin(); my_si != my_vec.end(); ++my_si) {
+        found_error = true;
+    }
+
+    // every other inner container is empty
+    my_vec.clear();
+    for(int i=0; i < maxval; ++i) {
+        my_vec.push_back(my_inner_container);
+        if(i%2) {
+            for(int j = 0; j < maxval; ++j) {
+                my_vec.at(i).push_back((T)(maxval * (i/2) + j));
+            }
+        }
+    }
+    for(my_si = my_vec.begin(), ii=0; my_si != my_vec.end(); ++my_si, ++ii) {
+        if((*my_si) != ii) {
+            found_error = true;
+            if(Verbose) printf("*my_si=%d, ii=%d\n", (int)(*my_si), (int)ii);
+        }
+    }
+
+    tbb::internal::segmented_iterator<nested_vec, const T> my_csi(my_vec);
+    for(my_csi=my_vec.begin(), ii=0; my_csi != my_vec.end(); ++my_csi, ++ii) {
+        if((*my_csi) != ii) {
+            found_error = true;
+            if(Verbose) printf( "*my_csi=%d\n", int(*my_csi));
+        }
+    }
+
+    // outer level empty
+    my_vec.clear();
+    for(my_csi=my_vec.begin(); my_csi != my_vec.end(); ++my_csi) {
+        found_error = true;
+    }
+
+    // inner levels empty
+    my_vec.clear();
+    for(int i =0; i < maxval; ++i) {
+        my_vec.push_back(my_inner_container);
+    }
+    for(my_csi = my_vec.begin(); my_csi != my_vec.end(); ++my_csi) {
+        found_error = true;
+    }
+
+    // every other inner container is empty
+    my_vec.clear();
+    for(int i=0; i < maxval; ++i) {
+        my_vec.push_back(my_inner_container);
+        if(i%2) {
+            for(int j = 0; j < maxval; ++j) {
+                my_vec.at(i).push_back((T)(maxval * (i/2) + j));
+            }
+        }
+    }
+    for(my_csi = my_vec.begin(), ii=0; my_csi != my_vec.end(); ++my_csi, ++ii) {
+        if((*my_csi) != ii) {
+            found_error = true;
+            if(Verbose) printf("*my_csi=%d, ii=%d\n", (int)(*my_csi), (int)ii);
+        }
+    }
+
+
+    if(found_error) printf("segmented_iterator failed\n");
+}
+
+template <typename Key, typename Val>
+void
+flog_segmented_iterator_map() {
+   typedef typename std::map<Key, Val> my_map;
+   typedef std::vector< my_map > nested_vec;
+   my_map my_inner_container;
+   my_inner_container.clear();
+   nested_vec my_vec;
+   my_vec.clear();
+   bool found_error = false;
+
+   // simple nested vector (neither level empty)
+   const int maxval = 4;
+   for(int i=0; i < maxval; i++) {
+       my_vec.push_back(my_inner_container);
+       for(int j = 0; j < maxval; j++) {
+           my_vec.at(i).insert(std::make_pair<Key,Val>(maxval * i + j, 2*(maxval*i + j)));
+       }
+   }
+
+   tbb::internal::segmented_iterator<nested_vec, std::pair<const Key, Val> > my_si(my_vec);
+   Key ii;
+   for(my_si=my_vec.begin(), ii=0; my_si != my_vec.end(); ++my_si, ++ii) {
+       if(((*my_si).first != ii) || ((*my_si).second != 2*ii)) {
+           found_error = true;
+           if(Verbose) printf( "ii=%d, (*my_si).first=%d, second=%d\n",ii, int((*my_si).first), int((*my_si).second));
+       }
+   }
+
+   tbb::internal::segmented_iterator<nested_vec, const std::pair<const Key, Val> > my_csi(my_vec);
+   for(my_csi=my_vec.begin(), ii=0; my_csi != my_vec.end(); ++my_csi, ++ii) {
+       if(((*my_csi).first != ii) || ((*my_csi).second != 2*ii)) {
+           found_error = true;
+           if(Verbose) printf( "ii=%d, (*my_csi).first=%d, second=%d\n",ii, int((*my_csi).first), int((*my_csi).second));
+       }
+   }
+}
+
+void
+run_segmented_iterator_tests() {
+   // only the following containers can be used with the segmented iterator.
+    if(Verbose) printf("Running Segmented Iterator Tests\n");
+   flog_segmented_interator<std::vector< int > >();
+   flog_segmented_interator<std::vector< double > >();
+   flog_segmented_interator<std::deque< int > >();
+   flog_segmented_interator<std::deque< double > >();
+   flog_segmented_interator<std::list< int > >();
+   flog_segmented_interator<std::list< double > >();
+
+   flog_segmented_iterator_map<int, int>();
+   flog_segmented_iterator_map<int, double>(); 
+}
+
 int main(int argc, char *argv[]) {
    ParseCommandLine(argc, argv);
+   run_segmented_iterator_tests();
 
    flog_key_creation_and_deletion();
 

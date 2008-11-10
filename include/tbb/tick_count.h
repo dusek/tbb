@@ -35,7 +35,6 @@
 #include <windows.h>
 #elif __linux__
 #include <ctime>
-#include <stdio.h>
 #else /* generic Unix */
 #include <sys/time.h>
 #endif /* (choice of OS) */

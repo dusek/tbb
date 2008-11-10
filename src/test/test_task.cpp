@@ -183,6 +183,7 @@ struct AffinityTask: public tbb::task {
         // We exploit those conditions for sake of unit testing.
         ASSERT( id!=expected_affinity_id, NULL );
         ASSERT( !noted, "note_affinity_id called twice!" );
+        ASSERT ( &tbb::task::self() == (tbb::task*)this, "Wrong innermost running task" );
         noted = true;
     }
 };
@@ -209,6 +210,38 @@ void TestAffinity( int nthread ) {
             __TBB_Yield();
     }
     // Wait for the children
+    t->wait_for_all();
+    t->destroy(*t);
+}
+
+struct NoteAffinityTask: public tbb::task {
+    bool noted;
+    NoteAffinityTask( int id ) : noted(false)
+    {
+        set_affinity(id);
+    }
+    ~NoteAffinityTask () {
+        ASSERT (noted, "note_affinity has not been called");
+    }
+    /*override*/ tbb::task* execute() {
+        return NULL;
+    }
+    /*override*/ void note_affinity( affinity_id id ) {
+        noted = true;
+        ASSERT ( &tbb::task::self() == (tbb::task*)this, "Wrong innermost running task" );
+    }
+};
+
+// This test checks one of the paths inside the scheduler by affinitizing the child task 
+// to non-existent thread so that it is proxied in the local task pool but not retrieved 
+// by another thread. 
+void TestNoteAffinityContext() {
+    tbb::task_scheduler_init init(1);
+    tbb::empty_task* t = new( tbb::task::allocate_root() ) tbb::empty_task;
+    t->set_ref_count(2);
+    // This master in the absence of workers will have an affinity id of 1. 
+    // So use another number to make the task get proxied.
+    t->spawn( *new(t->allocate_child()) NoteAffinityTask(2) );
     t->wait_for_all();
     t->destroy(*t);
 }
@@ -364,6 +397,7 @@ int main(int argc, char* argv[]) {
     TestUnconstructibleTask<1>();
     TestUnconstructibleTask<10000>();
     TestAlignment();
+    TestNoteAffinityContext();
     for( int p=MinThread; p<=MaxThread; ++p ) {
         TestSpawnChildren( p );
         TestSpawnRootList( p );
