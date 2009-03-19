@@ -1,5 +1,5 @@
 /*
-    Copyright 2005-2008 Intel Corporation.  All Rights Reserved.
+    Copyright 2005-2009 Intel Corporation.  All Rights Reserved.
 
     This file is part of Threading Building Blocks.
 
@@ -54,6 +54,11 @@ enum common_counter_type {
 };
 
 #if COLLECT_STATISTICS
+/* Statistics reporting callback registred via a static object dtor on
+   Posix or DLL_PROCESS_DETACH on Windows.
+ */
+
+static bool reportAllocationStatistics;
 
 struct bin_counters {
     int counter[MaxCounters];
@@ -63,15 +68,18 @@ static bin_counters statistic[MAX_THREADS][NUM_OF_BINS+1]; //zero-initialized;
 
 static inline int STAT_increment(int thread, int bin, int ctr)
 {
-    return ++(statistic[thread][bin].counter[ctr]);
+    return reportAllocationStatistics && thread < MAX_THREADS ? ++(statistic[thread][bin].counter[ctr]) : 0;
 }
 #else
-#define STAT_increment(a,b,c) ((int)0)
+#define STAT_increment(a,b,c) ((int)a)
 #endif
 
 static inline void STAT_print(int thread)
 {
 #if COLLECT_STATISTICS
+    if (!reportAllocationStatistics)
+        return;
+
     char filename[100];
     sprintf(filename, "stat_ScalableMalloc_thr%04d.log", thread);
     FILE* outfile = fopen(filename, "w");

@@ -1,5 +1,5 @@
 /*
-    Copyright 2005-2008 Intel Corporation.  All Rights Reserved.
+    Copyright 2005-2009 Intel Corporation.  All Rights Reserved.
 
     This file is part of Threading Building Blocks.
 
@@ -26,6 +26,7 @@
     the GNU General Public License.
 */
 
+#include "tbb/enumerable_thread_specific.h"
 #include "tbb/task_scheduler_init.h"
 #include "tbb/parallel_for.h"
 #include "tbb/parallel_reduce.h"
@@ -33,7 +34,6 @@
 #include "tbb/tick_count.h"
 #include "tbb/tbb_allocator.h"
 #include "tbb/tbb_thread.h"
-#include "tbb/enumerable_thread_specific.h"
 
 #include <cstring>
 #include <vector>
@@ -59,11 +59,9 @@ const double EXPECTED_SUM = (REPETITIONS + 1) * N;
 // Hide: operator=
 //
 
-class minimal {
+class minimal: NoAssign {
 private:
     int my_value;
-    minimal &operator=(const minimal &m) { exit(1); }
-
 public:
     minimal() : my_value(0) { ++construction_counter; }
     minimal( const minimal &m ) : my_value(m.my_value) { ++construction_counter; }
@@ -119,7 +117,7 @@ void run_serial_scalar_tests(const char *test_name) {
 
 
 template <typename T>
-class parallel_scalar_body {
+class parallel_scalar_body: NoAssign {
     
     tbb::enumerable_thread_specific<T> &sums;
  
@@ -213,7 +211,7 @@ void run_parallel_scalar_tests(const char *test_name) {
 
 
 template <typename T>
-class parallel_vector_for_body {
+class parallel_vector_for_body: NoAssign {
     
     tbb::enumerable_thread_specific< std::vector<T, tbb::tbb_allocator<T> > > &locals;
  
@@ -239,7 +237,7 @@ struct parallel_vector_reduce_body {
     size_t count;    
 
     parallel_vector_reduce_body ( ) : count(0) { test_helper<T>::init(sum); }
-    parallel_vector_reduce_body ( parallel_vector_reduce_body<R, T> &b, tbb::split ) : count(0) {  test_helper<T>::init(sum); }
+    parallel_vector_reduce_body ( parallel_vector_reduce_body<R, T> &, tbb::split ) : count(0) {  test_helper<T>::init(sum); }
 
     void operator()( const R &r ) {
         for (typename R::iterator ri = r.begin(); ri != r.end(); ++ri) {
@@ -290,8 +288,8 @@ void run_parallel_vector_tests(const char *test_name) {
             ASSERT( vs.size() == pvrb.count, NULL);
 
             tbb::flattened2d<ets_type> fvs = flatten2d(vs);
-            int ccount = fvs.size();
-            int elem_cnt = 0;
+            size_t ccount = fvs.size();
+            size_t elem_cnt = 0;
             for(typename tbb::flattened2d<ets_type>::const_iterator i = fvs.begin(); i != fvs.end(); ++i) {
                 ++elem_cnt;
             };

@@ -1,4 +1,4 @@
-# Copyright 2005-2008 Intel Corporation.  All Rights Reserved.
+# Copyright 2005-2009 Intel Corporation.  All Rights Reserved.
 #
 # This file is part of Threading Building Blocks.
 #
@@ -61,6 +61,16 @@ CONLY ?= $(CPLUS)
 %.$(OBJ): %.asm
 	$(ASM) $(ASM_FLAGS) $<
 
+%.$(OBJ): %.s
+	cpp <$< | grep -v '^#' >$*.tmp
+	$(ASM) $(ASM_FLAGS) -o $@ $*.tmp
+	rm $*.tmp
+
+%.$(OBJ): %.s
+	cpp <$< | grep -v '^#' >$*.tmp
+	$(ASM) $(ASM_FLAGS) -o $@ $*.tmp
+	rm $*.tmp
+
 # Rule for generating .E file if needed for visual inspection
 %.E: %.cpp
 	$(CPLUS) $(CPLUS_FLAGS) $(INCLUDES) $(PREPROC_ONLY) $< >$@
@@ -79,10 +89,15 @@ ifeq (1,$(TBB_NOSTRICT))
 # The Mac uses gcc, so the list is empty for that platform.
 # The files below need the -strict_ansi flag downgraded to -ansi to compile
 
-$(KNOWN_NOSTRICT): %.o: %.cpp
+$(KNOWN_NOSTRICT): %.$(OBJ): %.cpp
 	$(CPLUS) $(COMPILE_ONLY) $(CPLUS_FLAGS_NOSTRICT) $(INCLUDES) $<
 
 endif
+
+# For deprecated files, we don't mind warnings etc., thus compilation rules are most relaxed
+%_deprecated.$(OBJ): %.cpp
+	$(CPLUS) $(COMPILE_ONLY) $(OUTPUTOBJ_KEY)$@ $(subst $(WARNING_KEY),,$(CPLUS_FLAGS_NOSTRICT)) \
+                 $(WARNING_SUPPRESS) $(DEFINE_KEY)TBB_DEPRECATED $(INCLUDES) $<
 
 $(KNOWN_WARNINGS): %.$(OBJ): %.cpp
 	$(CPLUS) $(COMPILE_ONLY) $(subst $(WARNING_KEY),,$(CPLUS_FLAGS_NOSTRICT)) $(INCLUDES) $<
@@ -101,7 +116,8 @@ tbbvars:
 
 ifneq (,$(TBB.MANIFEST))
 $(TBB.MANIFEST):
-	cmd /C "echo int main(){return 0;} >tbbmanifest.c"
+	cmd /C "echo #include ^<stdio.h^> >tbbmanifest.c"
+	cmd /C "echo int main(){return 0;} >>tbbmanifest.c"
 	cl $(C_FLAGS) tbbmanifest.c
 
 version_string.tmp: $(TBB.MANIFEST)

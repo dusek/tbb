@@ -1,5 +1,5 @@
 /*
-    Copyright 2005-2008 Intel Corporation.  All Rights Reserved.
+    Copyright 2005-2009 Intel Corporation.  All Rights Reserved.
 
     This file is part of Threading Building Blocks.
 
@@ -31,6 +31,7 @@
 
 #include "tbb_stddef.h"
 #include "tbb_machine.h"
+#include "tbb_profiling.h"
 
 namespace tbb {
 
@@ -71,7 +72,11 @@ class spin_rw_mutex_v3 {
     //! @endcond
 public:
     //! Construct unacquired mutex.
-    spin_rw_mutex_v3() : state(0) {}
+    spin_rw_mutex_v3() : state(0) {
+#if TBB_USE_THREADING_TOOLS
+        internal_construct();
+#endif
+    }
 
 #if TBB_USE_ASSERT
     //! Destructor asserts if the mutex is acquired, i.e. state is zero.
@@ -83,7 +88,7 @@ public:
     //! The scoped locking pattern
     /** It helps to avoid the common problem of forgetting to release lock.
         It also nicely provides the "node" for queuing locks. */
-    class scoped_lock : private internal::no_copy {
+    class scoped_lock : internal::no_copy {
     public:
         //! Construct lock that has not acquired a mutex.
         /** Equivalent to zero-initialization of *this. */
@@ -184,7 +189,11 @@ private:
         Bit 1 = request by a writer to acquire lock (hint to readers to wait)
         Bit 2..N = number of readers holding lock */
     state_t state;
+
+    void __TBB_EXPORTED_METHOD internal_construct();
 };
+
+__TBB_DEFINE_PROFILING_SET_NAME(spin_rw_mutex)
 
 } // namespace tbb
 

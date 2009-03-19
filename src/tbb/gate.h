@@ -1,5 +1,5 @@
 /*
-    Copyright 2005-2008 Intel Corporation.  All Rights Reserved.
+    Copyright 2005-2009 Intel Corporation.  All Rights Reserved.
 
     This file is part of Threading Building Blocks.
 
@@ -29,17 +29,23 @@
 #ifndef _TBB_Gate_H
 #define _TBB_Gate_H
 
+#include "itt_notify.h"
+
 namespace tbb {
 
 namespace internal {
 
-#if __TBB_USE_FUTEX
+#  if __TBB_USE_FUTEX
 
 //! Implementation of Gate based on futex.
 /** Use this futex-based implementation where possible, because it is the simplest and usually fastest. */
 class Gate {
 public:
     typedef intptr_t state_t;
+
+    Gate() {
+        ITT_SYNC_CREATE(&state, SyncType_Scheduler, SyncObj_Gate);
+    }
 
     //! Get current state of gate
     state_t get_state() const {
@@ -93,6 +99,8 @@ public:
     {
         event = CreateEvent( NULL, true, false, NULL );
         InitializeCriticalSection( &critical_section );
+        ITT_SYNC_CREATE(event, SyncType_Scheduler, SyncObj_Gate);
+        ITT_SYNC_CREATE(&critical_section, SyncType_Scheduler, SyncObj_GateLock);
     }
     ~Gate() {
         CloseHandle( event );
@@ -136,11 +144,12 @@ private:
     pthread_cond_t cond;
 public:
     //! Initialize with count=0
-    Gate() :   
-    state(0)
+    Gate() : state(0)
     {
         pthread_mutex_init( &mutex, NULL );
         pthread_cond_init( &cond, NULL);
+        ITT_SYNC_CREATE(&cond, SyncType_Scheduler, SyncObj_Gate);
+        ITT_SYNC_CREATE(&mutex, SyncType_Scheduler, SyncObj_GateLock);
     }
     ~Gate() {
         pthread_cond_destroy( &cond );

@@ -1,5 +1,5 @@
 /*
-    Copyright 2005-2008 Intel Corporation.  All Rights Reserved.
+    Copyright 2005-2009 Intel Corporation.  All Rights Reserved.
 
     This file is part of Threading Building Blocks.
 
@@ -279,7 +279,6 @@ namespace internal {
     template<typename Iterator, typename Body, typename Item>
     class do_task_iter: public task
     {
-        //typedef typename std::iterator_traits<Iterator>::value_type Item;
         typedef parallel_do_feeder_impl<Body, Item> feeder_type;
 
     public:

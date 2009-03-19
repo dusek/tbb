@@ -1,4 +1,4 @@
-# Copyright 2005-2008 Intel Corporation.  All Rights Reserved.
+# Copyright 2005-2009 Intel Corporation.  All Rights Reserved.
 #
 # This file is part of Threading Building Blocks.
 #
@@ -34,6 +34,8 @@ all: release debug examples
 tbb: tbb_release tbb_debug
 
 tbbmalloc: tbbmalloc_release tbbmalloc_debug
+
+rml: rml_release rml_debug
 
 test: tbbmalloc_test_release test_release tbbmalloc_test_debug test_debug
 
@@ -94,6 +96,12 @@ tbb_release: mkdir_release
 tbb_debug: mkdir_debug
 	$(MAKE) -C "$(work_dir)_debug"  -r -f $(tbb_root)/build/Makefile.tbb cfg=debug tbb_root=$(tbb_root)
 
+rml_release: mkdir_release
+	$(MAKE) -C "$(work_dir)_release"  -r -f $(tbb_root)/build/Makefile.rml cfg=release tbb_root=$(tbb_root)
+
+rml_debug: mkdir_debug
+	$(MAKE) -C "$(work_dir)_debug"  -r -f $(tbb_root)/build/Makefile.rml cfg=debug tbb_root=$(tbb_root)
+
 test_release: $(call cross_cfg,mkdir_release) $(call cross_cfg,tbb_release) test_release_no_depends
 test_release_no_depends: 
 	-$(MAKE) -C "$(call cross_cfg,$(work_dir)_release)"  -r -f $(tbb_root)/build/Makefile.test cfg=release tbb_root=$(tbb_root) 
@@ -101,6 +109,12 @@ test_release_no_depends:
 test_debug: $(call cross_cfg,mkdir_debug) $(call cross_cfg,tbb_debug) test_debug_no_depends
 test_debug_no_depends:
 	-$(MAKE) -C "$(call cross_cfg,$(work_dir)_debug)"  -r -f $(tbb_root)/build/Makefile.test cfg=debug tbb_root=$(tbb_root)
+
+test_release_no_ignore: 
+	$(MAKE) -C "$(call cross_cfg,$(work_dir)_release)"  -r -f $(tbb_root)/build/Makefile.test cfg=release tbb_root=$(tbb_root) 
+
+test_debug_no_ignore:
+	$(MAKE) -C "$(call cross_cfg,$(work_dir)_debug)"  -r -f $(tbb_root)/build/Makefile.test cfg=debug tbb_root=$(tbb_root)
 
 .PHONY: tbbmalloc_release tbbmalloc_debug tbbmalloc_test_release tbbmalloc_test_debug
 .PHONY: tbbmalloc_test_release_no_depends tbbmalloc_test_debug_no_depends
@@ -110,6 +124,18 @@ tbbmalloc_release: mkdir_release
 
 tbbmalloc_debug: mkdir_debug
 	$(MAKE) -C "$(work_dir)_debug"  -r -f $(tbb_root)/build/Makefile.tbbmalloc cfg=debug malloc tbb_root=$(tbb_root)
+
+tbbmalloc_dll_release: mkdir_release
+	$(MAKE) -C "$(work_dir)_release"  -r -f $(tbb_root)/build/Makefile.tbbmalloc cfg=release malloc_dll tbb_root=$(tbb_root)
+
+tbbmalloc_proxy_dll_release: mkdir_release
+	$(MAKE) -C "$(work_dir)_release"  -r -f $(tbb_root)/build/Makefile.tbbmalloc cfg=release  malloc_proxy_dll tbb_root=$(tbb_root)
+
+tbbmalloc_dll_debug: mkdir_debug
+	$(MAKE) -C "$(work_dir)_debug"  -r -f $(tbb_root)/build/Makefile.tbbmalloc cfg=debug malloc_dll tbb_root=$(tbb_root)
+
+tbbmalloc_proxy_dll_debug: mkdir_debug
+	$(MAKE) -C "$(work_dir)_debug"  -r -f $(tbb_root)/build/Makefile.tbbmalloc cfg=debug malloc_proxy_dll tbb_root=$(tbb_root)
 
 tbbmalloc_test_release: $(call cross_cfg,mkdir_release) $(call cross_cfg,tbbmalloc_release) tbbmalloc_test_release_no_depends
 tbbmalloc_test_release_no_depends:

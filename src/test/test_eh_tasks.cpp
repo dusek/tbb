@@ -1,5 +1,5 @@
 /*
-    Copyright 2005-2008 Intel Corporation.  All Rights Reserved.
+    Copyright 2005-2009 Intel Corporation.  All Rights Reserved.
 
     This file is part of Threading Building Blocks.
 
@@ -42,6 +42,7 @@
 
 #include "harness.h"
 #include "harness_trace.h"
+#include "harness_sleep.h"
 
 #define NUM_CHILD_TASKS                 256
 #define NUM_ROOT_TASKS                  32
@@ -51,24 +52,8 @@
 namespace internal = tbb::internal;
 using internal::intptr;
 
-namespace util {
-
-    void sleep ( int ms ) {
-    #if _WIN32 || _WIN64
-        ::Sleep(ms);
-    #else
-        timespec  requested = { ms / 1000, (ms % 1000)*1000000 };
-        timespec  remaining = {0};
-        nanosleep(&requested, &remaining);
-    #endif
-    }
-} // namespace util
-
 int g_max_concurrency = 0;
 int g_num_threads = 0;
-
-inline void yield_if_singlecore() { if ( g_max_concurrency == 1 ) __TBB_Yield(); }
-
 
 class test_exception : public std::exception
 {
@@ -125,7 +110,7 @@ public:
     void trace (const char* prefix ) { 
         const char* separator = prefix && prefix[0] ? " " : "";
         lock_t lock(my_mutex);
-        TRACE ("%s%stasks total %u, existing %u, executed %u", prefix, separator, (intptr)my_existed, (intptr)my_existing, (intptr)my_executed);
+        REMARK ("%s%stasks total %u, existing %u, executed %u", prefix, separator, (intptr)my_existed, (intptr)my_existing, (intptr)my_executed);
     }
 };
 
@@ -164,17 +149,17 @@ void reset_globals () {
 intptr num_tasks () { return g_master->get_task_node_count(true); }
 
 void throw_test_exception ( intptr throw_threshold ) {
-    if ( !g_throw_exception  ||  g_exception_in_master ^ (internal::GetThreadSpecific() == g_master) )
+    if ( !g_throw_exception  ||  g_exception_in_master ^ (internal::Governor::local_scheduler() == g_master) )
         return; 
     while ( g_cur_stat.existed() < throw_threshold )
-        yield_if_singlecore();
+        __TBB_Yield();
     if ( !g_solitary_exception ) {
-        TRACE ("About to throw one of multiple test_exceptions... :");
+        REMARK ("About to throw one of multiple test_exceptions... :");
         throw test_exception(EXCEPTION_DESCR);
     }
     if ( __TBB_CompareAndSwapW(&g_exception_thrown, 1, 0) == 0 ) {
         g_exc_stat = g_cur_stat;
-        TRACE ("About to throw solitary test_exception... :");
+        REMARK ("About to throw solitary test_exception... :");
         throw solitary_test_exception(EXCEPTION_DESCR);
     }
 }
@@ -184,7 +169,7 @@ inline void wait_for_exception_with_timeout ( int timeout = 50000 ) {
     int wait_count = 0;
     while ( g_no_exception && (++wait_count < timeout) ) __TBB_Yield();
     if ( wait_count == timeout )
-        TRACE("wait_for_exception_with_timeout: wait failed\n");
+        REMARK("wait_for_exception_with_timeout: wait failed\n");
 }
 
 #define TRY()   \
@@ -220,10 +205,10 @@ inline void wait_for_exception_with_timeout ( int timeout = 50000 ) {
     ASSERT (!g_cur_stat.existing(), "Not all task objects have been destroyed");
     
 #define TEST_PROLOGUE() \
-    TRACEP ("");    \
+    REMARK (__FUNCTION__);    \
     {   \
     tbb::task_scheduler_init init (g_num_threads);  \
-    g_master = internal::GetThreadSpecific();       \
+    g_master = internal::Governor::local_scheduler();  \
     reset_globals();
 
 #define TEST_EPILOGUE() \
@@ -296,15 +281,15 @@ class my_simple_root_task : public my_base_task
             __TBB_Yield();
         }
 //        ++g_tasks_started;
-        if ( g_exception_in_master  ^  (internal::GetThreadSpecific() == g_master) )
+        if ( g_exception_in_master ^ (internal::Governor::local_scheduler() == g_master) )
         {
             // Make absolutely sure that worker threads on multicore machines had a chance to steal something
-//            util::sleep(10);
+//            Harness::Sleep(10);
             int n = 0;
 //            while ( (++n < c_timeout) && (g_tasks_started < g_tasks_wait_limit) ) __TBB_Yield();
             while ( (++n < c_timeout) && !g_tasks_started ) __TBB_Yield();
             if ( n == c_timeout )
-                TRACE("my_simple_root_task: wait failed\n");
+                REMARK("my_simple_root_task: wait failed\n");
         }
         wait_for_all();
         return NULL;
@@ -326,12 +311,12 @@ void Test1 () {
         my_leaf_task &t = *new( r.allocate_child() ) my_leaf_task;
         r.spawn(t);
         // Make sure that worker threads on multicore machines had a chance to steal something
-//        util::sleep(1);
+//        Harness::Sleep(1);
         int n = 0;
 //        while ( ++n < c_timeout && g_no_exception && g_tasks_started < min (i + 1, g_num_threads - 1) ) __TBB_Yield();
         while ( ++n < c_timeout && !g_tasks_started ) __TBB_Yield();
         if ( n == c_timeout )
-            TRACE("Test1: wait failed\n");
+            REMARK("Test1: wait failed\n");
     }
     TRY();
         r.wait_for_all();
@@ -539,8 +524,8 @@ void Test6 () {
     intptr  num_tasks_expected = 1 + NUM_ROOT_TASKS * (2 + NUM_CHILD_TASKS);
     intptr  min_num_tasks_created = 1 + g_num_threads * 2 + NUM_CHILD_TASKS;
     // 2 stands for my_bound_hierarchy_launcher_task and my_simple_root_task
-    // g_num_threads corresponds to my_bound_hierarchy_launcher_task
-    intptr  min_num_tasks_executed = 2 + g_num_threads + NUM_CHILD_TASKS;
+    // 1 corresponds to my_bound_hierarchy_launcher_task 
+    intptr  min_num_tasks_executed = 2 + 1 + NUM_CHILD_TASKS;
     ASSERT (g_cur_stat.existed() <= num_tasks_expected, "Number of expected tasks is calculated incorrectly");
     ASSERT (g_cur_stat.existed() >= min_num_tasks_created, "Too few tasks created");
     ASSERT (g_cur_stat.executed() >= min_num_tasks_executed, "Too few tasks executed");
@@ -614,7 +599,7 @@ class my_cancellation_root_task : public my_base_task
 
     tbb::task* do_execute () {
         while ( g_cur_stat.executed() < my_cancel_threshold )
-            yield_if_singlecore();
+            __TBB_Yield();
         my_ctx_to_cancel.cancel_group_execution();
         g_exc_stat = g_cur_stat;
         return NULL;
@@ -653,7 +638,7 @@ void Test9 () {
     CATCH();
     ASSERT (no_exception, "Cancelling tasks should not cause any exceptions");
     // g_exc_stat contains statistics snapshot at the moment right after cancellation signal sending
-    TRACE ("Threshold %d; executed: after cancellation signal %d, total %d", threshold, g_exc_stat.executed(), g_cur_stat.executed());
+    REMARK ("Threshold %d; executed: after cancellation signal %d, total %d", threshold, g_exc_stat.executed(), g_cur_stat.executed());
     // 2 - root tasks in the calculation branch
     //ASSERT_WARNING (g_exc_stat.executed() - threshold <= g_num_threads + 2, "too many tasks executed between reaching threshold and statistics cutoff");
     // 3 - all root tasks 
@@ -666,17 +651,17 @@ void Test9 () {
 
 template<typename T>
 void throw_movable_exception ( intptr throw_threshold, const T& data ) {
-    if ( g_exception_in_master ^ (internal::GetThreadSpecific() == g_master) )
+    if ( g_exception_in_master ^ (internal::Governor::local_scheduler() == g_master) )
         return; 
     if ( !g_solitary_exception ) {
-        TRACE ("About to throw one of multiple movable_exceptions... :");
+        REMARK ("About to throw one of multiple movable_exceptions... :");
         throw tbb::movable_exception<T>(data);
     }
     while ( g_cur_stat.existed() < throw_threshold )
-        yield_if_singlecore();
+        __TBB_Yield();
     if ( __TBB_CompareAndSwapW(&g_exception_thrown, 1, 0) == 0 ) {
         g_exc_stat = g_cur_stat;
-        TRACE ("About to throw solitary movable_exception... :");
+        REMARK ("About to throw solitary movable_exception... :");
         throw tbb::movable_exception<T>(data);
     }
 }
@@ -733,12 +718,12 @@ void Test10 () {
         my_leaf_task_with_movable_exceptions &t = *new( r.allocate_child() ) my_leaf_task_with_movable_exceptions;
         r.spawn(t);
         // Make sure that worker threads on multicore machines had a chance to steal something
-//        util::sleep(20);
+//        Harness::Sleep(20);
 //        __TBB_Yield();
         int n = 0;
         while ( ++n < c_timeout && !g_tasks_started ) __TBB_Yield();
         if ( n == c_timeout )
-            TRACE("Test10: wait failed\n");
+            REMARK("Test10: wait failed\n");
     }
     TRY()
         r.wait_for_all();
@@ -775,7 +760,7 @@ void Test10 () {
 
 void TestExceptionHandling ()
 {
-    TRACE ("Number of threads %d", g_num_threads);
+    REMARK ("Number of threads %d", g_num_threads);
 
     Test1();
     Test2();

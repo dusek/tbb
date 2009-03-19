@@ -1,4 +1,4 @@
-# Copyright 2005-2008 Intel Corporation.  All Rights Reserved.
+# Copyright 2005-2009 Intel Corporation.  All Rights Reserved.
 #
 # This file is part of Threading Building Blocks.
 #
@@ -47,7 +47,7 @@ LIB_LINK_FLAGS = -dynamiclib -i-static
 C_FLAGS = $(CPLUS_FLAGS) -x c
 
 ifeq ($(cfg), release)
-    CPLUS_FLAGS = -O2 -fno-omit-frame-pointer 
+    CPLUS_FLAGS = -O2 -fno-omit-frame-pointer
 else
     CPLUS_FLAGS = -g -O0 -DTBB_USE_DEBUG
 endif

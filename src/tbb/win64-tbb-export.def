@@ -1,4 +1,4 @@
-; Copyright 2005-2008 Intel Corporation.  All Rights Reserved.
+; Copyright 2005-2009 Intel Corporation.  All Rights Reserved.
 ;
 ; This file is part of Threading Building Blocks.
 ;
@@ -26,6 +26,8 @@
 
 ; This file is organized with a section for each .cpp file.
 ; Each of these sections is in alphabetical order.
+
+#include "tbb/tbb_config.h"
 
 EXPORTS
 
@@ -87,11 +89,13 @@ __TBB_machine_pause
 ?handle_perror@internal@tbb@@YAXHPEBD@Z
 ?set_assertion_handler@tbb@@YAP6AXPEBDH00@ZP6AX0H00@Z@Z
 ?runtime_warning@internal@tbb@@YAXPEBDZZ
+TBB_runtime_interface_version
 
 ; itt_notify.cpp
 ?itt_load_pointer_with_acquire_v3@internal@tbb@@YAPEAXPEBX@Z
 ?itt_store_pointer_with_release_v3@internal@tbb@@YAXPEAX0@Z
 ?itt_load_pointer_v3@internal@tbb@@YAPEAXPEBX@Z
+?itt_set_sync_name_v3@internal@tbb@@YAXPEAXPEB_W@Z
 
 ; pipeline.cpp
 ??_7pipeline@tbb@@6B@
@@ -102,8 +106,10 @@ __TBB_machine_pause
 ?clear@pipeline@tbb@@QEAAXXZ
 ?inject_token@pipeline@tbb@@AEAAXAEAVtask@2@@Z
 ?run@pipeline@tbb@@QEAAX_K@Z
+?run@pipeline@tbb@@QEAAX_KAEAVtask_group_context@2@@Z
 
 ; queuing_rw_mutex.cpp
+?internal_construct@queuing_rw_mutex@tbb@@QEAAXXZ
 ?acquire@scoped_lock@queuing_rw_mutex@tbb@@QEAAXAEAV23@_N@Z
 ?downgrade_to_reader@scoped_lock@queuing_rw_mutex@tbb@@QEAA_NXZ
 ?release@scoped_lock@queuing_rw_mutex@tbb@@QEAAXXZ
@@ -124,6 +130,7 @@ __TBB_machine_pause
 #endif
 
 ; spin_rw_mutex v3
+?internal_construct@spin_rw_mutex_v3@tbb@@AEAAXXZ
 ?internal_upgrade@spin_rw_mutex_v3@tbb@@AEAA_NXZ
 ?internal_downgrade@spin_rw_mutex_v3@tbb@@AEAAXXZ
 ?internal_acquire_reader@spin_rw_mutex_v3@tbb@@AEAAXXZ
@@ -134,6 +141,7 @@ __TBB_machine_pause
 ?internal_try_acquire_writer@spin_rw_mutex_v3@tbb@@AEAA_NXZ
 
 ; spin_mutex.cpp
+?internal_construct@spin_mutex@tbb@@QEAAXXZ
 ?internal_acquire@scoped_lock@spin_mutex@tbb@@AEAAXAEAV23@@Z
 ?internal_release@scoped_lock@spin_mutex@tbb@@AEAAXXZ
 ?internal_try_acquire@scoped_lock@spin_mutex@tbb@@AEAA_NAEAV23@@Z
@@ -153,6 +161,7 @@ __TBB_machine_pause
 ?internal_release@scoped_lock@recursive_mutex@tbb@@AEAAXXZ
 
 ; queuing_mutex.cpp
+?internal_construct@queuing_mutex@tbb@@QEAAXXZ
 ?acquire@scoped_lock@queuing_mutex@tbb@@QEAAXAEAV23@@Z
 ?release@scoped_lock@queuing_mutex@tbb@@QEAAXXZ
 ?try_acquire@scoped_lock@queuing_mutex@tbb@@QEAA_NAEAV23@@Z
@@ -191,6 +200,7 @@ __TBB_machine_pause
 ?internal_finish_clear@concurrent_queue_base_v3@internal@tbb@@IEAAXXZ
 ?internal_set_capacity@concurrent_queue_base_v3@internal@tbb@@IEAAX_J_K@Z
 ?internal_throw_exception@concurrent_queue_base_v3@internal@tbb@@IEBAXXZ
+?assign@concurrent_queue_base_v3@internal@tbb@@IEAAXAEBV123@@Z
 
 #if !TBB_NO_LEGACY
 ; concurrent_vector.cpp v2

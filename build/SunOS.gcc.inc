@@ -1,4 +1,4 @@
-# Copyright 2005-2008 Intel Corporation.  All Rights Reserved.
+# Copyright 2005-2009 Intel Corporation.  All Rights Reserved.
 #
 # This file is part of Threading Building Blocks.
 #
@@ -79,11 +79,6 @@ endif
 #------------------------------------------------------------------------------
 # Setting assembler data.
 #------------------------------------------------------------------------------
-%.$(OBJ): %.s
-	cpp $(ASM_FLAGS) <$< | grep -v '^#' >$*.tmp
-	$(ASM) -o $@ $*.tmp
-	rm $*.tmp
-
 ASSEMBLY_SOURCE=$(arch)-gas
 ifeq (itanium,$(arch))
     ASM=ias

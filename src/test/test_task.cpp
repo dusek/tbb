@@ -1,5 +1,5 @@
 /*
-    Copyright 2005-2008 Intel Corporation.  All Rights Reserved.
+    Copyright 2005-2009 Intel Corporation.  All Rights Reserved.
 
     This file is part of Threading Building Blocks.
 
@@ -35,6 +35,53 @@
 // Test for task::spawn_children and task_list
 //------------------------------------------------------------------------
 
+#if __TBB_TASK_DEQUE
+
+class UnboundedlyRecursiveOnUnboundedStealingTask : public tbb::task {
+    typedef UnboundedlyRecursiveOnUnboundedStealingTask this_type;
+
+    this_type *my_parent;
+    const int my_depth; 
+    volatile bool my_go_ahead;
+
+    volatile uintptr_t my_anchor;
+
+    // Well, virtually unboundedly, for any practical purpose
+    static const int max_depth = 1000000; 
+
+public:
+    UnboundedlyRecursiveOnUnboundedStealingTask( this_type *parent = NULL, int depth = max_depth )
+        : my_parent(parent)
+        , my_depth(depth)
+        , my_go_ahead(true)
+        , my_anchor(0)
+    {}
+
+    /*override*/
+    tbb::task* execute() {
+        if( !my_parent || (my_depth > 0 &&  my_parent->my_go_ahead) ) {
+            if ( my_parent ) {
+                // We are stolen, let our parent to start waiting for us
+                my_parent->my_go_ahead = false;
+            }
+            tbb::task &t = *new( tbb::task::allocate_child() ) this_type(this, my_depth - 1);
+            set_ref_count( 2 );
+            spawn( t );
+            // Give a willing thief a chance to steal
+            for( int i = 0; i < 1000000 && my_go_ahead; ++i ) {
+                my_anchor += 1;
+                __TBB_Yield();
+            }
+            // If our child has not been stolen yet, then prohibit it siring ones 
+            // of its own (when this thread executes it inside the next wait_for_all)
+            my_go_ahead = false;
+            wait_for_all();
+        }
+        return NULL;
+    }
+}; // UnboundedlyRecursiveOnUnboundedStealingTask
+
+#endif /* __TBB_TASK_DEQUE */
 
 
 tbb::atomic<int> Count;
@@ -83,6 +130,15 @@ static int Expected( int child_count, int depth ) {
 #include "tbb/task_scheduler_init.h"
 #include "harness.h"
 
+#if __TBB_TASK_DEQUE
+void TestStealLimit( int nthread ) {
+    if( Verbose ) 
+        printf( "testing steal limiting heuristics for %d threads\n", nthread );
+    tbb::task_scheduler_init init(nthread);
+    tbb::task &t = *new( tbb::task::allocate_root() ) UnboundedlyRecursiveOnUnboundedStealingTask();
+    tbb::task::spawn_root_and_wait(t);
+}
+#endif /* __TBB_TASK_DEQUE */
 
 //! Test task::spawn( task_list& )
 void TestSpawnChildren( int nthread ) {
@@ -218,7 +274,7 @@ struct NoteAffinityTask: public tbb::task {
     bool noted;
     NoteAffinityTask( int id ) : noted(false)
     {
-        set_affinity(id);
+        set_affinity(tbb::task::affinity_id(id));
     }
     ~NoteAffinityTask () {
         ASSERT (noted, "note_affinity has not been called");
@@ -226,7 +282,7 @@ struct NoteAffinityTask: public tbb::task {
     /*override*/ tbb::task* execute() {
         return NULL;
     }
-    /*override*/ void note_affinity( affinity_id id ) {
+    /*override*/ void note_affinity( affinity_id /*id*/ ) {
         noted = true;
         ASSERT ( &tbb::task::self() == (tbb::task*)this, "Wrong innermost running task" );
     }
@@ -256,6 +312,12 @@ static int TestUnconstructibleTaskCount;
 struct ConstructionFailure {
 };
 
+#if _MSC_VER && !defined(__INTEL_COMPILER)
+    // Suppress pointless "unreachable code" warning.
+    #pragma warning (push)
+    #pragma warning (disable: 4702)
+#endif
+
 //! Task that cannot be constructed.  
 template<size_t N>
 struct UnconstructibleTask: public tbb::empty_task {
@@ -264,6 +326,10 @@ struct UnconstructibleTask: public tbb::empty_task {
         throw ConstructionFailure();
     }
 };
+
+#if _MSC_VER && !defined(__INTEL_COMPILER)
+    #pragma warning (pop)
+#endif
 
 #define TRY_BAD_CONSTRUCTION(x)                  \
     {                                            \
@@ -303,6 +369,12 @@ void TestUnconstructibleTask() {
 // Test for alignment problems with task objects.
 //------------------------------------------------------------------------
 
+#if _MSC_VER && !defined(__INTEL_COMPILER)
+    // Workaround for pointless warning "structure was padded due to __declspec(align())
+    #pragma warning (push)
+    #pragma warning (disable: 4324)
+#endif
+
 //! Task with members of type T.
 /** The task recursively creates tasks. */
 template<typename T> 
@@ -322,6 +394,10 @@ class TaskWithMember: public tbb::task {
 public:
     TaskWithMember( unsigned char n ) : count(n) {}
 };
+
+#if _MSC_VER && !defined(__INTEL_COMPILER)
+    #pragma warning (pop)
+#endif
 
 template<typename T> 
 void TestAlignmentOfOneClass() {
@@ -369,7 +445,9 @@ int Fib( int n ) {
     if( n<2 ) {
         return n;
     } else {
-        int y;
+        // y actually does not need to be initialized.  It is initialized solely to suppress
+        // a gratuitous warning "potentially uninitialized local variable". 
+        int y=-1;
         tbb::task* root_task = new( tbb::task::allocate_root() ) tbb::empty_task;
         root_task->set_ref_count(2);
         root_task->spawn( *new( root_task->allocate_child() ) RightFibTask(&y,n) );
@@ -404,9 +482,9 @@ int main(int argc, char* argv[]) {
         TestSafeContinuation( p );
         TestLeftRecursion( p );
         TestAffinity( p );
-#if __TBB_TASK_DEQUE && __TBB_STEAL_LIMITING_HEURISTICS && !(__TBB_ipf || __linux__ && __TBB_x86_32)
+#if __TBB_TASK_DEQUE
         TestStealLimit( p );
-#endif /* __TBB_TASK_DEQUE && __TBB_STEAL_LIMITING_HEURISTICS */
+#endif /* __TBB_TASK_DEQUE */
     }
     printf("done\n");
     return 0;

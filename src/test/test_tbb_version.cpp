@@ -1,5 +1,5 @@
 /*
-    Copyright 2005-2008 Intel Corporation.  All Rights Reserved.
+    Copyright 2005-2009 Intel Corporation.  All Rights Reserved.
 
     This file is part of Threading Building Blocks.
 
@@ -55,8 +55,16 @@ void initialize_strings_vector(std::vector <string_pair>* vector);
 const char stderr_stream[] = "version_test.err";
 const char stdout_stream[] = "version_test.out";
 
-int main(int argc, char **argv)
+int main(int argc, char*[] )
 {
+/* where we first introduced runtime version identification */
+#if TBB_INTERFACE_VERSION>=3014 
+    // For now, just test that run-time TBB version matches the compile-time version,
+    // since otherwise the subsequent test of "TBB: INTERFACE VERSION" string will fail anyway.
+    // We need something more clever in future.
+    ASSERT(tbb::TBB_runtime_interface_version()==TBB_INTERFACE_VERSION,
+           "Running with the library of different version than the test was compiled against");
+#endif
     try{
         FILE *stream_out;
         FILE *stream_err;   
@@ -189,7 +197,7 @@ int main(int argc, char **argv)
 void initialize_strings_vector(std::vector <string_pair>* vector)
 {
     vector->push_back(string_pair("TBB: VERSION\t\t2.1", required));          // check TBB_VERSION
-    vector->push_back(string_pair("TBB: INTERFACE VERSION\t3014", required)); // check TBB_INTERFACE_VERSION
+    vector->push_back(string_pair("TBB: INTERFACE VERSION\t3016", required)); // check TBB_INTERFACE_VERSION
     vector->push_back(string_pair("TBB: BUILD_DATE", required));
     vector->push_back(string_pair("TBB: BUILD_HOST", required));
     vector->push_back(string_pair("TBB: BUILD_OS", required));

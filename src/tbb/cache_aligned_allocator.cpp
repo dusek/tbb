@@ -1,5 +1,5 @@
 /*
-    Copyright 2005-2008 Intel Corporation.  All Rights Reserved.
+    Copyright 2005-2009 Intel Corporation.  All Rights Reserved.
 
     This file is part of Threading Building Blocks.
 
@@ -29,6 +29,7 @@
 #include "tbb/cache_aligned_allocator.h"
 #include "tbb/tbb_allocator.h"
 #include "tbb_misc.h"
+#include "dynamic_link.h"
 #include <cstdlib>
 
 #if _WIN32||_WIN64
@@ -70,7 +71,7 @@ static void* (*MallocHandler)( size_t size ) = &DummyMalloc;
 static void (*FreeHandler)( void* pointer ) = &DummyFree;
 
 //! Table describing the how to link the handlers.
-static const DynamicLinkDescriptor MallocLinkTable[] = {
+static const dynamic_link_descriptor MallocLinkTable[] = {
     DLD(scalable_malloc, MallocHandler),
     DLD(scalable_free, FreeHandler),
 };
@@ -125,7 +126,7 @@ static void (*padded_free_handler)( void* p ) = &dummy_padded_free;
     If that allocator is not found, it links to malloc and free. */
 void initialize_cache_aligned_allocator() {
     __TBB_ASSERT( MallocHandler==&DummyMalloc, NULL );
-    bool success = FillDynamicLinks( MALLOCLIB_NAME, MallocLinkTable, 2 );
+    bool success = dynamic_link( MALLOCLIB_NAME, MallocLinkTable, 2 );
     if( !success ) {
         // If unsuccessful, set the handlers to the default routines.
         // This must be done now, and not before FillDynanmicLinks runs, because if other
@@ -188,12 +189,11 @@ size_t NFS_GetLineSize() {
 const size_t BigSize = 4096;
 
 #if _MSC_VER && !defined(__INTEL_COMPILER)
-#pragma warning( push )
-// unary minus operator applied to unsigned type, result still unsigned
-#pragma warning( disable: 4146 )
-#endif /* _MSC_VER && !defined(__INTEL_COMPILER) */
+    // unary minus operator applied to unsigned type, result still unsigned
+    #pragma warning( disable: 4146 4706 )
+#endif
 
-void* NFS_Allocate( size_t n, size_t element_size, void* hint ) {
+void* NFS_Allocate( size_t n, size_t element_size, void* /*hint*/ ) {
     size_t m = NFS_LineSize;
     __TBB_ASSERT( m<=NFS_MaxLineSize, "illegal value for NFS_LineSize" );
     __TBB_ASSERT( (m & m-1)==0, "must be power of two" );
@@ -301,9 +301,6 @@ bool __TBB_EXPORTED_FUNC is_malloc_used_v3() {
                   MallocHandler!=&malloc && FreeHandler!=&free, NULL );
     return MallocHandler == &malloc;
 }
-#if _MSC_VER && !defined(__INTEL_COMPILER)
-#pragma warning( pop )
-#endif /* _MSC_VER && !defined(__INTEL_COMPILER) */
 
 } // namespace internal
 

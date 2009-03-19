@@ -1,5 +1,5 @@
 /*
-    Copyright 2005-2008 Intel Corporation.  All Rights Reserved.
+    Copyright 2005-2009 Intel Corporation.  All Rights Reserved.
 
     This file is part of Threading Building Blocks.
 
@@ -59,6 +59,10 @@ bool spin_mutex::scoped_lock::internal_try_acquire( spin_mutex& m ) {
         ITT_NOTIFY(sync_acquired, &m);
     }
     return result;
+}
+
+void spin_mutex::internal_construct() {
+    ITT_SYNC_CREATE(this, _T("tbb::spin_mutex"), _T(""));
 }
 
 } // namespace tbb

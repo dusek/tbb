@@ -1,5 +1,5 @@
 /*
-    Copyright 2005-2008 Intel Corporation.  All Rights Reserved.
+    Copyright 2005-2009 Intel Corporation.  All Rights Reserved.
 
     This file is part of Threading Building Blocks.
 
@@ -73,10 +73,8 @@ bool exec_test(const char *self) {
     }
     return true;
 }
-#endif /* __APPLE__ */
 
 int main( int argc, char * argv[] ) {
-#if __APPLE__
     MinThread = 3000;
     ParseCommandLine( argc, argv );
     if( MinThread <= 0 ) {
@@ -90,8 +88,14 @@ int main( int argc, char * argv[] ) {
 
         printf("done\n");
     }
-#else
-        printf("skip\n");
-#endif
     return 0;
 }
+
+#else
+
+int main() {
+    printf("skip\n");
+    return 0;
+}
+
+#endif /* __APPLE__ */

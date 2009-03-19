@@ -1,5 +1,5 @@
 /*
-    Copyright 2005-2008 Intel Corporation.  All Rights Reserved.
+    Copyright 2005-2009 Intel Corporation.  All Rights Reserved.
 
     This file is part of Threading Building Blocks.
 
@@ -27,7 +27,7 @@
 */
 
 #include "tbb/parallel_while.h"
-#include "harness_assert.h"
+#include "harness.h"
 
 const int N = 200;
 
@@ -75,7 +75,7 @@ public:
     }
 };
 
-class MatrixMultiplyBody {
+class MatrixMultiplyBody: NoAssign {
     Element (*a)[N];
     Element (*b)[N];
     Element (*c)[N];
@@ -110,7 +110,6 @@ void WhileMatrixMultiply( Element c[N][N], Element a[N][N], Element b[N][N], int
     w.run( stream, body );
 }
 
-#include "harness.h"
 #include "tbb/tick_count.h"
 #include <cstdlib>
 #include <cstdio>

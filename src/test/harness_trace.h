@@ -1,5 +1,5 @@
 /*
-    Copyright 2005-2008 Intel Corporation.  All Rights Reserved.
+    Copyright 2005-2009 Intel Corporation.  All Rights Reserved.
 
     This file is part of Threading Building Blocks.
 
@@ -81,8 +81,6 @@ namespace harness_internal {
 
         void  trace ( const char* fmt, ... )
         {
-            if ( !Verbose )
-                return;
             char    msg[MAX_TRACE_SIZE];
             char    msg_fmt_buf[MAX_TRACE_SIZE];
             const char  *msg_fmt = fmt;
@@ -100,7 +98,8 @@ namespace harness_internal {
                 msg[len] = '\n';
                 msg[len + 1] = 0;
             }
-            printf (msg);
+            printf ("%s",msg);
+            fflush(stdout);
 #if _WIN32 || _WIN64
             OutputDebugStringA(msg);
 #endif
@@ -109,12 +108,20 @@ namespace harness_internal {
 
     static tracer_t tracer;
 
+    template<int>
+    bool not_the_first_call () {
+        static bool first_call = false;
+        bool res = first_call;
+        first_call = true;
+        return res;
+    }
 } // namespace harness_internal
 
 #if defined(_MSC_VER)  &&  _MSC_VER >= 1300  ||  defined(__GNUC__)  ||  defined(__GNUG__)
 	#define HARNESS_TRACE_ORIG_INFO __FILE__, __LINE__, __FUNCTION__
 #else
 	#define HARNESS_TRACE_ORIG_INFO __FILE__, __LINE__, ""
+    #define __FUNCTION__ ""
 #endif
 
 
@@ -125,8 +132,17 @@ namespace harness_internal {
 //! printf style tracing macro without automatic new line character adding
 #define TRACENL harness_internal::tracer.set_trace_info(0, HARNESS_TRACE_ORIG_INFO)->trace
 
-//! printf style tracing macro automatically prepending additional information
+//! printf style tracing macro with additional information prefix (e.g. current function name)
 #define TRACEP harness_internal::tracer.set_trace_info(harness_internal::tracer_t::prefix | \
                                     harness_internal::tracer_t::need_lf, HARNESS_TRACE_ORIG_INFO)->trace
+
+//! printf style remark macro
+/** Produces output only when the test is run with the -v (verbose) option. **/
+#define REMARK  !Verbose ? (void)0 : TRACE
+
+//! printf style remark macro
+/** Produces output only when invoked first time. 
+    Only one instance of this macro is allowed per source code line. **/
+#define REMARK_ONCE  (!Verbose || harness_internal::not_the_first_call<__LINE__>()) ? (void)0 : TRACE
 
 #endif /* tbb_tests_harness_trace_H */

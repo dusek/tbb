@@ -1,5 +1,5 @@
 /*
-    Copyright 2005-2008 Intel Corporation.  All Rights Reserved.
+    Copyright 2005-2009 Intel Corporation.  All Rights Reserved.
 
     This file is part of Threading Building Blocks.
 
@@ -43,11 +43,11 @@ extern "C" void _ReadWriteBarrier();
 #define __TBB_WORDSIZE 4
 #define __TBB_BIG_ENDIAN 0
 
-#if defined(_MSC_VER) && defined(_Wp64)
+#if defined(_MSC_VER) && !defined(__INTEL_COMPILER)
     // Workaround for overzealous compiler warnings in /Wp64 mode
     #pragma warning (push)
     #pragma warning (disable: 4244 4267)
-#endif /* _MSC_VER && _Wp64 */
+#endif
 
 extern "C" {
     __int64 __TBB_EXPORTED_FUNC __TBB_machine_cmpswp8 (volatile void *ptr, __int64 value, __int64 comparand );
@@ -151,7 +151,7 @@ static inline T __TBB_machine_fetchstore##S ( volatile void * ptr, U value ) { \
 
 __TBB_DEFINE_ATOMICS(1, __int8, __int8, al, cl)
 __TBB_DEFINE_ATOMICS(2, __int16, __int16, ax, cx)
-__TBB_DEFINE_ATOMICS(4, __int32, size_t, eax, ecx)
+__TBB_DEFINE_ATOMICS(4, __int32, ptrdiff_t, eax, ecx)
 
 static inline __int32 __TBB_machine_lg( unsigned __int64 i ) {
     unsigned __int32 j;
@@ -163,7 +163,7 @@ static inline __int32 __TBB_machine_lg( unsigned __int64 i ) {
     return j;
 }
 
-static inline void __TBB_machine_OR( volatile void *operand, unsigned __int32 addend ) {
+static inline void __TBB_machine_OR( volatile void *operand, __int32 addend ) {
    __asm 
    {
        mov eax, addend
@@ -172,7 +172,7 @@ static inline void __TBB_machine_OR( volatile void *operand, unsigned __int32 ad
    }
 }
 
-static inline void __TBB_machine_AND( volatile void *operand, unsigned __int32 addend ) {
+static inline void __TBB_machine_AND( volatile void *operand, __int32 addend ) {
    __asm 
    {
        mov eax, addend
@@ -239,7 +239,15 @@ static inline void __TBB_x86_cpuid( __int32 buffer[4], __int32 mode ) {
     }
 }
 
-#if defined(_MSC_VER) && defined(_Wp64)
-    // Workaround for overzealous compiler warnings in /Wp64 mode
+#if defined(_MSC_VER)&&_MSC_VER<1400
+    static inline void* __TBB_machine_get_current_teb () {
+        void* pteb;
+        __asm mov eax, fs:[0x18]
+        __asm mov pteb, eax
+        return pteb;
+    }
+#endif
+
+#if defined(_MSC_VER) && !defined(__INTEL_COMPILER)
     #pragma warning (pop)
-#endif /* _MSC_VER && _Wp64 */
+#endif // warnings 4244, 4267 are back

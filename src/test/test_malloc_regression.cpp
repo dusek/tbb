@@ -1,5 +1,5 @@
 /*
-    Copyright 2005-2008 Intel Corporation.  All Rights Reserved.
+    Copyright 2005-2009 Intel Corporation.  All Rights Reserved.
 
     This file is part of Threading Building Blocks.
 
@@ -26,7 +26,6 @@
     the GNU General Public License.
 */
 
-#define __TBB_NO_IMPLICIT_LINKAGE 1
 #define HARNESS_NO_PARSE_COMMAND_LINE 1
 
 #include <stdio.h>
@@ -97,7 +96,7 @@ bool test_bootstrap_leak(void) {
     return memory_leak<=0;
 }
 
-int main( int argc, char* argv[] ) {
+int main( int /*argc*/, char* argv[] ) {
     bool passed = true;
 
     passed &= test_bootstrap_leak();

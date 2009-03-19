@@ -1,5 +1,5 @@
 /*
-    Copyright 2005-2008 Intel Corporation.  All Rights Reserved.
+    Copyright 2005-2009 Intel Corporation.  All Rights Reserved.
 
     This file is part of Threading Building Blocks.
 
@@ -30,21 +30,32 @@
 #define TBB_USE_PERFORMANCE_WARNINGS 1
 #endif
 
-#include "tbb/tbb_stddef.h"
-#include "harness_assert.h"
+// Our tests usually include the header under test first.  But this test needs
+// to use the preprocessor to edit the identifier runtime_warning in concurrent_hash_map.h.
+// Hence we include a few other headers before doing the abusive edit.
+#include "tbb/tbb_stddef.h" /* Defines runtime_warning */
+#include "harness_assert.h" /* Prerequisite for defining hooked_warning */
 
-// hook performance warning
+// The symbol internal::runtime_warning is normally an entry point into the TBB library.
+// Here for sake of testing, we define it to be hooked_warning, a routine peculiar to this unit test.
 #define runtime_warning hooked_warning
-bool bad_hashing = false;
-namespace tbb { namespace internal {
-    void hooked_warning( const char* format, ... ) {
-        ASSERT(bad_hashing, NULL);
-    }
-}}// namespace tbb::internal
+
+static bool bad_hashing = false;
+
+namespace tbb { 
+    namespace internal {
+        static void hooked_warning( const char* /*format*/, ... ) {
+            ASSERT(bad_hashing, "unexpected bad hashing");
+        }
+    } // namespace internal
+} // namespace tbb
 
 #include "tbb/concurrent_hash_map.h"
 
-// test whether a complete set of headers were already included. OSS Bug #120 (& #130):
+// Restore runtime_warning as an entry point into the TBB library.
+#undef runtime_warning
+
+// Test whether a sufficient set of headers were included to instantiate a concurernt_hash_map. OSS Bug #120 (& #130):
 // http://www.threadingbuildingblocks.org/bug_desc.php?id=120
 tbb::concurrent_hash_map<std::pair<std::pair<int,std::string>,const char*>,int> TestInstantiation;
 
@@ -170,7 +181,7 @@ public:
     bool equal( const MyKey& j, const MyKey& k ) const {
         return j.key==k.key;
     }
-    unsigned long hash( const MyKey& k ) const {
+    unsigned long hash( const MyKey& ) const {
         return 1;
     }   
 };
@@ -321,7 +332,7 @@ struct InnerInsert {
 };
 
 template<typename Op, typename MyTable>
-class TableOperation {
+class TableOperation: NoAssign {
     MyTable& my_table;
 public:
     void operator()( const tbb::blocked_range<int>& range ) const {
@@ -385,7 +396,7 @@ void TraverseTable( MyTable& table, size_t n, size_t expected_size ) {
 typedef tbb::atomic<unsigned char> AtomicByte;
 
 template<typename RangeType>
-struct ParallelTraverseBody {
+struct ParallelTraverseBody: NoAssign {
     const size_t n;
     AtomicByte* const array;
     ParallelTraverseBody( AtomicByte array_[], size_t n_ ) : 
@@ -487,7 +498,7 @@ void TestInsertFindErase( int nthread ) {
 
 volatile int Counter;
 
-class AddToTable {
+class AddToTable: NoAssign {
     MyTable& my_table;
     const int my_nthread;
     const int my_m;
@@ -523,7 +534,7 @@ public:
     }
 };
 
-class RemoveFromTable {
+class RemoveFromTable: NoAssign {
     MyTable& my_table;
     const int my_nthread;
     const int my_m;
@@ -863,7 +874,6 @@ int main( int argc, char* argv[] ) {
         TestConcurrency( nthread );
     }
     // check linking
-    #undef runtime_warning
     if(bad_hashing) { //should be false
         tbb::internal::runtime_warning("none\nERROR: it must not be executed");
     }

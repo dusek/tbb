@@ -1,4 +1,4 @@
-# Copyright 2005-2008 Intel Corporation.  All Rights Reserved.
+# Copyright 2005-2009 Intel Corporation.  All Rights Reserved.
 #
 # This file is part of Threading Building Blocks.
 #
@@ -82,10 +82,10 @@ release: ../../common/gui/$(UI)video.cpp SeismicSimulation.cpp resources
 	$(CXX) -O2 -DNDEBUG $(CXXFLAGS) -o $(EXE) $< SeismicSimulation.cpp -ltbb $(LIBS)
 
 debug: ../../common/gui/$(UI)video.cpp SeismicSimulation.cpp resources
-	$(CXX) -g -O0 -DTBB_DO_ASSERT $(CXXFLAGS) -o $(EXE) $< SeismicSimulation.cpp -ltbb_debug $(LIBS)
+	$(CXX) -g -O0 -DTBB_USE_DEBUG $(CXXFLAGS) -o $(EXE) $< SeismicSimulation.cpp -ltbb_debug $(LIBS)
 
 clean:
-	rm -f $(EXE) *.o *.d
+	$(RM) $(EXE) *.o *.d
 ifeq ($(UI),mac)
 	rm -rf $(NAME).app
 endif

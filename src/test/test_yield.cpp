@@ -1,5 +1,5 @@
 /*
-    Copyright 2005-2008 Intel Corporation.  All Rights Reserved.
+    Copyright 2005-2009 Intel Corporation.  All Rights Reserved.
 
     This file is part of Threading Building Blocks.
 
@@ -30,14 +30,14 @@
 // On Red Hat EL4 U1, it does not work, because sched_yield is broken.
 
 #include "tbb/tbb_machine.h"
-#include "harness.h"
 #include "tbb/tick_count.h"
+#include "harness.h"
 
 static volatile long CyclicCounter;
 static volatile bool Quit;
 double SingleThreadTime;
 
-struct RoundRobin {
+struct RoundRobin: NoAssign {
     const int number_of_threads;
     RoundRobin( long p ) : number_of_threads(p) {}
     void operator()( long k ) const {

@@ -1,5 +1,5 @@
 /*
-    Copyright 2005-2008 Intel Corporation.  All Rights Reserved.
+    Copyright 2005-2009 Intel Corporation.  All Rights Reserved.
 
     This file is part of Threading Building Blocks.
 
@@ -35,7 +35,7 @@
 #if !defined(__cplusplus) && __ICC==1100
     #pragma warning (push)
     #pragma warning (disable: 991)
-#endif /* !defined(__cplusplus) && __ICC==1100 */
+#endif
 
 #ifdef __cplusplus
 extern "C" {
@@ -63,6 +63,22 @@ void * __TBB_EXPORTED_FUNC scalable_realloc (void* ptr, size_t size);
     @ingroup memory_allocation */
 void * __TBB_EXPORTED_FUNC scalable_calloc (size_t nobj, size_t size);
 
+/** The "posix_memalign" analogue.
+    @ingroup memory_allocation */
+int __TBB_EXPORTED_FUNC scalable_posix_memalign (void** memptr, size_t alignment, size_t size);
+
+/** The "_aligned_malloc" analogue.
+    @ingroup memory_allocation */
+void * __TBB_EXPORTED_FUNC scalable_aligned_malloc (size_t size, size_t alignment);
+
+/** The "_aligned_realloc" analogue.
+    @ingroup memory_allocation */
+void * __TBB_EXPORTED_FUNC scalable_aligned_realloc (void* ptr, size_t size, size_t alignment);
+
+/** The "_aligned_free" analogue.
+    @ingroup memory_allocation */
+void __TBB_EXPORTED_FUNC scalable_aligned_free (void* ptr);
+
 #ifdef __cplusplus
 } /* extern "C" */
 #endif /* __cplusplus */
@@ -71,7 +87,23 @@ void * __TBB_EXPORTED_FUNC scalable_calloc (size_t nobj, size_t size);
 
 #include <new>      /* To use new with the placement argument */
 
+/* Ensure that including this header does not cause implicit linkage with TBB */
+#ifndef __TBB_NO_IMPLICIT_LINKAGE
+    #define __TBB_NO_IMPLICIT_LINKAGE 1
+    #include "tbb_stddef.h"
+    #undef  __TBB_NO_IMPLICIT_LINKAGE
+#else
+    #include "tbb_stddef.h"
+#endif
+
+
 namespace tbb {
+
+#if _MSC_VER && !defined(__INTEL_COMPILER)
+    // Workaround for erroneous "unreferenced parameter" warning in method destroy.
+    #pragma warning (push)
+    #pragma warning (disable: 4100)
+#endif
 
 //! Meets "allocator" requirements of ISO C++ Standard, Section 20.1.5
 /** The members are ordered the same way they are in section 20.4.1
@@ -80,11 +112,11 @@ namespace tbb {
 template<typename T>
 class scalable_allocator {
 public:
-    typedef T* pointer;
-    typedef const T* const_pointer;
-    typedef T& reference;
-    typedef const T& const_reference;
-    typedef T value_type;
+    typedef typename internal::allocator_type<T>::value_type value_type;
+    typedef value_type* pointer;
+    typedef const value_type* const_pointer;
+    typedef value_type& reference;
+    typedef const value_type& const_reference;
     typedef size_t size_type;
     typedef ptrdiff_t difference_type;
     template<class U> struct rebind {
@@ -110,12 +142,16 @@ public:
 
     //! Largest value for which method allocate might succeed.
     size_type max_size() const throw() {
-        size_type absolutemax = static_cast<size_type>(-1) / sizeof (T);
+        size_type absolutemax = static_cast<size_type>(-1) / sizeof (value_type);
         return (absolutemax > 0 ? absolutemax : 1);
     }
-    void construct( pointer p, const T& val ) { new(static_cast<void*>(p)) T(val); }
-    void destroy( pointer p ) {(static_cast<T*>(p))->~T();}
+    void construct( pointer p, const value_type& val ) { new(static_cast<void*>(p)) value_type(val); }
+    void destroy( pointer p ) {p->~value_type();}
 };
+
+#if _MSC_VER && !defined(__INTEL_COMPILER)
+    #pragma warning (pop)
+#endif // warning 4100 is back
 
 //! Analogous to std::allocator<void>, as defined in ISO C++ Standard, Section 20.4.1
 /** @ingroup memory_allocation */
@@ -158,6 +194,6 @@ inline bool operator!=( const scalable_allocator<T>&, const scalable_allocator<U
 
 #if !defined(__cplusplus) && __ICC==1100
     #pragma warning (pop)
-#endif /* !defined(__cplusplus) && __ICC==1100 */
+#endif // ICC 11.0 warning 991 is back
 
 #endif /* __TBB_scalable_allocator_H */

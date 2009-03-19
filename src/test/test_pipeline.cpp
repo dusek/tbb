@@ -1,5 +1,5 @@
 /*
-    Copyright 2005-2008 Intel Corporation.  All Rights Reserved.
+    Copyright 2005-2009 Intel Corporation.  All Rights Reserved.
 
     This file is part of Threading Building Blocks.
 
@@ -159,7 +159,7 @@ struct hacked_pipeline {
 
 //! The struct below repeats layout of tbb::internal::ordered_buffer.
 struct hacked_ordered_buffer {
-    tbb::task** array;
+    void* array; // This should be changed to task_info* if ever used
     tbb::internal::Token array_size;
     tbb::internal::Token low_token;
     tbb::spin_mutex array_mutex;

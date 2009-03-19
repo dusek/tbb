@@ -45,7 +45,7 @@
 				Name="VCCLCompilerTool"
 				Optimization="0"
 				AdditionalIncludeDirectories="$(TBB21_INSTALL_DIR)\include"
-				PreprocessorDefinitions="WIN32;_DEBUG;_CONSOLE;TBB_DO_ASSERT"
+				PreprocessorDefinitions="WIN32;_DEBUG;_CONSOLE;TBB_USE_DEBUG"
 				RuntimeLibrary="3"
 				UsePrecompiledHeader="0"
 				DebugInformationFormat="3"
@@ -123,6 +123,7 @@
 				PreprocessorDefinitions="WIN32;NDEBUG;_CONSOLE"
 				RuntimeLibrary="2"
 				UsePrecompiledHeader="0"
+				DebugInformationFormat="3"
 			/>
 			<Tool
 				Name="VCManagedResourceCompilerTool"
@@ -138,6 +139,7 @@
 				AdditionalDependencies="tbb.lib"
 				LinkIncremental="1"
 				AdditionalLibraryDirectories="$(TBB21_INSTALL_DIR)\ia32\vc9\lib"
+				GenerateDebugInformation="true"
 				SubSystem="1"
 				OptimizeReferences="2"
 				EnableCOMDATFolding="2"
@@ -197,7 +199,7 @@
 				Name="VCCLCompilerTool"
 				Optimization="0"
 				AdditionalIncludeDirectories="$(TBB21_INSTALL_DIR)\include"
-				PreprocessorDefinitions="WIN64;_DEBUG;_CONSOLE;TBB_DO_ASSERT"
+				PreprocessorDefinitions="WIN64;_DEBUG;_CONSOLE;TBB_USE_DEBUG"
 				RuntimeLibrary="3"
 				UsePrecompiledHeader="0"
 				DebugInformationFormat="3"
@@ -277,6 +279,7 @@
 				PreprocessorDefinitions="WIN64;NDEBUG;_CONSOLE"
 				RuntimeLibrary="2"
 				UsePrecompiledHeader="0"
+				DebugInformationFormat="3"
 			/>
 			<Tool
 				Name="VCManagedResourceCompilerTool"
@@ -292,6 +295,7 @@
 				AdditionalDependencies="tbb.lib"
 				LinkIncremental="1"
 				AdditionalLibraryDirectories="$(TBB21_INSTALL_DIR)\em64t\vc9\lib"
+				GenerateDebugInformation="true"
 				SubSystem="1"
 				OptimizeReferences="2"
 				EnableCOMDATFolding="2"

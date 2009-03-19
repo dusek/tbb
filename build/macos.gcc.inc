@@ -1,4 +1,4 @@
-# Copyright 2005-2008 Intel Corporation.  All Rights Reserved.
+# Copyright 2005-2009 Intel Corporation.  All Rights Reserved.
 #
 # This file is part of Threading Building Blocks.
 #
@@ -58,9 +58,15 @@ ifeq (em64t,$(arch))
 endif
 
 ifeq (ppc64,$(arch))
-    CPLUS_FLAGS += -m64
-    LINK_FLAGS += -m64
-    LIB_LINK_FLAGS += -m64
+    CPLUS_FLAGS += -arch ppc64
+    LINK_FLAGS += -arch ppc64
+    LIB_LINK_FLAGS += -arch ppc64
+endif
+
+ifeq (ppc,$(arch))
+    CPLUS_FLAGS += -arch ppc
+    LINK_FLAGS += -arch ppc
+    LIB_LINK_FLAGS += -arch ppc
 endif
 
 #------------------------------------------------------------------------------

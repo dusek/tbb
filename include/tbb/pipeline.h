@@ -1,5 +1,5 @@
 /*
-    Copyright 2005-2008 Intel Corporation.  All Rights Reserved.
+    Copyright 2005-2009 Intel Corporation.  All Rights Reserved.
 
     This file is part of Threading Building Blocks.
 
@@ -54,7 +54,7 @@ class ordered_buffer;
 
 //! A stage in a pipeline.
 /** @ingroup algorithms */
-class filter {
+class filter: internal::no_copy {
 private:
     //! Value used to mark "not in pipeline"
     static filter* not_in_pipeline() {return reinterpret_cast<filter*>(internal::intptr(-1));}
@@ -62,12 +62,12 @@ private:
     //! The lowest bit 0 is for parallel vs. serial
     static const unsigned char filter_is_serial = 0x1; 
 
-    //! 4th bit determines an order
+    //! 4th bit distinguish ordered vs unordered
     // The bit was not set for parallel filters in TBB 2.1 and earlier,
     // but is_ordered() function always treats parallel filters as out of order
     static const unsigned char filter_is_out_of_order = 0x1<<4;  
 
-    static const unsigned char current_version = __TBB_PIPELINE_VERSION(3);
+    static const unsigned char current_version = __TBB_PIPELINE_VERSION(4);
     static const unsigned char version_mask = 0x7<<1; // bits 1-3 are for version
 public:
     enum mode {
@@ -116,6 +116,13 @@ public:
     /** If the filter was added to a pipeline, the pipeline must be destroyed first. */
     virtual __TBB_EXPORTED_METHOD ~filter();
 
+#if __TBB_EXCEPTIONS
+    //! Destroys item if pipeline is cancelled
+    /** Required to prevent memory leaks 
+        Note it can be called concurrently even for serial filters.*/
+    virtual void finalize( void* /*item*/ ) {};
+#endif
+
 private:
     //! Pointer to next filter in the pipeline.
     filter* next_filter_in_pipeline;
@@ -153,6 +160,11 @@ public:
     //! Run the pipeline to completion.
     void __TBB_EXPORTED_METHOD run( size_t max_number_of_live_tokens );
 
+#if __TBB_EXCEPTIONS
+    //! Run the pipeline to completion with user-supplied context
+    void __TBB_EXPORTED_METHOD run( size_t max_number_of_live_tokens, tbb::task_group_context& context );
+#endif
+
     //! Remove all filters from the pipeline
     void __TBB_EXPORTED_METHOD clear();
 
@@ -183,6 +195,11 @@ private:
 
     //! Not used, but retained to satisfy old export files.
     void __TBB_EXPORTED_METHOD inject_token( task& self );
+
+#if __TBB_EXCEPTIONS
+    //! Does clean up if pipeline is cancelled or exception occured
+    void clear_filters();
+#endif
 };
 
 } // tbb

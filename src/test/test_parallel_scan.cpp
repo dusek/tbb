@@ -1,5 +1,5 @@
 /*
-    Copyright 2005-2008 Intel Corporation.  All Rights Reserved.
+    Copyright 2005-2009 Intel Corporation.  All Rights Reserved.
 
     This file is part of Threading Building Blocks.
 
@@ -120,18 +120,18 @@ public:
         self = this;
     }
     template<typename Tag> 
-    void operator()( const Range& r, Tag tag ) {
+    void operator()( const Range& r, Tag /*tag*/ ) {
         Snooze(true);
 #if PRINT_DEBUG
         if( my_range.empty() )
-            printf("%d computing %s [%ld..%ld)\n",id,tag.is_final_scan()?"final":"lookahead",r.begin(),r.end() );
+            printf("%d computing %s [%ld..%ld)\n",id,Tag::is_final_scan()?"final":"lookahead",r.begin(),r.end() );
         else
-            printf("%d computing %s [%ld..%ld) [%ld..%ld)\n",id,tag.is_final_scan()?"final":"lookahead",my_range.begin(),my_range.end(),r.begin(),r.end());
+            printf("%d computing %s [%ld..%ld) [%ld..%ld)\n",id,Tag::is_final_scan()?"final":"lookahead",my_range.begin(),my_range.end(),r.begin(),r.end());
 #endif /* PRINT_DEBUG */
-        ASSERT( !tag.is_final_scan() || (my_range.begin()==0 && my_range.end()==r.begin()) || (my_range.empty() && r.begin()==0), NULL );
+        ASSERT( !Tag::is_final_scan() || (my_range.begin()==0 && my_range.end()==r.begin()) || (my_range.empty() && r.begin()==0), NULL );
         for( long i=r.begin(); i<r.end(); ++i ) {
             my_total += my_array[i];
-            if( tag.is_final_scan() ) {
+            if( Tag::is_final_scan() ) {
                 ASSERT( AddendHistory[i]<USED_FINAL, "addend used 'finally' twice?" );
                 AddendHistory[i] |= USED_FINAL;
                 my_sum[i] = my_total;

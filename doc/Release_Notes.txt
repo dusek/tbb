@@ -61,16 +61,17 @@ Software - Supported Operating Systems
 	Microsoft* Windows* XP Professional
 	Microsoft* Windows* Server 2003
 	Microsoft* Windows* Vista
+	Microsoft* Windows* Server 2008
     Linux* Systems
 	Red Hat* Enterprise Linux* 3, 4, 5
 	    (when using Red Hat* Enterprise Linux* 4 with Intel(R)
 	    Itanium(R) processors, operating system Update 2 or higher
 	    is recommended)
-	Red Hat* Fedora* Core 5, Core 6, 7, 8
+	Red Hat* Fedora* Core 8, 9, 10
 	    (not with Intel(R) Itanium(R) processors)
 	Asianux* 3.0
 	Debian* GNU/Linux* 4.0
-	Ubuntu* 7.04, 7.10
+	Ubuntu* 7.04, 7.10, 8.04, 8.10
 	SuSE* Linux* Enterprise Server (SLES) 9, 10
 	SGI* Propack* 4.0 (with Intel(R) Itanium(R) processors only)
 	SGI* Propack* 5.0 (not with IA-32 architecture processors)
@@ -90,7 +91,7 @@ Software - Supported Compilers
     Intel(R) C++ Compiler 10.0 or higher
     For each supported Linux* operating system, the standard gcc
 	version provided with that operating system is supported,
-	including: 3.2, 3.3, 3.4, 4.0, 4.1
+	including gcc 3.2 through 4.3
     For each supported Mac OS* X operating system, the standard gcc
 	version provided with that operating system is supported,
 	including: 4.0.1 (Xcode* tool suite 2.4.1 or higher)
@@ -143,9 +144,20 @@ Library Issues
 
 	https://bugs.launchpad.net/ubuntu/+source/gcc-4.1/+bug/77559
 
+	- By default, Ubuntu* in 64-bit mode does not install packages 
+	required to compile 32-bit applications. Trying to compile 32-bit 
+	applications (including TBB examples), you may get errors like:
+		/usr/bin/ld: skipping incompatible /usr/lib/libpthread.so when searching for -lpthread
+		/usr/bin/ld: skipping incompatible /usr/lib/libpthread.a when searching for -lpthread
+		/usr/bin/ld: cannot find -lpthread
+	or
+		/usr/include/gnu/stubs.h:7:27: error: gnu/stubs-32.h: No such file or directory
+	In order to overcome the issue, additional packages should be
+	installed, such as gcc-multilib, ia32-libs, and others.
+	Refer to your provider of Ubuntu distribution for more details.
 
 ------------------------------------------------------------------------
-Copyright (C) 2005-2008 Intel Corporation.  All Rights Reserved.
+Copyright (C) 2005-2009 Intel Corporation.  All Rights Reserved.
 
 Intel, Pentium, Intel Xeon, Itanium, Intel XScale and VTune are
 registered trademarks or trademarks of Intel Corporation or its

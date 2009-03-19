@@ -1,0 +1,47 @@
+<HTML>
+<BODY>
+
+<H2>Overview</H2>
+"Game of life" demonstrates interoperability TBB and .NET. <br>This program runs 2 simultaneous instances of the classic "game of Life”. 
+One of these instances is calculated using sequential programming. The other is calculated using parallel programming via TBB.
+
+<H2>Files</H2>
+<DL>
+<DT><A HREF="Evolution.cpp">Evolution.cpp</A>
+<DD>File contain example class hierarchy.
+<DT><A HREF="Game_of_life.cpp">Game_of_life.cpp </A>
+<DD>File contain program entry point and other source that not related to logical structure of example.
+<DT><A HREF="Update_state.cpp">Update_state.cpp </A>
+<DD>File contain 2 type of source code for calculating steps in program. First type use SSE, second is ordinary  C++ code.
+</DL>
+
+<H2>Directories</H2>
+<DL>
+<DT><A HREF="vc8">vc8</A>
+<DD>Contains Microsoft* Visual Studio* 2005 workspace for building and running the example.
+<DT><A HREF="vc9">vc9</A>
+<DD>Contains Microsoft* Visual Studio* 2008 workspace for building and running the example.
+</DL>
+
+<H2>To Build</H2>
+General build directions can be found <A HREF=../../index.html#build>here</A>.
+<P></P>
+
+<H2>Usage</H2>
+<DL>
+For Windows* systems, Microsoft* Visual Studio* projects are provided for each of the above versions. 
+</DL>
+
+<HR>
+<A HREF="../index.html">Up to parent directory</A>
+<p></p>
+Copyright &copy; 2005-2009 Intel Corporation.  All Rights Reserved.
+<p></p>
+Intel, Pentium, Intel Xeon, Itanium, Intel XScale and VTune are 
+registered trademarks or trademarks of Intel Corporation or its 
+subsidiaries in the United States and other countries. 
+<p></p>
+* Other names and brands may be claimed as the property of others.
+</BODY>
+</HTML>
+

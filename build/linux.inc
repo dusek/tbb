@@ -1,4 +1,4 @@
-# Copyright 2005-2008 Intel Corporation.  All Rights Reserved.
+# Copyright 2005-2009 Intel Corporation.  All Rights Reserved.
 #
 # This file is part of Threading Building Blocks.
 #
@@ -71,7 +71,7 @@ else
         export LD_LIBRARY_PATH := .
 endif
 
-####### Build settigns ########################################################
+####### Build settings ########################################################
 
 OBJ = o
 DLL = so
@@ -91,6 +91,13 @@ MALLOC_NO_VERSION.DLL = libtbbmalloc$(DEBUG_SUFFIX).$(DLL)
 MALLOC.DEF = $(MALLOC_ROOT)/lin-tbbmalloc-export.def
 MALLOC.DLL = $(MALLOC_NO_VERSION.DLL).$(SONAME_SUFFIX)
 MALLOC.LIB = $(MALLOC_NO_VERSION.DLL)
+LINK_MALLOC.LIB = $(MALLOC_NO_VERSION.DLL)
+
+MALLOCPROXY_NO_VERSION.DLL = libtbbmalloc_proxy$(DEBUG_SUFFIX).$(DLL)
+MALLOCPROXY.DEF = $(MALLOC_ROOT)/$(def_prefix)-proxy-export.def
+MALLOCPROXY.DLL = $(MALLOCPROXY_NO_VERSION.DLL).$(SONAME_SUFFIX)
+MALLOCPROXY.LIB = $(MALLOCPROXY_NO_VERSION.DLL)
+
 
 TBB_NOSTRICT=1
 

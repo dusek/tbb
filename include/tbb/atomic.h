@@ -1,5 +1,5 @@
 /*
-    Copyright 2005-2008 Intel Corporation.  All Rights Reserved.
+    Copyright 2005-2009 Intel Corporation.  All Rights Reserved.
 
     This file is part of Threading Building Blocks.
 
@@ -40,11 +40,11 @@
 
 #include "tbb_machine.h"
 
-#if defined(_MSC_VER) && defined(_Wp64)
-    // Workaround for overzealous compiler warnings in /Wp64 mode
+#if defined(_MSC_VER) && !defined(__INTEL_COMPILER)
+    // Workaround for overzealous compiler warnings 
     #pragma warning (push)
     #pragma warning (disable: 4244 4267)
-#endif /* _MSC_VER && _Wp64 */
+#endif
 
 namespace tbb {
 
@@ -170,7 +170,11 @@ __TBB_DECL_ATOMIC_PRIMITIVES(8)
     The baroque expression below avoids all the warnings (we hope). */
 #define __TBB_MINUS_ONE(T) (T(T(0)-T(1)))
 
-template<typename I, typename D, size_t Step>
+//! Base class that provides basic functionality for atomic<T>.
+/** I is the underlying type.
+    D is the difference type.
+    StepType should be char if I is an integral type, and T if I is a T*. */
+template<typename I, typename D, typename StepType>
 struct atomic_impl: private atomic_base<I> {
 private:
     typedef typename atomic_word<sizeof(I)>::word word;
@@ -179,7 +183,7 @@ public:
 
     template<memory_semantics M>
     value_type fetch_and_add( D addend ) {
-        return value_type(internal::atomic_traits<sizeof(value_type),M>::fetch_and_add( &this->my_value, addend*Step ));
+        return value_type(internal::atomic_traits<sizeof(value_type),M>::fetch_and_add( &this->my_value, addend*sizeof(StepType) ));
     }
 
     value_type fetch_and_add( D addend ) {
@@ -265,23 +269,23 @@ public:
 #if defined(__INTEL_COMPILER)||!defined(_MSC_VER)||_MSC_VER>=1400
 
 template<>
-inline atomic_impl<__TBB_LONG_LONG,__TBB_LONG_LONG,1>::operator atomic_impl<__TBB_LONG_LONG,__TBB_LONG_LONG,1>::value_type() const volatile {
+inline atomic_impl<__TBB_LONG_LONG,__TBB_LONG_LONG,char>::operator atomic_impl<__TBB_LONG_LONG,__TBB_LONG_LONG,char>::value_type() const volatile {
     return __TBB_Load8(&this->my_value);
 }
 
 template<>
-inline atomic_impl<unsigned __TBB_LONG_LONG,unsigned __TBB_LONG_LONG,1>::operator atomic_impl<unsigned __TBB_LONG_LONG,unsigned __TBB_LONG_LONG,1>::value_type() const volatile {
+inline atomic_impl<unsigned __TBB_LONG_LONG,unsigned __TBB_LONG_LONG,char>::operator atomic_impl<unsigned __TBB_LONG_LONG,unsigned __TBB_LONG_LONG,char>::value_type() const volatile {
     return __TBB_Load8(&this->my_value);
 }
 
 template<>
-inline atomic_impl<__TBB_LONG_LONG,__TBB_LONG_LONG,1>::value_type atomic_impl<__TBB_LONG_LONG,__TBB_LONG_LONG,1>::store_with_release( value_type rhs ) {
+inline atomic_impl<__TBB_LONG_LONG,__TBB_LONG_LONG,char>::value_type atomic_impl<__TBB_LONG_LONG,__TBB_LONG_LONG,char>::store_with_release( value_type rhs ) {
     __TBB_Store8(&this->my_value,rhs);
     return rhs;
 }
 
 template<>
-inline atomic_impl<unsigned __TBB_LONG_LONG,unsigned __TBB_LONG_LONG,1>::value_type atomic_impl<unsigned __TBB_LONG_LONG,unsigned __TBB_LONG_LONG,1>::store_with_release( value_type rhs ) {
+inline atomic_impl<unsigned __TBB_LONG_LONG,unsigned __TBB_LONG_LONG,char>::value_type atomic_impl<unsigned __TBB_LONG_LONG,unsigned __TBB_LONG_LONG,char>::store_with_release( value_type rhs ) {
     __TBB_Store8(&this->my_value,rhs);
     return rhs;
 }
@@ -300,7 +304,7 @@ struct atomic {
 };
 
 #define __TBB_DECL_ATOMIC(T) \
-    template<> struct atomic<T>: internal::atomic_impl<T,T,1> {  \
+    template<> struct atomic<T>: internal::atomic_impl<T,T,char> {  \
         T operator=( T rhs ) {return store_with_release(rhs);}  \
         atomic<T>& operator=( const atomic<T>& rhs ) {store_with_release(rhs); return *this;}  \
     };
@@ -322,7 +326,7 @@ __TBB_DECL_ATOMIC(unsigned long)
    type synonyms on the platform.  Type U should be the wider variant of T from the
    perspective of /Wp64. */
 #define __TBB_DECL_ATOMIC_ALT(T,U) \
-    template<> struct atomic<T>: internal::atomic_impl<T,T,1> {  \
+    template<> struct atomic<T>: internal::atomic_impl<T,T,char> {  \
         T operator=( U rhs ) {return store_with_release(T(rhs));}  \
         atomic<T>& operator=( const atomic<T>& rhs ) {store_with_release(rhs); return *this;}  \
     };
@@ -343,7 +347,7 @@ __TBB_DECL_ATOMIC(unsigned char)
 __TBB_DECL_ATOMIC(wchar_t)
 #endif /* _MSC_VER||!defined(_NATIVE_WCHAR_T_DEFINED) */
 
-template<typename T> struct atomic<T*>: internal::atomic_impl<T*,ptrdiff_t,sizeof(T)> {
+template<typename T> struct atomic<T*>: internal::atomic_impl<T*,ptrdiff_t,T> {
     T* operator=( T* rhs ) {
         // "this" required here in strict ISO C++ because store_with_release is a dependent name
         return this->store_with_release(rhs);
@@ -437,9 +441,8 @@ public:
 
 } // namespace tbb
 
-#if defined(_MSC_VER) && defined(_Wp64)
-    // Workaround for overzealous compiler warnings in /Wp64 mode
+#if defined(_MSC_VER) && !defined(__INTEL_COMPILER)
     #pragma warning (pop)
-#endif /* _MSC_VER && _Wp64 */
+#endif // warnings 4244, 4267 are back
 
 #endif /* __TBB_atomic_H */

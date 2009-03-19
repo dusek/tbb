@@ -1,5 +1,5 @@
 /*
-    Copyright 2005-2008 Intel Corporation.  All Rights Reserved.
+    Copyright 2005-2009 Intel Corporation.  All Rights Reserved.
 
     This file is part of Threading Building Blocks.
 
@@ -54,7 +54,7 @@ class ChangeProducer: public tbb::task {
 public:
     /*override*/ tbb::task* execute() {
         if( is_stolen_task() ) {
-            Producer = GetThreadSpecific();
+            Producer = internal::Governor::local_scheduler();
         }
         return NULL;
     }
@@ -70,7 +70,7 @@ public:
     /*override*/ tbb::task* execute() {
         if( my_depth>0 ) {
             int child_count = my_child_count;
-            scheduler* my_sched = GetThreadSpecific();
+            scheduler* my_sched = internal::Governor::local_scheduler();
             tbb::task& c  = *new( tbb::task::allocate_continuation() ) tbb::empty_task;
             c.set_ref_count( child_count );
             recycle_as_child_of(c);
@@ -100,7 +100,15 @@ public:
 };
 
 #include "harness_memory.h"
+#if _MSC_VER==1500 && !defined(__INTEL_COMPILER)
+    // VS2008/VC9 seems to have an issue
+    #pragma warning( push )
+    #pragma warning( disable: 4985 )
+#endif
 #include <math.h>
+#if _MSC_VER==1500 && !defined(__INTEL_COMPILER)
+    #pragma warning( pop )
+#endif
 
 void RunTaskGenerators( int i ) {
     tbb::task* dummy_root;
@@ -141,7 +149,7 @@ void TestTaskReclamation() {
     if( Verbose )
         printf("Starting with %d threads\n", MinThread);
     // For now, the master will produce "additional" tasks; later a worker will replace it;
-    Producer  = GetThreadSpecific();
+    Producer  = internal::Governor::local_scheduler();
     int N = 20;
     // First N iterations fill internal buffers and collect initial statistics
     for( int i=0; i<N; ++i ) {
@@ -152,7 +160,7 @@ void TestTaskReclamation() {
         if( m-initial_amount_of_memory > 0)
             initial_amount_of_memory = m;
 
-        tbb::internal::intptr n = GetThreadSpecific()->get_task_node_count( /*count_arena_workers=*/true );
+        intptr_t n = internal::Governor::local_scheduler()->get_task_node_count( /*count_arena_workers=*/true );
         task_count_sum += n;
         task_count_sum_square += n*n;
 
@@ -170,7 +178,7 @@ void TestTaskReclamation() {
         // These iterations check for excessive memory use and unreasonable task count
         RunTaskGenerators( i );
 
-        tbb::internal::intptr n = GetThreadSpecific()->get_task_node_count( /*count_arena_workers=*/true );
+        intptr_t n = internal::Governor::local_scheduler()->get_task_node_count( /*count_arena_workers=*/true );
         size_t m = GetMemoryUsage();
 
         if( (m-initial_amount_of_memory > 0) && (n > average+4*sigma) ) {

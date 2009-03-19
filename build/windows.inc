@@ -1,4 +1,4 @@
-# Copyright 2005-2008 Intel Corporation.  All Rights Reserved.
+# Copyright 2005-2009 Intel Corporation.  All Rights Reserved.
 #
 # This file is part of Threading Building Blocks.
 #
@@ -81,6 +81,12 @@ MALLOC.MANIFEST =
 ifneq ($(runtime),vc7.1)
 MALLOC.MANIFEST = tbbmanifest.exe.manifest
 endif
+LINK_MALLOC.LIB = $(MALLOC.LIB)
+
+MALLOCPROXY.DLL = tbbmalloc_proxy$(DEBUG_SUFFIX).$(DLL)
+
 
 MAKE_VERSIONS = cmd /C cscript /nologo /E:jscript $(subst \,/,$(tbb_root))/build/version_info_windows.js $(compiler) $(arch) $(subst \,/,"$(CPLUS) $(CPLUS_FLAGS) $(INCLUDES)") > version_string.tmp
 MAKE_TBBVARS  = cmd /C "$(subst /,\,$(tbb_root))\build\generate_tbbvars.bat"
+
+TEST_LAUNCHER =  $(subst /,\,$(tbb_root))\build\test_launcher.bat

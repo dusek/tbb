@@ -1,4 +1,4 @@
-# Copyright 2005-2008 Intel Corporation.  All Rights Reserved.
+# Copyright 2005-2009 Intel Corporation.  All Rights Reserved.
 #
 # This file is part of Threading Building Blocks.
 #
@@ -63,6 +63,7 @@ endif
 TBB_CPLUS.OBJ = concurrent_hash_map.$(OBJ) \
 		concurrent_queue.$(OBJ) \
 		concurrent_vector.$(OBJ) \
+		dynamic_link.$(OBJ) \
 		itt_notify.$(OBJ) \
 		cache_aligned_allocator.$(OBJ) \
 		pipeline.$(OBJ) \
@@ -75,7 +76,8 @@ TBB_CPLUS.OBJ = concurrent_hash_map.$(OBJ) \
 		mutex.$(OBJ) \
 		recursive_mutex.$(OBJ) \
 		tbb_thread.$(OBJ) \
-		enumerable_thread_specific.$(OBJ)
+		enumerable_thread_specific.$(OBJ) \
+		itt_notify_proxy.$(OBJ)
 
 # OLD/Legacy object files for backward binary compatibility
 ifeq (,$(findstring $(DEFINE_KEY)TBB_NO_LEGACY,$(CPLUS_FLAGS)))
@@ -91,11 +93,12 @@ TBB.OBJ = $(TBB_CPLUS.OBJ) $(TBB_CPLUS_OLD.OBJ) $(TBB_ASM.OBJ)
 # Suppress superfluous warnings for TBB compilation
 WARNING_KEY += $(WARNING_SUPPRESS)
 
+
 include $(tbb_root)/build/common_rules.inc
 
 ifneq (,$(TBB.DEF))
 tbb.def: $(TBB.DEF)
-	$(CMD) "$(CPLUS) $(PREPROC_ONLY) $(TBB.DEF) $(filter $(DEFINE_KEY)%,$(CPLUS_FLAGS)) >tbb.def 2>$(NUL) || exit 0"
+	$(CMD) "$(CPLUS) $(PREPROC_ONLY) $(TBB.DEF) $(INCLUDES) $(filter $(DEFINE_KEY)%,$(CPLUS_FLAGS)) >tbb.def 2>$(NUL) || exit 0"
 
 LIB_LINK_FLAGS += $(EXPORT_KEY)tbb.def
 $(TBB.DLL): tbb.def

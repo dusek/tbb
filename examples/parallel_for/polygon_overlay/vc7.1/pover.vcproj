@@ -85,7 +85,8 @@ copy &quot;$(TBB21_INSTALL_DIR)\ia32\vc7.1\bin\tbbmalloc_debug.dll&quot; &quot;$
 				RuntimeLibrary="2"
 				EnableFunctionLevelLinking="TRUE"
 				UsePrecompiledHeader="0"
-				Detect64BitPortabilityProblems="TRUE"/>
+				Detect64BitPortabilityProblems="TRUE"
+				DebugInformationFormat="3"/>
 			<Tool
 				Name="VCCustomBuildTool"/>
 			<Tool
@@ -93,6 +94,7 @@ copy &quot;$(TBB21_INSTALL_DIR)\ia32\vc7.1\bin\tbbmalloc_debug.dll&quot; &quot;$
 				AdditionalDependencies="tbb.lib tbbmalloc.lib"
 				LinkIncremental="1"
 				AdditionalLibraryDirectories="&quot;$(TBB21_INSTALL_DIR)\ia32\vc7.1\lib&quot;"
+				GenerateDebugInformation="TRUE"
 				SubSystem="1"
 				OptimizeReferences="2"
 				EnableCOMDATFolding="2"
@@ -141,7 +143,8 @@ copy &quot;$(TBB21_INSTALL_DIR)\ia32\vc7.1\bin\tbbmalloc.dll&quot; &quot;$(OutDi
 				RuntimeLibrary="2"
 				EnableFunctionLevelLinking="TRUE"
 				UsePrecompiledHeader="0"
-				Detect64BitPortabilityProblems="TRUE"/>
+				Detect64BitPortabilityProblems="TRUE"
+				DebugInformationFormat="3"/>
 			<Tool
 				Name="VCCustomBuildTool"/>
 			<Tool
@@ -149,6 +152,7 @@ copy &quot;$(TBB21_INSTALL_DIR)\ia32\vc7.1\bin\tbbmalloc.dll&quot; &quot;$(OutDi
 				AdditionalDependencies="tbb.lib tbbmalloc.lib"
 				LinkIncremental="1"
 				AdditionalLibraryDirectories="&quot;$(TBB21_INSTALL_DIR)\ia32\vc7.1\lib&quot;"
+				GenerateDebugInformation="TRUE"
 				SubSystem="2"
 				OptimizeReferences="2"
 				EnableCOMDATFolding="2"
@@ -312,7 +316,8 @@ copy &quot;$(TBB21_INSTALL_DIR)\ia32\vc7.1\bin\tbbmalloc_debug.dll&quot; &quot;$
 				RuntimeLibrary="2"
 				EnableFunctionLevelLinking="TRUE"
 				UsePrecompiledHeader="0"
-				Detect64BitPortabilityProblems="TRUE"/>
+				Detect64BitPortabilityProblems="TRUE"
+				DebugInformationFormat="3"/>
 			<Tool
 				Name="VCCustomBuildTool"/>
 			<Tool
@@ -320,6 +325,7 @@ copy &quot;$(TBB21_INSTALL_DIR)\ia32\vc7.1\bin\tbbmalloc_debug.dll&quot; &quot;$
 				AdditionalDependencies="tbb.lib tbbmalloc.lib"
 				LinkIncremental="1"
 				AdditionalLibraryDirectories="&quot;$(TBB21_INSTALL_DIR)\ia32\vc7.1\lib&quot;;&quot;$(DXSDK_DIR)\lib\x86&quot;"
+				GenerateDebugInformation="TRUE"
 				SubSystem="2"
 				OptimizeReferences="2"
 				EnableCOMDATFolding="2"

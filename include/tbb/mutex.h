@@ -1,5 +1,5 @@
 /*
-    Copyright 2005-2008 Intel Corporation.  All Rights Reserved.
+    Copyright 2005-2009 Intel Corporation.  All Rights Reserved.
 
     This file is part of Threading Building Blocks.
 
@@ -46,6 +46,7 @@ extern void handle_perror( int error_code, const char* what );
 #endif /* _WIN32||_WIN64 */
 
 #include "tbb_stddef.h"
+#include "tbb_profiling.h"
 
 namespace tbb {
 
@@ -56,7 +57,7 @@ class mutex {
 public:
     //! Construct unacquired mutex.
     mutex() {
-#if TBB_USE_ASSERT
+#if TBB_USE_ASSERT || TBB_USE_THREADING_TOOLS
     internal_construct();
 #else
   #if _WIN32||_WIN64
@@ -88,7 +89,7 @@ public:
     //! The scoped locking pattern
     /** It helps to avoid the common problem of forgetting to release lock.
         It also nicely provides the "node" for queuing locks. */
-    class scoped_lock : private internal::no_copy {
+    class scoped_lock : internal::no_copy {
     public:
         //! Construct lock that has not acquired a mutex. 
         scoped_lock() : my_mutex(NULL) {};
@@ -187,6 +188,8 @@ private:
     //! All checks from mutex destructor using mutex.state were moved here
     void __TBB_EXPORTED_METHOD internal_destroy();
 };
+
+__TBB_DEFINE_PROFILING_SET_NAME(mutex)
 
 } // namespace tbb 
 

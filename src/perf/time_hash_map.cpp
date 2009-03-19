@@ -1,5 +1,5 @@
 /*
-    Copyright 2005-2008 Intel Corporation.  All Rights Reserved.
+    Copyright 2005-2009 Intel Corporation.  All Rights Reserved.
 
     This file is part of Threading Building Blocks.
 
@@ -36,7 +36,8 @@
 #define OLDTABLEHEADER "tbb/concurrent_hash_map-4078.h"//-4329
 
 //! enable/disable experimental implementation tests (correct include file also)
-#define TESTTABLE 1
+
+#define TESTTABLE 0
 #define TESTTABLEHEADER "tbb/concurrent_unordered_map.h"
 
 //////////////////////////////////////////////////////////////////////////////////
@@ -60,6 +61,7 @@
 // for test
 #include "tbb/spin_mutex.h"
 #include "time_framework.h"
+
 
 using namespace tbb;
 using namespace tbb::internal;
@@ -142,7 +144,7 @@ struct TestTBBMap : TesterBase {
             break;
           case 3: // clean
             for(int i = t*n_items, e = (t+1)*n_items; i < e; i++) {
-                Table.erase( i );
+                ASSERT( Table.erase( i ), NULL);
             }
         }
         return 0;

@@ -1,5 +1,5 @@
 /*
-    Copyright 2005-2008 Intel Corporation.  All Rights Reserved.
+    Copyright 2005-2009 Intel Corporation.  All Rights Reserved.
 
     This file is part of Threading Building Blocks.
 
@@ -51,7 +51,7 @@ class task_scheduler_init: internal::no_copy {
     /** NULL if not currently initialized. */
     internal::scheduler* my_scheduler;
 public:
-    
+
     //! Typedef for number of threads that is automatic.
     static const int automatic = -1;
 
@@ -80,7 +80,7 @@ public:
     task_scheduler_init( int number_of_threads=automatic, stack_size_type thread_stack_size=0 ) : my_scheduler(NULL)  {
         initialize( number_of_threads, thread_stack_size );
     }
-  
+
     //! Destroy scheduler for this thread if thread has no other live task_scheduler_inits.
     ~task_scheduler_init() {
         if( my_scheduler ) 

@@ -1,5 +1,5 @@
 /*
-    Copyright 2005-2008 Intel Corporation.  All Rights Reserved.
+    Copyright 2005-2009 Intel Corporation.  All Rights Reserved.
 
     This file is part of Threading Building Blocks.
 
@@ -162,7 +162,7 @@ void Invariant<M,N>::flog_once( size_t mode )
 static tbb::atomic<size_t> Order;
 
 template<typename State, long TestSize>
-struct Work {
+struct Work: NoAssign {
     static const size_t chunk = 100;
     State& state;
     Work( State& state_ ) : state(state_) {}

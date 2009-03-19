@@ -1,5 +1,5 @@
 /*
-    Copyright 2005-2008 Intel Corporation.  All Rights Reserved.
+    Copyright 2005-2009 Intel Corporation.  All Rights Reserved.
 
     This file is part of Threading Building Blocks.
 
@@ -29,21 +29,18 @@
 #include "tbb/queuing_rw_mutex.h"
 #include "tbb/spin_rw_mutex.h"
 #include "harness.h"
-#include "tbb/blocked_range.h"
-#include "tbb/task.h"
-#include "tbb/parallel_for.h"
 
 using namespace tbb;
 
 volatile int Count;
 
 template<typename RWMutex>
-struct Hammer {
+struct Hammer: NoAssign {
     RWMutex &MutexProtectingCount;
     mutable volatile int dummy;
 
     Hammer(RWMutex &m): MutexProtectingCount(m) {}
-    void operator()( const blocked_range<int>& range ) const {
+    void operator()( int /*thread_id*/ ) const {
         for( int j=0; j<100000; ++j ) {
             typename RWMutex::scoped_lock lock(MutexProtectingCount,false);
             int c = Count;
@@ -70,16 +67,13 @@ struct Hammer {
 queuing_rw_mutex QRW_mutex;
 spin_rw_mutex SRW_mutex;
 
-#include "tbb/task_scheduler_init.h"
-
 int main( int argc, char* argv[]) {
     ParseCommandLine( argc, argv );
     for( int p=MinThread; p<=MaxThread; ++p ) {
-        task_scheduler_init init(p);
         Count = 0;
-        parallel_for( blocked_range<int>( 0, p, 1 ), Hammer<queuing_rw_mutex>(QRW_mutex) ); 
+        NativeParallelFor( p, Hammer<queuing_rw_mutex>(QRW_mutex) ); 
         Count = 0;
-        parallel_for( blocked_range<int>( 0, p, 1 ), Hammer<spin_rw_mutex>(SRW_mutex) );
+        NativeParallelFor( p, Hammer<spin_rw_mutex>(SRW_mutex) );
     }
     printf("done\n");
     return 0;

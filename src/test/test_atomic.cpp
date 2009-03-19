@@ -1,5 +1,5 @@
 /*
-    Copyright 2005-2008 Intel Corporation.  All Rights Reserved.
+    Copyright 2005-2009 Intel Corporation.  All Rights Reserved.
 
     This file is part of Threading Building Blocks.
 
@@ -32,6 +32,12 @@
 #include "tbb/atomic.h"
 #include "harness_assert.h"
 
+#if _MSC_VER && !defined(__INTEL_COMPILER)
+    // unary minus operator applied to unsigned type, result still unsigned
+    #pragma warning( push )
+    #pragma warning( disable: 4310 )
+#endif
+
 //! Structure that holds an atomic<T> and some guard bytes around it.
 template<typename T>
 struct TestStruct {
@@ -48,6 +54,10 @@ struct TestStruct {
         ASSERT( suffix==T(0x5678), NULL );
     }
 };
+
+#if _MSC_VER && !defined(__INTEL_COMPILER)
+    #pragma warning( pop )
+#endif
 
 //! Test compare_and_swap template members of class atomic<T> for memory_semantics=M
 template<typename T,tbb::memory_semantics M>
@@ -106,6 +116,13 @@ void TestFetchAndStore( T i, T j ) {
     TestFetchAndStoreAcquireRelease<T,tbb::acquire>(i,j);
     TestFetchAndStoreAcquireRelease<T,tbb::release>(i,j);
 }
+
+#if _MSC_VER && !defined(__INTEL_COMPILER)
+    // conversion from <bigger integer> to <smaller integer>, possible loss of data
+    // the warning seems a complete nonsense when issued for e.g. short+=short
+    #pragma warning( push )
+    #pragma warning( disable: 4244 )
+#endif
 
 //! Test fetch_and_add members of class atomic<T> for memory_semantics=M
 template<typename T,tbb::memory_semantics M>
@@ -180,6 +197,16 @@ void TestFetchAndAdd( T i ) {
     TestFetchAndAddAcquireRelease<T,tbb::release>(i);
 }
 
+#if _MSC_VER && !defined(__INTEL_COMPILER)
+    #pragma warning( pop )
+#endif // warning 4244 is back
+
+//! A type with unknown size.
+class IncompleteType;
+
+void TestFetchAndAdd( IncompleteType* ) {
+    // There are no fetch-and-add operations on a IncompleteType*.
+}
 void TestFetchAndAdd( void* ) {
     // There are no fetch-and-add operations on a void*.
 }
@@ -218,10 +245,10 @@ struct AlignmentChecker {
 #include "harness.h"
 
 #if _MSC_VER && !defined(__INTEL_COMPILER)
-#pragma warning( push )
-// unary minus operator applied to unsigned type, result still unsigned
-#pragma warning( disable: 4146 )
-#endif /* _MSC_VER && !defined(__INTEL_COMPILER) */
+    // unary minus operator applied to unsigned type, result still unsigned
+    #pragma warning( push )
+    #pragma warning( disable: 4146 )
+#endif
 
 /** T is an integral type. */
 template<typename T>
@@ -245,9 +272,10 @@ void TestAtomicInteger( const char* name ) {
     }
     TestParallel<T>( name );
 }
+
 #if _MSC_VER && !defined(__INTEL_COMPILER)
-#pragma warning( pop )
-#endif /* _MSC_VER && !defined(__INTEL_COMPILER) */
+    #pragma warning( pop )
+#endif
 
 
 template<typename T>
@@ -263,7 +291,7 @@ void TestIndirection() {
     pointer = &item;
     for( int k=-10; k<=10; ++k ) {
         // Test various syntaxes for indirection to fields with non-zero offset.   
-        T value1, value2;
+        T value1=T(), value2=T();
         for( size_t j=0; j<sizeof(T); ++j ) {
             *(char*)&value1 = char(k^j);
             *(char*)&value2 = char(k^j*j);
@@ -277,27 +305,142 @@ void TestIndirection() {
     }
 }
 
+//! Test atomic<T*>
 template<typename T>
 void TestAtomicPointer() {
+    if( Verbose )
+        printf("testing atomic pointer (%d)\n",int(sizeof(T)));
     T array[1000];
     TestOperations<T*>(&array[500],&array[250],&array[750]);
-    TestOperations<void*>(&array[500],&array[250],&array[750]);
     TestIndirection<T>();
     TestParallel<T*>( "pointer" );
 }
 
-// Specialization for void*
-template<>
-void TestAtomicPointer<void*>() {
-    void* array[1000];
-    TestOperations<void*>(&array[500],&array[250],&array[750]);
-    TestParallel<void*>( "pointer" );
+//! Test atomic<Ptr> where Ptr is a pointer to a type of unknown size
+template<typename Ptr>
+void TestAtomicPointerToTypeOfUnknownSize( const char* name ) {
+    if( Verbose )
+        printf("testing atomic<%s>\n",name);
+    char array[1000];
+    TestOperations<Ptr>((Ptr)(void*)&array[500],(Ptr)(void*)&array[250],(Ptr)(void*)&array[750]);
+    TestParallel<Ptr>( name );
 }
 
 void TestAtomicBool() {
+    if( Verbose )
+        printf("testing atomic<bool>\n");
     TestOperations<bool>(true,true,false);
     TestOperations<bool>(false,false,true);
     TestParallel<bool>( "bool" );
+}
+
+const int numMaskedOperations = 100000;
+const int testSpaceSize = 8;
+int prime[testSpaceSize] = {3,5,7,11,13,17,19,23};
+
+#if _MSC_VER && !defined(__INTEL_COMPILER)
+    // "possible loss of data" warning suppressed again
+    #pragma warning( push )
+    #pragma warning( disable: 4244 )
+#endif
+
+template<typename T>
+class TestMaskedCAS_Body: NoAssign {
+    T*  test_space_uncontended;
+    T*  test_space_contended;
+public:   
+    TestMaskedCAS_Body( T* _space1, T* _space2 ) : test_space_uncontended(_space1), test_space_contended(_space2) {}
+    void operator()( int my_idx ) const {
+        using tbb::internal::__TBB_MaskedCompareAndSwap;
+        const T my_prime = T(prime[my_idx]);
+        T* const my_ptr = test_space_uncontended+my_idx;
+        T old_value=0;
+        for( int i=0; i<numMaskedOperations; ++i, old_value+=my_prime ){
+            T result;
+        // Test uncontended case
+            T new_value = old_value + my_prime;
+            // The following CAS should always fail
+            result = __TBB_MaskedCompareAndSwap<sizeof(T),T>(my_ptr,new_value,old_value-1);
+            ASSERT(result!=old_value-1, "masked CAS succeeded while it should fail");
+            ASSERT(result==*my_ptr, "masked CAS result mismatch with real value");
+            // The following one should succeed
+            result = __TBB_MaskedCompareAndSwap<sizeof(T),T>(my_ptr,new_value,old_value);
+            ASSERT(result==old_value && *my_ptr==new_value, "masked CAS failed while it should succeed");
+            // The following one should fail again
+            result = __TBB_MaskedCompareAndSwap<sizeof(T),T>(my_ptr,new_value,old_value);
+            ASSERT(result!=old_value, "masked CAS succeeded while it should fail");
+            ASSERT(result==*my_ptr, "masked CAS result mismatch with real value");
+        // Test contended case
+            for( int j=0; j<testSpaceSize; ++j ){
+                // try adding my_prime until success
+                T value;
+                do {
+                    value = test_space_contended[j];
+                    result = __TBB_MaskedCompareAndSwap<sizeof(T),T>(test_space_contended+j,value+my_prime,value);
+                } while( result!=value );
+            }
+        }
+    }
+};
+
+template<typename T>
+struct intptr_as_array_of
+{
+    static const int how_many_Ts = sizeof(intptr_t)/sizeof(T);
+    union {
+        intptr_t result;
+        T space[ how_many_Ts ];
+    };
+};
+
+template<typename T>
+intptr_t getCorrectUncontendedValue(int slot_idx) {
+    intptr_as_array_of<T> slot;
+    slot.result = 0;
+    for( int i=0; i<slot.how_many_Ts; ++i ) {
+        const T my_prime = T(prime[slot_idx*slot.how_many_Ts + i]);
+        for( int j=0; j<numMaskedOperations; ++j )
+            slot.space[i] += my_prime;
+    }
+    return slot.result;
+}
+
+template<typename T>
+intptr_t getCorrectContendedValue() {
+    intptr_as_array_of<T>  slot;
+    slot.result = 0;
+    for( int i=0; i<slot.how_many_Ts; ++i )
+        for( int primes=0; primes<testSpaceSize; ++primes )
+            for( int j=0; j<numMaskedOperations; ++j )
+                slot.space[i] += prime[primes];
+    return slot.result;
+}
+
+#if _MSC_VER && !defined(__INTEL_COMPILER)
+    #pragma warning( pop )
+#endif // warning 4244 is back again
+
+template<typename T>
+void TestMaskedCAS() {
+    if( Verbose )
+        printf("testing masked CAS<%d>\n",int(sizeof(T)));
+
+    const int num_slots = sizeof(T)*testSpaceSize/sizeof(intptr_t);
+    intptr_t arr1[num_slots+2]; // two more "canary" slots at boundaries
+    intptr_t arr2[num_slots+2];
+    for(int i=0; i<num_slots+2; ++i)
+        arr2[i] = arr1[i] = 0;
+    T* test_space_uncontended = (T*)(arr1+1);
+    T* test_space_contended = (T*)(arr2+1);
+
+    NativeParallelFor( testSpaceSize, TestMaskedCAS_Body<T>(test_space_uncontended, test_space_contended) );
+
+    ASSERT( arr1[0]==0 && arr1[num_slots+1]==0 && arr2[0]==0 && arr2[num_slots+1]==0 , "adjacent memory was overwritten" );
+    const intptr_t correctContendedValue = getCorrectContendedValue<T>();
+    for(int i=0; i<num_slots; ++i) {
+        ASSERT( arr1[i+1]==getCorrectUncontendedValue<T>(i), "unexpected value in an uncontended slot" );
+        ASSERT( arr2[i+1]==correctContendedValue, "unexpected value in a contended slot" );
+    }
 }
 
 template<unsigned N>
@@ -333,9 +476,12 @@ int main( int argc, char* argv[] ) {
     TestAtomicPointer<ArrayElement<6> >();
     TestAtomicPointer<ArrayElement<7> >();
     TestAtomicPointer<ArrayElement<8> >();
-    TestAtomicPointer<void*>();
+    TestAtomicPointerToTypeOfUnknownSize<IncompleteType*>( "IncompleteType*" );
+    TestAtomicPointerToTypeOfUnknownSize<void*>( "void*" );
     TestAtomicBool();
     ASSERT( !ParallelError, NULL );
+    TestMaskedCAS<unsigned char>();
+    TestMaskedCAS<unsigned short>();
     printf("done\n");
     return 0;
 }
@@ -357,6 +503,13 @@ T special_sum(intptr_t arg1, intptr_t arg2) {
     return (T)((T)arg1 + arg2);
 }
 
+// The specialization for IncompleteType* is required
+// because pointer arithmetic (+) is impossible with IncompleteType*
+template<>
+IncompleteType* special_sum<IncompleteType*>(intptr_t arg1, intptr_t arg2) {
+    return (IncompleteType*)(arg1 + arg2);
+}
+
 // The specialization for void* is required
 // because pointer arithmetic (+) is impossible with void*
 template<>
@@ -374,7 +527,7 @@ bool special_sum<bool>(intptr_t arg1, intptr_t arg2) {
 volatile int One = 1;
  
 template<typename T>
-class HammerLoadAndStoreFence {
+class HammerLoadAndStoreFence: NoAssign {
     FlagAndMessage<T>* fam;
     const int n;
     const int p;
@@ -478,7 +631,7 @@ public:
      //! Get ith member of set
      T get( int i ) const {
          // Create multiple of factor.  The & prevents overflow of the product.
-         return (i&0x7F)*factor;
+         return T((i&0x7F)*factor);
      }        
      //! True if set contains x
      bool contains( T x ) const {
@@ -507,7 +660,7 @@ public:
 };
 
 template<typename T>
-class HammerAssignment {
+class HammerAssignment: NoAssign {
     tbb::atomic<T>& x;
     const char* name;
     SparseValueSet<T> set;
@@ -540,8 +693,14 @@ public:
 };
 
 // Compile-time check that a class method has the required signature.
-// Intended to check the assignment operator of tbb::atomic
+// Intended to check the assignment operator of tbb::atomic.
 template<typename T> void TestAssignmentSignature( T& (T::*)(const T&) ) {}
+
+#if _MSC_VER && !defined(__INTEL_COMPILER)
+    // Suppress "conditional expression is constant" warning.
+    #pragma warning( push )
+    #pragma warning( disable: 4127 )
+#endif
 
 template<typename T>
 void TestAssignment( const char* name ) {
@@ -565,13 +724,17 @@ void TestAssignment( const char* name ) {
         // y crosses 8-byte boundary if and only if x does not cross.
         tbb::atomic<T>& y = *reinterpret_cast<tbb::atomic<T>*>((reinterpret_cast<uintptr_t>(&raw_space[7+delta])&~7u) - delta);
         // Assertion checks that y really did end up somewhere inside "raw_space".
-        __TBB_ASSERT( raw_space<=reinterpret_cast<char*>(&y), "y starts before raw_space" );
-        __TBB_ASSERT( reinterpret_cast<char*>(&y+1) <= raw_space+sizeof(raw_space), "y starts after raw_space" );
+        ASSERT( raw_space<=reinterpret_cast<char*>(&y), "y starts before raw_space" );
+        ASSERT( reinterpret_cast<char*>(&y+1) <= raw_space+sizeof(raw_space), "y starts after raw_space" );
         y = 0;
         NativeParallelFor( 2, HammerAssignment<T>( y, name ) );
     }
 #endif /* __TBB_x86_32 && (__linux__ || __FreeBSD__ || _WIN32) */
 }
+
+#if _MSC_VER && !defined(__INTEL_COMPILER)
+    #pragma warning( pop )
+#endif
 
 template<typename T>
 void TestParallel( const char* name ) {

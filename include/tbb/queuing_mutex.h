@@ -1,5 +1,5 @@
 /*
-    Copyright 2005-2008 Intel Corporation.  All Rights Reserved.
+    Copyright 2005-2009 Intel Corporation.  All Rights Reserved.
 
     This file is part of Threading Building Blocks.
 
@@ -31,6 +31,7 @@
 
 #include <cstring>
 #include "atomic.h"
+#include "tbb_profiling.h"
 
 namespace tbb {
 
@@ -41,12 +42,15 @@ public:
     //! Construct unacquired mutex.
     queuing_mutex() {
         q_tail = NULL;
-    };
+#if TBB_USE_THREADING_TOOLS
+        internal_construct();
+#endif
+    }
 
     //! The scoped locking pattern
     /** It helps to avoid the common problem of forgetting to release lock.
         It also nicely provides the "node" for queuing locks. */
-    class scoped_lock : private internal:: no_copy {
+    class scoped_lock: internal::no_copy {
         //! Initialize fields to mean "no lock held".
         void initialize() {
             mutex = NULL;
@@ -94,6 +98,8 @@ public:
         internal::uintptr going;
     };
 
+    void __TBB_EXPORTED_METHOD internal_construct();
+
     // Mutex traits
     static const bool is_rw_mutex = false;
     static const bool is_recursive_mutex = false;
@@ -105,6 +111,8 @@ private:
     atomic<scoped_lock*> q_tail;
 
 };
+
+__TBB_DEFINE_PROFILING_SET_NAME(queuing_mutex)
 
 } // namespace tbb
 

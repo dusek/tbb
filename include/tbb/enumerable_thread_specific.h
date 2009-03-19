@@ -1,5 +1,5 @@
 /*
-    Copyright 2005-2008 Intel Corporation.  All Rights Reserved.
+    Copyright 2005-2009 Intel Corporation.  All Rights Reserved.
 
     This file is part of Threading Building Blocks.
 
@@ -29,8 +29,8 @@
 #ifndef __TBB_enumerable_thread_specific_H
 #define __TBB_enumerable_thread_specific_H
 
-#include "tbb/concurrent_vector.h"
-#include "tbb/cache_aligned_allocator.h"
+#include "concurrent_vector.h"
+#include "cache_aligned_allocator.h"
 
 #if _WIN32||_WIN64
 #include <windows.h>
@@ -170,7 +170,7 @@ namespace tbb {
         template<typename Container, typename T, typename U>
         bool operator==( const enumerable_thread_specific_iterator<Container,T>& i, 
                          const enumerable_thread_specific_iterator<Container,U>& j ) {
-            return i.my_index==j.my_index;
+            return i.my_index==j.my_index && i.my_container == j.my_container;
         }
         
         template<typename Container, typename T, typename U>
@@ -225,7 +225,6 @@ namespace tbb {
             friend class segmented_iterator;
 
             public:
-
 
                 segmented_iterator() {my_segcont = NULL;}
 
@@ -316,15 +315,6 @@ namespace tbb {
 
                 // i->
                 pointer operator->() const { return &operator*();}
-
-                size_type size() {
-                    __TBB_ASSERT(my_segcont, NULL);
-                    size_type tot_size = 0;
-                    for(outer_iterator oi = my_segcont->begin(); oi != my_segcont->end(); ++oi) {
-                        tot_size += oi->size();
-                    }
-                    return tot_size;
-                }
 
             private:
                 SegmentedContainer*             my_segcont;
@@ -525,31 +515,35 @@ namespace tbb {
 
     template< typename Container >
     class flattened2d {
+
+        // This intermediate typedef is to address issues with VC7.1 compilers
+        typedef typename Container::value_type conval_type;
+
     public:
 
         //! Basic types
-        typedef typename Container::value_type::size_type size_type;
-        typedef typename Container::value_type::difference_type difference_type;
-        typedef typename Container::value_type::allocator_type allocator_type;
-        typedef typename Container::value_type::value_type value_type;
-        typedef typename Container::value_type::reference reference;
-        typedef typename Container::value_type::const_reference const_reference;
-        typedef typename Container::value_type::pointer pointer;
-        typedef typename Container::value_type::const_pointer const_pointer;
+        typedef typename conval_type::size_type size_type;
+        typedef typename conval_type::difference_type difference_type;
+        typedef typename conval_type::allocator_type allocator_type;
+        typedef typename conval_type::value_type value_type;
+        typedef typename conval_type::reference reference;
+        typedef typename conval_type::const_reference const_reference;
+        typedef typename conval_type::pointer pointer;
+        typedef typename conval_type::const_pointer const_pointer;
 
         typedef typename internal::segmented_iterator<Container, value_type> iterator;
         typedef typename internal::segmented_iterator<Container, const value_type> const_iterator;
 
         flattened2d( const Container &c, typename Container::const_iterator b, typename Container::const_iterator e ) : 
-            my_container(const_cast<Container &>(c)), my_begin(b), my_end(e) { }
+            my_container(const_cast<Container*>(&c)), my_begin(b), my_end(e) { }
 
         flattened2d( const Container &c ) : 
-            my_container(const_cast<Container &>(c)), my_begin(c.begin()), my_end(c.end()) { }
+            my_container(const_cast<Container*>(&c)), my_begin(c.begin()), my_end(c.end()) { }
 
-        iterator begin() { return iterator(my_container) = my_begin; }
-        iterator end() { return iterator(my_container) = my_end; }
-        const_iterator begin() const { return const_iterator(my_container) = my_begin; }
-        const_iterator end() const { return const_iterator(my_container) = my_end; }
+        iterator begin() { return iterator(*my_container) = my_begin; }
+        iterator end() { return iterator(*my_container) = my_end; }
+        const_iterator begin() const { return const_iterator(*my_container) = my_begin; }
+        const_iterator end() const { return const_iterator(*my_container) = my_end; }
 
         size_type size() const {
             size_type tot_size = 0;
@@ -561,7 +555,7 @@ namespace tbb {
 
     private:
 
-        Container &my_container;
+        Container *my_container;
         typename Container::const_iterator my_begin;
         typename Container::const_iterator my_end;
 

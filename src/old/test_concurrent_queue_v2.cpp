@@ -1,5 +1,5 @@
 /*
-    Copyright 2005-2008 Intel Corporation.  All Rights Reserved.
+    Copyright 2005-2009 Intel Corporation.  All Rights Reserved.
 
     This file is part of Threading Building Blocks.
 
@@ -183,10 +183,14 @@ void TestPushPop( int prefill, ptrdiff_t capacity, int nthread ) {
 #endif /* _WIN32||_WIN64 */
                 if( PopKind[k]<min_requirement ) {
                     if( trial>=max_trial ) {
-                        printf("Warning: %d threads had only %ld pop_if_present operations %s after %d trials (expected at least %d)\n",
-                               nthread, long(PopKind[k]), k==0?"fail":"succeed", max_trial, min_requirement);
-                        printf("This problem may merely be unlucky scheduling.\n"
-                               "Investigate only if it happens repeatedly.\n");
+                        if( Verbose )
+                            printf("Warning: %d threads had only %ld pop_if_present operations %s after %d trials (expected at least %d). "
+                                    "This problem may merely be unlucky scheduling. "
+                                    "Investigate only if it happens repeatedly.\n",
+                                    nthread, long(PopKind[k]), k==0?"failed":"succeeded", max_trial, min_requirement);
+                        else
+                            printf("Warning: the number of %s pop_if_present operations is less than expected for %d threads. Investigate if it happens repeatedly.\n",
+                                   k==0?"failed":"succeeded", nthread );
                     } else {
                         success = false;
                     }

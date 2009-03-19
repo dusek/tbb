@@ -1,4 +1,4 @@
-# Copyright 2005-2008 Intel Corporation.  All Rights Reserved.
+# Copyright 2005-2009 Intel Corporation.  All Rights Reserved.
 #
 # This file is part of Threading Building Blocks.
 #
@@ -81,7 +81,7 @@ CXXFLAGS_TBB_NDEBUG = $(CXXFLAGS)
 LIBS_TBB_NDEBUG = tbb.lib $(LIBS)
 
 # Add these for tbb/tbb1d debug builds
-CXXFLAGS_TBB_DEBUG = $(CXXFLAGS) /D TBB_DO_ASSERT
+CXXFLAGS_TBB_DEBUG = $(CXXFLAGS) /D TBB_USE_DEBUG
 LIBS_TBB_DEBUG =  tbb_debug.lib $(LIBS)
 
 

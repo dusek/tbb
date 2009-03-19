@@ -1,5 +1,5 @@
 /*
-    Copyright 2005-2008 Intel Corporation.  All Rights Reserved.
+    Copyright 2005-2009 Intel Corporation.  All Rights Reserved.
 
     This file is part of Threading Building Blocks.
 
@@ -33,7 +33,7 @@
 #if defined(_MSC_VER) && defined(_Wp64)
     // Workaround for overzealous compiler warnings in /Wp64 mode
     #pragma warning (disable: 4244)
-#endif /* _MSC_VER && _Wp64 */
+#endif
 
 namespace tbb {
 
@@ -49,7 +49,7 @@ bool spin_rw_mutex_v3::internal_acquire_writer()
 {
     ITT_NOTIFY(sync_prepare, this);
     internal::ExponentialBackoff backoff;
-    while(true) {
+    for(;;) {
         state_t s = const_cast<volatile state_t&>(state); // ensure reloading
         if( !(s & BUSY) ) { // no readers, no writers
             if( CAS(state, WRITER, s)==s )
@@ -76,7 +76,7 @@ void spin_rw_mutex_v3::internal_acquire_reader()
 {
     ITT_NOTIFY(sync_prepare, this);
     internal::ExponentialBackoff backoff;
-    while(true) {
+    for(;;) {
         state_t s = const_cast<volatile state_t&>(state); // ensure reloading
         if( !(s & (WRITER|WRITER_PENDING)) ) { // no writer or write requests
             state_t t = (state_t)__TBB_FetchAndAddW( &state, (intptr_t) ONE_READER );
@@ -167,4 +167,8 @@ bool spin_rw_mutex_v3::internal_try_acquire_reader()
     return false;
 }
 
+
+void spin_rw_mutex_v3::internal_construct() {
+    ITT_SYNC_CREATE(this, _T("tbb::spin_rw_mutex"), _T(""));
+}
 } // namespace tbb

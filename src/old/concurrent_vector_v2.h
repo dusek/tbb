@@ -1,5 +1,5 @@
 /*
-    Copyright 2005-2008 Intel Corporation.  All Rights Reserved.
+    Copyright 2005-2009 Intel Corporation.  All Rights Reserved.
 
     This file is part of Threading Building Blocks.
 
@@ -93,7 +93,7 @@ namespace internal {
             }
 #endif /* TBB_DO_ASSERT */
         };
- 
+
         atomic<segment_t*> my_segment;
 
         segment_t my_storage[2];

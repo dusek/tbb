@@ -1,5 +1,5 @@
 /*
-    Copyright 2005-2008 Intel Corporation.  All Rights Reserved.
+    Copyright 2005-2009 Intel Corporation.  All Rights Reserved.
 
     This file is part of Threading Building Blocks.
 
@@ -145,7 +145,7 @@ void TestBasic( A& a ) {
 
 // A is an allocator for some type
 template<typename A>
-struct Body {
+struct Body: NoAssign {
     static const size_t max_k = 100000;
     A &a;
     Body(A &a_) : a(a_) {}
@@ -211,14 +211,3 @@ int TestMain() {
     return 0;
 }
 
-template<typename Container>
-void TestContainer() {
-    Container c;
-    for( int i=0; i<1000; ++i )
-        c.push_back(i*i);    
-    typename Container::const_iterator p = c.begin();
-    for( int i=0; i<1000; ++i ) {
-        ASSERT( *p==i*i, NULL );
-        ++p;
-    }
-}

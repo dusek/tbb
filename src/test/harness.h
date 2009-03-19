@@ -1,5 +1,5 @@
 /*
-    Copyright 2005-2008 Intel Corporation.  All Rights Reserved.
+    Copyright 2005-2009 Intel Corporation.  All Rights Reserved.
 
     This file is part of Threading Building Blocks.
 
@@ -41,7 +41,6 @@
 #include <cstring>
 #endif
 #include <new>
-#include "harness_assert.h"
 
 #if _WIN32||_WIN64
     #include <windows.h>
@@ -50,18 +49,35 @@
     #include <pthread.h>
 #endif
 
-static void ReportError( int line, const char* expression, const char * message, bool is_error ) {
-    if ( is_error ) {
-        printf("Line %d, assertion %s: %s\n", line, expression, message ? message : "failed" );
-#if TBB_EXIT_ON_ASSERT
-        exit(1);
-#else
-        abort();
-#endif /* TBB_EXIT_ON_ASSERT */
-    }
-    else
-        printf("Warning: at line %d, assertion %s: %s\n", line, expression, message ? message : "failed" );
+#if !HARNESS_NO_ASSERT
+#include "harness_assert.h"
+
+typedef void (*test_error_extra_t)(void);
+static test_error_extra_t ErrorExtraCall; 
+//! Set additional handler to process failed assertions
+void SetHarnessErrorProcessing( test_error_extra_t extra_call ) {
+    ErrorExtraCall = extra_call;
+    // TODO: add tbb::set_assertion_handler(ReportError);
 }
+//! Reports errors issued by failed assertions
+void ReportError( const char* filename, int line, const char* expression, const char * message ) {
+    printf("%s:%d, assertion %s: %s\n", filename, line, expression, message ? message : "failed" );
+    if( ErrorExtraCall )
+        (*ErrorExtraCall)();
+#if TBB_EXIT_ON_ASSERT
+    exit(1);
+#else
+    abort();
+#endif /* TBB_EXIT_ON_ASSERT */
+}
+//! Reports warnings issued by failed warning assertions
+void ReportWarning( const char* filename, int line, const char* expression, const char * message ) {
+    printf("Warning: %s:%d, assertion %s: %s\n", filename, line, expression, message ? message : "failed" );
+}
+#else
+#define ASSERT(p,msg) ((void)0)
+#define ASSERT_WARNING(p,msg) ((void)0)
+#endif /* HARNESS_NO_ASSERT */
 
 #if !HARNESS_NO_PARSE_COMMAND_LINE
 //! Controls level of commentary.
@@ -117,9 +133,28 @@ static void ParseCommandLine( int argc, char* argv[] ) {
 }
 #endif /* HARNESS_NO_PARSE_COMMAND_LINE */
 
+//! Base class for prohibiting compiler-generated operator=
+class NoAssign {
+    //! Assignment not allowed
+    void operator=( const NoAssign& );
+public:
+#if __GNUC__
+    //! Explicitly define default construction, because otherwise gcc issues gratuitous warning.
+    NoAssign() {}
+#endif /* __GNUC__ */
+};
+
+//! Base class for prohibiting compiler-generated copy constructor or operator=
+class NoCopy: NoAssign {
+    //! Copy construction not allowed  
+    NoCopy( const NoCopy& );
+public:
+    NoCopy() {}
+};
+
 //! For internal use by template function NativeParallelFor
 template<typename Index, typename Body>
-class NativeParallelForTask {
+class NativeParallelForTask: NoCopy {
 public:
     NativeParallelForTask( Index index_, const Body& body_ ) :
         index(index_),
@@ -137,12 +172,30 @@ public:
     #pragma warning (push)
     #pragma warning (disable: 2193)
 #endif /* __ICC==1100 */
-        int status = pthread_create(&thread_id, NULL, thread_function, this);
+        // Some machines may have very large hard stack limit. When the test is 
+        // launched by make, the default stack size is set to the hard limit, and 
+        // calls to pthread_create fail with out-of-memory error. 
+        // Therefore we set the stack size explicitly (as for TBB worker threads).
+        const size_t MByte = 1<<20;
+#if __i386__||__i386
+        const size_t stack_size = 1*MByte;
+#elif __x86_64__
+        const size_t stack_size = 2*MByte;
+#else
+        const size_t stack_size = 4*MByte;
+#endif
+        pthread_attr_t attr_stack;
+        int status = pthread_attr_init(&attr_stack);
+        ASSERT(0==status, "NativeParallelFor: pthread_attr_init failed");
+        status = pthread_attr_setstacksize( &attr_stack, stack_size );
+        ASSERT(0==status, "NativeParallelFor: pthread_attr_setstacksize failed");
+        status = pthread_create(&thread_id, &attr_stack, thread_function, this);
         ASSERT(0==status, "NativeParallelFor: pthread_create failed");
+        pthread_attr_destroy(&attr_stack);
 #if __ICC==1100
     #pragma warning (pop)
-#endif /* __ICC==1100 */
 #endif
+#endif /* _WIN32||_WIN64 */
     }
 
     //! Wait for task to finish
@@ -177,7 +230,15 @@ private:
 #endif
     {
         NativeParallelForTask& self = *static_cast<NativeParallelForTask*>(object);
+#if defined(__EXCEPTIONS) || defined(_CPPUNWIND) || defined(__SUNPRO_CC)
+        try {
+            (self.body)(self.index);
+        } catch(...) {
+            ASSERT( false, "uncaught exception" );
+        }
+#else
         (self.body)(self.index);
+#endif// exceptions are enabled
         return 0;
     }
 };
@@ -223,7 +284,7 @@ void zero_fill(void* array, size_t N) {
         In case operands cause signed/unsigned or size mismatch warnings it is caller's
         responsibility to do the appropriate cast before calling the function. **/
     template<typename T1, typename T2>
-    const T1& min ( const T1& val1, const T2& val2 ) {
+    T1 min ( const T1& val1, const T2& val2 ) {
         return val1 < val2 ? val1 : val2;
     }
 #endif /* !min */
@@ -234,7 +295,7 @@ void zero_fill(void* array, size_t N) {
         In case operands cause signed/unsigned or size mismatch warnings it is caller's
         responsibility to do the appropriate cast before calling the function. **/
     template<typename T1, typename T2>
-    const T1& max ( const T1& val1, const T2& val2 ) {
+    T1 max ( const T1& val1, const T2& val2 ) {
         return val1 < val2 ? val2 : val1;
     }
 #endif /* !max */

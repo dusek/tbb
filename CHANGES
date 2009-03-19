@@ -1,17 +1,96 @@
+20090313 open-source release
+
+Changes (w.r.t. 20081109 open-source release):
+
+- Includes all changes introduced in TBB 2.1 Update 2 & Update 3
+    commercial-aligned releases (see below for details).
+- Added parallel_invoke template function. It runs up to 10 
+    user-defined functions in parallel and waits for them to complete.
+- Added a special library providing ability to replace the standard
+    memory allocation routines in Microsoft* C/C++ RTL (malloc/free,
+    global new/delete, etc.) with the TBB memory allocator. 
+    Usage details are described in include/tbb/tbbmalloc_proxy.h file.
+- Task scheduler switched to use new implementation of its core 
+    functionality (deque based task pool, new structure of arena slots).
+- Preview of Microsoft* Visual Studio* 2005 project files for 
+    building the library is available in build/vsproject folder.
+- Added tests for aligned memory allocations and malloc replacement.
+- Added parallel_for/game_of_life.net example (for Windows only) 
+    showing TBB usage in a .NET application.
+- A number of other fixes and improvements to code, tests, makefiles,
+    examples and documents.
+
+Bugs fixed: 
+- 150 - request to build TBB examples with debug info in release mode.
+- backward compatibility issue with concurrent_queue on Windows.
+- dependency on VS 2005 SP1 runtime libraries removed.
+- compilation of GUI examples under XCode* 3.1 (1577).
+- On Windows, TBB allocator classes can be instantiated with const types 
+    for compatibility with MS implementation of STL containers (1566).
+
+------------------------------------------------------------------------
+TBB 2.1 Update 3 commercial-aligned release
+
+Changes (w.r.t. TBB 2.1 U2 commercial-aligned release):
+
+- Added support for aligned allocations to the TBB memory allocator.
+- Added a special library to use with LD_PRELOAD on Linux* in order to 
+    replace the standard memory allocation routines in C/C++ with the 
+    TBB memory allocator.
+- Added null_mutex and null_rw_mutex: no-op classes interface-compliant 
+    to other TBB mutexes.
+- Improved performance of parallel_sort, to close most of the serial gap
+    with std::sort, and beat it on 2 and more cores.
+- A few other small changes.
+
+Bugs fixed:
+
+- the problem where parallel_for hanged after exception throw 
+    if affinity_partitioner was used (1556).
+- get rid of VS warnings about mbstowcs deprecation (1560),
+    as well as some other warnings.
+- operator== for concurrent_vector::iterator fixed to work correctly
+    with different vector instances.
+
+------------------------------------------------------------------------
+TBB 2.1 Update 2 commercial-aligned release
+
+Changes (w.r.t. TBB 2.1 U1 commercial-aligned release):
+
+- Incorporates all open-source-release changes down to TBB 2.1 U1,
+    except for:
+    - 20081019 addition of enumerable_thread_specific;
+- Warning level for Microsoft* Visual C++* compiler raised to /W4 /Wp64;
+    warnings found on this level were cleaned or suppressed.
+- Added TBB_runtime_interface_version API function.
+- Added new example: pipeline/square.
+- Added exception handling and cancellation support
+    for parallel_do and pipeline.
+- Added copy constructor and [begin,end) constructor to concurrent_queue.
+- Added some support for beta version of Intel(R) Parallel Amplifier.
+- Added scripts to set environment for cross-compilation of 32-bit 
+    applications on 64-bit Linux with Intel(R) C++ Compiler.
+- Fixed semantics of concurrent_vector::clear() to not deallocate
+    internal arrays. Fixed compact() to perform such deallocation later.
+- Fixed the issue with atomic<T*> when T is incomplete type.
+- Improved support for PowerPC* Macintosh*, including the fix 
+    for a bug in masked compare-and-swap reported by a customer.
+- As usual, a number of other improvements everywhere.
+
 ------------------------------------------------------------------------
 20081109 open-source release
 
 Changes (w.r.t. previous open-source release):
 
-- New serial out of order filter for tbb::pipeline was added
-- Fixed the issue with tbb::atomic<T*>::operator= reported at the forum 
+- Added new serial out of order filter for tbb::pipeline.
+- Fixed the issue with atomic<T*>::operator= reported at the forum.
 - Fixed the issue with using tbb::task::self() in task destructor 
-    reported at the forum
+    reported at the forum.
 - A number of other improvements to code, tests, makefiles, examples 
     and documents.
 
 Open-source contributions integrated: 
-- Changes in the allocator were partially integrated
+- Changes in the memory allocator were partially integrated.
 
 ------------------------------------------------------------------------
 20081019 open-source release
@@ -20,39 +99,40 @@ Changes (w.r.t. previous open-source release):
 
 - Introduced enumerable_thread_specific<T>.  This new class provides a 
     wrapper around native thread local storage as well as iterators and 
-    ranges for accessing the thread local copies.
-- Improved support for Intel(R) Threading Analysis Tools on Intel(R) 64 
-    Architecture.
+    ranges for accessing the thread local copies (1533).
+- Improved support for Intel(R) Threading Analysis Tools
+    on Intel(R) 64 architecture.
 - Dependency from Microsoft* CRT was integrated to the libraries using 
-    manifests for better support of calls from code different from 
-    Visual C++* runtime.
+    manifests, to avoid issues if called from code that uses different 
+    version of Visual C++* runtime than the library.
 - Introduced new defines TBB_USE_ASSERT, TBB_USE_DEBUG, 
-    TBB_USE_PERFORMANCE_WARNINGS, TBB_USE_THREADING_TOOLS
+    TBB_USE_PERFORMANCE_WARNINGS, TBB_USE_THREADING_TOOLS.
 - A number of other improvements to code, tests, makefiles, examples 
     and documents.
 
 Open-source contributions integrated:
 
-- linker optimization (partially).
+- linker optimization: /incremental:no .
 
 ------------------------------------------------------------------------
 20080925 open-source release
 
 Changes (w.r.t. previous open-source release):
 
+- Same fix for a memory leak in the memory allocator as in TBB 2.1 U1.
 - Improved support for lambda functions.
-- Fixed more concurrent_queue issues.
+- Fixed more concurrent_queue issues reported at the forum.
 - A number of other improvements to code, tests, makefiles, examples 
     and documents.
 
 ------------------------------------------------------------------------
-TBB 2.1 U1 commercial-aligned release
+TBB 2.1 Update 1 commercial-aligned release
 
 Changes (w.r.t. TBB 2.1 Gold commercial-aligned release):
 
 - Fixed small memory leak in the memory allocator.
-- Open-source-release changes down to TBB 2.1 GOLD below,
-    were incorporated into this release, except for:
+- Incorporates all open-source-release changes down to TBB 2.1 GOLD,
+    except for:
     - 20080825 changes for parallel_do;
 
 ------------------------------------------------------------------------

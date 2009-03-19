@@ -1,4 +1,4 @@
-# Copyright 2005-2008 Intel Corporation.  All Rights Reserved.
+# Copyright 2005-2009 Intel Corporation.  All Rights Reserved.
 #
 # This file is part of Threading Building Blocks.
 #
@@ -41,6 +41,7 @@ export COMPILER_VERSION := ICC: $(shell icc -V </dev/null 2>&1 | grep 'Version')
 TBB_NOSTRICT = 1
 
 CPLUS = icpc 
+CONLY = icc
 
 ifeq (release,$(cfg))
 CPLUS_FLAGS = -O2 -strict_ansi -DUSE_PTHREAD
@@ -57,7 +58,7 @@ endif
 OPENMP_FLAG = -openmp
 LIB_LINK_FLAGS = -shared -i-static -Wl,-soname=$(BUILDING_LIBRARY)
 LIBS = -lpthread -lrt 
-C_FLAGS = $(CPLUS_FLAGS) -x c
+C_FLAGS = $(CPLUS_FLAGS)
 
 ASM=
 ASM_FLAGS=
@@ -72,15 +73,10 @@ endif
 #------------------------------------------------------------------------------
 # Setting assembler data.
 #------------------------------------------------------------------------------
-%.$(OBJ): %.s
-	cpp $(ASM_FLAGS) <$< | grep -v '^#' >$*.tmp
-	$(ASM) -o $@ $*.tmp
-	rm $*.tmp
-
 ASSEMBLY_SOURCE=$(arch)-gas
 ifeq (itanium,$(arch))
     ASM=ias
-    TBB_ASM.OBJ = atomic_support.o lock_byte.o log2.o pause.o
+    TBB_ASM.OBJ = atomic_support.o lock_byte.o log2.o pause.o ia64_misc.o
 endif 
 #------------------------------------------------------------------------------
 # End of setting assembler data.

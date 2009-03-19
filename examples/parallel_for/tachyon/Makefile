@@ -1,4 +1,4 @@
-# Copyright 2005-2008 Intel Corporation.  All Rights Reserved.
+# Copyright 2005-2009 Intel Corporation.  All Rights Reserved.
 #
 # This file is part of Threading Building Blocks.
 #
@@ -166,7 +166,7 @@ endif
 ifeq ($(ADD_TBB),1)
 MYCXXFLAGS +=
 ifeq ($(ADD_DEBUG),1)
-MYCXXFLAGS += -DTBB_DO_ASSERT
+MYCXXFLAGS += -DTBB_USE_DEBUG
 LIBS += -ltbb_debug
 else
 LIBS += -ltbb
@@ -191,7 +191,10 @@ ifeq ($(UI),mac)
 	$(PBXCP) xcode/Info.plist $(RES)
 endif
 	$(CXX) $(MYCXXFLAGS) -o $@ $(SOURCE) $(LIBS)
-	rm -f *.o
+	$(RM) *.o
 
 clean:
-	rm -rf $(NAME).* *.o *.d
+	$(RM) $(EXE)* *.o *.d
+ifeq ($(UI),mac)
+	rm -rf $(NAME).*
+endif

@@ -26,7 +26,7 @@
 				FavorSizeOrSpeed="1"
 				OmitFramePointers="TRUE"
 				AdditionalIncludeDirectories="&quot;$(TBB21_INSTALL_DIR)\include&quot;"
-				PreprocessorDefinitions="WIN32;_DEBUG;_WINDOWS;TBB_DO_ASSERT"
+				PreprocessorDefinitions="WIN32;_DEBUG;_WINDOWS;TBB_USE_DEBUG"
 				RuntimeLibrary="3"
 				EnableFunctionLevelLinking="TRUE"
 				UsePrecompiledHeader="0"
@@ -84,7 +84,8 @@
 				RuntimeLibrary="2"
 				EnableFunctionLevelLinking="TRUE"
 				UsePrecompiledHeader="0"
-				Detect64BitPortabilityProblems="TRUE"/>
+				Detect64BitPortabilityProblems="TRUE"
+				DebugInformationFormat="3"/>
 			<Tool
 				Name="VCCustomBuildTool"/>
 			<Tool
@@ -92,6 +93,7 @@
 				AdditionalDependencies="tbb.lib"
 				LinkIncremental="1"
 				AdditionalLibraryDirectories="&quot;$(TBB21_INSTALL_DIR)\ia32\vc7.1\lib&quot;"
+				GenerateDebugInformation="TRUE"
 				SubSystem="2"
 				OptimizeReferences="2"
 				EnableCOMDATFolding="2"
@@ -138,7 +140,8 @@
 				RuntimeLibrary="2"
 				EnableFunctionLevelLinking="TRUE"
 				UsePrecompiledHeader="0"
-				Detect64BitPortabilityProblems="TRUE"/>
+				Detect64BitPortabilityProblems="TRUE"
+				DebugInformationFormat="3"/>
 			<Tool
 				Name="VCCustomBuildTool"/>
 			<Tool
@@ -146,6 +149,7 @@
 				AdditionalDependencies="tbb.lib"
 				LinkIncremental="1"
 				AdditionalLibraryDirectories="&quot;$(TBB21_INSTALL_DIR)\ia32\vc7.1\lib&quot;;&quot;$(DXSDK_DIR)\lib\x86&quot;"
+				GenerateDebugInformation="TRUE"
 				SubSystem="2"
 				OptimizeReferences="2"
 				EnableCOMDATFolding="2"
@@ -190,7 +194,7 @@
 				FavorSizeOrSpeed="1"
 				OmitFramePointers="TRUE"
 				AdditionalIncludeDirectories="&quot;$(TBB21_INSTALL_DIR)\include&quot;;&quot;$(DXSDK_DIR)\include&quot;"
-				PreprocessorDefinitions="WIN32;_DEBUG;_WINDOWS;TBB_DO_ASSERT"
+				PreprocessorDefinitions="WIN32;_DEBUG;_WINDOWS;TBB_USE_DEBUG"
 				RuntimeLibrary="3"
 				EnableFunctionLevelLinking="TRUE"
 				UsePrecompiledHeader="0"

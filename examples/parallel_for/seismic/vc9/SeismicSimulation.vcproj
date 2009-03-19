@@ -48,7 +48,7 @@
 				OmitFramePointers="true"
 				WholeProgramOptimization="true"
 				AdditionalIncludeDirectories="&quot;$(TBB21_INSTALL_DIR)\include&quot;"
-				PreprocessorDefinitions="WIN32;_DEBUG;_WINDOWS;TBB_DO_ASSERT"
+				PreprocessorDefinitions="WIN32;_DEBUG;_WINDOWS;TBB_USE_DEBUG"
 				RuntimeLibrary="3"
 				EnableFunctionLevelLinking="true"
 				UsePrecompiledHeader="0"
@@ -133,6 +133,7 @@
 				RuntimeLibrary="2"
 				EnableFunctionLevelLinking="true"
 				UsePrecompiledHeader="0"
+				DebugInformationFormat="3"
 			/>
 			<Tool
 				Name="VCManagedResourceCompilerTool"
@@ -148,6 +149,7 @@
 				AdditionalDependencies="tbb.lib"
 				LinkIncremental="1"
 				AdditionalLibraryDirectories="&quot;$(TBB21_INSTALL_DIR)\ia32\vc9\lib&quot;"
+				GenerateDebugInformation="true"
 				SubSystem="2"
 				OptimizeReferences="2"
 				EnableCOMDATFolding="2"
@@ -215,6 +217,7 @@
 				RuntimeLibrary="2"
 				EnableFunctionLevelLinking="true"
 				UsePrecompiledHeader="0"
+				DebugInformationFormat="3"
 			/>
 			<Tool
 				Name="VCManagedResourceCompilerTool"
@@ -230,6 +233,7 @@
 				AdditionalDependencies="tbb.lib"
 				LinkIncremental="1"
 				AdditionalLibraryDirectories="&quot;$(TBB21_INSTALL_DIR)\ia32\vc9\lib&quot;;&quot;$(DXSDK_DIR)\lib\x86&quot;"
+				GenerateDebugInformation="true"
 				SubSystem="2"
 				OptimizeReferences="2"
 				EnableCOMDATFolding="2"
@@ -292,7 +296,7 @@
 				OmitFramePointers="true"
 				WholeProgramOptimization="true"
 				AdditionalIncludeDirectories="&quot;$(TBB21_INSTALL_DIR)\include&quot;;&quot;$(DXSDK_DIR)\include&quot;"
-				PreprocessorDefinitions="WIN32;_DEBUG;_WINDOWS;TBB_DO_ASSERT"
+				PreprocessorDefinitions="WIN32;_DEBUG;_WINDOWS;TBB_USE_DEBUG"
 				RuntimeLibrary="3"
 				EnableFunctionLevelLinking="true"
 				UsePrecompiledHeader="0"
@@ -373,7 +377,7 @@
 				OmitFramePointers="true"
 				WholeProgramOptimization="true"
 				AdditionalIncludeDirectories="&quot;$(TBB21_INSTALL_DIR)\include&quot;"
-				PreprocessorDefinitions="WIN64;_DEBUG;_WINDOWS;TBB_DO_ASSERT"
+				PreprocessorDefinitions="WIN64;_DEBUG;_WINDOWS;TBB_USE_DEBUG"
 				RuntimeLibrary="3"
 				EnableFunctionLevelLinking="true"
 				UsePrecompiledHeader="0"
@@ -460,6 +464,7 @@
 				RuntimeLibrary="2"
 				EnableFunctionLevelLinking="true"
 				UsePrecompiledHeader="0"
+				DebugInformationFormat="3"
 			/>
 			<Tool
 				Name="VCManagedResourceCompilerTool"
@@ -475,6 +480,7 @@
 				AdditionalDependencies="tbb.lib"
 				LinkIncremental="1"
 				AdditionalLibraryDirectories="&quot;$(TBB21_INSTALL_DIR)\em64t\vc9\lib&quot;"
+				GenerateDebugInformation="true"
 				SubSystem="2"
 				OptimizeReferences="2"
 				EnableCOMDATFolding="2"
@@ -544,6 +550,7 @@
 				RuntimeLibrary="2"
 				EnableFunctionLevelLinking="true"
 				UsePrecompiledHeader="0"
+				DebugInformationFormat="3"
 			/>
 			<Tool
 				Name="VCManagedResourceCompilerTool"
@@ -559,6 +566,7 @@
 				AdditionalDependencies="tbb.lib"
 				LinkIncremental="1"
 				AdditionalLibraryDirectories="&quot;$(TBB21_INSTALL_DIR)\em64t\vc9\lib&quot;;&quot;$(DXSDK_DIR)\lib\x64&quot;"
+				GenerateDebugInformation="true"
 				SubSystem="2"
 				OptimizeReferences="2"
 				EnableCOMDATFolding="2"
@@ -623,7 +631,7 @@
 				OmitFramePointers="true"
 				WholeProgramOptimization="true"
 				AdditionalIncludeDirectories="&quot;$(TBB21_INSTALL_DIR)\include&quot;;&quot;$(DXSDK_DIR)\include&quot;"
-				PreprocessorDefinitions="WIN64;_DEBUG;_WINDOWS;TBB_DO_ASSERT"
+				PreprocessorDefinitions="WIN64;_DEBUG;_WINDOWS;TBB_USE_DEBUG"
 				RuntimeLibrary="3"
 				EnableFunctionLevelLinking="true"
 				UsePrecompiledHeader="0"

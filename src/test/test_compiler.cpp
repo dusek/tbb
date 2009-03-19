@@ -1,5 +1,5 @@
 /*
-    Copyright 2005-2008 Intel Corporation.  All Rights Reserved.
+    Copyright 2005-2009 Intel Corporation.  All Rights Reserved.
 
     This file is part of Threading Building Blocks.
 
@@ -33,8 +33,6 @@ union char2bool {
     volatile bool b;
 } u;
 
-#include "harness.h"
-
 // The function proves the compiler uses 0 or 1 to store a bool. It
 // inspects what a compiler does when it loads a bool.  A compiler that
 // uses a value other than 0 or 1 to represent a bool will have to normalize
@@ -46,16 +44,14 @@ int test_bool_representation() {
         u.c = (unsigned char)i;
         unsigned char x = (unsigned char)u.b;
         if( x != i ) {
-            if( Verbose )
-                printf("Test failed at %d iteration\n",i);
+            printf("Test failed at iteration i=%d\n",i);
             return 1;
         }
     }
     return 0;
 }
 
-int main( int argc, char* argv[] ) {
-    ParseCommandLine(argc, argv);
+int main() {
     if( test_bool_representation()!=0 )
         printf("ERROR: bool representation test failed\n");
     else

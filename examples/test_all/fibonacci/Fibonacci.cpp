@@ -1,5 +1,5 @@
 /*
-    Copyright 2005-2008 Intel Corporation.  All Rights Reserved.
+    Copyright 2005-2009 Intel Corporation.  All Rights Reserved.
 
     This file is part of Threading Building Blocks.
 
@@ -524,7 +524,7 @@ typedef value (*MeasureFunc)(int);
 value Measure(const char *name, MeasureFunc func, int n)
 {
     value result;
-    if(Verbose) printf(name);
+    if(Verbose) printf("%s",name);
     t0 = tick_count::now();
     for(int number = 2; number <= n; number++)
         result = func(number);

@@ -1,5 +1,5 @@
 /*
-    Copyright 2005-2008 Intel Corporation.  All Rights Reserved.
+    Copyright 2005-2009 Intel Corporation.  All Rights Reserved.
 
     This file is part of Threading Building Blocks.
 
@@ -208,7 +208,7 @@ inline
 double RunTestImpl ( const char* title, void (*pfn)(), char* histogramFileName = no_histogram ) {
     double  time = 0, variation = 0, deviation = 0;
     size_t nrep = 1;
-    while (true) {
+    for (;;) {
         CalibrateTiming(NRUNS, 1, nrep);
         StartTiming(NRUNS, 1, nrep);
         pfn();

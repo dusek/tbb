@@ -1,5 +1,5 @@
 /*
-    Copyright 2005-2008 Intel Corporation.  All Rights Reserved.
+    Copyright 2005-2009 Intel Corporation.  All Rights Reserved.
 
     This file is part of Threading Building Blocks.
 
@@ -144,7 +144,7 @@ static void CheckVector( const vector_t& cv, size_t expected_size, size_t old_si
 
 //! Test of assign, grow, copying with various sizes
 void TestResizeAndCopy() {
-	typedef static_counting_allocator<std::allocator<Foo>, std::size_t> allocator_t;
+    typedef static_counting_allocator<std::allocator<Foo>, std::size_t> allocator_t;
     typedef tbb::concurrent_vector<Foo, allocator_t> vector_t;
     allocator_t::init_counters();
     for( int old_size=0; old_size<=128; NextSize( old_size ) ) {
@@ -308,9 +308,12 @@ void CheckConstIterator( const Vector& u, int i, const Iterator& cp ) {
 
 template<typename Iterator1, typename Iterator2, typename V> 
 void CheckIteratorComparison( V& u ) {
+    V u2 = u;
     Iterator1 i = u.begin();
+
     for( int i_count=0; i_count<100; ++i_count ) {
         Iterator2 j = u.begin();
+        Iterator2 i2 = u2.begin();
         for( int j_count=0; j_count<100; ++j_count ) {
             ASSERT( (i==j)==(i_count==j_count), NULL );
             ASSERT( (i!=j)==(i_count!=j_count), NULL );
@@ -319,7 +322,10 @@ void CheckIteratorComparison( V& u ) {
             ASSERT( (i>j)==(i_count>j_count), NULL );
             ASSERT( (i<=j)==(i_count<=j_count), NULL );
             ASSERT( (i>=j)==(i_count>=j_count), NULL );
+            ASSERT( !(i==i2), NULL ); 
+            ASSERT( i!=i2, NULL ); 
             ++j;
+            ++i2;
         }
         ++i;
     }
@@ -382,7 +388,7 @@ void TestSequentialFor() {
         }
         CheckConstIterator(u,i,cp);
     }
-  
+
     // Now go forwards and backwards
     ptrdiff_t j = 0;
     cp = u.begin();
@@ -476,7 +482,7 @@ static const size_t Modulus = 7;
 typedef static_counting_allocator<tbb::cache_aligned_allocator<Foo> > MyAllocator;
 typedef tbb::concurrent_vector<Foo, MyAllocator> MyVector;
 
-class GrowToAtLeast {
+class GrowToAtLeast: NoAssign {
     MyVector& my_vector;
 public:
     void operator()( const tbb::blocked_range<size_t>& range ) const {
@@ -497,13 +503,18 @@ void TestConcurrentGrowToAtLeast() {
         tbb::parallel_for( tbb::blocked_range<size_t>(0,10000*s,s), GrowToAtLeast(v) );
     }
     v.clear();
-    size_t items_allocated = v.get_allocator().items_allocated, items_freed = v.get_allocator().items_freed;
-    size_t allocations = v.get_allocator().allocations, frees = v.get_allocator().frees;
-    ASSERT( items_allocated == items_freed, NULL); ASSERT( allocations == frees, NULL);
+    ASSERT( 0 == v.get_allocator().frees, NULL);
+    v.compact();
+    size_t items_allocated = v.get_allocator().items_allocated,
+           items_freed = v.get_allocator().items_freed;
+    size_t allocations = v.get_allocator().allocations,
+           frees = v.get_allocator().frees;
+    ASSERT( items_allocated == items_freed, NULL);
+    ASSERT( allocations == frees, NULL);
 }
 
 //! Test concurrent invocations of method concurrent_vector::grow_by
-class GrowBy {
+class GrowBy: NoAssign {
     MyVector& my_vector;
 public:
     void operator()( const tbb::blocked_range<int>& range ) const {
@@ -555,9 +566,12 @@ void TestConcurrentGrowBy( int nthread ) {
         if( nthread>1 && inversions<m/10 )
             std::printf("Warning: not much concurrency in TestConcurrentGrowBy\n");
     }
-    size_t items_allocated = MyAllocator::items_allocated, items_freed = MyAllocator::items_freed;
-    size_t allocations = MyAllocator::allocations, frees = MyAllocator::frees;
-    ASSERT( items_allocated == items_freed, NULL); ASSERT( allocations == frees, NULL);
+    size_t items_allocated = MyAllocator::items_allocated,
+           items_freed = MyAllocator::items_freed;
+    size_t allocations = MyAllocator::allocations,
+           frees = MyAllocator::frees;
+    ASSERT( items_allocated == items_freed, NULL);
+    ASSERT( allocations == frees, NULL);
 }
 
 //! Test the assignment operator and swap
@@ -587,10 +601,14 @@ void TestAssign() {
             ASSERT( v.size()==size_t(src_size), NULL );
             for( int i=0; i<src_size; ++i )
                 ASSERT( v[i].bar()==i, NULL );
-            size_t items_allocated = u.get_allocator().items_allocated, items_freed = u.get_allocator().items_freed;
-            size_t allocations = u.get_allocator().allocations, frees = u.get_allocator().frees + 100;
-            ASSERT( items_allocated == items_freed, NULL); ASSERT( allocations == frees, NULL);
-            ASSERT( u.get_allocator().allocations == u.get_allocator().frees + 100, NULL);
+            ASSERT( 0 == u.get_allocator().frees, NULL);
+            u.compact(); // deallocate unused memory
+            size_t items_allocated = u.get_allocator().items_allocated,
+                   items_freed = u.get_allocator().items_freed;
+            size_t allocations = u.get_allocator().allocations,
+                   frees = u.get_allocator().frees + 100;
+            ASSERT( items_allocated == items_freed, NULL);
+            ASSERT( allocations == frees, NULL);
         }
     }
 }
@@ -605,8 +623,8 @@ void TestComparison() {
     var[0].assign(str[0].begin(), str[0].end());
     var[1].assign(str[0].rbegin(), str[0].rend());
     var[2].assign(var[1].rbegin(), var[1].rend()); // same as 0th
-    for (int i = 0; i < 3; i++) {
-        for (int j = 0; j < 3; j++) {
+    for (int i = 0; i < 3; ++i) {
+        for (int j = 0; j < 3; ++j) {
             ASSERT( (var[i] == var[j]) == (str[i] == str[j]), NULL );
             ASSERT( (var[i] != var[j]) == (str[i] != str[j]), NULL );
             ASSERT( (var[i] < var[j]) == (str[i] < str[j]), NULL );
@@ -704,7 +722,7 @@ void TestSort() {
 // Test exceptions safety (from allocator and items constructors)
 //------------------------------------------------------------------------
 template<typename MyVector>
-class GrowthException {
+class GrowthException: NoAssign {
     MyVector& my_vector;
 public:
     static volatile bool my_cancel;
@@ -731,11 +749,12 @@ public:
     }
     GrowthException( MyVector& vector ) : my_vector(vector) { my_cancel = false; }
 };
+
 template<typename MyVector>
 volatile bool GrowthException<MyVector>::my_cancel = false;
 
 void TestExceptions() {
-	typedef static_counting_allocator<std::allocator<Foo>, std::size_t> allocator_t;
+    typedef static_counting_allocator<std::allocator<Foo>, std::size_t> allocator_t;
     typedef tbb::concurrent_vector<Foo, allocator_t> vector_t;
 
     enum methods {
@@ -746,8 +765,8 @@ void TestExceptions() {
     try {
         vector_t src(FooIterator(0), FooIterator(N)); // original data
 
-        for(int t = 0; t < 2; t++) // exception type
-        for(int m = zero_method+1; m < all_methods; m++)
+        for(int t = 0; t < 2; ++t) // exception type
+        for(int m = zero_method+1; m < all_methods; ++m)
         {
             allocator_t::init_counters();
             if(t) MaxFooCount = FooCount + N/2;
@@ -811,10 +830,10 @@ void TestExceptions() {
                         ASSERT(size == N, "unexpected size");
                         ASSERT(capacity >= N, "unexpected capacity");
                         int i;
-                        for(i = 1; true; i++)
+                        for(i = 1; ; ++i)
                             if(!victim[i].zero_bar()) break;
                             else ASSERT(victim[i].bar() == (m == assign_ir)? i : Foo::initial_value_of_bar, NULL);
-                        for(; size_t(i) < size; i++) ASSERT(!victim[i].zero_bar(), NULL);
+                        for(; size_t(i) < size; ++i) ASSERT(!victim[i].zero_bar(), NULL);
                         ASSERT(size_t(i) == size, NULL);
                         break;
                     }
@@ -824,7 +843,7 @@ void TestExceptions() {
                     {// not related to if(!t)
                         vector_t copy_of_victim(victim);
                         ASSERT(copy_of_victim.size() > 0, NULL);
-                        for(int i = 0; true; i++) {
+                        for(int i = 0; ; ++i) {
                             try {
                                 Foo &foo = victim.at(i);
                                 int bar = t? foo.zero_bar() : foo.bar();
@@ -887,9 +906,11 @@ int main( int argc, char* argv[] ) {
         TestConcurrentGrowBy( nthread );
     }
     TestComparison();
+#if !__TBB_FLOATING_POINT_BROKEN
     TestFindPrimes();
+#endif
     TestSort();
-#if __GLIBC__==2&&__GLIBC_MINOR__==3
+#if __TBB_EXCEPTION_HANDLING_BROKEN
     printf("Warning: Exception safety test is skipped due to a known issue.\n");
 #else
     TestExceptions();

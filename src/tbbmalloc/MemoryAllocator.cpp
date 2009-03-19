@@ -1,5 +1,5 @@
 /*
-    Copyright 2005-2008 Intel Corporation.  All Rights Reserved.
+    Copyright 2005-2009 Intel Corporation.  All Rights Reserved.
 
     This file is part of Threading Building Blocks.
 
@@ -26,19 +26,6 @@
     the GNU General Public License.
 */
 
-
-//#define MALLOC_TRACE
-
-#ifdef MALLOC_TRACE
-#define TRACEF printf
-#else
-static inline int TRACEF(const char *arg, ...)
-{
-    return 0;
-}
-#endif /* MALLOC_TRACE */
-
-#define ASSERT_TEXT NULL
 
 #include "TypeDefinitions.h"
 
@@ -67,18 +54,29 @@ static inline int TRACEF(const char *arg, ...)
 #include <stdio.h>
 #include <string.h>
 #include <errno.h>
+#include <stdlib.h>
 
+/********* Various compile-time options        **************/
 
-/**
-*** Define various compile-time options
-**/
+#define MALLOC_TRACE 0
+
+#if MALLOC_TRACE
+#define TRACEF(x) printf x
+#else
+#define TRACEF(x) ((void)0)
+#endif /* MALLOC_TRACE */
+
+#define ASSERT_TEXT NULL
 
 //! Define the main synchronization method
 /** It should be specified before including LifoQueue.h */
 #define FINE_GRAIN_LOCKS
 #include "LifoQueue.h"
 
-#define COLLECT_STATISTICS 0
+#if MALLOC_DEBUG
+#define COLLECT_STATISTICS 1
+#endif
+
 #include "Statistics.h"
 
 #define FREELIST_NONBLOCKING 1
@@ -86,19 +84,60 @@ static inline int TRACEF(const char *arg, ...)
 // If USE_MALLOC_FOR_LARGE_OBJECT is nonzero, then large allocations are done via malloc.
 // Otherwise large allocations are done using the scalable allocator's block allocator.
 // As of 06.Jun.17, using malloc is about 10x faster on Linux.
+#if !_WIN32
 #define USE_MALLOC_FOR_LARGE_OBJECT 1
+#endif
 
 
-#if USE_MALLOC_FOR_LARGE_OBJECT
-#include <stdlib.h>
-#else
-extern "C" void exit( int ); /* to not include stdlib.h */
-#endif /* USE_MALLOC_FOR_LARGE_OBJECT */
+extern "C" {
+    void * scalable_malloc(size_t size);
+    void   scalable_free(void *object);
+}
 
+/********* End compile-time options        **************/
+
+#if MALLOC_LD_PRELOAD 
+#include <new> /* for placement new */
+#endif
 
 namespace ThreadingSubstrate {
 
 namespace Internal {
+
+/******* A helper class to support overriding malloc with scalable_malloc *******/
+#if MALLOC_LD_PRELOAD 
+class recursive_malloc_call_protector {
+    static MallocMutex rmc_mutex;
+
+    MallocMutex::scoped_lock* lock_acquired;
+    char scoped_lock_space[sizeof(MallocMutex::scoped_lock)+1];
+public:
+    recursive_malloc_call_protector(bool condition) : lock_acquired(NULL) {
+        if (condition) {
+            lock_acquired = new (scoped_lock_space) MallocMutex::scoped_lock( rmc_mutex );
+            lockRecursiveMallocFlag();
+        }
+    }
+    ~recursive_malloc_call_protector() {
+        if (lock_acquired) {
+            unlockRecursiveMallocFlag();
+            lock_acquired->~scoped_lock();
+        }
+    }
+};
+
+MallocMutex recursive_malloc_call_protector::rmc_mutex;
+
+#define malloc_proxy __TBB_malloc_proxy
+
+#else /* MALLOC_LD_PRELOAD */
+class recursive_malloc_call_protector {
+public:
+    recursive_malloc_call_protector(bool) {}
+    ~recursive_malloc_call_protector() {}
+};
+const bool malloc_proxy = false;
+#endif /* MALLOC_LD_PRELOAD */
 
 /*********** Code to provide thread ID and a thread-local void pointer **********/
 
@@ -114,6 +153,7 @@ static inline ThreadId  getThreadId(void)
     ThreadId result;
     result = reinterpret_cast<ThreadId>(TlsGetValue_func(Tid_key));
     if( !result ) {
+        recursive_malloc_call_protector scoped(/*condition=*/malloc_proxy);
         // Thread-local value is zero -> first call from this thread,
         // need to initialize with next ID value (IDs start from 1)
         result = AtomicIncrement(ThreadIdCount); // returned new value!
@@ -131,6 +171,7 @@ static inline void* getThreadMallocTLS() {
 }
 
 static inline void  setThreadMallocTLS( void * newvalue ) {
+    recursive_malloc_call_protector scoped(/*condition=*/malloc_proxy);
     TlsSetValue_func( TLS_pointer_key, newvalue );
 }
 
@@ -140,6 +181,11 @@ static inline void  setThreadMallocTLS( void * newvalue ) {
  * This number of bins in the TLS that leads to blocks that we can allocate in.
  */
 const uint32_t numBlockBinLimit = 32;
+
+/*
+ * The identifier to make sure that memory is allocated by scalable_malloc.
+ */
+const uint64_t theMallocUniqueID=0xE3C7AF89A1E2D8C1ULL; 
 
 /********* The data structures and global objects        **************/
 
@@ -151,9 +197,9 @@ struct FreeObject {
  * The following constant is used to define the size of struct Block, the block header.
  * The intent is to have the size of a Block multiple of the cache line size, this allows us to
  * get good alignment at the cost of some overhead equal to the amount of padding included in the Block.
-  */
+ */
 
-const int alignedSize = 64; // 64 is a common size of a cache line
+const int blockHeaderAlignment = 64; // a common size of a cache line
 
 struct Block;
 
@@ -170,9 +216,6 @@ struct Block;
  * some bin allocation sizes, in particular "fitting" sizes (see above).
  */
 
-/* define to make sure that memory is allocated by scalable_malloc*/
-const uint64_t tbbmallocUniqueID=0xE3C7AF89A1E2D8C1ULL; 
-
 struct LocalBlockFields {
     Block       *next;            /* This field needs to be on a 16K boundary and the first field in the block
                                      for LIFO lists to work. */
@@ -187,10 +230,10 @@ struct LocalBlockFields {
 };
 
 struct Block : public LocalBlockFields {
-    size_t       __pad_local_fields[(alignedSize-sizeof(LocalBlockFields))/sizeof(size_t)];
+    size_t       __pad_local_fields[(blockHeaderAlignment-sizeof(LocalBlockFields))/sizeof(size_t)];
     FreeObject  *publicFreeList;
     Block       *nextPrivatizable;
-    size_t       __pad_public_fields[(alignedSize-2*sizeof(void*))/sizeof(size_t)];
+    size_t       __pad_public_fields[(blockHeaderAlignment-2*sizeof(void*))/sizeof(size_t)];
 };
 
 struct Bin {
@@ -255,13 +298,13 @@ const uint32_t numFittingBins = 5;
 
 const uint32_t fittingAlignment = 128;
 
-#define SET_FITTING_SIZE(N) ((((blockSize-sizeof(Block))/(N))/fittingAlignment)*fittingAlignment)
-
+#define SET_FITTING_SIZE(N) ( (blockSize-sizeof(Block))/N ) & ~(fittingAlignment-1)
 const uint32_t fittingSize1 = SET_FITTING_SIZE(9);
 const uint32_t fittingSize2 = SET_FITTING_SIZE(6);
 const uint32_t fittingSize3 = SET_FITTING_SIZE(4);
 const uint32_t fittingSize4 = SET_FITTING_SIZE(3);
 const uint32_t fittingSize5 = SET_FITTING_SIZE(2);
+#undef SET_FITTING_SIZE
 
 /*
  * Objects of this size and larger are considered large objects.
@@ -271,16 +314,6 @@ const uint32_t minLargeObjectSize = fittingSize5 + 1;
 const uint32_t numBlockBins = minFittingIndex+numFittingBins;
 
 /*
- * Functions to align an integer down or up to the given power of two
- */
-static inline uintptr_t alignDown(uintptr_t arg, uintptr_t alignment) {
-    return (arg              ) & ~(alignment-1);
-}
-static inline uintptr_t alignUp(uintptr_t arg, uintptr_t alignment) {
-    return (arg+(alignment-1)) & ~(alignment-1);
-}
-
-/*
  * Get virtual memory in pieces of this size: 0x0100000 is 1 megabyte decimal
  */
 static size_t mmapRequestSize = 0x0100000;
@@ -288,19 +321,18 @@ static size_t mmapRequestSize = 0x0100000;
 /********** End of numeric parameters controlling allocations *********/
 
 #if __INTEL_COMPILER || _MSC_VER
-#define NOINLINE(decl) static __declspec(noinline) decl
+#define NOINLINE(decl) __declspec(noinline) decl
 #elif __GNUC__
-#define NOINLINE(decl) static decl __attribute__ ((noinline))
+#define NOINLINE(decl) decl __attribute__ ((noinline))
+#else
+#define NOINLINE(decl) decl
 #endif
 
-#ifdef NOINLINE
-
-NOINLINE( Block* getPublicFreeListBlock(Bin* bin) );
-NOINLINE( void moveBlockToBinFront(Block *block) );
-NOINLINE( void processLessUsedBlock(Block *block) );
+static NOINLINE( Block* getPublicFreeListBlock(Bin* bin) );
+static NOINLINE( void moveBlockToBinFront(Block *block) );
+static NOINLINE( void processLessUsedBlock(Block *block) );
 
 #undef NOINLINE
-#endif
 
 /*********** Code to acquire memory from the OS or other executive ****************/
 
@@ -317,28 +349,34 @@ NOINLINE( void processLessUsedBlock(Block *block) );
 static void* getMemory (size_t bytes)
 {
     void *result = 0;
-    MALLOC_ASSERT( bytes>=minLargeObjectSize, "request too small" );
+    // TODO: either make sure the assertion below is always valid, or remove it.
+    /*MALLOC_ASSERT( bytes>=minLargeObjectSize, "request too small" );*/
+#if MEMORY_MAPPING_USES_MALLOC
+    recursive_malloc_call_protector scoped(/*condition=*/malloc_proxy);
+#endif
     result = MapMemory(bytes);
-#ifdef MALLOC_TRACE
+#if MALLOC_TRACE
     if (!result) {
-        TRACEF("ScalableMalloc trace - getMemory unsuccess, can't get %d bytes from OS\n", bytes);
+        TRACEF(( "[ScalableMalloc trace] getMemory unsuccess, can't get %d bytes from OS\n", bytes ));
     } else {
-        TRACEF("ScalableMalloc trace - getMemory success returning %p\n", result);
+        TRACEF(( "[ScalableMalloc trace] - getMemory success returning %p\n", result ));
     }
 #endif
     return result;
 }
 
+#if !USE_MALLOC_FOR_LARGE_OBJECT
 static void returnMemory(void *area, size_t bytes)
 {
     int retcode = UnmapMemory(area, bytes);
-#ifdef MALLOC_TRACE
+#if MALLOC_TRACE
     if (retcode) {
-        TRACEF("ScalableMalloc trace - returnMemory unsuccess for %p; perhaps it has already been freed or was never allocated.\n", area);
+        TRACEF(( "[ScalableMalloc trace] returnMemory unsuccess for %p; perhaps it has already been freed or was never allocated.\n", area ));
     }
 #endif
     return;
 }
+#endif /* USE_MALLOC_FOR_LARGE_OBJECT */
 
 /********* End memory acquisition code ********************************/
 
@@ -353,32 +391,32 @@ static void returnMemory(void *area, size_t bytes)
 extern "C" unsigned char _BitScanReverse( unsigned long* i, unsigned long w );
 #pragma intrinsic(_BitScanReverse)
 #endif
-static inline unsigned int highestBitPos(unsigned int number)
+static inline unsigned int highestBitPos(unsigned int n)
 {
     unsigned int pos;
 #if __ARCH_x86_32||__ARCH_x86_64
 
 # if __linux__||__APPLE__||__FreeBSD__ || __sun
-    __asm__ ("bsr %1,%0" : "=r"(pos) : "r"(number));
+    __asm__ ("bsr %1,%0" : "=r"(pos) : "r"(n));
 # elif (_WIN32 && (!_WIN64 || __INTEL_COMPILER))
     __asm
     {
-        bsr eax, number
+        bsr eax, n
         mov pos, eax
     }
 # elif _WIN64 && _MSC_VER>=1400
-    _BitScanReverse((unsigned long*)&pos, (unsigned long)number);
+    _BitScanReverse((unsigned long*)&pos, (unsigned long)n);
 # else
 #   error highestBitPos() not implemented for this platform
 # endif
 
 #elif __ARCH_ipf || __ARCH_other
     static unsigned int bsr[16] = {0,6,7,7,8,8,8,8,9,9,9,9,9,9,9,9};
-    MALLOC_ASSERT( number>=64 && number<1024, ASSERT_TEXT );
-    pos = bsr[ number>>6 ];
+    MALLOC_ASSERT( n>=64 && n<1024, ASSERT_TEXT );
+    pos = bsr[ n>>6 ];
 #else
 #   error highestBitPos() not implemented for this platform
-#endif
+#endif /* __ARCH_* */
     return pos;
 }
 
@@ -399,9 +437,9 @@ static unsigned int getIndexOrObjectSize (unsigned int size)
         if (indexRequest)
             return minSegregatedObjectIndex - (4*6) - 4 + (4*order) + ((size-1)>>(order-2));
         else {
-            unsigned int aligner = 127 >> (9-order); // alignment in group minus 1
-            MALLOC_ASSERT( aligner==15 || aligner==31 || aligner==63 || aligner==127, ASSERT_TEXT );
-            return alignUp(size,aligner+1);
+            unsigned int alignment = 128 >> (9-order); // alignment in the group
+            MALLOC_ASSERT( alignment==16 || alignment==32 || alignment==64 || alignment==128, ASSERT_TEXT );
+            return alignUp(size,alignment);
         }
     }
     else {
@@ -421,7 +459,7 @@ static unsigned int getIndexOrObjectSize (unsigned int size)
                     return indexRequest ? minFittingIndex+4 : fittingSize5;
             } else {
                 MALLOC_ASSERT( 0,ASSERT_TEXT ); // this should not happen
-                return (unsigned int)(-1);
+                return ~0U;
             }
         }
     }
@@ -451,7 +489,7 @@ static inline void *alignBigBlock(void *unalignedBigBlock)
 {
     void *alignedBigBlock;
     /* align the entireHeap so all blocks are aligned. */
-    alignedBigBlock = (void *) alignUp((uintptr_t)unalignedBigBlock, blockSize);
+    alignedBigBlock = alignUp(unalignedBigBlock, blockSize);
     return alignedBigBlock;
 }
 
@@ -474,7 +512,7 @@ static int mallocBigBlock()
     unalignedBigBlock = getMemory(mmapRequestSize);
 
     if (!unalignedBigBlock) {
-        TRACEF(" in mallocBigBlock, getMemory returns 0\n");
+        TRACEF(( "[ScalableMalloc trace] in mallocBigBlock, getMemory returns 0\n" ));
         /* We can't get any more memory from the OS or executive so return 0 */
         return 0;
     }
@@ -489,15 +527,14 @@ static int mallocBigBlock()
     while ( ((uintptr_t)splitBlock + blockSize) <= (uintptr_t)bigBlockCeiling ) {
         splitEdge = (void*)((uintptr_t)splitBlock + bigBlockSplitSize);
         if( splitEdge > bigBlockCeiling) {
-            // align down to blockSize
-            splitEdge = (void*)alignDown((uintptr_t)bigBlockCeiling, blockSize);
+            splitEdge = alignDown(bigBlockCeiling, blockSize);
         }
         splitBlock->bumpPtr = (FreeObject*)splitEdge;
         freeBlockList.push((void**) splitBlock);
         splitBlock = (Block*)splitEdge;
     }
 
-    TRACEF("in mallocBigBlock returning 1\n");
+    TRACEF(( "[ScalableMalloc trace] in mallocBigBlock returning 1\n" ));
     return 1;
 }
 
@@ -564,7 +601,7 @@ static void bootStrapFree(void* ptr)
 
 /********* Thread and block related code      *************/
 
-#ifdef MALLOC_DEBUG
+#if MALLOC_DEBUG>1
 /* The debug version verifies the TLSBin as needed */
 static void verifyTLSBin (Bin* bin, size_t size)
 {
@@ -577,13 +614,13 @@ static void verifyTLSBin (Bin* bin, size_t size)
     MALLOC_ASSERT( bin == tls+index, ASSERT_TEXT );
 
     if (tls[index].activeBlk) {
-        MALLOC_ASSERT( tls[index].activeBlk->mallocUniqueID==tbbmallocUniqueID, ASSERT_TEXT );
+        MALLOC_ASSERT( tls[index].activeBlk->mallocUniqueID==theMallocUniqueID, ASSERT_TEXT );
         MALLOC_ASSERT( tls[index].activeBlk->owner == getThreadId(), ASSERT_TEXT );
         MALLOC_ASSERT( tls[index].activeBlk->objectSize == objSize, ASSERT_TEXT );
 
         for (temp = tls[index].activeBlk->next; temp; temp=temp->next) {
             MALLOC_ASSERT( temp!=tls[index].activeBlk, ASSERT_TEXT );
-            MALLOC_ASSERT( temp->mallocUniqueID==tbbmallocUniqueID, ASSERT_TEXT );
+            MALLOC_ASSERT( temp->mallocUniqueID==theMallocUniqueID, ASSERT_TEXT );
             MALLOC_ASSERT( temp->owner == getThreadId(), ASSERT_TEXT );
             MALLOC_ASSERT( temp->objectSize == objSize, ASSERT_TEXT );
             MALLOC_ASSERT( temp->previous->next == temp, ASSERT_TEXT );
@@ -593,7 +630,7 @@ static void verifyTLSBin (Bin* bin, size_t size)
         }
         for (temp = tls[index].activeBlk->previous; temp; temp=temp->previous) {
             MALLOC_ASSERT( temp!=tls[index].activeBlk, ASSERT_TEXT );
-            MALLOC_ASSERT( temp->mallocUniqueID==tbbmallocUniqueID, ASSERT_TEXT );
+            MALLOC_ASSERT( temp->mallocUniqueID==theMallocUniqueID, ASSERT_TEXT );
             MALLOC_ASSERT( temp->owner == getThreadId(), ASSERT_TEXT );
             MALLOC_ASSERT( temp->objectSize == objSize, ASSERT_TEXT );
             MALLOC_ASSERT( temp->next->previous == temp, ASSERT_TEXT );
@@ -605,7 +642,7 @@ static void verifyTLSBin (Bin* bin, size_t size)
 }
 #else
 inline static void verifyTLSBin (Bin*, size_t) {}
-#endif
+#endif /* MALLOC_DEBUG>1 */
 
 /*
  * Add a block to the start of this tls bin list.
@@ -680,7 +717,7 @@ static Bin* getAllocationBin(size_t size)
         MALLOC_ASSERT( tlsSize >= sizeof(Bin) * numBlockBins, ASSERT_TEXT );
         tls = (Bin*) bootStrapMalloc(tlsSize);
         /* the block contains zeroes after bootStrapMalloc, so bins are initialized */
-#ifdef MALLOC_DEBUG
+#if MALLOC_DEBUG
         for (int i = 0; i < numBlockBinLimit; i++) {
             MALLOC_ASSERT( tls[i].activeBlk == 0, ASSERT_TEXT );
             MALLOC_ASSERT( tls[i].mailbox == 0, ASSERT_TEXT );
@@ -688,7 +725,7 @@ static Bin* getAllocationBin(size_t size)
 #endif
         setThreadMallocTLS(tls);
     }
-    MALLOC_ASSERT(tls, ASSERT_TEXT);
+    MALLOC_ASSERT( tls, ASSERT_TEXT );
     return tls+getIndex(size);
 }
 
@@ -720,15 +757,13 @@ static unsigned int emptyEnoughToUse (Block *mallocBlock)
 /* Restore the bump pointer for an empty block that is planned to use */
 static void restoreBumpPtr (Block *block)
 {
-    MALLOC_ASSERT (block->allocatedCount == 0, ASSERT_TEXT);
-    MALLOC_ASSERT (block->publicFreeList == NULL, ASSERT_TEXT);
+    MALLOC_ASSERT( block->allocatedCount == 0, ASSERT_TEXT );
+    MALLOC_ASSERT( block->publicFreeList == NULL, ASSERT_TEXT );
     STAT_increment(block->owner, getIndex(block->objectSize), freeRestoreBumpPtr);
     block->bumpPtr = (FreeObject *)((uintptr_t)block + blockSize - block->objectSize);
     block->freeList = NULL;
     block->isFull = 0;
 }
-
-// #ifdef FINE_GRAIN_LOCKS
 
 #if !(FREELIST_NONBLOCKING)
 static MallocMutex publicFreeListLock; // lock for changes of publicFreeList
@@ -757,7 +792,7 @@ static void freePublicObject (Block *block, FreeObject *objectToFree)
         temp = (FreeObject*)AtomicCompareExchange(
                                 (intptr_t&)block->publicFreeList,
                                 (intptr_t)objectToFree, (intptr_t)publicFreeList );
-        //no backoff necessary because trying to make change, not waiting for a change
+        // no backoff necessary because trying to make change, not waiting for a change
     } while( temp != publicFreeList );
 #else
     STAT_increment(getThreadId(), ThreadCommonCounters, lockPublicFreeList);
@@ -777,22 +812,14 @@ static void freePublicObject (Block *block, FreeObject *objectToFree)
         // 3) but it can not be done until the block is put to the mailbox
         // So the executing thread is now the only one that can change nextPrivatizable
         if( !isNotForUse(block->nextPrivatizable) ) {
-            MALLOC_ASSERT(block->nextPrivatizable!=NULL, ASSERT_TEXT);
-            MALLOC_ASSERT(block->owner!=0, ASSERT_TEXT);
+            MALLOC_ASSERT( block->nextPrivatizable!=NULL, ASSERT_TEXT );
+            MALLOC_ASSERT( block->owner!=0, ASSERT_TEXT );
             theBin = (Bin*) block->nextPrivatizable;
-#ifdef MALLOC_DEBUG
-            { // check that nextPrivatizable points to the bin the block belongs to
-                uint32_t index = getIndex( block->objectSize );
-                Bin* tls = (Bin*)getThreadMallocTLS();
-                MALLOC_ASSERT(theBin==tls+index, ASSERT_TEXT);
-            }
-#endif
-// the counter should be changed            STAT_increment(getThreadId(), ThreadCommonCounters, lockPublicFreeList);
             MallocMutex::scoped_lock scoped_cs(theBin->mailLock);
             block->nextPrivatizable = theBin->mailbox;
             theBin->mailbox = block;
         } else {
-            MALLOC_ASSERT(block->owner==0, ASSERT_TEXT);
+            MALLOC_ASSERT( block->owner==0, ASSERT_TEXT );
         }
     }
     STAT_increment(getThreadId(), ThreadCommonCounters, freeToOtherThread);
@@ -811,7 +838,7 @@ static void privatizePublicFreeList (Block *mallocBlock)
         temp = (FreeObject*)AtomicCompareExchange(
                                 (intptr_t&)mallocBlock->publicFreeList,
                                 0, (intptr_t)publicFreeList);
-        //no backoff necessary because trying to make change, not waiting for a change
+        // no backoff necessary because trying to make change, not waiting for a change
     } while( temp != publicFreeList );
     MALLOC_ITT_SYNC_ACQUIRED(&mallocBlock->publicFreeList);
 #else
@@ -824,16 +851,16 @@ static void privatizePublicFreeList (Block *mallocBlock)
     temp = publicFreeList;
 #endif
 
-    MALLOC_ASSERT(publicFreeList && publicFreeList==temp, ASSERT_TEXT); // there should be something in publicFreeList!
+    MALLOC_ASSERT( publicFreeList && publicFreeList==temp, ASSERT_TEXT ); // there should be something in publicFreeList!
     if( !isNotForUse(temp) ) { // return/getPartialBlock could set it to UNUSABLE
-        MALLOC_ASSERT(mallocBlock->allocatedCount <= (blockSize-sizeof(Block))/mallocBlock->objectSize, ASSERT_TEXT);
+        MALLOC_ASSERT( mallocBlock->allocatedCount <= (blockSize-sizeof(Block))/mallocBlock->objectSize, ASSERT_TEXT );
         /* other threads did not change the counter freeing our blocks */
         mallocBlock->allocatedCount--;
         while( isSolidPtr(temp->next) ){ // the list will end with either NULL or UNUSABLE
             temp = temp->next;
             mallocBlock->allocatedCount--;
         }
-        MALLOC_ASSERT(mallocBlock->allocatedCount < (blockSize-sizeof(Block))/mallocBlock->objectSize, ASSERT_TEXT);
+        MALLOC_ASSERT( mallocBlock->allocatedCount < (blockSize-sizeof(Block))/mallocBlock->objectSize, ASSERT_TEXT );
         /* merge with local freeList */
         temp->next = mallocBlock->freeList;
         mallocBlock->freeList = publicFreeList;
@@ -866,19 +893,19 @@ static Block* getPublicFreeListBlock (Bin* bin)
 static Block *getPartialBlock(Bin* bin, unsigned int size)
 {
     Block *result;
-    MALLOC_ASSERT(bin, ASSERT_TEXT);
+    MALLOC_ASSERT( bin, ASSERT_TEXT );
     unsigned int index = getIndex(size);
     result = (Block *) globalSizeBins[index].pop();
     if (result) {
-        MALLOC_ASSERT( result->mallocUniqueID==tbbmallocUniqueID, ASSERT_TEXT );
+        MALLOC_ASSERT( result->mallocUniqueID==theMallocUniqueID, ASSERT_TEXT );
         result->next = NULL;
         result->previous = NULL;
         MALLOC_ASSERT( result->publicFreeList!=NULL, ASSERT_TEXT );
         /* There is not a race here since no other thread owns this block */
-        MALLOC_ASSERT(result->owner == 0, ASSERT_TEXT);
+        MALLOC_ASSERT( result->owner == 0, ASSERT_TEXT );
         result->owner = getThreadId();
         // It is safe to change nextPrivatizable, as publicFreeList is not null
-        MALLOC_ASSERT(isNotForUse(result->nextPrivatizable), ASSERT_TEXT);
+        MALLOC_ASSERT( isNotForUse(result->nextPrivatizable), ASSERT_TEXT );
         result->nextPrivatizable = (Block*)bin;
         // the next call is required to change publicFreeList to 0
         privatizePublicFreeList(result);
@@ -897,8 +924,8 @@ static Block *getPartialBlock(Bin* bin, unsigned int size)
 static void returnPartialBlock(Bin* bin, Block *block)
 {
     unsigned int index = getIndex(block->objectSize);
-    MALLOC_ASSERT(bin, ASSERT_TEXT);
-    MALLOC_ASSERT (block->owner==getThreadId(), ASSERT_TEXT);
+    MALLOC_ASSERT( bin, ASSERT_TEXT );
+    MALLOC_ASSERT( block->owner==getThreadId(), ASSERT_TEXT );
     STAT_increment(block->owner, index, freeBlockPublic);
     // need to set publicFreeList to non-zero, so other threads
     // will not change nextPrivatizable and it can be zeroed.
@@ -918,8 +945,8 @@ static void returnPartialBlock(Bin* bin, Block *block)
             // another thread freed an object; we need to wait until it finishes.
             // I believe there is no need for exponential backoff, as the wait here is not for a lock;
             // but need to yield, so the thread we wait has a chance to run.
+            int count = 256;
             while( (intptr_t)const_cast<Block* volatile &>(block->nextPrivatizable)==(intptr_t)bin ) {
-                int count = 256;
                 if (--count==0) {
                     do_yield();
                     count = 256;
@@ -927,20 +954,18 @@ static void returnPartialBlock(Bin* bin, Block *block)
             }
         }
     } else {
-        MALLOC_ASSERT(isSolidPtr(block->publicFreeList), ASSERT_TEXT);
+        MALLOC_ASSERT( isSolidPtr(block->publicFreeList), ASSERT_TEXT );
     }
     MALLOC_ASSERT( block->publicFreeList!=NULL, ASSERT_TEXT );
     // now it is safe to change our data
     block->previous = NULL;
     block->owner = 0;
-    /* it is caller responsibility to ensure that the list of blocks
-     * formed by nextPrivatizable pointers is kept consistent if required.
-     * if only called from thread shutdown code, it does not matter */
+    // it is caller responsibility to ensure that the list of blocks
+    // formed by nextPrivatizable pointers is kept consistent if required.
+    // if only called from thread shutdown code, it does not matter.
     (uintptr_t&)(block->nextPrivatizable) = UNUSABLE;
     globalSizeBins[index].push((void **)block);
 }
-
-// #endif /* FINE_GRAIN_LOCKS */
 
 static void initEmptyBlock(Block *block, size_t size)
 {
@@ -949,10 +974,10 @@ static void initEmptyBlock(Block *block, size_t size)
     unsigned int index      = getIndex(size);
     unsigned int objectSize = getObjectSize(size); 
     Bin* tls = (Bin*)getThreadMallocTLS();
-#ifdef MALLOC_DEBUG
+#if MALLOC_DEBUG
     memset (block, 0x0e5, blockSize);
 #endif
-    block->mallocUniqueID = tbbmallocUniqueID;
+    block->mallocUniqueID = theMallocUniqueID;
     block->next = NULL;
     block->previous = NULL;
     block->objectSize = objectSize;
@@ -962,13 +987,13 @@ static void initEmptyBlock(Block *block, size_t size)
     block->freeList = NULL;
     block->allocatedCount = 0;
     block->isFull = 0;
-    block->publicFreeList = NULL;
 
+    block->publicFreeList = NULL;
     // each block should have the address where the head of the list of "privatizable" blocks is kept
     // the only exception is a block for boot strap which is initialized when TLS is yet NULL
     block->nextPrivatizable = tls? (Block*)(tls + index) : NULL;
-    TRACEF ("Empty block %p is initialized, owner is %d, objectSize is %d, bumpPtr is %p\n",
-        block, block->owner, block->objectSize, block->bumpPtr);
+    TRACEF(( "[ScalableMalloc trace] Empty block %p is initialized, owner is %d, objectSize is %d, bumpPtr is %p\n",
+             block, block->owner, block->objectSize, block->bumpPtr ));
   }
 
 /* Return an empty uninitialized block in a non-blocking fashion. */
@@ -990,14 +1015,14 @@ static Block *getEmptyBlock(size_t size)
     }
 
     // check alignment
-    MALLOC_ASSERT( !( (uintptr_t)bigBlock & (uintptr_t)(blockSize-1) ), ASSERT_TEXT);
-    MALLOC_ASSERT( !( (uintptr_t)bigBlock->bumpPtr & (uintptr_t)(blockSize-1) ), ASSERT_TEXT);
+    MALLOC_ASSERT( isAligned( bigBlock, blockSize ), ASSERT_TEXT );
+    MALLOC_ASSERT( isAligned( bigBlock->bumpPtr, blockSize ), ASSERT_TEXT );
     // block should be at least as big as blockSize; otherwise the previous block can be damaged.
-    MALLOC_ASSERT( (uintptr_t)bigBlock->bumpPtr >= (uintptr_t)bigBlock + blockSize, ASSERT_TEXT);
+    MALLOC_ASSERT( (uintptr_t)bigBlock->bumpPtr >= (uintptr_t)bigBlock + blockSize, ASSERT_TEXT );
     bigBlock->bumpPtr = (FreeObject *)((uintptr_t)bigBlock->bumpPtr - blockSize);
     result = (Block *)bigBlock->bumpPtr;
     if ( result!=bigBlock ) {
-        TRACEF("Pushing partial rest of block back on.\n");
+        TRACEF(( "[ScalableMalloc trace] Pushing partial rest of block back on.\n" ));
         freeBlockList.push((void **)bigBlock);
     }
     initEmptyBlock(result, size);
@@ -1010,8 +1035,8 @@ static Block *getEmptyBlock(size_t size)
 static void returnEmptyBlock (Block *block, bool keepTheBin = true)
 {
     // it is caller's responsibility to ensure no data is lost before calling this
-    MALLOC_ASSERT(block->allocatedCount==0, ASSERT_TEXT);
-    MALLOC_ASSERT(block->publicFreeList==NULL, ASSERT_TEXT);
+    MALLOC_ASSERT( block->allocatedCount==0, ASSERT_TEXT );
+    MALLOC_ASSERT( block->publicFreeList==NULL, ASSERT_TEXT );
     if (keepTheBin) {
         /* We should keep the TLS bin structure */
         MALLOC_ASSERT( block->next == NULL, ASSERT_TEXT );
@@ -1044,7 +1069,7 @@ inline static Block* getActiveBlock( Bin* bin )
 inline static void setActiveBlock (Bin* bin, Block *block)
 {
     MALLOC_ASSERT( bin, ASSERT_TEXT );
-    MALLOC_ASSERT(block->owner == getThreadId(), ASSERT_TEXT);
+    MALLOC_ASSERT( block->owner == getThreadId(), ASSERT_TEXT );
     // it is the caller responsibility to keep bin consistence (i.e. ensure this block is in the bin list)
     bin->activeBlk = block;
 }
@@ -1062,6 +1087,77 @@ inline static Block* setPreviousBlockActive( Bin* bin )
 
 /********* End thread related code  *************/
 
+/********* Library initialization *************/
+
+//! Value indicating the state of initialization.
+/* 0 = initialization not started.
+ * 1 = initialization started but not finished.
+ * 2 = initialization finished.
+ * In theory, we only need values 0 and 2. But value 1 is nonetheless
+ * useful for detecting errors in the double-check pattern.
+ */
+static int mallocInitialized;   // implicitly initialized to 0
+static MallocMutex initAndShutMutex;
+
+extern "C" void mallocThreadShutdownNotification(void*);
+
+/*
+ * Allocator initialization routine;
+ * it is called lazily on the very first scalable_malloc call.
+ */
+static void initMemoryManager()
+{
+    TRACEF(( "[ScalableMalloc trace] sizeof(Block) is %d (expected 128); sizeof(uintptr_t) is %d\n",
+             sizeof(Block), sizeof(uintptr_t) ));
+    MALLOC_ASSERT( 2*blockHeaderAlignment == sizeof(Block), ASSERT_TEXT );
+
+// Create keys for thread-local storage and for thread id
+// TODO: add error handling
+#if USE_WINTHREAD
+    TLS_pointer_key = TlsAlloc();
+    Tid_key = TlsAlloc();
+#else
+    int status1 = pthread_key_create( &TLS_pointer_key, mallocThreadShutdownNotification );
+    int status2 = pthread_key_create( &Tid_key, NULL );
+    if ( status1 || status2 ) {
+        fprintf (stderr, "The memory manager cannot create tls key during initialisation; exiting \n");
+        exit(1);
+    }
+#endif /* USE_WINTHREAD */
+#if COLLECT_STATISTICS
+    if (NULL != getenv("TBB_MALLOC_STAT"))
+        reportAllocationStatistics = true;
+#endif
+    TRACEF(( "[ScalableMalloc trace] Asking for a mallocBigBlock\n" ));
+    if (!mallocBigBlock()) {
+        fprintf (stderr, "The memory manager cannot access sufficient memory to initialize; exiting \n");
+        exit(1);
+    }
+}
+
+//! Ensures that initMemoryManager() is called once and only once.
+/** Does not return until initMemoryManager() has been completed by a thread.
+    There is no need to call this routine if mallocInitialized==2 . */
+static inline void checkInitialization()
+{
+    if (mallocInitialized==2) return;
+    MallocMutex::scoped_lock lock( initAndShutMutex );
+    if (mallocInitialized!=2) {
+        MALLOC_ASSERT( mallocInitialized==0, ASSERT_TEXT );
+        mallocInitialized = 1;
+        initMemoryManager();
+#ifdef  MALLOC_EXTRA_INITIALIZATION
+        recursive_malloc_call_protector scoped(/*condition=*/malloc_proxy);
+        MALLOC_EXTRA_INITIALIZATION;
+#endif
+        MALLOC_ASSERT( mallocInitialized==1, ASSERT_TEXT );
+        mallocInitialized = 2;
+    }
+    MALLOC_ASSERT( mallocInitialized==2, ASSERT_TEXT ); /* It can't be 0 or I would have initialized it */
+}
+
+/********* End library initialization *************/
+
 /********* The malloc show          *************/
 
 /*
@@ -1072,26 +1168,39 @@ inline static Block* setPreviousBlockActive( Bin* bin )
  *
  */
 
-static unsigned int isLargeObject(void *object); /* Forward Ref */
-
 struct LargeObjectHeader {
     void        *unalignedResult;   /* The base of the memory returned from getMemory, this is what is used to return this to the OS */
-    uint64_t     mallocUniqueID;    /* The field to check whether the memory was allocated by scalable_malloc */
     size_t       unalignedSize;     /* The size that was requested from getMemory */
+    uint64_t     mallocUniqueID;    /* The field to check whether the memory was allocated by scalable_malloc */
     size_t       objectSize;        /* The size originally requested by a client */
 };
 
-static inline void *mallocLargeObject (size_t size)
+/* A predicate checks whether an object starts on blockSize boundary */
+static inline unsigned int isLargeObject(void *object)
 {
-    void *result;
+    return isAligned(object, blockSize);
+}
+
+static inline void *mallocLargeObject (size_t size, size_t alignment)
+{
     void *alignedArea;
     void *unalignedArea;
     LargeObjectHeader *header;
 
     // TODO: can the requestedSize be optimized somehow?
-    size_t requestedSize = size + sizeof(LargeObjectHeader) + blockSize;
+    size_t requestedSize = size + sizeof(LargeObjectHeader) + alignment;
 #if USE_MALLOC_FOR_LARGE_OBJECT
-    unalignedArea = malloc(requestedSize);
+#if MALLOC_LD_PRELOAD
+    if (malloc_proxy) {
+        if ( original_malloc_found ){
+            unalignedArea = (*original_malloc_ptr)(requestedSize);
+        }else{
+            MALLOC_ASSERT( 0, ASSERT_TEXT );
+            return NULL;
+        }
+    } else
+#endif /* MALLOC_LD_PRELOAD */
+        unalignedArea = malloc(requestedSize);
 #else
     unalignedArea = getMemory(requestedSize);
 #endif /* USE_MALLOC_FOR_LARGE_OBJECT */
@@ -1099,16 +1208,16 @@ static inline void *mallocLargeObject (size_t size)
         /* We can't get any more memory from the OS or executive so return 0 */
         return 0;
     }
-    alignedArea = (void *)alignUp((uintptr_t)unalignedArea, blockSize);
-    header = (LargeObjectHeader *)alignedArea;
+    alignedArea = (void*) alignUp((uintptr_t)unalignedArea+sizeof(LargeObjectHeader),
+                                   alignment);
+    header = (LargeObjectHeader*) ((uintptr_t)alignedArea-sizeof(LargeObjectHeader));
     header->unalignedResult = unalignedArea;
-    header->mallocUniqueID=tbbmallocUniqueID;
+    header->mallocUniqueID=theMallocUniqueID;
     header->unalignedSize = requestedSize;
     header->objectSize = size;
-    result = (void *)((uintptr_t)alignedArea + sizeof(LargeObjectHeader));
-    MALLOC_ASSERT(isLargeObject(result), ASSERT_TEXT);
+    MALLOC_ASSERT( isLargeObject(alignedArea), ASSERT_TEXT );
     STAT_increment(getThreadId(), ThreadCommonCounters, allocLargeSize);
-    return result;
+    return alignedArea;
 }
 
 static inline void freeLargeObject(void *object)
@@ -1118,16 +1227,19 @@ static inline void freeLargeObject(void *object)
     header = (LargeObjectHeader *)((uintptr_t)object - sizeof(LargeObjectHeader));
     header->mallocUniqueID = 0;
 #if USE_MALLOC_FOR_LARGE_OBJECT
-    free(header->unalignedResult);
+#if MALLOC_LD_PRELOAD
+    if (malloc_proxy) {
+        if ( original_malloc_found ){
+            original_free_ptr(header->unalignedResult);
+        }else{
+            MALLOC_ASSERT( 0, ASSERT_TEXT );
+        }
+    } else
+#endif /* MALLOC_LD_PRELOAD */
+        free(header->unalignedResult);
 #else
     returnMemory(header->unalignedResult, header->unalignedSize);
 #endif /* USE_MALLOC_FOR_LARGE_OBJECT */
-}
-
-/* Does this object start on a 16K boundary + the size of a large object header? */
-static inline unsigned int isLargeObject(void *object)
-{
-    return ((uintptr_t)object & (blockSize - 1)) == sizeof(LargeObjectHeader);
 }
 
 static FreeObject *allocateFromFreeList(Block *mallocBlock)
@@ -1139,10 +1251,10 @@ static FreeObject *allocateFromFreeList(Block *mallocBlock)
     }
 
     result = mallocBlock->freeList;
-    MALLOC_ASSERT (result, ASSERT_TEXT);
+    MALLOC_ASSERT( result, ASSERT_TEXT );
 
     mallocBlock->freeList = result->next;
-    MALLOC_ASSERT(mallocBlock->allocatedCount < (blockSize-sizeof(Block))/mallocBlock->objectSize, ASSERT_TEXT);
+    MALLOC_ASSERT( mallocBlock->allocatedCount < (blockSize-sizeof(Block))/mallocBlock->objectSize, ASSERT_TEXT );
     mallocBlock->allocatedCount++;
     STAT_increment(mallocBlock->owner, getIndex(mallocBlock->objectSize), allocFreeListUsed);
 
@@ -1158,7 +1270,7 @@ static FreeObject *allocateFromBumpPtr(Block *mallocBlock)
         if ( (uintptr_t)mallocBlock->bumpPtr < (uintptr_t)mallocBlock+sizeof(Block) ) {
             mallocBlock->bumpPtr = NULL;
         }
-        MALLOC_ASSERT(mallocBlock->allocatedCount < (blockSize-sizeof(Block))/mallocBlock->objectSize, ASSERT_TEXT);
+        MALLOC_ASSERT( mallocBlock->allocatedCount < (blockSize-sizeof(Block))/mallocBlock->objectSize, ASSERT_TEXT );
         mallocBlock->allocatedCount++;
         STAT_increment(mallocBlock->owner, getIndex(mallocBlock->objectSize), allocBumpPtrUsed);
     }
@@ -1170,23 +1282,20 @@ inline static FreeObject* allocateFromBlock( Block *mallocBlock )
     FreeObject *result;
 
     MALLOC_ASSERT( mallocBlock->owner == getThreadId(), ASSERT_TEXT );
-    /*
-     * for better cache locality, first looking in the free list
-     */
+
+    /* for better cache locality, first looking in the free list. */
     if ( (result = allocateFromFreeList(mallocBlock)) ) {
         return result;
     }
     MALLOC_ASSERT( !mallocBlock->freeList, ASSERT_TEXT );
-    /*
-     * if free list is empty, try thread local bump pointer allocation.
-     */
+
+    /* if free list is empty, try thread local bump pointer allocation. */
     if ( (result = allocateFromBumpPtr(mallocBlock)) ) {
         return result;
     }
     MALLOC_ASSERT( !mallocBlock->bumpPtr, ASSERT_TEXT );
-    /*
-     * the block is considered full
-     */
+
+    /* the block is considered full. */
     mallocBlock->isFull = 1;
     return NULL;
 }
@@ -1212,11 +1321,92 @@ static void processLessUsedBlock(Block *block)
     }
 }
 
-inline void* set_errno_if_NULL(void* arg)
+/*
+ * All aligned allocations fall into one of the following categories:
+ *  1. if both request size and alignment are <= maxSegregatedObjectSize,
+ *       we just align the size up, and request this amount, because for every size
+ *       aligned to some power of 2, the allocated object is at least that aligned.
+ * 2. for bigger size, check if already guaranteed fittingAlignment is enough.
+ * 3. if size+alignment<minLargeObjectSize, we take an object of fittingSizeN and align
+ *       its address up; given such pointer, scalable_free could find the real object.
+ * 4. otherwise, aligned large object is allocated.
+ */
+static void *allocateAligned(size_t size, size_t alignment)
 {
-   if ( arg==NULL )
-       errno = ENOMEM;
-   return arg;
+    MALLOC_ASSERT( isPowerOfTwo(alignment), ASSERT_TEXT );
+
+    void *result;
+    if (size<=maxSegregatedObjectSize && alignment<=maxSegregatedObjectSize)
+        result = scalable_malloc(alignUp(size? size: sizeof(size_t), alignment));
+    else if (alignment<=fittingAlignment)
+        result = scalable_malloc(size);
+    else if (size+alignment < minLargeObjectSize) {
+        void *unaligned = scalable_malloc(size+alignment);
+        if (!unaligned) return NULL;
+        result = alignUp(unaligned, alignment);
+    } else {
+        /* This can be the first allocation call. */
+        checkInitialization();
+        /* To correctly detect kind of allocation in scalable_free we need 
+           to distinguish memory allocated as large object.
+           This is done via alignment that is greater than can be found in Block.
+        */ 
+        result = mallocLargeObject(size, blockSize>alignment? blockSize: alignment);
+    }
+
+    MALLOC_ASSERT( isAligned(result, alignment), ASSERT_TEXT );
+    return result;
+}
+
+static void *reallocAligned(void *ptr, size_t size, size_t alignment = 0)
+{
+    void *result;
+    size_t copySize;
+
+    if (isLargeObject(ptr)) {
+        LargeObjectHeader* loh = (LargeObjectHeader *)((uintptr_t)ptr - sizeof(LargeObjectHeader));
+        MALLOC_ASSERT( loh->mallocUniqueID==theMallocUniqueID, ASSERT_TEXT );
+        copySize = loh->unalignedSize-((uintptr_t)ptr-(uintptr_t)loh->unalignedResult);
+        if (size <= copySize && (0==alignment || isAligned(ptr, alignment))) {
+            loh->objectSize = size;
+            return ptr;
+        } else {
+           copySize = loh->objectSize;
+           result = alignment ? allocateAligned(size, alignment) : scalable_malloc(size);
+        }
+    } else {
+        Block* block = (Block *)alignDown(ptr, blockSize);
+        MALLOC_ASSERT( block->mallocUniqueID==theMallocUniqueID, ASSERT_TEXT );
+        copySize = block->objectSize;
+        if (size <= copySize && (0==alignment || isAligned(ptr, alignment))) {
+            return ptr;
+        } else {
+            result = alignment ? allocateAligned(size, alignment) : scalable_malloc(size);
+        }
+    }
+    if (result) {
+        memcpy(result, ptr, copySize<size? copySize: size);
+        scalable_free(ptr);
+    }
+    return result;
+}
+
+/* A predicate checks if an object is properly placed inside its block */
+static inline bool isProperlyPlaced(const void *object, const Block *block)
+{
+    return 0 == ((uintptr_t)block + blockSize - (uintptr_t)object) % block->objectSize;
+}
+
+/* Finds the real object inside the block */
+static inline FreeObject *findAllocatedObject(const void *address, const Block *block)
+{
+    // calculate offset from the end of the block space
+    uintptr_t offset = (uintptr_t)block + blockSize - (uintptr_t)address;
+    MALLOC_ASSERT( offset<blockSize-sizeof(Block), ASSERT_TEXT );
+    // find offset difference from a multiple of allocation size
+    offset %= block->objectSize;
+    // and move the address down to where the real object starts.
+    return (FreeObject*)((uintptr_t)address - (offset? block->objectSize-offset: 0));
 }
 
 } // namespace Internal
@@ -1225,70 +1415,15 @@ inline void* set_errno_if_NULL(void* arg)
 using namespace ThreadingSubstrate;
 using namespace ThreadingSubstrate::Internal;
 
-//! Value indicating state of package initialization.
-/* 0 = initialization not started.
-   1 = initialization started but not finished.
-   2 = initialization finished.
-   In theory, we only need values 0 and 2.  But value 1 is nonetheless useful for
-   detecting errors in the double-check pattern. */
-static int mallocInitialized;   // implicitly initialized to 0
-static MallocMutex initAndShutMutex;
-
-extern "C" void mallocThreadShutdownNotification(void*);
-
-/*
- * Obviously this needs to be called before malloc is available.
- */
-/*  THIS IS DONE ON-DEMAND ON FIRST MALLOC, SO ASSUME MANUAL CALL TO IT IS NOT REQUIRED  */
-static void initMemoryManager()
-{
-    TRACEF("sizeof(Block) is %d (expected 128); sizeof(uintptr_t) is %d\n", sizeof(Block), sizeof(uintptr_t));
-    MALLOC_ASSERT( 2*alignedSize == sizeof(Block), ASSERT_TEXT );
-
-// Create keys for thread-local storage and for thread id
-// TODO: add error handling
-#if USE_WINTHREAD
-    TLS_pointer_key = TlsAlloc();
-    Tid_key = TlsAlloc();
-#else
-    int status = pthread_key_create( &TLS_pointer_key, mallocThreadShutdownNotification );
-    status = pthread_key_create( &Tid_key, NULL );
-#endif /* USE_WINTHREAD */
-#if 0    // no more necessary
-    lifoQueueInit(&freeBlockList);
-#endif
-    TRACEF("Asking for a mallocBigBlock\n");
-    if (!mallocBigBlock()) {
-        fprintf (stderr, "The memory manager cannot access sufficient memory to initialize; exiting \n");
-        exit(1);
-    }
-}
-
-//! Ensures that initMemoryManager() is called once and only once.
-/** Does not return until initMemoryManager() has been completed by a thread.
-    There is no need to call this routine if mallocInitialized==2 . */
-static void checkInitialization()
-{
-    MallocMutex::scoped_lock lock( initAndShutMutex );
-    if(mallocInitialized!=2) {
-        MALLOC_ASSERT(mallocInitialized==0, ASSERT_TEXT);
-        mallocInitialized = 1;
-        initMemoryManager();
-#ifdef  MALLOC_EXTRA_INITIALIZATION
-        MALLOC_EXTRA_INITIALIZATION;
-#endif /* MALLOC_EXTRA_INITIALIZATION */
-        MALLOC_ASSERT(mallocInitialized==1, ASSERT_TEXT);
-        mallocInitialized = 2;
-    }
-    MALLOC_ASSERT(mallocInitialized==2, ASSERT_TEXT); /* It can't be 0 or I would have initialized it */
-}
-
 /*
  * When a thread is shutting down this routine should be called to remove all the thread ids
  * from the malloc blocks and replace them with a NULL thread id.
  *
  */
+#if MALLOC_TRACE
 static unsigned int threadGoingDownCount = 0;
+#endif
+
 /*
  * for pthreads, the function is set as a callback in pthread_key_create for TLS bin.
  * it will be automatically called at thread exit with the key value as the argument.
@@ -1308,7 +1443,8 @@ extern "C" void mallocThreadShutdownNotification(void* arg)
         if ( mallocInitialized == 0 ) return;
     }
 
-    TRACEF("Thread id %d blocks return start %d\n", getThreadId(),  threadGoingDownCount++);
+    TRACEF(( "[ScalableMalloc trace] Thread id %d blocks return start %d\n",
+             getThreadId(),  threadGoingDownCount++ ));
 #ifdef USE_WINTHREAD
     tls = (Bin*)getThreadMallocTLS();
 #else
@@ -1346,20 +1482,12 @@ extern "C" void mallocThreadShutdownNotification(void* arg)
         setThreadMallocTLS(NULL);
     }
 
-#ifndef USE_WINTHREAD
-// on Windows,  all statistics will be flushed in mallocProcessShutdownNotification
-#if COLLECT_STATISTICS
-    STAT_print(getThreadId());
-#endif
-#endif
-
-    TRACEF("Thread id %d blocks return end\n", getThreadId());
+    TRACEF(( "[ScalableMalloc trace] Thread id %d blocks return end\n", getThreadId() ));
 }
 
 extern "C" void mallocProcessShutdownNotification(void)
 {
     // for now, this function is only necessary for dumping statistics
-    // and it should only be called on Windows via DLL_PROCESS_DETACH
 #if COLLECT_STATISTICS
     ThreadId nThreads = ThreadIdCount;
     for( int i=1; i<=nThreads && i<MAX_THREADS; ++i )
@@ -1375,17 +1503,18 @@ extern "C" void * scalable_malloc(size_t size)
     Block * mallocBlock;
     FreeObject *result;
 
-    if( !size ) size = sizeof(size_t);
+    if (!size) size = sizeof(size_t);
 
-    if (mallocInitialized!=2) {
-        /* This returns only after malloc is initialized */
-        checkInitialization();
-    }
+    /* This returns only after malloc is initialized */
+    checkInitialization();
+
     /*
      * Use Large Object Allocation
      */
     if (size >= minLargeObjectSize) {
-        return set_errno_if_NULL( mallocLargeObject(size) );
+        result = (FreeObject*)mallocLargeObject(size, blockSize);
+        if (!result) errno = ENOMEM;
+        return result;
     }
 
     /*
@@ -1411,8 +1540,8 @@ extern "C" void * scalable_malloc(size_t size)
      * else privatize publicly freed objects in some block and allocate from it
      */
     mallocBlock = getPublicFreeListBlock( bin );
-    if( mallocBlock ) {
-        if( emptyEnoughToUse(mallocBlock) ) {
+    if (mallocBlock) {
+        if (emptyEnoughToUse(mallocBlock)) {
             /* move the block to the front of the bin */
             outofTLSBin(bin, mallocBlock);
             pushTLSBin(bin, mallocBlock);
@@ -1422,7 +1551,7 @@ extern "C" void * scalable_malloc(size_t size)
             return result;
         }
         /* Else something strange happened, need to retry from the beginning; */
-        TRACEF("This isn't correct reasonable local block disappears --- ScalableMalloc\n");
+        TRACEF(( "[ScalableMalloc trace] Something is wrong: no objects in public free list; reentering.\n" ));
         return scalable_malloc(size);
     }
 
@@ -1452,13 +1581,13 @@ extern "C" void * scalable_malloc(size_t size)
             return result;
         }
         /* Else something strange happened, need to retry from the beginning; */
-        TRACEF("This isn't correct reasonable local block disappears --- ScalableMalloc\n");
+        TRACEF(( "[ScalableMalloc trace] Something is wrong: no objects in empty block; reentering.\n" ));
         return scalable_malloc(size);
     }
     /*
      * else nothing works so return NULL
      */
-    TRACEF("NULL Back; \n");
+    TRACEF(( "[ScalableMalloc trace] No memory found, returning NULL.\n" ));
     errno = ENOMEM;
     return NULL;
 }
@@ -1481,19 +1610,36 @@ extern "C" void scalable_free (void *object) {
         return;
     }
 
-    objectToFree = (FreeObject *)object;
-
     myTid = getThreadId();
 
-    block = (Block *)alignDown((uintptr_t)object, blockSize);/* mask low bits to get the block */
-    MALLOC_ASSERT (block->mallocUniqueID == tbbmallocUniqueID, ASSERT_TEXT);
-    MALLOC_ASSERT (block->allocatedCount, ASSERT_TEXT);
+    block = (Block *)alignDown(object, blockSize);/* mask low bits to get the block */
+    MALLOC_ASSERT( block->mallocUniqueID == theMallocUniqueID, ASSERT_TEXT );
+    MALLOC_ASSERT( block->allocatedCount, ASSERT_TEXT );
+
+    // Due to aligned allocations, a pointer passed to scalable_free
+    // might differ from the address of internally allocated object.
+    // Small objects however should always be fine.    
+    if (block->objectSize <= maxSegregatedObjectSize)
+        objectToFree = (FreeObject*)object;
+    // "Fitting size" allocations are suspicious if aligned higher than naturally
+    else {
+        if ( ! isAligned(object,2*fittingAlignment) )
+        // TODO: the above check is questionable - it gives false negatives in ~50% cases,
+        //       so might even be slower in average than unconditional use of findAllocatedObject.
+        // here it should be a "real" object
+            objectToFree = (FreeObject*)object;
+        else
+        // here object can be an aligned address, so applying additional checks
+            objectToFree = findAllocatedObject(object, block);
+        MALLOC_ASSERT( isAligned(objectToFree,fittingAlignment), ASSERT_TEXT );
+    }
+    MALLOC_ASSERT( isProperlyPlaced(objectToFree, block), ASSERT_TEXT );
 
     if (myTid == block->owner) {
-        ((FreeObject *)object)->next = block->freeList;
-        block->freeList = (FreeObject *) object;
+        objectToFree->next = block->freeList;
+        block->freeList = objectToFree;
         block->allocatedCount--;
-        MALLOC_ASSERT(block->allocatedCount < (blockSize-sizeof(Block))/block->objectSize, ASSERT_TEXT);
+        MALLOC_ASSERT( block->allocatedCount < (blockSize-sizeof(Block))/block->objectSize, ASSERT_TEXT );
 #if COLLECT_STATISTICS
         if (getActiveBlock(getAllocationBin(block->objectSize)) != block)
             STAT_increment(myTid, getIndex(block->objectSize), freeToInactiveBlock);
@@ -1512,6 +1658,25 @@ extern "C" void scalable_free (void *object) {
     }
 }
 
+/*
+ * A variant that provides additional memory safety, by checking whether the given address
+ * was obtained with this allocator, and if not redirecting to the provided alternative call.
+ */
+extern "C" void safer_scalable_free (void *object, void (*original_free)(void*)) 
+{
+    if (!object)
+        return;
+
+    // Check if the memory was allocated by scalable_malloc
+    uint64_t id = isLargeObject(object)?
+                    ((LargeObjectHeader*)((uintptr_t)object-sizeof(LargeObjectHeader)))->mallocUniqueID:
+                    ((Block *)alignDown(object, blockSize))->mallocUniqueID;
+    if (id==theMallocUniqueID)
+        scalable_free(object);
+    else if (original_free)
+        original_free(object);
+}
+
 /********* End the free code        *************/
 
 /********* Code for scalable_realloc       ***********/
@@ -1524,55 +1689,48 @@ extern "C" void scalable_free (void *object) {
  * NULL if the request cannot be satisfied, in which case *p is unchanged."
  *
  */
-extern "C" void* scalable_realloc(void* ptr, size_t sz)
+extern "C" void* scalable_realloc(void* ptr, size_t size)
 {
-    void *result;
-    Block* block;
-    size_t copySize;
-
-    if (ptr==NULL) {
-        return scalable_malloc(sz);
+    /* corner cases left out of reallocAligned to not deal with errno there */
+    if (!ptr) {
+        return scalable_malloc(size);
     }
-
-    if (sz == 0) {
+    if (!size) {
         scalable_free(ptr);
         return NULL;
     }
-    block = (Block *) alignDown((uintptr_t)ptr, blockSize); /* mask low bits to get the block */
-    MALLOC_ASSERT( block->mallocUniqueID==tbbmallocUniqueID, ASSERT_TEXT );
-
-    if (isLargeObject(ptr)) {
-        LargeObjectHeader* loh = (LargeObjectHeader*)block;
-        copySize = loh->unalignedSize-((uintptr_t)ptr-(uintptr_t)loh->unalignedResult);
-        if (sz <= copySize) {
-            loh->objectSize = sz;
-            return ptr;
-        }
-        else {
-           copySize = loh->objectSize;
-           result = scalable_malloc(sz);
-        }
-    } else {
-        copySize = block->objectSize;
-        if (sz <= copySize) {
-            return ptr;
-        } else {
-            result = scalable_malloc(sz);
-        }
-    }
-    if (copySize > sz) {
-        copySize = sz;
-    }
-
-    if (result) {
-        memcpy(result, ptr, copySize);
-        scalable_free(ptr);
-    } else {
-        errno = ENOMEM;
-    }
-    return result;
+    void* tmp = reallocAligned(ptr, size, 0);
+    if (!tmp) errno = ENOMEM;
+    return tmp;
 }
 
+/*
+ * A variant that provides additional memory safety, by checking whether the given address
+ * was obtained with this allocator, and if not redirecting to the provided alternative call.
+ */
+extern "C" void* safer_scalable_realloc (void* ptr, size_t sz, void* (*original_realloc)(void*,size_t)) 
+{
+    if (!ptr) {
+        return scalable_malloc(sz);
+    }
+    // Check if the memory was allocated by scalable_malloc
+    uint64_t id = isLargeObject(ptr)?
+                    ((LargeObjectHeader*)((uintptr_t)ptr-sizeof(LargeObjectHeader)))->mallocUniqueID:
+                    ((Block *)alignDown(ptr, blockSize))->mallocUniqueID;
+    if (id==theMallocUniqueID) {
+        if (!sz) {
+            scalable_free(ptr);
+            return NULL;
+        }
+        void* tmp = reallocAligned(ptr, sz, 0);
+        if (!tmp) errno = ENOMEM;
+        return tmp;
+    }
+    else if (original_realloc)
+        return original_realloc(ptr,sz);
+    else
+        return NULL;
+}
 
 /********* End code for scalable_realloc   ***********/
 
@@ -1588,15 +1746,71 @@ extern "C" void* scalable_realloc(void* ptr, size_t sz)
 
 extern "C" void * scalable_calloc(size_t nobj, size_t size)
 {
-    void *result;
-    size_t arraySize;
-    arraySize = nobj * size;
-    result = scalable_malloc(arraySize);
-    if (result) {
+    size_t arraySize = nobj * size;
+    void* result = scalable_malloc(arraySize);
+    if (result)
         memset(result, 0, arraySize);
-    }
     return result;
 }
 
 /********* End code for scalable_calloc   ***********/
 
+/********* Code for aligned allocation API **********/
+
+extern "C" int scalable_posix_memalign(void **memptr, size_t alignment, size_t size)
+{
+    if ( !isPowerOfTwoMultiple(alignment, sizeof(void*)) )
+        return EINVAL;
+    void *result = allocateAligned(size, alignment);
+    if (!result)
+        return ENOMEM;
+    *memptr = result;
+    return 0;
+}
+
+extern "C" void * scalable_aligned_malloc(size_t size, size_t alignment)
+{
+    if (!isPowerOfTwo(alignment) || 0==size) {
+        errno = EINVAL;
+        return NULL;
+    }
+    void* tmp = allocateAligned(size, alignment);
+    if (!tmp) errno = ENOMEM;
+    return tmp;
+}
+
+extern "C" void * scalable_aligned_realloc(void *ptr, size_t size, size_t alignment)
+{
+    /* corner cases left out of reallocAligned to not deal with errno there */
+    if (!isPowerOfTwo(alignment)) {
+        errno = EINVAL;
+        return NULL;
+    }
+    if (!ptr) {
+        return allocateAligned(size, alignment);
+    }
+    // Check if the memory was allocated by scalable_malloc
+    uint64_t id = isLargeObject(ptr)?
+                    ((LargeObjectHeader*)((uintptr_t)ptr-sizeof(LargeObjectHeader)))->mallocUniqueID:
+                    ((Block *)alignDown(ptr, blockSize))->mallocUniqueID;
+    if (!size) {
+        if (id==theMallocUniqueID)
+            scalable_free(ptr);
+        return NULL;
+    }
+    if (id!=theMallocUniqueID)
+        return NULL;
+
+    void* tmp = reallocAligned(ptr, size, alignment);
+    if (!tmp) errno = ENOMEM;
+    return tmp;
+}
+
+/********* End code for scalable_aligned_realloc   ***********/
+
+extern "C" void scalable_aligned_free(void *ptr)
+{
+    scalable_free(ptr);
+}
+
+/********* end code for aligned allocation API **********/

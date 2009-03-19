@@ -1,5 +1,5 @@
 /*
-    Copyright 2005-2008 Intel Corporation.  All Rights Reserved.
+    Copyright 2005-2009 Intel Corporation.  All Rights Reserved.
 
     This file is part of Threading Building Blocks.
 
@@ -42,13 +42,16 @@ static inline bool CAS(volatile uintptr &addr, uintptr newv, uintptr oldv) {
 //! Signal that write lock is released
 void spin_rw_mutex::internal_itt_releasing(spin_rw_mutex *mutex) {
     ITT_NOTIFY(sync_releasing, mutex);
+#if !DO_ITT_NOTIFY
+    (void)mutex;
+#endif
 }
 
 bool spin_rw_mutex::internal_acquire_writer(spin_rw_mutex *mutex)
 {
     ITT_NOTIFY(sync_prepare, mutex);
     ExponentialBackoff backoff;
-    while(true) {
+    for(;;) {
         state_t s = mutex->state;
         if( !(s & BUSY) ) { // no readers, no writers
             if( CAS(mutex->state, WRITER, s) )
@@ -75,7 +78,7 @@ void spin_rw_mutex::internal_release_writer(spin_rw_mutex *mutex) {
 void spin_rw_mutex::internal_acquire_reader(spin_rw_mutex *mutex) {
     ITT_NOTIFY(sync_prepare, mutex);
     ExponentialBackoff backoff;
-    while(true) {
+    for(;;) {
         state_t s = mutex->state;
         if( !(s & (WRITER|WRITER_PENDING)) ) { // no writer or write requests
             if( CAS(mutex->state, s+ONE_READER, s) )

@@ -1,5 +1,5 @@
 /*
-    Copyright 2005-2008 Intel Corporation.  All Rights Reserved.
+    Copyright 2005-2009 Intel Corporation.  All Rights Reserved.
 
     This file is part of Threading Building Blocks.
 
@@ -26,7 +26,8 @@
     the GNU General Public License.
 */
 
-#include "harness_assert.h"
+#include "tbb/parallel_sort.h"
+
 #include "harness.h"
 #include <math.h>
 #include <algorithm>
@@ -37,17 +38,15 @@
 #include <exception>
 
 #include "tbb/task_scheduler_init.h"
-#include "tbb/parallel_sort.h"
 #include "tbb/concurrent_vector.h"
 
-/** Has tighly controlled interface so that we can verify
+/** Has tightly controlled interface so that we can verify
     that parallel_sort uses only the required interface. */
 class Minimal {
     int val;
 public:
     Minimal() {}
     void set_val(int i) { val = i; }
-    int get_val(int i) { return val; }
     static bool CompareWith (const Minimal &a, const Minimal &b) { 
         return (a.val < b.val);
     }
@@ -402,8 +401,8 @@ bool parallel_sortTest(size_t n, tbb::concurrent_vector<Minimal>::iterator iter,
 /*! Minimal, float and string types are used.  All interfaces to parallel_sort that are usable
     by each type are tested.
 */
-void Flog( int nthread ) {
-    // For eacg type create: 
+void Flog() {
+    // For each type create: 
     // the list to be sorted by parallel_sort (array) 
     // the list to be sort by STL sort (array_2)
     // and a less function object
@@ -414,18 +413,20 @@ void Flog( int nthread ) {
     Minimal *minimal_array_2 = new Minimal[N];
     MinimalCompare minimal_less;
 
+#if !__TBB_FLOATING_POINT_BROKEN
     float *float_array = new float[N];
     float *float_array_2 = new float[N];
     std::less<float> float_less;
-
-    std::string *string_array = new std::string[N];
-    std::string *string_array_2 = new std::string[N];
-    std::less<std::string> string_less;
 
     tbb::concurrent_vector<float> float_cv1;
     tbb::concurrent_vector<float> float_cv2;
     float_cv1.grow_to_at_least(N);
     float_cv2.grow_to_at_least(N);
+#endif /* !__TBB_FLOATING_POINT_BROKEN */
+
+    std::string *string_array = new std::string[N];
+    std::string *string_array_2 = new std::string[N];
+    std::less<std::string> string_less;
 
     tbb::concurrent_vector<Minimal> minimal_cv1;
     tbb::concurrent_vector<Minimal> minimal_cv2;
@@ -442,6 +443,7 @@ void Flog( int nthread ) {
     parallel_sortTest(9999, minimal_array, minimal_array_2, &minimal_less);
     parallel_sortTest(50000, minimal_array, minimal_array_2, &minimal_less);
 
+#if !__TBB_FLOATING_POINT_BROKEN
     current_type = "float (no less)";
     parallel_sortTest(0, float_array, float_array_2, static_cast<std::less<float> *>(NULL)); 
     parallel_sortTest(1, float_array, float_array_2, static_cast<std::less<float> *>(NULL)); 
@@ -455,6 +457,21 @@ void Flog( int nthread ) {
     parallel_sortTest(10, float_array, float_array_2, &float_less); 
     parallel_sortTest(9999, float_array, float_array_2, &float_less); 
     parallel_sortTest(50000, float_array, float_array_2, &float_less); 
+
+    current_type = "concurrent_vector<float> (no less)";
+    parallel_sortTest(0, float_cv1.begin(), float_cv2.begin(), static_cast<std::less<float> *>(NULL));
+    parallel_sortTest(1, float_cv1.begin(), float_cv2.begin(), static_cast<std::less<float> *>(NULL));
+    parallel_sortTest(10, float_cv1.begin(), float_cv2.begin(), static_cast<std::less<float> *>(NULL));
+    parallel_sortTest(9999, float_cv1.begin(), float_cv2.begin(), static_cast<std::less<float> *>(NULL));
+    parallel_sortTest(50000, float_cv1.begin(), float_cv2.begin(), static_cast<std::less<float> *>(NULL));
+
+    current_type = "concurrent_vector<float> (less)";
+    parallel_sortTest(0, float_cv1.begin(), float_cv2.begin(), &float_less);
+    parallel_sortTest(1, float_cv1.begin(), float_cv2.begin(), &float_less);
+    parallel_sortTest(10, float_cv1.begin(), float_cv2.begin(), &float_less);
+    parallel_sortTest(9999, float_cv1.begin(), float_cv2.begin(), &float_less);
+    parallel_sortTest(50000, float_cv1.begin(), float_cv2.begin(), &float_less);
+#endif /* !__TBB_FLOATING_POINT_BROKEN */
 
     current_type = "string (no less)";
     parallel_sortTest(0, string_array, string_array_2, static_cast<std::less<std::string> *>(NULL));
@@ -470,20 +487,6 @@ void Flog( int nthread ) {
     parallel_sortTest(9999, string_array, string_array_2, &string_less);
     parallel_sortTest(50000, string_array, string_array_2, &string_less);
 
-    current_type = "concurrent_vector<float> (no less)";
-    parallel_sortTest(0, float_cv1.begin(), float_cv2.begin(), static_cast<std::less<float> *>(NULL));
-    parallel_sortTest(1, float_cv1.begin(), float_cv2.begin(), static_cast<std::less<float> *>(NULL));
-    parallel_sortTest(10, float_cv1.begin(), float_cv2.begin(), static_cast<std::less<float> *>(NULL));
-    parallel_sortTest(9999, float_cv1.begin(), float_cv2.begin(), static_cast<std::less<float> *>(NULL));
-    parallel_sortTest(50000, float_cv1.begin(), float_cv2.begin(), static_cast<std::less<float> *>(NULL));
-
-    current_type = "concurrent_vector<float> (less)";
-    parallel_sortTest(0, float_cv1.begin(), float_cv2.begin(), &float_less);
-    parallel_sortTest(1, float_cv1.begin(), float_cv2.begin(), &float_less);
-    parallel_sortTest(10, float_cv1.begin(), float_cv2.begin(), &float_less);
-    parallel_sortTest(9999, float_cv1.begin(), float_cv2.begin(), &float_less);
-    parallel_sortTest(50000, float_cv1.begin(), float_cv2.begin(), &float_less);
-
     current_type = "concurrent_vector<Minimal> (less)";
     parallel_sortTest(0, minimal_cv1.begin(), minimal_cv2.begin(), &minimal_less);
     parallel_sortTest(1, minimal_cv1.begin(), minimal_cv2.begin(), &minimal_less);
@@ -494,8 +497,10 @@ void Flog( int nthread ) {
     delete [] minimal_array;
     delete [] minimal_array_2;
 
+#if !__TBB_FLOATING_POINT_BROKEN
     delete [] float_array;
     delete [] float_array_2;
+#endif /* !__TBB_FLOATING_POINT_BROKEN */
 
     delete [] string_array;
     delete [] string_array_2;
@@ -515,7 +520,7 @@ int main( int argc, char* argv[] ) {
         if( p>0 ) {
             tbb::task_scheduler_init init( p );
             current_p = p;
-            Flog(p);
+            Flog();
 
             // Test that all workers sleep when no work
             TestCPUUserTime(p);

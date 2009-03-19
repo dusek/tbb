@@ -1,5 +1,5 @@
 /*
-    Copyright 2005-2008 Intel Corporation.  All Rights Reserved.
+    Copyright 2005-2009 Intel Corporation.  All Rights Reserved.
 
     This file is part of Threading Building Blocks.
 
@@ -113,6 +113,12 @@ protected:
 
     //! throw an exception
     void __TBB_EXPORTED_METHOD internal_throw_exception() const;
+
+    //! copy internal representation
+    void __TBB_EXPORTED_METHOD assign( const concurrent_queue_base_v3& src ) ;
+
+private:
+    virtual void copy_page_item( page& dst, size_t dindex, const page& src, size_t sindex ) = 0;
 };
 
 typedef concurrent_queue_base_v3 concurrent_queue_base ;
@@ -226,7 +232,7 @@ bool operator!=( const concurrent_queue_iterator<C,T>& i, const concurrent_queue
 
 //! A high-performance thread-safe queue.
 /** Multiple threads may each push and pop concurrently.
-    Assignment and copy construction are not allowed.
+    Assignment construction is not allowed.
     @ingroup containers */
 template<typename T, class A>
 class concurrent_queue: public internal::concurrent_queue_base_v3 {
@@ -237,7 +243,7 @@ class concurrent_queue: public internal::concurrent_queue_base_v3 {
     page_allocator_type my_allocator;
 
     //! Class used to ensure exception-safety of method "pop" 
-    class destroyer {
+    class destroyer: internal::no_copy {
         T& my_value;
     public:
         destroyer( T& value ) : my_value(value) {}
@@ -253,6 +259,10 @@ class concurrent_queue: public internal::concurrent_queue_base_v3 {
         new( &get_ref(dst,index) ) T(*static_cast<const T*>(src)); 
     }
 
+    /*override*/ virtual void copy_page_item( page& dst, size_t dindex, const page& src, size_t sindex ) {
+        new( &get_ref(dst,dindex) ) T( static_cast<const T*>(static_cast<const void*>(&src+1))[sindex] );
+    }
+
     /*override*/ virtual void assign_and_destroy_item( void* dst, page& src, size_t index ) {
         T& from = get_ref(src,index);
         destroyer d(from);
@@ -265,7 +275,7 @@ class concurrent_queue: public internal::concurrent_queue_base_v3 {
         if( !p ) internal_throw_exception(); 
         return p;
     }
-    
+
     /*override*/ virtual void deallocate_page( page *p ) {
         size_t n = sizeof(page) + items_per_page*item_size;
         my_allocator.deallocate( reinterpret_cast<char*>(p), n );
@@ -293,9 +303,8 @@ public:
     typedef std::ptrdiff_t difference_type;
 
     //! Construct empty queue
-    concurrent_queue(const allocator_type  &a = allocator_type()) : 
-        concurrent_queue_base_v3( sizeof(T) )
-            , my_allocator( a )
+    explicit concurrent_queue(const allocator_type  &a = allocator_type()) : 
+        concurrent_queue_base_v3( sizeof(T) ), my_allocator( a )
     {
     }
 
@@ -365,6 +374,21 @@ public:
     const_iterator begin() const {return const_iterator(*this);}
     const_iterator end() const {return const_iterator();}
     
+    //! Copy constructor
+    concurrent_queue( const concurrent_queue& src, const allocator_type &a = allocator_type()) : 
+        concurrent_queue_base_v3( sizeof(T) ), my_allocator( a )
+    {
+        assign( src );
+    }
+
+    //! [begin,end) constructor
+    template<typename InputIterator>
+    concurrent_queue( InputIterator begin, InputIterator end, const allocator_type &a = allocator_type()) :
+        concurrent_queue_base_v3( sizeof(T) ), my_allocator( a )
+    {
+        for( ; begin != end; ++begin )
+            internal_push_if_not_full(&*begin);
+    }
 }; 
 
 template<typename T, class A>

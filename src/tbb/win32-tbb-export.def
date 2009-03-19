@@ -1,4 +1,4 @@
-; Copyright 2005-2008 Intel Corporation.  All Rights Reserved.
+; Copyright 2005-2009 Intel Corporation.  All Rights Reserved.
 ;
 ; This file is part of Threading Building Blocks.
 ;
@@ -23,6 +23,8 @@
 ; the GNU General Public License.  This exception does not however
 ; invalidate any other reasons why the executable file might be covered by
 ; the GNU General Public License.
+
+#include "tbb/tbb_config.h"
 
 EXPORTS
 
@@ -91,10 +93,12 @@ __TBB_machine_trylockbyte
 ?handle_perror@internal@tbb@@YAXHPBD@Z
 ?set_assertion_handler@tbb@@YAP6AXPBDH00@ZP6AX0H00@Z@Z
 ?runtime_warning@internal@tbb@@YAXPBDZZ
+TBB_runtime_interface_version
 
 ; itt_notify.cpp
 ?itt_load_pointer_with_acquire_v3@internal@tbb@@YAPAXPBX@Z
 ?itt_store_pointer_with_release_v3@internal@tbb@@YAXPAX0@Z
+?itt_set_sync_name_v3@internal@tbb@@YAXPAXPB_W@Z
 ?itt_load_pointer_v3@internal@tbb@@YAPAXPBX@Z
 
 ; pipeline.cpp
@@ -106,8 +110,10 @@ __TBB_machine_trylockbyte
 ?clear@pipeline@tbb@@QAEXXZ
 ?inject_token@pipeline@tbb@@AAEXAAVtask@2@@Z
 ?run@pipeline@tbb@@QAEXI@Z
+?run@pipeline@tbb@@QAEXIAAVtask_group_context@2@@Z
 
 ; queuing_rw_mutex.cpp
+?internal_construct@queuing_rw_mutex@tbb@@QAEXXZ
 ?acquire@scoped_lock@queuing_rw_mutex@tbb@@QAEXAAV23@_N@Z
 ?downgrade_to_reader@scoped_lock@queuing_rw_mutex@tbb@@QAE_NXZ
 ?release@scoped_lock@queuing_rw_mutex@tbb@@QAEXXZ
@@ -128,6 +134,7 @@ __TBB_machine_trylockbyte
 #endif
 
 ; spin_rw_mutex v3
+?internal_construct@spin_rw_mutex_v3@tbb@@AAEXXZ
 ?internal_upgrade@spin_rw_mutex_v3@tbb@@AAE_NXZ
 ?internal_downgrade@spin_rw_mutex_v3@tbb@@AAEXXZ
 ?internal_acquire_reader@spin_rw_mutex_v3@tbb@@AAEXXZ
@@ -138,6 +145,7 @@ __TBB_machine_trylockbyte
 ?internal_try_acquire_writer@spin_rw_mutex_v3@tbb@@AAE_NXZ
 
 ; spin_mutex.cpp
+?internal_construct@spin_mutex@tbb@@QAEXXZ
 ?internal_acquire@scoped_lock@spin_mutex@tbb@@AAEXAAV23@@Z
 ?internal_release@scoped_lock@spin_mutex@tbb@@AAEXXZ
 ?internal_try_acquire@scoped_lock@spin_mutex@tbb@@AAE_NAAV23@@Z
@@ -157,6 +165,7 @@ __TBB_machine_trylockbyte
 ?internal_destroy@recursive_mutex@tbb@@AAEXXZ
 
 ; queuing_mutex.cpp
+?internal_construct@queuing_mutex@tbb@@QAEXXZ
 ?acquire@scoped_lock@queuing_mutex@tbb@@QAEXAAV23@@Z
 ?release@scoped_lock@queuing_mutex@tbb@@QAEXXZ
 ?try_acquire@scoped_lock@queuing_mutex@tbb@@QAE_NAAV23@@Z
@@ -195,6 +204,7 @@ __TBB_machine_trylockbyte
 ?internal_set_capacity@concurrent_queue_base_v3@internal@tbb@@IAEXHI@Z
 ?internal_finish_clear@concurrent_queue_base_v3@internal@tbb@@IAEXXZ
 ?internal_throw_exception@concurrent_queue_base_v3@internal@tbb@@IBEXXZ
+?assign@concurrent_queue_base_v3@internal@tbb@@IAEXABV123@@Z
 
 #if !TBB_NO_LEGACY
 ; concurrent_vector.cpp v2

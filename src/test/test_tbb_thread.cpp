@@ -1,5 +1,5 @@
 /*
-    Copyright 2005-2008 Intel Corporation.  All Rights Reserved.
+    Copyright 2005-2009 Intel Corporation.  All Rights Reserved.
 
     This file is part of Threading Building Blocks.
 
@@ -32,7 +32,6 @@
 
 static const int THRDS = 3;
 static const int THRDS_DETACH = 2;
-static tbb::atomic<int> ready;
 static tbb::atomic<int> sum;
 static tbb::atomic<int> BaseCount;
 static tbb::tbb_thread::id real_ids[THRDS+THRDS_DETACH];
@@ -64,26 +63,24 @@ public:
 };
 
 
+#include "harness_barrier.h"
+
 class ThreadFunc: Base {
     ThreadFunc() {}
 
-    void init() {
-        ++ready;
-        while (ready != THRDS)
-            tbb::this_tbb_thread::yield();
-    }
+    static Harness::SpinBarrier init_barrier;
 
     friend void RunTests();
 public:
     void operator()(){
         real_ids[0] = tbb::this_tbb_thread::get_id();
-        init();
+        init_barrier.wait();
         
         sum.fetch_and_add(1);
     }
     void operator()(int num){
         real_ids[num] = tbb::this_tbb_thread::get_id();
-        init();
+        init_barrier.wait();
 
         sum.fetch_and_add(num);
     }
@@ -97,7 +94,7 @@ public:
         ASSERT( ( WAIT - (t1-t0).seconds() ) < 1e-10 
                 || (t1-t0).seconds() > WAIT, "Should sleep enough.");
 
-        init();
+        init_barrier.wait();
 
         sum.fetch_and_add(num);
         sum.fetch_and_add(dx.value);
@@ -106,6 +103,8 @@ public:
         tbb::this_tbb_thread::sleep( tbb::tick_count::interval_t(d.value*1.) );
     }
 };
+
+Harness::SpinBarrier ThreadFunc::init_barrier(THRDS);
 
 void CheckRelations( const tbb::tbb_thread::id ids[], int n, bool duplicates_allowed ) {
     for( int i=0; i<n; ++i ) {

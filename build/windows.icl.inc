@@ -1,4 +1,4 @@
-# Copyright 2005-2008 Intel Corporation.  All Rights Reserved.
+# Copyright 2005-2009 Intel Corporation.  All Rights Reserved.
 #
 # This file is part of Threading Building Blocks.
 #
@@ -48,15 +48,14 @@ MS_CRT_KEY = /MD$(if $(findstring debug,$(cfg)),d)
 EH_FLAGS = /EHsc /GR
 
 ifeq ($(cfg), release)
-    CPLUS_FLAGS = $(MS_CRT_KEY) /O2 /Zi $(EH_FLAGS) /Zc:forScope
+    CPLUS_FLAGS = $(MS_CRT_KEY) /O2 /Zi $(EH_FLAGS) /Zc:forScope /Zc:wchar_t
     ASM_FLAGS =
 ifeq (ia32,$(arch))
     CPLUS_FLAGS += /Oy
 endif
 endif
 ifeq ($(cfg), debug)
-    CPLUS_FLAGS = $(MS_CRT_KEY) /Od /Ob0 /Zi $(EH_FLAGS) /Zc:forScope \
-                      /DTBB_USE_DEBUG
+    CPLUS_FLAGS = $(MS_CRT_KEY) /Od /Ob0 /Zi $(EH_FLAGS) /Zc:forScope /Zc:wchar_t /DTBB_USE_DEBUG
     LINK_FLAGS += libmmds.lib /NODEFAULTLIB:libmmdd.lib
     ASM_FLAGS = /DUSE_FRAME_POINTER
 endif
@@ -86,7 +85,12 @@ endif
 OPENMP_FLAG = /Qopenmp
 CPLUS_FLAGS += /DUSE_WINTHREAD /D_CRT_SECURE_NO_DEPRECATE \
                /D_WIN32_WINNT=$(_WIN32_WINNT)
-C_FLAGS = $(CPLUS_FLAGS) /TC
+
+ifeq ($(runtime),vc8)
+        CPLUS_FLAGS += /D_USE_RTM_VERSION
+endif
+
+C_FLAGS = $(CPLUS_FLAGS)
 
 VCVERSION:=$(runtime)
 VCCOMPAT_FLAG := $(if $(findstring vc7.1, $(VCVERSION)),/Qvc7.1)

@@ -1,5 +1,5 @@
 /*
-    Copyright 2005-2008 Intel Corporation.  All Rights Reserved.
+    Copyright 2005-2009 Intel Corporation.  All Rights Reserved.
 
     This file is part of Threading Building Blocks.
 
@@ -30,13 +30,10 @@
 #error Do not include this file directly; include tbb_machine.h instead
 #endif
 
-#define __TBB_WORDSIZE 8
-#define __TBB_BIG_ENDIAN 1
-
 #include <stdint.h>
 #include <unistd.h>
 
-#include <sched.h>
+#include <sched.h> // sched_yield
 
 inline int32_t __TBB_machine_cmpswp4 (volatile void *ptr, int32_t value, int32_t comparand )
 {
@@ -71,9 +68,13 @@ inline int64_t __TBB_machine_cmpswp8 (volatile void *ptr, int64_t value, int64_t
     return result;
 }
 
+#define __TBB_BIG_ENDIAN 1
+
 #if defined(powerpc64) || defined(__powerpc64__) || defined(__ppc64__)
+#define __TBB_WORDSIZE 8
 #define __TBB_CompareAndSwapW(P,V,C) __TBB_machine_cmpswp8(P,V,C)
 #else
+#define __TBB_WORDSIZE 4
 #define __TBB_CompareAndSwapW(P,V,C) __TBB_machine_cmpswp4(P,V,C)
 #endif
 

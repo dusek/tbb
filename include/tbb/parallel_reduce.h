@@ -1,5 +1,5 @@
 /*
-    Copyright 2005-2008 Intel Corporation.  All Rights Reserved.
+    Copyright 2005-2009 Intel Corporation.  All Rights Reserved.
 
     This file is part of Threading Building Blocks.
 
@@ -115,7 +115,7 @@ namespace internal {
         }
         //! Process a steal.
         /** Affinity is never set, so if this method is called, it must arise because this is stolen. */
-        /*override*/ void note_affinity( affinity_id id ) {
+        /*override*/ void note_affinity( affinity_id /*id*/ ) {
             finish_type* p = static_cast<finish_type*>(parent() );
             Body* body = new( p->zombie_space.begin() ) Body(*my_body,split());
             p->has_right_zombie = true;

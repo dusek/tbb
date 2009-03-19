@@ -1,5 +1,5 @@
 /*
-    Copyright 2005-2008 Intel Corporation.  All Rights Reserved.
+    Copyright 2005-2009 Intel Corporation.  All Rights Reserved.
 
     This file is part of Threading Building Blocks.
 
@@ -54,10 +54,10 @@ public:
     task_scheduler_observer_v3() : my_proxy(NULL) {my_busy_count=0;}
 
     //! Called by thread before first steal since observation became enabled
-    virtual void on_scheduler_entry( bool is_worker ) {} 
+    virtual void on_scheduler_entry( bool /*is_worker*/ ) {} 
 
     //! Called by thread when it no longer takes part in task stealing.
-    virtual void on_scheduler_exit( bool is_worker ) {}
+    virtual void on_scheduler_exit( bool /*is_worker*/ ) {}
 
     //! Destructor
     virtual ~task_scheduler_observer_v3() {observe(false);}

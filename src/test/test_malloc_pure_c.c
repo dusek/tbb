@@ -1,5 +1,5 @@
 /*
-    Copyright 2005-2008 Intel Corporation.  All Rights Reserved.
+    Copyright 2005-2009 Intel Corporation.  All Rights Reserved.
 
     This file is part of Threading Building Blocks.
 
@@ -74,6 +74,7 @@ int main(void)
         p1 = scalable_realloc(p2, i);
         p2 = scalable_malloc(i);
     }
+    scalable_free(p1);
     scalable_free(p2);
     printf("done\n");
     return 0;

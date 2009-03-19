@@ -1,5 +1,5 @@
 /*
-    Copyright 2005-2008 Intel Corporation.  All Rights Reserved.
+    Copyright 2005-2009 Intel Corporation.  All Rights Reserved.
 
     This file is part of Threading Building Blocks.
 
@@ -59,6 +59,9 @@ public:
     //! Number of bytes appended to buffer.
     size_t size() const {return my_end-begin();}
 };
+
+static const char* InputFileName = "input.txt";
+static const char* OutputFileName = "output.txt";
 
 class MyInputFilter: public tbb::filter {
 public:
@@ -133,13 +136,15 @@ MyOutputFilter::MyOutputFilter( FILE* output_file ) :
 
 void* MyOutputFilter::operator()( void* item ) {
     MyBuffer& b = *static_cast<MyBuffer*>(item);
-    fwrite( b.begin(), 1, b.size(), my_output_file );
+    int n = fwrite( b.begin(), 1, b.size(), my_output_file );
+    if( n<=0 ) {
+        fprintf(stderr,"Can't write into %s file\n", OutputFileName);
+        exit(1);
+    }
     return NULL;
 }
 
 static int NThread = tbb::task_scheduler_init::automatic;
-static const char* InputFileName = "input.txt";
-static const char* OutputFileName = "output.txt";
 static bool is_number_of_threads_set = false;
 
 void Usage()

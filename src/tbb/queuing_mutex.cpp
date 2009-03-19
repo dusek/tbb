@@ -1,5 +1,5 @@
 /*
-    Copyright 2005-2008 Intel Corporation.  All Rights Reserved.
+    Copyright 2005-2009 Intel Corporation.  All Rights Reserved.
 
     This file is part of Threading Building Blocks.
 
@@ -48,11 +48,11 @@ void queuing_mutex::scoped_lock::acquire( queuing_mutex& m )
     next  = NULL;
     going = 0;
 
-    ITT_NOTIFY(sync_prepare, mutex);
     // The fetch_and_store must have release semantics, because we are
     // "sending" the fields initialized above to other processors.
     scoped_lock* pred = m.q_tail.fetch_and_store<tbb::release>(this);
     if( pred ) {
+        ITT_NOTIFY(sync_prepare, mutex);
         __TBB_ASSERT( !pred->next, "the predecessor has another successor!");
         pred->next = this;
         SpinwaitWhileEq( going, 0ul );
@@ -108,6 +108,10 @@ void queuing_mutex::scoped_lock::release( )
     __TBB_store_with_release(next->going, 1);
 done:
     initialize();
+}
+
+void queuing_mutex::internal_construct() {
+    ITT_SYNC_CREATE(this, _T("tbb::queuing_mutex"), _T(""));
 }
 
 } // namespace tbb

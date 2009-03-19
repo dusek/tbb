@@ -1,5 +1,5 @@
 /*
-    Copyright 2005-2008 Intel Corporation.  All Rights Reserved.
+    Copyright 2005-2009 Intel Corporation.  All Rights Reserved.
 
     This file is part of Threading Building Blocks.
 
@@ -88,6 +88,9 @@ extern "C" {
     void __TBB_machine_pause(int32_t delay);
     bool __TBB_machine_trylockbyte( volatile unsigned char &ptr );
     int64_t __TBB_machine_lockbyte( volatile unsigned char &ptr );
+
+    //! Retrieves the current RSE backing store pointer. IA64 specific.
+    void* __TBB_get_bsp();
 }
 
 #define __TBB_CompareAndSwap1(P,V,C) __TBB_machine_cmpswp1__TBB_full_fence(P,V,C)

@@ -1,5 +1,5 @@
 /*
-    Copyright 2005-2008 Intel Corporation.  All Rights Reserved.
+    Copyright 2005-2009 Intel Corporation.  All Rights Reserved.
 
     This file is part of Threading Building Blocks.
 
@@ -73,6 +73,7 @@ struct AbuseOneTask {
         TRY_BAD_EXPR(AbusedTask->recycle_as_safe_continuation(), "execute" );
         TRY_BAD_EXPR(AbusedTask->recycle_to_reexecute(), "execute" );
 
+#if !__TBB_TASK_DEQUE
         // Check correct use of depth parameter
         tbb::task::depth_type depth = AbusedTask->depth();
         ASSERT( depth==0, NULL );
@@ -87,6 +88,7 @@ struct AbuseOneTask {
         // Try abusing the depth parameter
         TRY_BAD_EXPR(AbusedTask->set_depth(-1),"negative");
         TRY_BAD_EXPR(AbusedTask->add_to_depth(-1),"negative");
+#endif /* !__TBB_TASK_DEQUE */
 
         ++AbuseOneTaskRan;
     }

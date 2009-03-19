@@ -1,5 +1,5 @@
 /*
-    Copyright 2005-2008 Intel Corporation.  All Rights Reserved.
+    Copyright 2005-2009 Intel Corporation.  All Rights Reserved.
 
     This file is part of Threading Building Blocks.
 
@@ -36,7 +36,7 @@
 #if defined(_MSC_VER) && defined(_Wp64)
     // Workaround for overzealous compiler warnings in /Wp64 mode
     #pragma warning (disable: 4267)
-#endif /* _MSC_VER && _Wp64 */
+#endif
 
 using namespace std;
 
@@ -110,8 +110,9 @@ public:
                 publish_segment(s[k], __TBB_BAD_ALLOC); // and assign __TBB_BAD_ALLOC here
                 throw bad_last_alloc(); // throw custom exception
             }
-            publish_segment(s[k], static_cast<void*>(
-                                static_cast<char*>(array0) + segment_base(k)*element_size ) );
+            publish_segment( s[k],
+                    static_cast<void*>( static_cast<char*>(array0) + segment_base(k)*element_size )
+            );
         } else {
             try {
                 publish_segment(v.my_segment[k], allocate_segment(v, m));
@@ -340,10 +341,9 @@ concurrent_vector_base_v3::segment_index_t concurrent_vector_base_v3::internal_c
 void *concurrent_vector_base_v3::internal_compact( size_type element_size, void *table, internal_array_op1 destroy, internal_array_op2 copy )
 {
     const size_type my_size = my_early_size;
-    if( !my_size ) return NULL;
-    const segment_index_t k_end = helper::find_segment_end(*this);
-    const segment_index_t k_stop = segment_index_of(my_size-1) + 1;
-    const segment_index_t first_block = my_first_block; // getting values from atomics
+    const segment_index_t k_end = helper::find_segment_end(*this); // allocated segments
+    const segment_index_t k_stop = my_size? segment_index_of(my_size-1) + 1 : 0; // number of segments to store existing items: 0=>0; 1,2=>1; 3,4=>2; [5-8]=>3;..
+    const segment_index_t first_block = my_first_block; // number of merged segments, getting values from atomics
 
     segment_index_t k = first_block;
     if(k_stop < first_block)
@@ -357,7 +357,7 @@ void *concurrent_vector_base_v3::internal_compact( size_type element_size, void 
     internal_segments_table &old = *static_cast<internal_segments_table*>( table );
     memset(&old, 0, sizeof(old));
 
-    if ( k != first_block ) // first segment optimization
+    if ( k != first_block && k ) // first segment optimization
     {
         // exception can occur here
         void *seg = old.table[0] = helper::allocate_segment( *this, segment_size(k) );
@@ -391,8 +391,10 @@ void *concurrent_vector_base_v3::internal_compact( size_type element_size, void 
     }
     // free unnecessary segments allocated by reserve() call
     if ( k_stop < k_end ) {
+        old.first_block = first_block;
         memcpy(old.table+k_stop, segment_table+k_stop, (k_end-k_stop) * sizeof(segment_t));
         memset(segment_table+k_stop, 0, (k_end-k_stop) * sizeof(segment_t));
+        if( !k ) my_first_block = 0;
     }
     return table;
 }

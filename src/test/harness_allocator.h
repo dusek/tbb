@@ -1,5 +1,5 @@
 /*
-    Copyright 2005-2008 Intel Corporation.  All Rights Reserved.
+    Copyright 2005-2009 Intel Corporation.  All Rights Reserved.
 
     This file is part of Threading Building Blocks.
 
@@ -50,7 +50,7 @@ using std::printf;
     // Workaround for overzealous compiler warnings in /Wp64 mode
     #pragma warning (push)
     #pragma warning (disable: 4267)
-#endif /* _MSC_VER && _Wp64 */
+#endif
 
 
 template <typename base_alloc_t, typename count_t = tbb::atomic<size_t> >
@@ -225,4 +225,4 @@ public:
 #if defined(_MSC_VER) && defined(_Wp64)
     // Workaround for overzealous compiler warnings in /Wp64 mode
     #pragma warning (pop)
-#endif /* _MSC_VER && _Wp64 */
+#endif // warning 4267 is back

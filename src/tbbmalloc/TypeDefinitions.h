@@ -1,5 +1,5 @@
 /*
-    Copyright 2005-2008 Intel Corporation.  All Rights Reserved.
+    Copyright 2005-2009 Intel Corporation.  All Rights Reserved.
 
     This file is part of Threading Building Blocks.
 
@@ -65,5 +65,38 @@ typedef unsigned __int64 uint64_t;
 
 //! PROVIDE YOUR OWN Customize.h IF YOU FEEL NECESSARY
 #include "Customize.h"
+
+/*
+ * Functions to align an integer down or up to the given power of two,
+ * and test for such an alignment, and for power of two.
+ */
+template<typename T>
+static inline T alignDown(T arg, uintptr_t alignment) {
+    return T( (uintptr_t)arg                & ~(alignment-1));
+}
+template<typename T>
+static inline T alignUp  (T arg, uintptr_t alignment) {
+    return T(((uintptr_t)arg+(alignment-1)) & ~(alignment-1));
+    // /*is this better?*/ return (((uintptr_t)arg-1) | (alignment-1)) + 1;
+}
+template<typename T>
+static inline bool isAligned(T arg, uintptr_t alignment) {
+    return 0==((uintptr_t)arg & (alignment-1));
+}
+static inline bool isPowerOfTwo(uintptr_t arg) {
+    return arg && (0==(arg & (arg-1)));
+}
+static inline bool isPowerOfTwoMultiple(uintptr_t arg, uintptr_t divisor) {
+    // Divisor is assumed to be a power of two (which is valid for current uses).
+    MALLOC_ASSERT( isPowerOfTwo(divisor), "Divisor should be a power of two" );
+    return arg && (0==(arg & (arg-divisor)));
+}
+
+void lockRecursiveMallocFlag();
+void unlockRecursiveMallocFlag();
+
+extern bool  original_malloc_found;
+extern void* (*original_malloc_ptr)(size_t);
+extern void  (*original_free_ptr)(void*);
 
 #endif /* _itt_shared_malloc_TypeDefinitions_H_ */

@@ -1,5 +1,5 @@
 /*
-    Copyright 2005-2008 Intel Corporation.  All Rights Reserved.
+    Copyright 2005-2009 Intel Corporation.  All Rights Reserved.
 
     This file is part of Threading Building Blocks.
 
@@ -26,7 +26,7 @@
     the GNU General Public License.
 */
 
-// Source file for miscellanous entities that are infrequently referenced by 
+// Source file for miscellaneous entities that are infrequently referenced by 
 // an executing program.
 
 #include "tbb/tbb_stddef.h"
@@ -38,17 +38,13 @@
 #include <cstdlib>
 #include <cstring>
 #if defined(__EXCEPTIONS) || defined(_CPPUNWIND) || defined(__SUNPRO_CC)
-#include <stdexcept>
+    #include <string> // std::string is used to construct runtime_error
+    #include <stdexcept>
 #endif
-#if !(_WIN32||_WIN64)
-#include <dlfcn.h>
-#endif 
 
 using namespace std;
 
 #include "tbb/tbb_machine.h"
-
-#include <iterator>
 
 namespace tbb {
 
@@ -76,64 +72,6 @@ bool GetBoolEnvironmentVariable( const char * name ) {
     return false;
 }
 
-#if __TBB_WEAK_SYMBOLS
-
-bool FillDynamicLinks( const char* /*library*/, const DynamicLinkDescriptor descriptors[], size_t n )
-{
-    size_t k = 0;
-    for ( ; k < n  &&  descriptors[k].ptr; ++k )
-        *descriptors[k].handler = (PointerToHandler) descriptors[k].ptr;
-    return k == n;
-}
-
-#else /* !__TBB_WEAK_SYMBOLS */
-
-bool FillDynamicLinks( void* module, const DynamicLinkDescriptor descriptors[], size_t n )
-{
-    const size_t max_n = 8;
-    __TBB_ASSERT( 0<n && n<=max_n, NULL );
-    PointerToHandler h[max_n];
-    size_t k = 0;
-    for ( ; k < n; ++k ) {
-#if _WIN32||_WIN64
-        h[k] = (PointerToHandler) GetProcAddress( (HMODULE)module, descriptors[k].name );
-#else
-        h[k] = (PointerToHandler) dlsym( module, descriptors[k].name );
-#endif /* _WIN32||_WIN64 */
-        if ( !h[k] )
-            break;
-    }
-    // Commit the entry points if they are all present.
-    if ( k == n ) {
-        // Cannot use memset here, because the writes must be atomic.
-        for( size_t k=0; k<n; ++k )
-            *descriptors[k].handler = h[k];
-        return true;
-    }
-    return false;
-}
-
-bool FillDynamicLinks( const char* library, const DynamicLinkDescriptor descriptors[], size_t n )
-{
-#if _WIN32||_WIN64
-    if ( FillDynamicLinks( GetModuleHandle(NULL), descriptors, n ) )
-        // Target library was statically linked into this executable
-        return true;
-    // Prevent Windows from displaying silly message boxes if it fails to load library
-    // (e.g. because of MS runtime problems - one those crazy manifest related ones)
-    UINT prev_mode = SetErrorMode (SEM_FAILCRITICALERRORS);
-    void* module = LoadLibrary (library);
-    SetErrorMode (prev_mode);
-#else
-    void* module = dlopen( library, RTLD_LAZY ); 
-#endif /* _WIN32||_WIN64 */
-    // Return true if the library is there and it contains all the expected entry points.
-    return module != NULL  &&  FillDynamicLinks( module, descriptors, n );
-}
-
-#endif /* !__TBB_WEAK_SYMBOLS */
-
-
 #include "tbb_version.h"
 
 /** The leading "\0" is here so that applying "strings" to the binary delivers a clean result. */
@@ -153,13 +91,18 @@ void PrintExtraVersionInfo( const char* category, const char* description ) {
 
 } // namespace internal
  
+extern "C" int TBB_runtime_interface_version() {
+    return TBB_INTERFACE_VERSION;
+}
+
 } // namespace tbb
 
 #if __TBB_x86_32
 
 #include "tbb/atomic.h"
 
-#if _WIN32||_WIN64 //on windows int64_t defined in tbb::internal namespace only
+//on Windows, int64_t defined in tbb::internal namespace only
+#if _WIN32||_WIN64 
 using tbb::internal::int64_t;
 #endif
 

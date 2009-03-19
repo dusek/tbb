@@ -20,7 +20,7 @@
 				Name="VCCLCompilerTool"
 				Optimization="0"
 				AdditionalIncludeDirectories="$(TBB21_INSTALL_DIR)\include"
-				PreprocessorDefinitions="WIN32;_DEBUG;_CONSOLE;TBB_DO_ASSERT"
+				PreprocessorDefinitions="WIN32;_DEBUG;_CONSOLE;TBB_USE_DEBUG"
 				RuntimeLibrary="3"
 				UsePrecompiledHeader="0"
 				Detect64BitPortabilityProblems="TRUE"
@@ -71,7 +71,8 @@
 				PreprocessorDefinitions="WIN32;NDEBUG;_CONSOLE"
 				RuntimeLibrary="2"
 				UsePrecompiledHeader="0"
-				Detect64BitPortabilityProblems="TRUE"/>
+				Detect64BitPortabilityProblems="TRUE"
+				DebugInformationFormat="3"/>
 			<Tool
 				Name="VCCustomBuildTool"/>
 			<Tool
@@ -79,6 +80,7 @@
 				AdditionalDependencies="tbb.lib"
 				LinkIncremental="1"
 				AdditionalLibraryDirectories="$(TBB21_INSTALL_DIR)\ia32\vc7.1\lib"
+				GenerateDebugInformation="TRUE"
 				SubSystem="1"
 				OptimizeReferences="2"
 				EnableCOMDATFolding="2"

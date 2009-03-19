@@ -1,5 +1,5 @@
 /*
-    Copyright 2005-2008 Intel Corporation.  All Rights Reserved.
+    Copyright 2005-2009 Intel Corporation.  All Rights Reserved.
 
     This file is part of Threading Building Blocks.
 
@@ -36,14 +36,21 @@ namespace tbb {
 
 namespace internal {
 
+//! This structure is used to store task information in ordered buffer
+struct task_info{
+    void* my_object;
+    Token my_token;
+    bool my_token_ready;
+    bool is_valid;
+};
+
 //! A buffer of ordered items.
 /** Each item is a task, inserted into a position in the buffer corrsponding to a Token. */
 class ordered_buffer {
     typedef  Token  size_type;
 
     //! Array of deferred tasks that cannot yet start executing. 
-    /** Element is NULL if unused. */
-    task** array;
+    task_info* array;
 
     //! Size of array
     /** Always 0 or a power of 2 */
@@ -71,7 +78,8 @@ class ordered_buffer {
     bool is_ordered;
 public:
     //! Construct empty buffer.
-    ordered_buffer( bool is_ordered_ ) : array(NULL), array_size(0), low_token(0), high_token(0), is_ordered(is_ordered_) {
+    ordered_buffer( bool is_ordered_ ) : array(NULL), array_size(0),
+                                         low_token(0), high_token(0), is_ordered(is_ordered_) {
         grow(initial_buffer_size);
         __TBB_ASSERT( array, NULL );
     }
@@ -79,53 +87,67 @@ public:
     //! Destroy the buffer.
     ~ordered_buffer() {
         __TBB_ASSERT( array, NULL );
-        cache_aligned_allocator<task*>().deallocate(array,array_size);
+        cache_aligned_allocator<task_info>().deallocate(array,array_size);
         poison_pointer( array );
     }
 
     //! Put a token into the buffer.
-    /** The putter must be in state that works if enqueued for later wakeup 
-        If putter was enqueued, returns NULL.  Otherwise returns putter,
-        which the caller is expected to spawn. */
+    /** If task information was placed into buffer, returns true;
+        otherwise returns false, informing the caller to create and spawn a task.
+    */
     // Using template to avoid explicit dependency on stage_task
     template<typename StageTask>
-    task* put_token( StageTask& putter ) {
-        task* result = &putter;
+    bool put_token( StageTask& putter ) {
         {
             spin_mutex::scoped_lock lock( array_mutex );
             Token token = is_ordered ? putter.next_token_number() : high_token++;
             if( token!=low_token ) {
                 // Trying to put token that is beyond low_token.
                 // Need to wait until low_token catches up before dispatching.
-                result = NULL;
                 __TBB_ASSERT( (tokendiff_t)(token-low_token)>0, NULL );
                 if( token-low_token>=array_size ) 
                     grow( token-low_token+1 );
                 ITT_NOTIFY( sync_releasing, this );
-                array[token&array_size-1] = &putter;
+                putter.put_task_info(array[token&array_size-1]);
+                return true;
             }
         }
-        return result;
+        return false;
     }
 
     //! Note that processing of a token is finished.
     /** Fires up processing of the next token, if processing was deferred. */
-    void note_done( Token token, task& spawner ) {
-        task* wakee=NULL;
+    // Using template to avoid explicit dependency on stage_task
+    template<typename StageTask>
+    void note_done( Token token, StageTask& spawner ) {
+        task_info wakee = {NULL, 0, 0, false};
         {
             spin_mutex::scoped_lock lock( array_mutex );
             if( !is_ordered || token==low_token ) {
                 // Wake the next task
-                task*& item = array[++low_token & array_size-1];
+                task_info& item = array[++low_token & array_size-1];
                 ITT_NOTIFY( sync_acquired, this );
                 wakee = item;
-                item = NULL;
+                item.is_valid = false;
             }
         }
-        if( wakee ) {
-            spawner.spawn(*wakee);
+        if( wakee.is_valid )
+            spawner.spawn_stage_task(wakee);
+    }
+
+#if __TBB_EXCEPTIONS
+    //! The method destroys all data in filters to prevent memory leaks
+    void clear( filter* my_filter ) {
+        long t=low_token;
+        for( size_type i=0; i<array_size; ++i, ++t ){
+            task_info& temp = array[t&array_size-1];
+            if (temp.is_valid ) {
+                my_filter->finalize(temp.my_object);
+                temp.is_valid = false;
+            }
         }
     }
+#endif
 };
 
 void ordered_buffer::grow( size_type minimum_size ) {
@@ -133,17 +155,17 @@ void ordered_buffer::grow( size_type minimum_size ) {
     size_type new_size = old_size ? 2*old_size : initial_buffer_size;
     while( new_size<minimum_size ) 
         new_size*=2;
-    task** new_array = cache_aligned_allocator<task*>().allocate(new_size);
-    task** old_array = array;
+    task_info* new_array = cache_aligned_allocator<task_info>().allocate(new_size);
+    task_info* old_array = array;
     for( size_type i=0; i<new_size; ++i )
-        new_array[i] = NULL;
+        new_array[i].is_valid = false;
     long t=low_token;
     for( size_type i=0; i<old_size; ++i, ++t )
         new_array[t&new_size-1] = old_array[t&old_size-1];
     array = new_array;
     array_size = new_size;
     if( old_array )
-        cache_aligned_allocator<task*>().deallocate(old_array,old_size);
+        cache_aligned_allocator<task_info>().deallocate(old_array,old_size);
 }
 
 class stage_task: public task {
@@ -186,13 +208,41 @@ public:
     }
     //! The virtual task execution method
     /*override*/ task* execute();
+#if __TBB_EXCEPTIONS
+    ~stage_task()    
+    {
+        if (my_filter && my_object && (my_filter->my_filter_mode & filter::version_mask) >= __TBB_PIPELINE_VERSION(4)) {
+            __TBB_ASSERT(is_cancelled(), "Tryning to finalize the task that wasn't cancelled");
+            my_filter->finalize(my_object);
+            my_object = NULL;
+        }
+    }
+#endif // __TBB_EXCEPTIONS
+    //! Creates and spawns stage_task from task_info
+    void spawn_stage_task(const task_info& info)
+    {
+        stage_task* clone = new( allocate_additional_child_of(*my_pipeline.end_counter) ) stage_task( my_pipeline, my_filter );
+        clone->my_token = info.my_token;
+        clone->my_token_ready = info.my_token_ready;
+        clone->my_object = info.my_object;                
+        
+        spawn(*clone);
+    }
+    //! Puts current task information
+    void put_task_info(task_info &where_to_put ) {
+        where_to_put.my_object = my_object;
+        where_to_put.my_token = my_token;
+        where_to_put.my_token_ready = my_token_ready;
+        where_to_put.is_valid = true;
+    }
 };
 
 task* stage_task::execute() {
     __TBB_ASSERT( !my_at_start || !my_object, NULL );
     if( my_at_start ) {
         if( my_filter->is_serial() ) {
-            if( (my_object = (*my_filter)(my_object)) ) {
+            my_object = (*my_filter)(my_object);
+            if( my_object ) {
                 my_token = my_pipeline.token_counter++;
                 my_token_ready = true;
                 ITT_NOTIFY( sync_releasing, &my_pipeline.input_tokens );
@@ -208,7 +258,8 @@ task* stage_task::execute() {
             ITT_NOTIFY( sync_releasing, &my_pipeline.input_tokens );
             if( --my_pipeline.input_tokens>0 )
                 spawn( *new( allocate_additional_child_of(*my_pipeline.end_counter) ) stage_task( my_pipeline ) );
-            if( !(my_object = (*my_filter)(my_object)) ) {
+            my_object = (*my_filter)(my_object);
+            if( !my_object ) {
                 my_pipeline.end_of_input = true; 
                 return NULL;
             }
@@ -217,7 +268,7 @@ task* stage_task::execute() {
     } else {
         my_object = (*my_filter)(my_object);
         if( ordered_buffer* input_buffer = my_filter->input_buffer )
-            input_buffer->note_done(my_token,*this);
+            input_buffer->note_done(my_token, *this);
     }
     task* next = NULL;
     my_filter = my_filter->next_filter_in_pipeline; 
@@ -227,18 +278,16 @@ task* stage_task::execute() {
         add_to_depth(1);
         if( ordered_buffer* input_buffer = my_filter->input_buffer ) {
             // The next filter must execute tokens in order.
-            stage_task& clone = *new( allocate_continuation() ) stage_task( my_pipeline, my_filter );
-            clone.my_token = my_token;
-            clone.my_token_ready = my_token_ready;
-            clone.my_object = my_object;
-            next = input_buffer->put_token(clone);
-        } else {
-            /* A semi-hackish way to reexecute the same task object immediately without spawning.
-               recycle_as_continuation marks the task for future execution,
-               and then 'this' pointer is returned to bypass spawning. */
-            recycle_as_continuation();
-            next = this;
+            if (input_buffer->put_token(*this )){
+                my_filter = NULL; // To prevent deleting my_object twice if exception occurs
+                return NULL;
+            }
         }
+        /* A semi-hackish way to reexecute the same task object immediately without spawning.
+           recycle_as_continuation marks the task for future execution,
+           and then 'this' pointer is returned to bypass spawning. */
+        recycle_as_continuation();
+        next = this;
     } else {
         // Reached end of the pipe.  Inject a new token.
         // The token must be injected before execute() returns, in order to prevent the
@@ -258,6 +307,16 @@ task* stage_task::execute() {
 void pipeline::inject_token( task& ) {
     __TBB_ASSERT(0,"illegal call to inject_token");
 }
+
+#if __TBB_EXCEPTIONS
+void pipeline::clear_filters() {
+    for( filter* f = filter_list; f; f = f->next_filter_in_pipeline ) {
+        if ((f->my_filter_mode & filter::version_mask) >= __TBB_PIPELINE_VERSION(4))
+            if( internal::ordered_buffer* b = f->input_buffer )
+                b->clear(f);
+    }
+}
+#endif
 
 pipeline::pipeline() : 
     filter_list(NULL),
@@ -342,20 +401,42 @@ void pipeline::remove_filter( filter& filter_ ) {
     filter_.my_pipeline = NULL;
 }
 
-void pipeline::run( size_t max_number_of_live_tokens ) {
+void pipeline::run( size_t max_number_of_live_tokens
+#if __TBB_EXCEPTIONS
+    , tbb::task_group_context& context
+#endif
+    ) {
     __TBB_ASSERT( max_number_of_live_tokens>0, "pipeline::run must have at least one token" );
     __TBB_ASSERT( !end_counter, "pipeline already running?" );
+    // The class destroys end_counter and clears all ordered buffers if pipeline was cancelled.
+    class pipeline_cleaner: internal::no_copy {
+        pipeline& my_pipeline;        
+    public:
+        pipeline_cleaner(pipeline& _pipeline) : my_pipeline(_pipeline)
+        {}
+        ~pipeline_cleaner(){
+#if __TBB_EXCEPTIONS
+            if (my_pipeline.end_counter->is_cancelled()) // Pipeline was cancelled
+                my_pipeline.clear_filters(); 
+#endif
+            my_pipeline.end_counter->destroy(*my_pipeline.end_counter);
+            my_pipeline.end_counter = NULL;            
+        }
+    };
     if( filter_list ) {
         if( filter_list->next_filter_in_pipeline || !filter_list->is_serial() ) {
+            pipeline_cleaner my_pipeline_cleaner(*this);
             end_of_input = false;
+#if __TBB_EXCEPTIONS            
+            end_counter = new( task::allocate_root(context) ) empty_task;
+#else
             end_counter = new( task::allocate_root() ) empty_task;
+#endif
             // 2 = 1 for spawned child + 1 for wait
             end_counter->set_ref_count(2);
             input_tokens = internal::Token(max_number_of_live_tokens);
             // Prime the pump with the non-waiter
             end_counter->spawn_and_wait_for_all( *new( end_counter->allocate_child() ) internal::stage_task( *this ) );
-            end_counter->destroy(*end_counter);
-            end_counter = NULL;
         } else {
             // There are no filters, and thus no parallelism is possible.
             // Just drain the input stream.
@@ -364,6 +445,13 @@ void pipeline::run( size_t max_number_of_live_tokens ) {
         }
     } 
 }
+
+#if __TBB_EXCEPTIONS
+void pipeline::run( size_t max_number_of_live_tokens ) {
+    tbb::task_group_context context;
+    run(max_number_of_live_tokens, context);
+}
+#endif // __TBB_EXCEPTIONS
 
 filter::~filter() {
     if ( (my_filter_mode & version_mask) >= __TBB_PIPELINE_VERSION(3) ) {

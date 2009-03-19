@@ -1,5 +1,5 @@
 /*
-    Copyright 2005-2008 Intel Corporation.  All Rights Reserved.
+    Copyright 2005-2009 Intel Corporation.  All Rights Reserved.
 
     This file is part of Threading Building Blocks.
 
@@ -221,7 +221,7 @@ void TestBody ( size_t depth ) {
 }
 
 template<class Iterator>
-void TestIterator_RvalueOnly ( int nthread, size_t depth ) {
+void TestIterator_RvalueOnly ( int /*nthread*/, size_t depth ) {
     g_values_counter = 0;
     TestBody<FakeTaskGeneratorBody, Iterator> (depth);
     TestBody<FakeTaskGeneratorBody_ConstRefVersion, Iterator> (depth);

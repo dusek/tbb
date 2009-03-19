@@ -1,6 +1,6 @@
 #!/bin/sh
 #
-# Copyright 2005-2008 Intel Corporation.  All Rights Reserved.
+# Copyright 2005-2009 Intel Corporation.  All Rights Reserved.
 #
 # This file is part of Threading Building Blocks.
 #
@@ -26,6 +26,16 @@
 # invalidate any other reasons why the executable file might be covered by
 # the GNU General Public License.
 
+while getopts  "l:" flag #
+do #
+    if [ `uname` != 'Linux' ] ; then #
+        echo 'skip' #
+        exit #
+    fi #
+    LD_PRELOAD=$OPTARG #
+    shift `expr $OPTIND - 1` #
+done #
 # Set stack limit and run the command line passed via parameters
 ulimit -s 10240 # 
-$* # 
+export LD_PRELOAD #
+./$* # 

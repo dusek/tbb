@@ -1,5 +1,5 @@
 /*
-    Copyright 2005-2008 Intel Corporation.  All Rights Reserved.
+    Copyright 2005-2009 Intel Corporation.  All Rights Reserved.
 
     This file is part of Threading Building Blocks.
 
@@ -41,6 +41,21 @@ namespace tbb {
 
 using namespace internal;
 
+//! Flag bits in a state_t that specify information about a locking request.
+enum state_t_flags {
+    STATE_NONE = 0,
+    STATE_WRITER = 1,
+    STATE_READER = 1<<1,
+    STATE_READER_UNBLOCKNEXT = 1<<2,
+    STATE_COMBINED_WAITINGREADER = STATE_READER | STATE_READER_UNBLOCKNEXT,
+    STATE_ACTIVEREADER = 1<<3,
+    STATE_COMBINED_READER = STATE_COMBINED_WAITINGREADER | STATE_ACTIVEREADER,
+    STATE_UPGRADE_REQUESTED = 1<<4,
+    STATE_UPGRADE_WAITING = 1<<5,
+    STATE_UPGRADE_LOSER = 1<<6,
+    STATE_COMBINED_UPGRADING = STATE_UPGRADE_WAITING | STATE_UPGRADE_LOSER
+};
+
 const unsigned char RELEASED = 0;
 const unsigned char ACQUIRED = 1;
  
@@ -81,7 +96,7 @@ inline void queuing_rw_mutex::scoped_lock::unblock_or_wait_on_internal_lock( uin
 }
 
 template<typename T>
-class tricky_atomic_pointer {
+class tricky_atomic_pointer: no_copy {
 public:
     typedef typename atomic_word<sizeof(T*)>::word word;
     template<memory_semantics M>
@@ -110,6 +125,7 @@ public:
         return reinterpret_cast<T*>( reinterpret_cast<word>(ref) | operand2 );
     }
 };
+
 typedef tricky_atomic_pointer<queuing_rw_mutex::scoped_lock> tricky_pointer;
 
 //! Mask for low order bit of a pointer.
@@ -120,11 +136,10 @@ uintptr get_flag( queuing_rw_mutex::scoped_lock* ptr ) {
     return uintptr(tricky_pointer(ptr)&FLAG);
 }
 
+//------------------------------------------------------------------------
+// Methods of queuing_rw_mutex::scoped_lock
+//------------------------------------------------------------------------
 
-//! Methods of queuing_rw_mutex::scoped_lock
-/** ----------------------------------------- **/
-
-//! A method to acquire queuing_rw_mutex lock
 void queuing_rw_mutex::scoped_lock::acquire( queuing_rw_mutex& m, bool write )
 {
     __TBB_ASSERT( !this->mutex, "scoped_lock is already holding a mutex");
@@ -135,15 +150,15 @@ void queuing_rw_mutex::scoped_lock::acquire( queuing_rw_mutex& m, bool write )
     prev  = NULL;
     next  = NULL;
     going = 0;
-    state = write ? STATE_WRITER : STATE_READER;
+    state = state_t(write ? STATE_WRITER : STATE_READER);
     internal_lock = RELEASED;
 
-    ITT_NOTIFY(sync_prepare, mutex);
     queuing_rw_mutex::scoped_lock* pred = m.q_tail.fetch_and_store<tbb::release>(this);
 
     if( write ) {       // Acquiring for write
 
         if( pred ) {
+            ITT_NOTIFY(sync_prepare, mutex);
             pred = tricky_pointer(pred) & ~FLAG;
             __TBB_ASSERT( !( tricky_pointer(pred) & FLAG ), "use of corrupted pointer!" );
             __TBB_ASSERT( !pred->next, "the predecessor has another successor!");
@@ -153,7 +168,9 @@ void queuing_rw_mutex::scoped_lock::acquire( queuing_rw_mutex& m, bool write )
         }
 
     } else {            // Acquiring for read
-
+#if DO_ITT_NOTIFY
+        bool sync_prepare_done = false;
+#endif
         if( pred ) {
             unsigned short pred_state;
             __TBB_ASSERT( !this->prev, "the predecessor is already set" );
@@ -172,11 +189,19 @@ void queuing_rw_mutex::scoped_lock::acquire( queuing_rw_mutex& m, bool write )
             // ensure release semantics on IPF
            __TBB_store_with_release(pred->next,this);
             if( pred_state != STATE_ACTIVEREADER ) {
+#if DO_ITT_NOTIFY
+                sync_prepare_done = true;
+                ITT_NOTIFY(sync_prepare, mutex);
+#endif
                 SpinwaitUntilEq(going, 1);
             }
         }
         unsigned short old_state = state.compare_and_swap<tbb::acquire>(STATE_ACTIVEREADER, STATE_READER);
         if( old_state!=STATE_READER ) {
+#if DO_ITT_NOTIFY
+            if( !sync_prepare_done )
+                ITT_NOTIFY(sync_prepare, mutex);
+#endif
             // Failed to become active reader -> need to unblock the next waiting reader first
             __TBB_ASSERT( state==STATE_READER_UNBLOCKNEXT, "unexpected state" );
             SpinwaitWhileEq(next, (scoped_lock*)NULL);
@@ -195,7 +220,6 @@ void queuing_rw_mutex::scoped_lock::acquire( queuing_rw_mutex& m, bool write )
     __TBB_load_with_acquire(going);
 }
 
-//! A method to try-acquire queuing_rw_mutex lock
 bool queuing_rw_mutex::scoped_lock::try_acquire( queuing_rw_mutex& m, bool write )
 {
     __TBB_ASSERT( !this->mutex, "scoped_lock is already holding a mutex");
@@ -205,7 +229,7 @@ bool queuing_rw_mutex::scoped_lock::try_acquire( queuing_rw_mutex& m, bool write
     prev  = NULL;
     next  = NULL;
     going = 0;
-    state = write ? STATE_WRITER : STATE_ACTIVEREADER;
+    state = state_t(write ? STATE_WRITER : STATE_ACTIVEREADER);
     internal_lock = RELEASED;
 
     if( m.q_tail ) return false;
@@ -226,7 +250,6 @@ bool queuing_rw_mutex::scoped_lock::try_acquire( queuing_rw_mutex& m, bool write
 
 }
 
-//! A method to release queuing_rw_mutex lock
 void queuing_rw_mutex::scoped_lock::release( )
 {
     __TBB_ASSERT(this->mutex!=NULL, "no lock acquired");
@@ -335,9 +358,6 @@ done:
     initialize();
 }
 
-//! A method to downgrade a writer to a reader.
-/** See more detailed comments in the SPIN model:
-    <TBB directory>/tools/spin_models/ReaderWriterMutex.pml */
 bool queuing_rw_mutex::scoped_lock::downgrade_to_reader()
 {
     __TBB_ASSERT( state==STATE_WRITER, "no sense to downgrade a reader" );
@@ -368,9 +388,6 @@ downgrade_done:
     return true;
 }
 
-//! A method to upgrade a reader to a writer.
-/** See more detailed comments in the SPIN model:
-    <TBB directory>/tools/spin_models/ReaderWriterMutex.pml */
 bool queuing_rw_mutex::scoped_lock::upgrade_to_writer()
 {
     __TBB_ASSERT( state==STATE_ACTIVEREADER, "only active reader can be upgraded" );
@@ -456,7 +473,7 @@ waiting:
     // additional lifetime issue prevention checks
     // wait for the successor to finish working with my fields
     wait_for_release_of_internal_lock();
-    // now wait for the predecesor to finish working with my fields
+    // now wait for the predecessor to finish working with my fields
     SpinwaitWhileEq( going, 2 );
     // there is an acquire semantics statement in the end of SpinwaitWhileEq.
 
@@ -466,6 +483,10 @@ waiting:
 
     ITT_NOTIFY(sync_acquired, mutex);
     return result;
+}
+
+void queuing_rw_mutex::internal_construct() {
+    ITT_SYNC_CREATE(this, _T("tbb::queuing_rw_mutex"), _T(""));
 }
 
 } // namespace tbb

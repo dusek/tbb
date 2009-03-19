@@ -1,4 +1,4 @@
-# Copyright 2005-2008 Intel Corporation.  All Rights Reserved.
+# Copyright 2005-2009 Intel Corporation.  All Rights Reserved.
 #
 # This file is part of Threading Building Blocks.
 #
@@ -32,8 +32,7 @@ ifndef tbb_os
   ifeq ($(OS),)
    $(error "$(OS) is not supported")
   else
-   tbb_os=$(OS)
-   export tbb_os
+   export tbb_os=$(OS)
    ifeq ($(OS), Linux)
     export tbb_os=linux
    endif

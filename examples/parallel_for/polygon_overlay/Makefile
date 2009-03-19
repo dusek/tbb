@@ -1,4 +1,4 @@
-# Copyright 2005-2008 Intel Corporation.  All Rights Reserved.
+# Copyright 2005-2009 Intel Corporation.  All Rights Reserved.
 #
 # This file is part of Threading Building Blocks.
 #
@@ -68,8 +68,7 @@ UI=con
 EXE=./$(NAME)
 endif # Mac
 endif # X
-SRCFILES = polymain.cpp polyover.cpp
-GUIFILES = ../../common/gui/$(UI)video.cpp pover_video.cpp
+SRCFILES = ../../common/gui/$(UI)video.cpp pover_video.cpp polymain.cpp polyover.cpp
 
 all:	release test
 
@@ -80,14 +79,14 @@ ifeq ($(UI),mac)
 	$(PBXCP) xcode/Info.plist $(APPRES)
 endif
 
-release: $(GUIFILES) $(SRCFILES) resources
-	$(CXX) -O3 -DNDEBUG $(CXXFLAGS) -o $(EXE) $< *.cpp -ltbb -ltbbmalloc $(LIBS)
+release: $(SRCFILES) resources
+	$(CXX) -O3 -DNDEBUG $(CXXFLAGS) -o $(EXE) $(SRCFILES) -ltbb -ltbbmalloc $(LIBS)
 
-debug:  $(GUIFILES) $(SRCFILES) resources
-	$(CXX) -g -O0 -DTBB_DO_ASSERT -D_DEBUG $(CXXFLAGS) -o $(EXE) $< *.cpp -ltbb_debug -ltbbmalloc_debug $(LIBS)
+debug:  $(SRCFILES) resources
+	$(CXX) -g -O0 -DTBB_USE_DEBUG -D_DEBUG $(CXXFLAGS) -o $(EXE) $(SRCFILES) -ltbb_debug -ltbbmalloc_debug $(LIBS)
 
 clean:
-	rm -f $(EXE) *.o *.d
+	$(RM) $(EXE) *.o *.d
 ifeq ($(UI),mac)
 	rm -rf $(NAME).app
 endif

@@ -1,5 +1,5 @@
 /*
-    Copyright 2005-2008 Intel Corporation.  All Rights Reserved.
+    Copyright 2005-2009 Intel Corporation.  All Rights Reserved.
 
     This file is part of Threading Building Blocks.
 
@@ -93,6 +93,7 @@ void plugin_call(int maxthread)
 
 #else /* _USRDLL undefined */
 
+#define HARNESS_NO_ASSERT 1
 #include "harness.h"
 
 extern "C" void plugin_call(int);
@@ -133,9 +134,13 @@ int use_lot_of_tls() {
 #else
     pthread_key_t last_handles[10];
     pthread_key_t result;
-    while( pthread_key_create(&result, NULL)==0 ) {
+    int setspecific_dummy=10;
+    while( pthread_key_create(&result, NULL)==0 
+	       && count < 4096 ) // Sun Solaris doesn't have any built-in limit, so we set something big enough
+	{
         last_handles[++count%10] = result;
         if(Verbose) printf("%d\n", count);
+        pthread_setspecific(result,&setspecific_dummy);
     }
     for( int i=0; i<10; ++i )
         pthread_key_delete(last_handles[i]);

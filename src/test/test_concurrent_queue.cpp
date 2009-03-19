@@ -1,5 +1,5 @@
 /*
-    Copyright 2005-2008 Intel Corporation.  All Rights Reserved.
+    Copyright 2005-2009 Intel Corporation.  All Rights Reserved.
 
     This file is part of Threading Building Blocks.
 
@@ -132,7 +132,7 @@ static tbb::atomic<long> PopKind[3];
 
 const int M = 10000;
 
-struct Body {
+struct Body: NoAssign {
     tbb::concurrent_queue<Foo>* queue;
     const int nthread;
     Body( int nthread_ ) : nthread(nthread_) {}
@@ -196,9 +196,11 @@ void TestPushPop( int prefill, ptrdiff_t capacity, int nthread ) {
         tbb::tick_count t0 = tbb::tick_count::now();
         NativeParallelFor( nthread, body );
         tbb::tick_count t1 = tbb::tick_count::now();
+#if !__TBB_FLOATING_POINT_BROKEN
         double timing = (t1-t0).seconds();
         if( Verbose )
             printf("prefill=%d capacity=%d time = %g = %g nsec/operation\n", prefill, int(capacity), timing, timing/(2*M*nthread)*1.E9);
+#endif /* !__TBB_FLOATING_POINT_BROKEN */
         int sum = 0;
         for( int k=0; k<nthread; ++k )
             sum += Sum[k];
@@ -249,6 +251,272 @@ void TestPushPop( int prefill, ptrdiff_t capacity, int nthread ) {
             }
         }
     }
+}
+
+class Bar {
+    enum state_t {
+        LIVE=0x1234,
+        DEAD=0xDEAD
+    };
+    state_t state;
+public:
+    ptrdiff_t my_id;
+    Bar() : state(LIVE), my_id(-1) {}
+    Bar(size_t _i) : state(LIVE), my_id(_i) {}
+    Bar( const Bar& a_bar ) : state(LIVE) {
+        ASSERT( a_bar.state==LIVE, NULL );
+        my_id = a_bar.my_id;
+    }
+    ~Bar() {
+        ASSERT( state==LIVE, NULL );
+        state = DEAD;
+        my_id = DEAD;
+    }
+    void operator=( const Bar& a_bar ) {
+        ASSERT( a_bar.state==LIVE, NULL );
+        ASSERT( state==LIVE, NULL );
+        my_id = a_bar.my_id;
+    }
+    friend bool operator==(const Bar& bar1, const Bar& bar2 ) ;
+} ;
+
+bool operator==(const Bar& bar1, const Bar& bar2) {
+    ASSERT( bar1.state==Bar::LIVE, NULL );
+    ASSERT( bar2.state==Bar::LIVE, NULL );
+    return bar1.my_id == bar2.my_id;
+}
+
+class BarIterator
+{
+    Bar* bar_ptr;
+    BarIterator(Bar* bp_) : bar_ptr(bp_) {}
+public:
+    ~BarIterator() {}
+    BarIterator& operator=( const BarIterator& other ) {
+        bar_ptr = other.bar_ptr;
+        return *this;
+    }
+    Bar& operator*() const {
+        return *bar_ptr;
+    }
+    BarIterator& operator++() {
+        ++bar_ptr;
+        return *this;
+    }
+    Bar* operator++(int) {
+        Bar* result = &operator*();
+        operator++();
+        return result;
+    }
+    friend bool operator==(const BarIterator& bia, const BarIterator& bib) ;
+    friend bool operator!=(const BarIterator& bia, const BarIterator& bib) ;
+    friend void TestConstructors ();
+} ;
+
+bool operator==(const BarIterator& bia, const BarIterator& bib) {
+    return bia.bar_ptr==bib.bar_ptr;
+}
+
+bool operator!=(const BarIterator& bia, const BarIterator& bib) {
+    return bia.bar_ptr!=bib.bar_ptr;
+}
+
+class Bar_exception : public std::bad_alloc {
+public:
+    virtual const char *what() const throw() { return "making the entry invalid"; }
+    virtual ~Bar_exception() throw() {}
+};
+
+class BarEx
+{
+    enum state_t {
+        LIVE=0x1234,
+        DEAD=0xDEAD
+    };
+    static int count;
+public:
+    state_t state;
+    typedef enum {
+        PREPARATION,
+        COPY_CONSTRUCT
+    } mode_t;
+    static mode_t mode;
+    ptrdiff_t my_id;
+    ptrdiff_t my_tilda_id;
+    static int button;
+    BarEx() : state(LIVE), my_id(-1), my_tilda_id(-1) {}
+    BarEx(size_t _i) : state(LIVE), my_id(_i), my_tilda_id(my_id^(-1)) {}
+    BarEx( const BarEx& a_bar ) : state(LIVE) {
+        ASSERT( a_bar.state==LIVE, NULL );
+        my_id = a_bar.my_id;
+        if( mode==PREPARATION ) 
+            if( !( ++count % 100 ) ) 
+                throw Bar_exception();
+        my_tilda_id = a_bar.my_tilda_id;
+    }
+    ~BarEx() {
+        ASSERT( state==LIVE, NULL );
+        state = DEAD;
+        my_id = DEAD;
+    }
+    static void set_mode( mode_t m ) { mode = m; }
+    void operator=( const BarEx& a_bar ) {
+        ASSERT( a_bar.state==LIVE, NULL );
+        ASSERT( state==LIVE, NULL );
+        my_id = a_bar.my_id;
+        my_tilda_id = a_bar.my_tilda_id;
+    }
+    friend bool operator==(const BarEx& bar1, const BarEx& bar2 ) ;
+} ;
+
+int    BarEx::count = 0;
+BarEx::mode_t BarEx::mode = BarEx::PREPARATION;
+
+bool operator==(const BarEx& bar1, const BarEx& bar2) {
+    ASSERT( bar1.state==BarEx::LIVE, NULL );
+    ASSERT( bar2.state==BarEx::LIVE, NULL );
+    ASSERT( (bar1.my_id ^ bar1.my_tilda_id) == -1, NULL );
+    ASSERT( (bar2.my_id ^ bar2.my_tilda_id) == -1, NULL );
+    return bar1.my_id==bar2.my_id && bar1.my_tilda_id==bar2.my_tilda_id;
+}
+
+void TestConstructors ()
+{
+    tbb::concurrent_queue<Bar> src_queue;
+    tbb::concurrent_queue<Bar>::const_iterator dqb;
+    tbb::concurrent_queue<Bar>::const_iterator dqe;
+    tbb::concurrent_queue<Bar>::const_iterator iter;
+
+    for( size_t size=0; size<1001; ++size ) {
+        for( size_t i=0; i<size; ++i )
+            src_queue.push(Bar(i+(i^size)));
+        tbb::concurrent_queue<Bar>::const_iterator sqb(src_queue.begin());
+        tbb::concurrent_queue<Bar>::const_iterator sqe(src_queue.end());
+
+        tbb::concurrent_queue<Bar> dst_queue(sqb, sqe);
+
+        ASSERT(src_queue.size()==dst_queue.size(), "different size");
+
+        src_queue.clear();
+    }
+
+    Bar bar_array[1001];
+    for( size_t size=0; size<1001; ++size ) {
+        for( size_t i=0; i<size; ++i )
+            bar_array[i] = Bar(i+(i^size));
+
+        const BarIterator sab(bar_array+0);
+        const BarIterator sae(bar_array+size);
+
+        tbb::concurrent_queue<Bar> dst_queue2(sab, sae);
+
+        ASSERT( int(size)==dst_queue2.size(), NULL );
+        ASSERT( sab==BarIterator(bar_array+0), NULL );
+        ASSERT( sae==BarIterator(bar_array+size), NULL );
+
+        dqb = dst_queue2.begin();
+        dqe = dst_queue2.end();
+        BarIterator v_iter(sab);
+        for( ; dqb != dqe; ++dqb, ++v_iter )
+            ASSERT( *dqb == *v_iter, "unexpected element" );
+        ASSERT( v_iter==sae, "different size?" );
+    }
+
+    src_queue.clear();
+
+    tbb::concurrent_queue<Bar> dst_queue3( src_queue );
+    ASSERT( src_queue.size()==dst_queue3.size(), NULL );
+    ASSERT( 0==dst_queue3.size(), NULL );
+
+    int k=0;
+    for( size_t i=0; i<1001; ++i ) {
+        Bar tmp_bar;
+        src_queue.push(Bar(++k));
+        src_queue.push(Bar(++k));
+        src_queue.pop(tmp_bar);
+
+        tbb::concurrent_queue<Bar> dst_queue4( src_queue );
+
+        ASSERT( src_queue.size()==dst_queue4.size(), NULL );
+
+        dqb = dst_queue4.begin();
+        dqe = dst_queue4.end();
+        iter = src_queue.begin();
+
+        for( ; dqb != dqe; ++dqb, ++iter )
+            ASSERT( *dqb == *iter, "unexpected element" );
+
+        ASSERT( iter==src_queue.end(), "different size?" );
+    }
+
+    tbb::concurrent_queue<Bar> dst_queue5( src_queue );
+
+    ASSERT( src_queue.size()==dst_queue5.size(), NULL );
+    dqb = dst_queue5.begin();
+    dqe = dst_queue5.end();
+    iter = src_queue.begin();
+    for( ; dqb != dqe; ++dqb, ++iter )
+        ASSERT( *dqb == *iter, "unexpected element" );
+
+    for( size_t i=0; i<100; ++i) {
+        Bar tmp_bar;
+        src_queue.push(Bar(i+1000));
+        src_queue.push(Bar(i+1000));
+        src_queue.pop(tmp_bar);
+
+        dst_queue5.push(Bar(i+1000));
+        dst_queue5.push(Bar(i+1000));
+        dst_queue5.pop(tmp_bar);
+    }
+
+    ASSERT( src_queue.size()==dst_queue5.size(), NULL );
+    dqb = dst_queue5.begin();
+    dqe = dst_queue5.end();
+    iter = src_queue.begin();
+    for( ; dqb != dqe; ++dqb, ++iter )
+        ASSERT( *dqb == *iter, "unexpected element" );
+    ASSERT( iter==src_queue.end(), "different size?" );
+
+#if __TBB_EXCEPTION_HANDLING_BROKEN || __TBB_PLACEMENT_NEW_EXCEPTION_SAFETY_BROKEN
+    printf("Warning: Part of the constructor test is skipped due to a known issue.\n");
+#else
+    k = 0;
+    int n_elements=0;
+    tbb::concurrent_queue<BarEx> src_queue_ex;
+    for( size_t size=0; size<1001; ++size ) {
+        BarEx tmp_bar_ex;
+        int n_successful_pushes=0;
+        BarEx::set_mode( BarEx::PREPARATION );
+        try {
+            src_queue_ex.push(BarEx(k+(k^size)));
+            ++n_successful_pushes;
+        } catch (...) {
+        }
+        ++k;
+        try {
+            src_queue_ex.push(BarEx(k+(k^size)));
+            ++n_successful_pushes;
+        } catch (...) {
+        }
+        ++k;
+        src_queue_ex.pop(tmp_bar_ex);
+        n_elements += (n_successful_pushes - 1);
+        ASSERT( src_queue_ex.size()==n_elements, NULL);
+
+        BarEx::set_mode( BarEx::COPY_CONSTRUCT );
+        tbb::concurrent_queue<BarEx> dst_queue_ex( src_queue_ex );
+
+        ASSERT( src_queue_ex.size()==dst_queue_ex.size(), NULL );
+
+        tbb::concurrent_queue<BarEx>::const_iterator dqb_ex  = dst_queue_ex.begin();
+        tbb::concurrent_queue<BarEx>::const_iterator dqe_ex  = dst_queue_ex.end();
+        tbb::concurrent_queue<BarEx>::const_iterator iter_ex = src_queue_ex.begin();
+
+        for( ; dqb_ex != dqe_ex; ++dqb_ex, ++iter_ex )
+            ASSERT( *dqb_ex == *iter_ex, "unexpected element" );
+        ASSERT( iter_ex==src_queue_ex.end(), "different size?" );
+    }
+#endif
 }
 
 template<typename Iterator1, typename Iterator2>
@@ -401,7 +669,7 @@ void TestClear() {
 }
 
 template<typename T>
-struct TestNegativeQueueBody {
+struct TestNegativeQueueBody: NoAssign {
     tbb::concurrent_queue<T>& queue;
     const int nthread;
     TestNegativeQueueBody( tbb::concurrent_queue<T>& q, int n ) : queue(q), nthread(n) {}
@@ -496,7 +764,7 @@ void TestExceptions() {
                 } catch ( Foo_exception & ) {
                     switch(m) {
                     case m_push: {
-                                ASSERT( queue_test.size()==(n_pushed+1), "incorrect queue size" );
+                                ASSERT( queue_test.size()==n_pushed, "incorrect queue size" );
                                 long tc = MaxFooCount;
                                 MaxFooCount = 0;
                                 for( int k=0; k<(int)tc; k++ ) {
@@ -555,6 +823,7 @@ int main( int argc, char* argv[] ) {
     TestClear();
     TestConcurrentQueueType();
     TestIterator();
+    TestConstructors();
 
     // Test concurrent operations
     for( int nthread=MinThread; nthread<=MaxThread; ++nthread ) {
@@ -567,7 +836,7 @@ int main( int argc, char* argv[] ) {
             TestPushPop(prefill,ptrdiff_t(100),nthread);
         }
     }
-#if __GLIBC__==2&&__GLIBC_MINOR__==3
+#if __TBB_EXCEPTION_HANDLING_BROKEN
     printf("Warning: Exception safety test is skipped due to a known issue.\n");
 #else
     TestExceptions();

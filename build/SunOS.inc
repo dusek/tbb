@@ -1,4 +1,4 @@
-# Copyright 2005-2008 Intel Corporation.  All Rights Reserved.
+# Copyright 2005-2009 Intel Corporation.  All Rights Reserved.
 #
 # This file is part of Threading Building Blocks.
 #
@@ -42,8 +42,7 @@ ifndef runtime
         gcc_version:=$(shell gcc -v 2>&1 | grep 'gcc version' | sed -e 's/^gcc version //' | sed -e 's/ .*$$//')
         os_version:=$(shell uname -r)
         os_kernel_version:=$(shell uname -r | sed -e 's/-.*$$//')
-        runtime:=cc$(gcc_version)_kernel$(os_kernel_version)
-        export runtime
+        export runtime:=cc$(gcc_version)_kernel$(os_kernel_version)
 endif
 
 native_compiler := suncc
@@ -61,18 +60,14 @@ MAKE_VERSIONS=bash $(tbb_root)/build/version_info_sunos.sh $(CPLUS) $(CPLUS_FLAG
 MAKE_TBBVARS=bash $(tbb_root)/build/generate_tbbvars.sh
 
 ifeq ($(compiler),suncc)
-        TBB_CUSTOM_VARS_SH=CXXFLAGS="-I$(CWD)/../include -library=stlport4 $(CXXFLAGS) -M$(CWD)/../build/suncc.map.pause"
-        export TBB_CUSTOM_VARS_SH
-        TBB_CUSTOM_VARS_CSH=CXXFLAGS "-I$(CWD)/../include -library=stlport4 $(CXXFLAGS) -M$(CWD)/../build/suncc.map.pause"
-        export TBB_CUSTOM_VARS_CSH
+        export TBB_CUSTOM_VARS_SH=CXXFLAGS="-I$(CWD)/../include -library=stlport4 $(CXXFLAGS) -M$(CWD)/../build/suncc.map.pause"
+        export TBB_CUSTOM_VARS_CSH=CXXFLAGS "-I$(CWD)/../include -library=stlport4 $(CXXFLAGS) -M$(CWD)/../build/suncc.map.pause"
 endif
 	
 ifdef LD_LIBRARY_PATH
-        LD_LIBRARY_PATH := .:$(LD_LIBRARY_PATH)
-        export LD_LIBRARY_PATH
+        export LD_LIBRARY_PATH := .:$(LD_LIBRARY_PATH)
 else
-        LD_LIBRARY_PATH := .
-        export LD_LIBRARY_PATH
+        export LD_LIBRARY_PATH := .
 endif
 
 ####### Build settings ########################################################
@@ -88,4 +83,8 @@ LINK_TBB.LIB = $(TBB.LIB)
 MALLOC.DLL = libtbbmalloc$(DEBUG_SUFFIX).$(DLL)
 MALLOC.LIB = $(MALLOC.DLL)
 
+MALLOCPROXY.DLL = libtbbmalloc_proxy$(DEBUG_SUFFIX).$(DLL)
+
 TBB_NOSTRICT=1
+
+TEST_LAUNCHER=sh $(tbb_root)/build/test_launcher.sh

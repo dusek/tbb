@@ -1,5 +1,5 @@
 /*
-    Copyright 2005-2008 Intel Corporation.  All Rights Reserved.
+    Copyright 2005-2009 Intel Corporation.  All Rights Reserved.
 
     This file is part of Threading Building Blocks.
 
@@ -45,8 +45,9 @@
         CheckAssertionFailure(__LINE__,#x,okay,message,substr); \
     }
 
+//! Exception object that holds a message.
 struct AssertionFailure {
-    const char* const message;
+    const char* message;
     AssertionFailure( const char* filename, int line, const char* expression, const char* comment );
 };
 

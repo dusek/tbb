@@ -1,4 +1,4 @@
-# Copyright 2005-2008 Intel Corporation.  All Rights Reserved.
+# Copyright 2005-2009 Intel Corporation.  All Rights Reserved.
 #
 # This file is part of Threading Building Blocks.
 #
@@ -56,6 +56,7 @@ ifeq (1,$(TBB_NOSTRICT))
 KNOWN_NOSTRICT += \
 	test_concurrent_hash_map.o	\
 	test_concurrent_vector.o	\
+	test_concurrent_queue.o	        \
 	test_enumerable_thread_specific.o \
 	test_handle_perror.o		\
 	test_cache_aligned_allocator_STL.o	\
@@ -89,7 +90,7 @@ test_model_plugin.exe: test_model_plugin.$(OBJ) test_model_plugin.$(DLL)
 	$(CPLUS) $(OUTPUT_KEY)$@ $(CPLUS_FLAGS) $< $(LIBDL) $(LIBS) $(LINK_FLAGS)
 
 
-TASK_CPP_DEPENDENCIES = $(TBB_ASM.OBJ) cache_aligned_allocator.$(OBJ) tbb_misc.$(OBJ) itt_notify.$(OBJ) mutex.$(OBJ) spin_rw_mutex.$(OBJ) spin_mutex.$(OBJ)
+TASK_CPP_DEPENDENCIES = $(TBB_ASM.OBJ) cache_aligned_allocator.$(OBJ) dynamic_link.$(OBJ) tbb_misc.$(OBJ) itt_notify.$(OBJ) mutex.$(OBJ) spin_rw_mutex.$(OBJ) spin_mutex.$(OBJ) itt_notify_proxy.$(OBJ)
 
 # These executables don't depend on the TBB library, but include task.cpp directly
 TASK_CPP_DIRECTLY_INCLUDED = test_eh_tasks.exe \
@@ -149,7 +150,9 @@ TEST_TBB_PLAIN.EXE = test_assembly.exe 	\
 	test_yield.exe           	\
 	test_tbb_version.exe           	\
 	test_eh_tasks.exe        \
-	test_eh_algorithms.exe
+	test_eh_algorithms.exe   \
+	test_parallel_invoke.exe        \
+	test_ittnotify.exe
 
 ifdef OPENMP_FLAG
 	TEST_TBB_PLAIN.EXE += test_tbb_openmp
@@ -208,14 +211,18 @@ test_tbb_plain: $(TEST_TBB_PLAIN.EXE)
 	$(run_cmd) ./test_eh_tasks.exe 2:4
 	$(run_cmd) ./test_eh_algorithms.exe 2:4
 	$(run_cmd) ./test_tbb_thread.exe
+	$(run_cmd) ./test_parallel_invoke.exe 1:4	
+	$(run_cmd) ./test_ittnotify.exe 2:2
 
 TEST_TBB_OLD.OBJ = test_concurrent_vector_v2.$(OBJ) test_concurrent_queue_v2.$(OBJ) test_mutex_v2.$(OBJ)
+
+TEST_TBB_DEPRECATED.OBJ =
 
 # For old files, we don't mind warnings etc., thus compilation rules are most relaxed
 $(TEST_TBB_OLD.OBJ): %.$(OBJ): %.cpp
 	$(CPLUS) $(COMPILE_ONLY) $(subst $(WARNING_KEY),,$(CPLUS_FLAGS_NOSTRICT)) $(WARNING_SUPPRESS) $(INCLUDES) $<
 
-TEST_TBB_OLD.EXE = $(subst .$(OBJ),.exe,$(TEST_TBB_OLD.OBJ))
+TEST_TBB_OLD.EXE = $(subst .$(OBJ),.exe,$(TEST_TBB_OLD.OBJ) $(TEST_TBB_DEPRECATED.OBJ))
 
 test_tbb_old: $(TEST_TBB_OLD.EXE)
 	$(run_cmd) ./test_concurrent_vector_v2.exe 1:4

@@ -1,5 +1,5 @@
 /*
-    Copyright 2005-2008 Intel Corporation.  All Rights Reserved.
+    Copyright 2005-2009 Intel Corporation.  All Rights Reserved.
 
     This file is part of Threading Building Blocks.
 
@@ -50,6 +50,12 @@ namespace internal {
 }
 //! @endcond
 
+#if _MSC_VER && !defined(__INTEL_COMPILER)
+    // Workaround for erroneous "unreferenced parameter" warning in method destroy.
+    #pragma warning (push)
+    #pragma warning (disable: 4100)
+#endif
+
 //! Meets "allocator" requirements of ISO C++ Standard, Section 20.1.5
 /** The class selects the best memory allocation mechanism available 
     from scalable_malloc and standard malloc.
@@ -59,11 +65,11 @@ namespace internal {
 template<typename T>
 class tbb_allocator {
 public:
-    typedef T* pointer;
-    typedef const T* const_pointer;
-    typedef T& reference;
-    typedef const T& const_reference;
-    typedef T value_type;
+    typedef typename internal::allocator_type<T>::value_type value_type;
+    typedef value_type* pointer;
+    typedef const value_type* const_pointer;
+    typedef value_type& reference;
+    typedef const value_type& const_reference;
     typedef size_t size_type;
     typedef ptrdiff_t difference_type;
     template<typename U> struct rebind {
@@ -85,7 +91,7 @@ public:
     
     //! Allocate space for n objects.
     pointer allocate( size_type n, const void* /*hint*/ = 0) {
-        return pointer(internal::allocate_via_handler_v3( n * sizeof(T) ));
+        return pointer(internal::allocate_via_handler_v3( n * sizeof(value_type) ));
     }
 
     //! Free previously allocated block of memory.
@@ -95,21 +101,25 @@ public:
 
     //! Largest value for which method allocate might succeed.
     size_type max_size() const throw() {
-        size_type max = static_cast<size_type>(-1) / sizeof (T);
+        size_type max = static_cast<size_type>(-1) / sizeof (value_type);
         return (max > 0 ? max : 1);
     }
     
     //! Copy-construct value at location pointed to by p.
-    void construct( pointer p, const T& value ) {new(static_cast<void*>(p)) T(value);}
+    void construct( pointer p, const value_type& value ) {new(static_cast<void*>(p)) value_type(value);}
 
     //! Destroy value at location pointed to by p.
-    void destroy( pointer p ) {p->~T();}
+    void destroy( pointer p ) {p->~value_type();}
 
     //! Returns current allocator
     static malloc_type allocator_type() {
         return internal::is_malloc_used_v3() ? standard : scalable;
     }
 };
+
+#if _MSC_VER && !defined(__INTEL_COMPILER)
+    #pragma warning (pop)
+#endif // warning 4100 is back
 
 //! Analogous to std::allocator<void>, as defined in ISO C++ Standard, Section 20.4.1
 /** @ingroup memory_allocation */

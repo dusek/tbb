@@ -1,5 +1,5 @@
 /*
-    Copyright 2005-2008 Intel Corporation.  All Rights Reserved.
+    Copyright 2005-2009 Intel Corporation.  All Rights Reserved.
 
     This file is part of Threading Building Blocks.
 
@@ -604,7 +604,7 @@ public:
 
 private:
     //! Basic unit of storage used in chain.
-    struct node {
+    struct node: internal::no_copy {
         //! Next node in chain
         node* next;
         node_mutex_t mutex;
@@ -612,7 +612,7 @@ private:
         node( const Key& key ) : item(key, T()) {}
         node( const Key& key, const T& t ) : item(key, t) {}
         // exception-safe allocation, see C++ Standard 2003, clause 5.3.4p17
-        void* operator new( size_t size, node_allocator_type& a ) {
+        void* operator new( size_t /*size*/, node_allocator_type& a ) {
             void *ptr = a.allocate(1);
             if(!ptr) throw std::bad_alloc();
             return ptr;
@@ -747,10 +747,16 @@ bool concurrent_hash_map<Key,T,HashCompare,A>::empty() const {
     return true;
 }
 
+#if _MSC_VER && !defined(__INTEL_COMPILER)
+    // Suppress "conditional expression is constant" warning.
+    #pragma warning( push )
+    #pragma warning( disable: 4127 )
+#endif
+
 template<typename Key, typename T, typename HashCompare, typename A>
 template<bool op_insert>
 bool concurrent_hash_map<Key,T,HashCompare,A>::lookup( const_accessor* result, const Key& key, bool write, const T* t ) {
-    if( result /*&& result->my_node -- checked in release() */ )
+    if( result )
         result->release();
     const hashcode_t h = my_hash_compare.hash( key );
     segment& s = get_segment(h);
@@ -758,9 +764,9 @@ restart:
     bool return_value = false;
     // first check in double-check sequence
 #if TBB_USE_THREADING_TOOLS
-    const bool grow = op_insert && s.internal_grow_predicate();
+    bool grow = op_insert && s.internal_grow_predicate();
 #else
-    const bool grow = op_insert && s.my_logical_size >= s.my_physical_size
+    bool grow = op_insert && s.my_logical_size >= s.my_physical_size
         && s.my_physical_size < max_physical_size; // check whether there are free bits
 #endif /* TBB_USE_THREADING_TOOLS */
     segment_mutex_t::scoped_lock segment_lock( s.my_mutex, /*write=*/grow );
@@ -816,6 +822,10 @@ done:
     result->my_hash = h;
     return return_value;
 }
+
+#if _MSC_VER && !defined(__INTEL_COMPILER)
+    #pragma warning( pop )
+#endif // warning 4127 is back
 
 template<typename Key, typename T, typename HashCompare, typename A>
 template<typename I>

@@ -1,5 +1,5 @@
 /*
-    Copyright 2005-2008 Intel Corporation.  All Rights Reserved.
+    Copyright 2005-2009 Intel Corporation.  All Rights Reserved.
 
     This file is part of Threading Building Blocks.
 
@@ -45,6 +45,10 @@
 #elif defined(__FreeBSD__)
 #include <unistd.h>
 #endif
+
+#if USE_PTHREAD
+#include <pthread.h>
+#endif /* USE_PTHREAD */
 
 namespace tbb {
 
@@ -122,41 +126,6 @@ void PrintVersion();
 //! Print extra TBB version information on stderr
 void PrintExtraVersionInfo( const char* category, const char* description );
 
-//! Type definition for a pointer to a void somefunc(void)
-typedef void (*PointerToHandler)();
-
-// Double cast through the void* from func_ptr in DLD macro is necessary to 
-// prevent warnings from some compilers (g++ 4.1)
-#if __TBB_WEAK_SYMBOLS
-
-#define DLD(s,h) {(PointerToHandler)&s, (PointerToHandler*)(void*)(&h)}
-//! Association between a handler name and location of pointer to it.
-struct DynamicLinkDescriptor {
-    //! pointer to the handler
-    PointerToHandler ptr;
-    //! Pointer to the handler
-    PointerToHandler* handler;
-};
-
-#else /* !__TBB_WEAK_SYMBOLS */
-
-#define DLD(s,h) {#s, (PointerToHandler*)(void*)(&h)}
-//! Association between a handler name and location of pointer to it.
-struct DynamicLinkDescriptor {
-    //! Name of the handler
-    const char* name;
-    //! Pointer to the handler
-    PointerToHandler* handler;
-};
-
-#endif /* !__TBB_WEAK_SYMBOLS */
-
-//! Fill in dynamically linked handlers.
-/** n is the length of array list[], must not exceed 4, which is all we currently need. 
-    If the library and all of the handlers are found, then all corresponding handler pointers are set.
-    Otherwise all corresponding handler pointers are untouched. */
-bool FillDynamicLinks( const char* libraryname, const DynamicLinkDescriptor list[], size_t n );
-
 //! Class that implements exponential backoff.
 /** See implementation of SpinwaitWhileEq for an example. */
 class ExponentialBackoff {
@@ -203,6 +172,38 @@ static inline void SpinwaitUntilEq( const volatile T& location, const U value ) 
         backoff.pause();
     }
 }
+
+typedef void (*tls_dtor_t)(void*);
+
+//! Class to use native TLS support directly
+template <typename T>
+class tls {
+#if USE_WINTHREAD
+    typedef DWORD tls_key_t;
+public:
+    int create() {
+        tls_key_t tmp = TlsAlloc();
+        if( tmp==TLS_OUT_OF_INDEXES )
+            return TLS_OUT_OF_INDEXES;
+        my_key = tmp;
+        return 0;
+    }
+    int  destroy()      { TlsFree(my_key); my_key=0; return 0; }
+    void set( T value ) { TlsSetValue(my_key, (LPVOID)value); }
+    T    get()          { return (T)TlsGetValue(my_key); }
+#else /* USE_PTHREAD */
+    typedef pthread_key_t tls_key_t;
+public:
+    int  create( tls_dtor_t dtor = NULL ) {
+        return pthread_key_create(&my_key, dtor);
+    }
+    int  destroy()      { return pthread_key_delete(my_key); }
+    void set( T value ) { pthread_setspecific(my_key, (void*)value); }
+    T    get()          { return (T)pthread_getspecific(my_key); }
+#endif
+private:
+    tls_key_t my_key;
+};
 
 } // namespace internal
 

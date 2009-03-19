@@ -1,4 +1,4 @@
-# Copyright 2005-2008 Intel Corporation.  All Rights Reserved.
+# Copyright 2005-2009 Intel Corporation.  All Rights Reserved.
 #
 # This file is part of Threading Building Blocks.
 #
@@ -48,10 +48,10 @@ LIBS = -lpthread -lrt -R .
 C_FLAGS = $(CPLUS_FLAGS)
 
 ifeq ($(cfg), release)
-        CPLUS_FLAGS = -xO2 -library=stlport4 -DUSE_PTHREAD $(WARNING_SUPPRESS)
+        CPLUS_FLAGS = -mt -xO2 -library=stlport4 -DUSE_PTHREAD $(WARNING_SUPPRESS)
 endif
 ifeq ($(cfg), debug)
-        CPLUS_FLAGS = -DTBB_USE_DEBUG -g -library=stlport4 -DUSE_PTHREAD $(WARNING_SUPPRESS)
+        CPLUS_FLAGS = -mt -DTBB_USE_DEBUG -g -library=stlport4 -DUSE_PTHREAD $(WARNING_SUPPRESS)
 endif
 
 ASM=
@@ -80,11 +80,6 @@ endif
 #------------------------------------------------------------------------------
 # Setting assembler data.
 #------------------------------------------------------------------------------
-%.$(OBJ): %.s
-	cpp $(ASM_FLAGS) <$< | grep -v '^#' >$*.tmp
-	$(ASM) $(ASM_FLAGS) -o $@ $*.tmp
-	rm $*.tmp
-
 ASSEMBLY_SOURCE=$(arch)-fbe
 #------------------------------------------------------------------------------
 # End of setting assembler data.

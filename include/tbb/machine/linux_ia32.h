@@ -1,5 +1,5 @@
 /*
-    Copyright 2005-2008 Intel Corporation.  All Rights Reserved.
+    Copyright 2005-2009 Intel Corporation.  All Rights Reserved.
 
     This file is part of Threading Building Blocks.
 
@@ -55,7 +55,7 @@ static inline T __TBB_machine_fetchadd##S(volatile void *ptr, T addend)         
                           : "=r"(result), "=m"(*(T *)ptr)                            \
                           : "0"(addend), "m"(*(T *)ptr)                              \
                           : "memory");                                               \
-   return result;                                                                    \
+    return result;                                                                   \
 }                                                                                    \
                                                                                      \
 static inline  T __TBB_machine_fetchstore##S(volatile void *ptr, T value)            \
@@ -65,7 +65,7 @@ static inline  T __TBB_machine_fetchstore##S(volatile void *ptr, T value)       
                           : "=r"(result), "=m"(*(T *)ptr)                            \
                           : "0"(value), "m"(*(T *)ptr)                               \
                           : "memory");                                               \
-   return result;                                                                    \
+    return result;                                                                   \
 }                                                                                    \
                                                                                      
 __MACHINE_DECL_ATOMICS(1,int8_t,"")
@@ -75,7 +75,8 @@ __MACHINE_DECL_ATOMICS(4,int32_t,"l")
 static inline int64_t __TBB_machine_cmpswp8 (volatile void *ptr, int64_t value, int64_t comparand )
 {
     int64_t result;
-#if __PIC__ /* compiling position-independent code */
+#if __PIC__ 
+    /* compiling position-independent code */
     // EBX register preserved for compliancy with position-independent code rules on IA32
     __asm__ __volatile__ (
             "pushl %%ebx\n\t"
@@ -92,7 +93,7 @@ static inline int64_t __TBB_machine_cmpswp8 (volatile void *ptr, int64_t value, 
              ,"ebx"
 #endif
     );
-#else /* __PIC__ */
+#else /* !__PIC__ */
     union {
         int64_t i64;
         int32_t i32[2];
@@ -106,7 +107,7 @@ static inline int64_t __TBB_machine_cmpswp8 (volatile void *ptr, int64_t value, 
              , "b"(i32[0]), "c"(i32[1])
              : "memory"
     );
-#endif
+#endif /* __PIC__ */
     return result;
 }
 

@@ -1,5 +1,5 @@
 /*
-    Copyright 2005-2008 Intel Corporation.  All Rights Reserved.
+    Copyright 2005-2009 Intel Corporation.  All Rights Reserved.
 
     This file is part of Threading Building Blocks.
 
@@ -88,11 +88,11 @@ inline __int64 __TBB_machine_lg( unsigned __int64 i ) {
     return j;
 }
 
-inline void __TBB_machine_OR( volatile void *operand, uintptr_t addend ) {
+inline void __TBB_machine_OR( volatile void *operand, intptr_t addend ) {
     _InterlockedOr64((__int64*)operand, addend); 
 }
 
-inline void __TBB_machine_AND( volatile void *operand, uintptr_t addend ) {
+inline void __TBB_machine_AND( volatile void *operand, intptr_t addend ) {
     _InterlockedAnd64((__int64*)operand, addend); 
 }
 

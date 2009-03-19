@@ -1,5 +1,5 @@
 /*
-    Copyright 2005-2008 Intel Corporation.  All Rights Reserved.
+    Copyright 2005-2009 Intel Corporation.  All Rights Reserved.
 
     This file is part of Threading Building Blocks.
 
@@ -37,7 +37,7 @@
 #if defined(_MSC_VER) && defined(_Wp64)
     // Workaround for overzealous compiler warnings in /Wp64 mode
     #pragma warning (disable: 4267)
-#endif /* _MSC_VER && _Wp64 */
+#endif
 
 #define RECORD_EVENTS 0
 
@@ -64,7 +64,7 @@ struct micro_queue {
 
     spin_mutex page_mutex;
     
-    class push_finalizer {
+    class push_finalizer: no_copy {
         ticket my_ticket;
         micro_queue& my_queue;
     public:
@@ -78,7 +78,7 @@ struct micro_queue {
 
     void push( const void* item, ticket k, concurrent_queue_base& base );
 
-    class pop_finalizer {
+    class pop_finalizer: no_copy {
         ticket my_ticket;
         micro_queue& my_queue;
         page* my_page; 
@@ -144,10 +144,10 @@ public:
 };
 
 #if _MSC_VER && !defined(__INTEL_COMPILER)
-#pragma warning( push )
-// unary minus operator applied to unsigned type, result still unsigned
-#pragma warning( disable: 4146 )
-#endif /* _MSC_VER && !defined(__INTEL_COMPILER) */
+    // unary minus operator applied to unsigned type, result still unsigned
+    #pragma warning( push )
+    #pragma warning( disable: 4146 )
+#endif
 
 //------------------------------------------------------------------------
 // micro_queue
@@ -200,8 +200,8 @@ bool micro_queue::pop( void* dst, ticket k, concurrent_queue_base& base ) {
 }
 
 #if _MSC_VER && !defined(__INTEL_COMPILER)
-#pragma warning( pop )
-#endif /* _MSC_VER && !defined(__INTEL_COMPILER) */
+    #pragma warning( pop )
+#endif
 
 //------------------------------------------------------------------------
 // concurrent_queue_base
@@ -311,7 +311,7 @@ void concurrent_queue_base::internal_set_capacity( ptrdiff_t capacity, size_t /*
 //------------------------------------------------------------------------
 // concurrent_queue_iterator_rep
 //------------------------------------------------------------------------
-class  concurrent_queue_iterator_rep {
+class  concurrent_queue_iterator_rep: no_assign {
 public:
     typedef concurrent_queue_rep::ticket ticket;
     ticket head_counter;   
