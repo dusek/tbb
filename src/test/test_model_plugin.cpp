@@ -136,8 +136,8 @@ int use_lot_of_tls() {
     pthread_key_t result;
     int setspecific_dummy=10;
     while( pthread_key_create(&result, NULL)==0 
-	       && count < 4096 ) // Sun Solaris doesn't have any built-in limit, so we set something big enough
-	{
+           && count < 4096 ) // Sun Solaris doesn't have any built-in limit, so we set something big enough
+    {
         last_handles[++count%10] = result;
         if(Verbose) printf("%d\n", count);
         pthread_setspecific(result,&setspecific_dummy);

@@ -179,8 +179,8 @@ MyOutputFilter::MyOutputFilter( FILE* output_file ) :
 
 void* MyOutputFilter::operator()( void* item ) {
     TextSlice& output = *static_cast<TextSlice*>(item);
-    int n = fwrite( output.begin(), 1, output.size(), my_output_file );
-    if( n<=0 ) {
+    size_t n = fwrite( output.begin(), 1, output.size(), my_output_file );
+    if( n!=output.size() ) {
         fprintf(stderr,"Can't write into %s file\n", OutputFileName);
         exit(1);
     }

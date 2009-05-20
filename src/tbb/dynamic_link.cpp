@@ -34,7 +34,6 @@
 #endif /* LIBRARY_ASSERT */
 
 #if _WIN32||_WIN64
-    #include <windows.h>
     #include <malloc.h>     /* alloca */
 #else
     #include <dlfcn.h>
@@ -77,8 +76,7 @@ bool dynamic_link( void* module, const dynamic_link_descriptor descriptors[], si
     size_t k = 0;
     for ( ; k < n; ++k ) {
 #if _WIN32||_WIN64
-        // Lvalue casting is used for consistency (see below)
-        (void *&)h[k] = GetProcAddress( (HMODULE)module, descriptors[k].name );
+        h[k] = pointer_to_handler(GetProcAddress( (HMODULE)module, descriptors[k].name ));
 #else
         // Lvalue casting is used; this way icc -strict-ansi does not warn about nonstandard pointer conversion
         (void *&)h[k] = dlsym( module, descriptors[k].name );
@@ -94,24 +92,42 @@ bool dynamic_link( void* module, const dynamic_link_descriptor descriptors[], si
     return true;
 }
 
-bool dynamic_link( const char* library, const dynamic_link_descriptor descriptors[], size_t n, size_t required )
+bool dynamic_link( const char* library, const dynamic_link_descriptor descriptors[], size_t n, size_t required, dynamic_link_handle* handle )
 {
 #if _WIN32||_WIN64
-    if ( dynamic_link( GetModuleHandle(NULL), descriptors, n, required ) )
+    // Interpret non-NULL handle parameter as request to really link against another library.
+    if ( !handle && dynamic_link( GetModuleHandle(NULL), descriptors, n, required ) )
         // Target library was statically linked into this executable
         return true;
     // Prevent Windows from displaying silly message boxes if it fails to load library
     // (e.g. because of MS runtime problems - one of those crazy manifest related ones)
     UINT prev_mode = SetErrorMode (SEM_FAILCRITICALERRORS);
-    void* module = LoadLibrary (library);
+    dynamic_link_handle module = LoadLibrary (library);
     SetErrorMode (prev_mode);
 #else
-    void* module = dlopen( library, RTLD_LAZY ); 
+    dynamic_link_handle module = dlopen( library, RTLD_LAZY ); 
 #endif /* _WIN32||_WIN64 */
-    // Return true if the library is there and it contains all the expected entry points.
-    return module != NULL  &&  dynamic_link( module, descriptors, n, required );
+    if( module ) {
+        if( !dynamic_link( module, descriptors, n, required ) ) {
+            // Return true if the library is there and it contains all the expected entry points.
+            dynamic_unlink(module);
+            module = NULL;
+        }
+    }
+    if( handle ) 
+        *handle = module;
+    return module!=NULL;
 }
 
+void dynamic_unlink( dynamic_link_handle handle ) {
+    if( handle ) {
+#if _WIN32||_WIN64
+        FreeLibrary( handle );
+#else
+        dlclose( handle );
+#endif /* _WIN32||_WIN64 */    
+    }
+}
 #endif /* !__TBB_WEAK_SYMBOLS */
 
 CLOSE_INTERNAL_NAMESPACE

@@ -30,6 +30,8 @@
 #define __TBB_spin_mutex_H
 
 #include <cstddef>
+#include <new>
+#include "aligned_space.h"
 #include "tbb_stddef.h"
 #include "tbb_machine.h"
 #include "tbb_profiling.h"
@@ -73,6 +75,8 @@ public:
         //! Like release, but with ITT instrumentation.
         void __TBB_EXPORTED_METHOD internal_release();
 
+        friend class spin_mutex;
+
     public:
         //! Construct without acquiring a mutex.
         scoped_lock() : my_mutex(NULL), my_unlock_value(0) {}
@@ -99,6 +103,7 @@ public:
         }
 
         //! Try acquiring lock (non-blocking)
+        /** Return true if lock acquired; false otherwise. */
         bool try_acquire( spin_mutex& m ) {
 #if TBB_USE_THREADING_TOOLS||TBB_USE_ASSERT
             return internal_try_acquire(m);
@@ -140,6 +145,42 @@ public:
     static const bool is_rw_mutex = false;
     static const bool is_recursive_mutex = false;
     static const bool is_fair_mutex = false;
+
+    // ISO C++0x compatibility methods
+
+    //! Acquire lock
+    void lock() {
+#if TBB_USE_THREADING_TOOLS
+        aligned_space<scoped_lock,1> tmp;
+        new(tmp.begin()) scoped_lock(*this);
+#else
+        __TBB_LockByte(flag);
+#endif /* TBB_USE_THREADING_TOOLS*/
+    }
+
+    //! Try acquiring lock (non-blocking)
+    /** Return true if lock acquired; false otherwise. */
+    bool try_lock() {
+#if TBB_USE_THREADING_TOOLS
+        aligned_space<scoped_lock,1> tmp;
+        return (new(tmp.begin()) scoped_lock)->internal_try_acquire(*this);
+#else
+        return __TBB_TryLockByte(flag);
+#endif /* TBB_USE_THREADING_TOOLS*/
+    }
+
+    //! Release lock
+    void unlock() {
+#if TBB_USE_THREADING_TOOLS
+        aligned_space<scoped_lock,1> tmp;
+        scoped_lock& s = *tmp.begin();
+        s.my_mutex = this;
+        s.my_unlock_value = 0;
+        s.internal_release();
+#else
+        __TBB_store_with_release(flag, 0);
+#endif /* TBB_USE_THREADING_TOOLS */
+    }
 
     friend class scoped_lock;
 };

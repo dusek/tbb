@@ -31,6 +31,11 @@
 // Every test is presumed to have a command line of the form "foo [-v] [nthread]"
 // The default for nthread is 2.
 
+#ifndef tbb_tests_harness_H
+#define tbb_tests_harness_H
+
+#define __TBB_LAMBDAS_PRESENT  ( _MSC_VER >= 1600 && !__INTEL_COMPILER || __INTEL_COMPILER >= 1100 && _TBB_CPP0X )
+
 #if __SUNPRO_CC
 #include <stdio.h>
 #include <stdlib.h>
@@ -47,6 +52,10 @@
     #include <process.h>
 #else
     #include <pthread.h>
+#endif
+#if __linux__
+#include <sys/utsname.h> /* for uname */
+#include <errno.h>       /* for use in LinuxKernelVersion() */
 #endif
 
 #if !HARNESS_NO_ASSERT
@@ -244,7 +253,7 @@ private:
 };
 
 //! Execute body(i) in parallel for i in the interval [0,n).
-/** Each iteartion is performed by a separate thread. */
+/** Each iteration is performed by a separate thread. */
 template<typename Index, typename Body>
 void NativeParallelFor( Index n, const Body& body ) {
     typedef NativeParallelForTask<Index,Body> task;
@@ -299,3 +308,69 @@ void zero_fill(void* array, size_t N) {
         return val1 < val2 ? val2 : val1;
     }
 #endif /* !max */
+
+#if __linux__
+inline unsigned LinuxKernelVersion()
+{
+    unsigned a, b, c;
+    struct utsname utsnameBuf;
+    
+    if (-1 == uname(&utsnameBuf)) {
+        printf("Can't call uname: errno %d\n", errno);
+        exit(1);
+    }
+    if (3 != sscanf(utsnameBuf.release, "%u.%u.%u", &a, &b, &c)) {
+        printf("Unable to parse OS release '%s'\n", utsnameBuf.release);
+        exit(1);
+    }
+    return 1000000*a+1000*b+c;
+}
+#endif
+
+namespace Harness {
+
+#if !HARNESS_NO_ASSERT
+//! Base class that asserts that no operations are made with the object after its destruction.
+class NoAfterlife {
+protected:
+    enum state_t {
+        LIVE=0x56781234,
+        DEAD=0xDEADBEEF
+    } m_state;
+
+public:
+    NoAfterlife() : m_state(LIVE) {}
+    NoAfterlife( const NoAfterlife& src ) : m_state(LIVE) {
+        ASSERT( src.IsLive(), "Constructing from the dead source" );
+    }
+    ~NoAfterlife() {
+        ASSERT( IsLive(), "Repeated destructor call" );
+        m_state = DEAD;
+    }
+    const NoAfterlife& operator=( const NoAfterlife& src ) {
+        ASSERT( IsLive(), NULL );
+        ASSERT( src.IsLive(), NULL );
+        return *this;
+    }
+    void AssertLive() const {
+        ASSERT( IsLive(), "Already dead" );
+    }
+    bool IsLive() const {
+        return m_state == LIVE;
+    }
+}; // NoAfterlife
+#endif /* !HARNESS_NO_ASSERT */
+
+#if _WIN32 || _WIN64
+    void Sleep ( int ms ) { ::Sleep(ms); }
+#else /* !WIN */
+    void Sleep ( int ms ) {
+        timespec  requested = { ms / 1000, (ms % 1000)*1000000 };
+        timespec  remaining = {0};
+        nanosleep(&requested, &remaining);
+    }
+#endif /* !WIN */
+
+} // namespace Harness
+
+#endif /* tbb_tests_harness_H */

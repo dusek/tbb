@@ -48,8 +48,11 @@ const size_t shared_size = 0;
 #elif _WIN32
 #include <windows.h>
 #include <psapi.h>
+#if _MSC_VER
 #pragma comment(lib, "psapi")
 #endif
+
+#endif /* OS selection */
 
 //! Return estimate of number of bytes of memory that this program is currently using.
 /* Returns 0 if not implemented on platform. */

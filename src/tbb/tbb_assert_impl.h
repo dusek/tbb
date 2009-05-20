@@ -36,8 +36,9 @@
 #include <stdio.h>
 #include <string.h>
 #include <stdarg.h>
-#if _WIN32||_WIN64
+#if _MSC_VER
 #include <crtdbg.h>
+#define __TBB_USE_DBGBREAK_DLG TBB_USE_DEBUG
 #endif
 
 #if _MSC_VER >= 1400
@@ -71,10 +72,11 @@ namespace tbb {
                          expression, line, filename );
                 if( comment )
                     fprintf( stderr, "Detailed description: %s\n", comment );
-#if (_WIN32||_WIN64) && defined(_DEBUG)
+#if __TBB_USE_DBGBREAK_DLG
                 if(1 == _CrtDbgReport(_CRT_ASSERT, filename, line, "tbb_debug.dll", "%s\r\n%s", expression, comment?comment:""))
                         _CrtDbgBreak();
 #else
+                fflush(stderr);
                 abort();
 #endif
             }

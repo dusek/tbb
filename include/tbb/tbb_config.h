@@ -75,11 +75,9 @@
 
 /** Feature sets **/
 
-#if defined(__EXCEPTIONS) || defined(_CPPUNWIND) || defined(__SUNPRO_CC)
 #ifndef __TBB_EXCEPTIONS
 #define __TBB_EXCEPTIONS 1
 #endif /* __TBB_EXCEPTIONS */
-#endif
 
 #ifndef __TBB_SCHEDULER_OBSERVER
 #define __TBB_SCHEDULER_OBSERVER 1
@@ -94,8 +92,26 @@
 #endif /* !__TBB_TASK_DEQUE */
 
 #ifndef __TBB_NEW_ITT_NOTIFY
-#define __TBB_NEW_ITT_NOTIFY 0
+#define __TBB_NEW_ITT_NOTIFY 1
 #endif /* !__TBB_NEW_ITT_NOTIFY */
+
+
+/* TODO: The following condition should be extended as soon as new compilers/runtimes 
+         with std::exception_ptr support appear. */
+#define __TBB_EXCEPTION_PTR_PRESENT  ( _MSC_VER >= 1600 )
+
+
+#ifndef TBB_USE_CAPTURED_EXCEPTION
+    #if __TBB_EXCEPTION_PTR_PRESENT
+        #define TBB_USE_CAPTURED_EXCEPTION 0
+    #else
+        #define TBB_USE_CAPTURED_EXCEPTION 1
+    #endif
+#else /* defined TBB_USE_CAPTURED_EXCEPTION */
+    #if !TBB_USE_CAPTURED_EXCEPTION && !__TBB_EXCEPTION_PTR_PRESENT
+        #error Current runtime does not support std::exception_ptr. Set TBB_USE_CAPTURED_EXCEPTION and make sure that your code is ready to catch tbb::captured_exception.
+    #endif
+#endif /* defined TBB_USE_CAPTURED_EXCEPTION */
 
 
 /** Workarounds presence **/
@@ -105,7 +121,14 @@
     removed as soon as the corresponding bugs are fixed or the buggy OS/compiler
     versions go out of the support list. 
 **/
-#if __GLIBC__==2 && __GLIBC_MINOR__==3
+
+#if defined(_MSC_VER) && _MSC_VER < 0x1500 && !defined(__INTEL_COMPILER)
+    /** VS2005 and earlier does not allow to declare a template class as a friend 
+        of classes defined in other namespaces. **/
+    #define __TBB_TEMPLATE_FRIENDS_BROKEN 1
+#endif
+
+#if __GLIBC__==2 && __GLIBC_MINOR__==3 || __MINGW32__
     /** Some older versions of glibc crash when exception handling happens concurrently. **/
     #define __TBB_EXCEPTION_HANDLING_BROKEN 1
 #endif

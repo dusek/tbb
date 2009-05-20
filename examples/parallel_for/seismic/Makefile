@@ -74,7 +74,7 @@ all:	release test
 resources:
 ifeq ($(UI),mac)
 	mkdir -p $(APPRES)/English.lproj $(NAME).app/Contents/MacOS
-	$(PBXCP) xcode/English.lproj/InfoPlist.strings xcode/English.lproj/main.nib $(APPRES)/English.lproj
+	$(PBXCP) xcode/English.lproj/main.nib $(APPRES)/English.lproj
 	$(PBXCP) xcode/Info.plist $(APPRES)
 endif
 

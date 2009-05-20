@@ -35,8 +35,9 @@
 #include "test_allocator_STL.h"
 
 int main() {
-    TestAllocatorWithSTL<tbb::cache_aligned_allocator>();
-    TestAllocatorWithSTL<tbb::tbb_allocator>();
+    TestAllocatorWithSTL<tbb::cache_aligned_allocator<void> >();
+    TestAllocatorWithSTL<tbb::tbb_allocator<void> >();
+    TestAllocatorWithSTL<tbb::zero_allocator<void> >();
     printf("done\n");
     return 0;
 }

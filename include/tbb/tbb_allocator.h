@@ -30,6 +30,7 @@
 #define __TBB_tbb_allocator_H
 
 #include <new>
+#include <cstring>
 #include "tbb_stddef.h"
 
 namespace tbb {
@@ -139,6 +140,63 @@ inline bool operator==( const tbb_allocator<T>&, const tbb_allocator<U>& ) {retu
 
 template<typename T, typename U>
 inline bool operator!=( const tbb_allocator<T>&, const tbb_allocator<U>& ) {return false;}
+
+//! Meets "allocator" requirements of ISO C++ Standard, Section 20.1.5
+/** The class is an adapter over an actual allocator that fills the allocation
+    using memset function with template argument C as the value.
+    The members are ordered the same way they are in section 20.4.1
+    of the ISO C++ standard.
+    @ingroup memory_allocation */
+template <typename T, template<typename X> class Allocator = tbb_allocator>
+class zero_allocator : public Allocator<T>
+{
+public:
+    typedef Allocator<T> base_allocator_type;
+    typedef typename base_allocator_type::value_type value_type;
+    typedef typename base_allocator_type::pointer pointer;
+    typedef typename base_allocator_type::const_pointer const_pointer;
+    typedef typename base_allocator_type::reference reference;
+    typedef typename base_allocator_type::const_reference const_reference;
+    typedef typename base_allocator_type::size_type size_type;
+    typedef typename base_allocator_type::difference_type difference_type;
+    template<typename U> struct rebind {
+        typedef zero_allocator<U, Allocator> other;
+    };
+
+    zero_allocator() throw() { }
+    zero_allocator(const zero_allocator &a) throw() : base_allocator_type( a ) { }
+    template<typename U>
+    zero_allocator(const zero_allocator<U> &a) throw() : base_allocator_type( Allocator<U>( a ) ) { }
+
+    pointer allocate(const size_type n, const void *hint = 0 ) {
+        pointer ptr = base_allocator_type::allocate( n, hint );
+        std::memset( ptr, 0, n * sizeof(value_type) );
+        return ptr;
+    }
+};
+
+//! Analogous to std::allocator<void>, as defined in ISO C++ Standard, Section 20.4.1
+/** @ingroup memory_allocation */
+template<template<typename T> class Allocator> 
+class zero_allocator<void, Allocator> : public Allocator<void> {
+public:
+    typedef Allocator<void> base_allocator_type;
+    typedef typename base_allocator_type::value_type value_type;
+    typedef typename base_allocator_type::pointer pointer;
+    typedef typename base_allocator_type::const_pointer const_pointer;
+    template<typename U> struct rebind {
+        typedef zero_allocator<U, Allocator> other;
+    };
+};
+
+template<typename T1, template<typename X1> class B1, typename T2, template<typename X2> class B2>
+inline bool operator==( const zero_allocator<T1,B1> &a, const zero_allocator<T2,B2> &b) {
+    return static_cast< B1<T1> >(a) == static_cast< B2<T2> >(b);
+}
+template<typename T1, template<typename X1> class B1, typename T2, template<typename X2> class B2>
+inline bool operator!=( const zero_allocator<T1,B1> &a, const zero_allocator<T2,B2> &b) {
+    return static_cast< B1<T1> >(a) != static_cast< B2<T2> >(b);
+}
 
 } // namespace tbb 
 

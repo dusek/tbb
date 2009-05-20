@@ -37,26 +37,26 @@ const int MByte = 1048576; //1MB
 #include <windows.h>
 #include <stdio.h>
 
-HANDLE hJob;
-
 void limitMem( int limit )
 {
+    static HANDLE hJob = NULL;
     JOBOBJECT_EXTENDED_LIMIT_INFORMATION jobInfo;
+
     jobInfo.BasicLimitInformation.LimitFlags = JOB_OBJECT_LIMIT_PROCESS_MEMORY;
     jobInfo.ProcessMemoryLimit = limit? limit*MByte : 2*1024LL*MByte;
     if (NULL == hJob) {
         if (NULL == (hJob = CreateJobObject(NULL, NULL))) {
-            printf("Can't assign create job object: %d\n", GetLastError());
+            printf("Can't assign create job object: %ld\n", GetLastError());
             exit(1);
         }
         if (0 == AssignProcessToJobObject(hJob, GetCurrentProcess())) {
-            printf("Can't assign process to job object: %d\n", GetLastError());
+            printf("Can't assign process to job object: %ld\n", GetLastError());
             exit(1);
         }
     }
     if (0 == SetInformationJobObject(hJob, JobObjectExtendedLimitInformation, 
                                      &jobInfo, sizeof(jobInfo))) {
-        printf("Can't set limits: %d\n", GetLastError());
+        printf("Can't set limits: %ld\n", GetLastError());
         exit(1);
     }
 }
@@ -65,6 +65,7 @@ void limitMem( int limit )
 #include <stdlib.h>
 #include <stdio.h>
 #include <errno.h>
+#include <sys/types.h>  // uint64_t on FreeBSD, needed for rlim_t
 
 void limitMem( int limit )
 {
@@ -135,6 +136,12 @@ TestAlignedMalloc*  Raligned_malloc;
 TestAlignedRealloc* Raligned_realloc;
 
 bool error_occurred = false;
+
+#if __APPLE__
+// Tests that use the variable are skipped on Mac OS* X
+#else
+static bool perProcessLimits = true;
+#endif
 
 const size_t POWERS_OF_2 = 20;
 
@@ -302,6 +309,14 @@ int main(int argc, char* argv[])
     }
 
     ParseCommandLine( argC, argV );
+#if __linux__
+    /* According to man pthreads 
+       "NPTL threads do not share resource limits (fixed in kernel 2.6.10)".
+       Use per-threads limits for affected systems.
+     */
+    if ( LinuxKernelVersion() < 2*1000000 + 6*1000 + 10)
+        perProcessLimits = false;
+#endif    
     //-------------------------------------
 #if __APPLE__
     /* Skip due to lack of memory limit enforcing under Mac OS X. */
@@ -417,133 +432,85 @@ void CMemTest::InvariantDataRealloc(bool aligned)
     //printf("end check\n");
 }
 
+struct PtrSize {
+    void  *ptr;
+    size_t size;
+};
+
+static int cmpAddrs(const void *p1, const void *p2)
+{
+    const PtrSize *a = (const PtrSize *)p1;
+    const PtrSize *b = (const PtrSize *)p2;
+
+    return a->ptr < b->ptr ? -1 : ( a->ptr == b->ptr ? 0 : 1);
+}
+
 void CMemTest::AddrArifm()
 {
-    int* MasPointer[COUNT_ELEM];
-    size_t MasCountElem[COUNT_ELEM];
-    size_t count;
-    int* tmpAddr;
-    int j;
-    UINT CountZero=0;
-    CountErrors=0;
+    PtrSize *arr = (PtrSize*)Tmalloc(COUNT_ELEM*sizeof(PtrSize));
+
     if (FullLog) printf("\nUnique pointer using Address arithmetics\n");
     if (FullLog) printf("malloc....");
+    ASSERT(arr, NULL);
     for (int i=0; i<COUNT_ELEM; i++)
     {
-        count=rand()%MAX_SIZE;
-        if (count == 0)
-            CountZero++;
-        tmpAddr=(int*)Tmalloc(count*sizeof(int));
-        for (j=0; j<i; j++) // find a place for the new address
-        {
-            if (*(MasPointer+j)>tmpAddr) break;
-        }
-        for (int k=i; k>j; k--)
-        {
-            MasPointer[k]=MasPointer[k-1];
-            MasCountElem[k]=MasCountElem[k-1];
-        }
-        MasPointer[j]=tmpAddr;
-        MasCountElem[j]=count*sizeof(int);/**/
+        arr[i].size=rand()%MAX_SIZE;
+        arr[i].ptr=Tmalloc(arr[i].size);
     }
-    if (FullLog) printf("Count zero: %d\n",CountZero);
+    qsort(arr, COUNT_ELEM, sizeof(PtrSize), cmpAddrs);
+
     for (int i=0; i<COUNT_ELEM-1; i++)
     {
-        if (NULL!=MasPointer[i] && NULL!=MasPointer[i+1]
-            && (uintptr_t)MasPointer[i]+MasCountElem[i] > (uintptr_t)MasPointer[i+1])
-        {
-            CountErrors++;
-            if (ShouldReportError()) printf("malloc: intersection detect at 0x%p between %llu element(int) and 0x%p\n",
-                                            (MasPointer+i),(long long unsigned)MasCountElem[i],(MasPointer+i+1));
-        }
+        if (NULL!=arr[i].ptr && NULL!=arr[i+1].ptr)
+            ASSERT((uintptr_t)arr[i].ptr+arr[i].size <= (uintptr_t)arr[i+1].ptr,
+                   "intersection detected");
     }
-    if (CountErrors) printf("%s\n",strError);
-    else if (FullLog) printf("%s\n",strOk);
-    error_occurred |= ( CountErrors>0 ) ;
     //----------------------------------------------------------------
-    CountErrors=0;
     if (FullLog) printf("realloc....");
     for (int i=0; i<COUNT_ELEM; i++)
     {
-        count=MasCountElem[i]*2;
-        if (count == 0)
-            CountZero++;
-        tmpAddr=(int*)Trealloc(MasPointer[i],count);
-        if (NULL==tmpAddr && 0!=count)
-            Tfree(MasPointer[i]);
-        for (j=0; j<i; j++) // find a place for the new address
-        {
-            if (*(MasPointer+j)>tmpAddr) break;
+        size_t count=arr[i].size*2;
+        void *tmpAddr=Trealloc(arr[i].ptr,count);
+        if (NULL!=tmpAddr) {
+            arr[i].ptr = tmpAddr;
+            arr[i].size = count;
+        } else if (count==0) { // becasue realloc(..., 0) works as free
+            arr[i].ptr = NULL;
+            arr[i].size = 0;
         }
-        for (int k=i; k>j; k--)
-        {
-            MasPointer[k]=MasPointer[k-1];
-            MasCountElem[k]=MasCountElem[k-1];
-        }
-        MasPointer[j]=tmpAddr;
-        MasCountElem[j]=count;//*sizeof(int);/**/
     }
-    if (FullLog) printf("Count zero: %d\n",CountZero);
+    qsort(arr, COUNT_ELEM, sizeof(PtrSize), cmpAddrs);
 
-    // now we have a sorted array of pointers
     for (int i=0; i<COUNT_ELEM-1; i++)
     {
-        if (NULL!=MasPointer[i] && NULL!=MasPointer[i+1]
-            && (uintptr_t)MasPointer[i]+MasCountElem[i] > (uintptr_t)MasPointer[i+1])
-        {
-            CountErrors++;
-            if (ShouldReportError()) printf("realloc: intersection detect at 0x%p between %llu element(int) and 0x%p\n",
-                                            (MasPointer+i),(long long unsigned)MasCountElem[i],(MasPointer+i+1));
-        }
+        if (NULL!=arr[i].ptr && NULL!=arr[i+1].ptr)
+            ASSERT((uintptr_t)arr[i].ptr+arr[i].size <= (uintptr_t)arr[i+1].ptr,
+                   "intersection detected");
     }
-    if (CountErrors) printf("%s\n",strError);
-    else if (FullLog) printf("%s\n",strOk);
-    error_occurred |= ( CountErrors>0 ) ;
     for (int i=0; i<COUNT_ELEM; i++)
     {
-        Tfree(MasPointer[i]);
+        Tfree(arr[i].ptr);
     }
     //-------------------------------------------
-    CountErrors=0;
     if (FullLog) printf("calloc....");
     for (int i=0; i<COUNT_ELEM; i++)
     {
-        count=rand()%MAX_SIZE;
-        if (count == 0)
-            CountZero++;
-        tmpAddr=(int*)Tcalloc(count*sizeof(int),2);
-        for (j=0; j<i; j++) // find a place for the new address
-        {
-            if (*(MasPointer+j)>tmpAddr) break;
-        }
-        for (int k=i; k>j; k--)
-        {
-            MasPointer[k]=MasPointer[k-1];
-            MasCountElem[k]=MasCountElem[k-1];
-        }
-        MasPointer[j]=tmpAddr;
-        MasCountElem[j]=count*sizeof(int)*2;/**/
+        arr[i].size=rand()%MAX_SIZE;
+        arr[i].ptr=Tcalloc(arr[i].size,1);
     }
-    if (FullLog) printf("Count zero: %d\n",CountZero);
+    qsort(arr, COUNT_ELEM, sizeof(PtrSize), cmpAddrs);
 
-    // now we have a sorted array of pointers
     for (int i=0; i<COUNT_ELEM-1; i++)
     {
-        if (NULL!=MasPointer[i] && NULL!=MasPointer[i+1]
-            && (uintptr_t)MasPointer[i]+MasCountElem[i] > (uintptr_t)MasPointer[i+1])
-        {
-            CountErrors++;
-            if (ShouldReportError()) printf("calloc: intersection detect at 0x%p between %llu element(int) and 0x%p\n",
-                                            (MasPointer+i),(long long unsigned)MasCountElem[i],(MasPointer+i+1));
-        }
+        if (NULL!=arr[i].ptr && NULL!=arr[i+1].ptr)
+            ASSERT((uintptr_t)arr[i].ptr+arr[i].size <= (uintptr_t)arr[i+1].ptr,
+                   "intersection detected");
     }
-    if (CountErrors) printf("%s\n",strError);
-    else if (FullLog) printf("%s\n",strOk);
-    error_occurred |= ( CountErrors>0 ) ;
     for (int i=0; i<COUNT_ELEM; i++)
     {
-        Tfree(MasPointer[i]);
+        Tfree(arr[i].ptr);
     }
+    Tfree(arr);
 }
 
 void CMemTest::Zerofilling()
@@ -561,7 +528,7 @@ void CMemTest::Zerofilling()
             continue;
         for (size_t j=0; j<CountElement; j++)
         {
-            if (!TSMas->IzZero())
+            if (!(TSMas+j)->IzZero())
             {
                 CountErrors++;
                 if (ShouldReportError()) printf("detect nonzero element at TestStruct\n");
@@ -750,9 +717,10 @@ void CMemTest::NULLReturn(UINT MinSize, UINT MaxSize)
 void CMemTest::UniquePointer()
 {
     CountErrors=0;
-    int* MasPointer[COUNT_ELEM];
-    size_t MasCountElem[COUNT_ELEM];
+    int **MasPointer = (int **)Tmalloc(sizeof(int*)*COUNT_ELEM);
+    size_t *MasCountElem = (size_t*)Tmalloc(sizeof(size_t)*COUNT_ELEM);
     if (FullLog) printf("\nUnique pointer using 0\n");
+    ASSERT(MasCountElem && MasPointer, NULL);
     //
     //-------------------------------------------------------
     //malloc
@@ -838,6 +806,8 @@ void CMemTest::UniquePointer()
     error_occurred |= ( CountErrors>0 ) ;
     for (int i=0; i<COUNT_ELEM; i++)
         Tfree(MasPointer[i]);
+    Tfree(MasCountElem);
+    Tfree(MasPointer);
 }
 
 bool CMemTest::ShouldReportError()
@@ -957,9 +927,20 @@ void CMemTest::RunAllTests(int total_threads)
 #else
     UniquePointer();
     AddrArifm();
-    limitBarrier->wait(limit_200M);
+    /* There is a bug in the specific verion of GLIBC (2.5-12) shipped 
+       with RHEL5 that leads to erroneous working of the test 
+       on Intel64 and IPF systems when setrlimit-related part is enabled.
+       Switching to GLIBC 2.5-18 from RHEL5.1 resolved the issue.
+     */
+    if (perProcessLimits)
+        limitBarrier->wait(limit_200M);
+    else
+        limitMem(200);
     NULLReturn(1*MByte,100*MByte);
-    limitBarrier->wait(no_limit);
+    if (perProcessLimits)
+        limitBarrier->wait(no_limit);
+    else
+        limitMem(0);
 #endif
-    if (FullLog) printf("All tests ended\nclearing memory....");
+    if (FullLog) printf("All tests ended\nclearing memory...");
 }

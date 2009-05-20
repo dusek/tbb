@@ -40,6 +40,8 @@ extern "C" void _ReadWriteBarrier();
 #define __TBB_fence_for_release() _ReadWriteBarrier()
 #endif
 
+inline void __TBB_rel_acq_fence() { __asm { __asm mfence } }
+
 #define __TBB_WORDSIZE 4
 #define __TBB_BIG_ENDIAN 0
 

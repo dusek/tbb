@@ -144,7 +144,10 @@ extern "C" {
    fences defined here stop such incorrect code motion. */
 #define __TBB_fence_for_release() __asm__ __volatile__("": : :"memory")
 #define __TBB_fence_for_acquire() __asm__ __volatile__("": : :"memory")
-#endif
+#define __TBB_rel_acq_fence() __asm__ __volatile__("mf": : :"memory")
+#else
+#define __TBB_rel_acq_fence() __mf()
+#endif /* __INTEL_COMPILER */
 
 // Special atomic functions
 #define __TBB_CompareAndSwapW(P,V,C)   __TBB_CompareAndSwap8(P,V,C)

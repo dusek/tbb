@@ -31,7 +31,7 @@
 
 #define COUNT_PARAMETERS 3
 
-#ifdef _WIN32
+#ifdef _MSC_VER
 #define snprintf _snprintf
 #endif
 

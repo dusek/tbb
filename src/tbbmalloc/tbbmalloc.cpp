@@ -128,7 +128,7 @@ static RegisterProcessShutdownNotification reg;
 #ifdef _WIN32
 #include <windows.h>
 
-BOOL WINAPI DllMain( HINSTANCE hInst, DWORD callReason, LPVOID )
+extern "C" BOOL WINAPI DllMain( HINSTANCE hInst, DWORD callReason, LPVOID )
 {
 
     if (callReason==DLL_THREAD_DETACH)

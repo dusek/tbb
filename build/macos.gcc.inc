@@ -25,6 +25,7 @@
 # the GNU General Public License.
 
 CPLUS = g++
+CONLY = gcc
 COMPILE_ONLY = -c -MMD
 PREPROC_ONLY = -E -x c
 INCLUDE_KEY = -I
@@ -41,7 +42,7 @@ LIBDL = -ldl
 LIBS = -lpthread
 LINK_FLAGS = 
 LIB_LINK_FLAGS = -dynamiclib
-C_FLAGS = $(CPLUS_FLAGS) -x c
+C_FLAGS = $(CPLUS_FLAGS)
 
 ifeq ($(cfg), release)
     CPLUS_FLAGS = -O2

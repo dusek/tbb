@@ -57,7 +57,7 @@ const char stdout_stream[] = "version_test.out";
 
 int main(int argc, char*[] )
 {
-/* where we first introduced runtime version identification */
+/* We first introduced runtime version identification in 3014 */
 #if TBB_INTERFACE_VERSION>=3014 
     // For now, just test that run-time TBB version matches the compile-time version,
     // since otherwise the subsequent test of "TBB: INTERFACE VERSION" string will fail anyway.
@@ -197,12 +197,14 @@ int main(int argc, char*[] )
 void initialize_strings_vector(std::vector <string_pair>* vector)
 {
     vector->push_back(string_pair("TBB: VERSION\t\t2.1", required));          // check TBB_VERSION
-    vector->push_back(string_pair("TBB: INTERFACE VERSION\t3016", required)); // check TBB_INTERFACE_VERSION
+    vector->push_back(string_pair("TBB: INTERFACE VERSION\t3017", required)); // check TBB_INTERFACE_VERSION
     vector->push_back(string_pair("TBB: BUILD_DATE", required));
     vector->push_back(string_pair("TBB: BUILD_HOST", required));
     vector->push_back(string_pair("TBB: BUILD_OS", required));
 #if _WIN32||_WIN64
+#if !__MINGW32__
     vector->push_back(string_pair("TBB: BUILD_CL", required));
+#endif
     vector->push_back(string_pair("TBB: BUILD_COMPILER", required));
 #elif __APPLE__
     vector->push_back(string_pair("TBB: BUILD_KERNEL", required));
@@ -226,6 +228,8 @@ void initialize_strings_vector(std::vector <string_pair>* vector)
     vector->push_back(string_pair("TBB: DO_ITT_NOTIFY", required));
     vector->push_back(string_pair("TBB: ITT", not_required)); //#ifdef DO_ITT_NOTIFY
     vector->push_back(string_pair("TBB: ALLOCATOR", required));
+    vector->push_back(string_pair("TBB: RML", not_required));
+    vector->push_back(string_pair("TBB: Intel(R) RML library built:", not_required));
     vector->push_back(string_pair("TBB: SCHEDULER", required));
 
     return;

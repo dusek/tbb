@@ -39,9 +39,10 @@ DYLIB_KEY = -shared
 TBB_NOSTRICT = 1
 
 CPLUS = g++ 
+CONLY = gcc
 LIB_LINK_FLAGS = -shared
 LIBS = -lpthread 
-C_FLAGS = $(CPLUS_FLAGS) -x c
+C_FLAGS = $(CPLUS_FLAGS)
 
 ifeq ($(cfg), release)
         CPLUS_FLAGS = -O2 -DUSE_PTHREAD

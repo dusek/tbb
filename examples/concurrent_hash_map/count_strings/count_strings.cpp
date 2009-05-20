@@ -26,6 +26,11 @@
     the GNU General Public License.
 */
 
+// Workaround for ICC 11.0 not finding __sync_fetch_and_add_4 on some of the Linux platforms.
+#if __linux__ && defined(__INTEL_COMPILER)
+#define __sync_fetch_and_add(ptr,addend) _InterlockedExchangeAdd(const_cast<void*>(reinterpret_cast<volatile void*>(ptr)), addend)
+#endif
+
 #include <string>
 #include <cstring>
 #include <cctype>

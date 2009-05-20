@@ -30,7 +30,6 @@
 #include "tbb/cache_aligned_allocator.h"
 #include "tbb/spin_mutex.h"
 #include "tbb/atomic.h"
-#include "../tbb/tbb_misc.h"
 #include <cstring>
 #include <stdio.h>
 
@@ -164,7 +163,7 @@ void micro_queue::push( const void* item, ticket k, concurrent_queue_base& base 
     }
     {
         push_finalizer finalizer( *this, k+concurrent_queue_rep::n_queue ); 
-        SpinwaitUntilEq( tail_counter, k );
+        spin_wait_until_eq( tail_counter, k );
         if( p ) {
             spin_mutex::scoped_lock lock( page_mutex );
             if( page* q = tail_page )
@@ -183,8 +182,8 @@ void micro_queue::push( const void* item, ticket k, concurrent_queue_base& base 
 
 bool micro_queue::pop( void* dst, ticket k, concurrent_queue_base& base ) {
     k &= -concurrent_queue_rep::n_queue;
-    SpinwaitUntilEq( head_counter, k );
-    SpinwaitWhileEq( tail_counter, k );
+    spin_wait_until_eq( head_counter, k );
+    spin_wait_while_eq( tail_counter, k );
     page& p = *head_page;
     __TBB_ASSERT( &p, NULL );
     size_t index = (k/concurrent_queue_rep::n_queue & base.items_per_page-1);
@@ -239,7 +238,7 @@ void concurrent_queue_base::internal_push( const void* src ) {
     concurrent_queue_rep::ticket k  = r.tail_counter++;
     ptrdiff_t e = my_capacity;
     if( e<concurrent_queue_rep::infinite_capacity ) {
-        ExponentialBackoff backoff;
+        atomic_backoff backoff;
         for(;;) {
             if( (ptrdiff_t)(k-r.head_counter)<e ) break;
             backoff.pause();
@@ -261,7 +260,7 @@ bool concurrent_queue_base::internal_pop_if_present( void* dst ) {
     concurrent_queue_rep& r = *my_rep;
     concurrent_queue_rep::ticket k;
     do {
-        ExponentialBackoff backoff;
+        atomic_backoff backoff;
         for(;;) {
             k = r.head_counter;
             if( r.tail_counter<=k ) {
@@ -281,7 +280,7 @@ bool concurrent_queue_base::internal_pop_if_present( void* dst ) {
 
 bool concurrent_queue_base::internal_push_if_not_full( const void* src ) {
     concurrent_queue_rep& r = *my_rep;
-    ExponentialBackoff backoff;
+    atomic_backoff backoff;
     concurrent_queue_rep::ticket k;
     for(;;) {
         k = r.tail_counter;

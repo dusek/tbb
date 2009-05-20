@@ -481,6 +481,9 @@ bool GenerateMap(Polygon_map_t **newMap, int xSize, int ySize, int gNPolygons, c
         }
     }
 #endif  // _DEBUG
+    free(tempMap);
+    free(validPolys);
+    free(validSide);
     return true;
 }
 
@@ -553,6 +556,7 @@ void CheckPolygonMap(Polygon_map_t *checkMap) {
             }
         }
     }
+    free(cArray);
 }
 
 bool CompOnePolygon(RPolygon *p1, RPolygon *p2) {
@@ -602,6 +606,8 @@ bool ComparePolygonMaps(Polygon_map_t *map1, Polygon_map_t *map2) {
             is_ok = false;
         }
     }
+    delete t1;
+    delete t2;
     return is_ok;
 }
 

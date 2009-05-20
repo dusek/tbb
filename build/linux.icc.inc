@@ -70,6 +70,10 @@ ifeq (itanium,$(arch))
     CPLUS_FLAGS += $(PIC_KEY)
 endif 
 
+ifneq (0,$(lambdas))
+	CPLUS_FLAGS += -std=c++0x -D_TBB_CPP0X
+endif
+
 #------------------------------------------------------------------------------
 # Setting assembler data.
 #------------------------------------------------------------------------------

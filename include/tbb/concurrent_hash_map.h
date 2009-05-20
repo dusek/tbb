@@ -808,7 +808,7 @@ done:
     if( !result ) return return_value;
     if( !result->my_lock.try_acquire( b->mutex, write ) ) {
         // we are unlucky, prepare for longer wait
-        internal::AtomicBackoff trials;
+        internal::atomic_backoff trials;
         do {
             if( !trials.bounded_pause() ) {
                 // the wait takes really long, restart the operation

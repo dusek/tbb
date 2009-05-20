@@ -92,6 +92,10 @@ endif
 
 C_FLAGS = $(CPLUS_FLAGS)
 
+ifneq (0,$(lambdas))
+	CPLUS_FLAGS += /Qstd=c++0x /D_TBB_CPP0X
+endif
+
 VCVERSION:=$(runtime)
 VCCOMPAT_FLAG := $(if $(findstring vc7.1, $(VCVERSION)),/Qvc7.1)
 ifeq ($(VCCOMPAT_FLAG),)

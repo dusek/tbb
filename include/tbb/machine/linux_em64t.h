@@ -38,6 +38,8 @@
 #define __TBB_fence_for_acquire() __asm__ __volatile__("": : :"memory")
 #define __TBB_fence_for_release() __asm__ __volatile__("": : :"memory")
 
+inline void __TBB_rel_acq_fence() { __asm__ __volatile__("mfence": : :"memory"); }
+
 #define __MACHINE_DECL_ATOMICS(S,T,X) \
 static inline T __TBB_machine_cmpswp##S (volatile void *ptr, T value, T comparand )  \
 {                                                                                    \

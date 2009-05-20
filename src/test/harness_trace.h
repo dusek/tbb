@@ -49,11 +49,11 @@
 
 #include <cstdarg>
 
-#if _WIN32||_WIN64
+#if _MSC_VER
     #define snprintf _snprintf
-#endif
-#if defined(_MSC_VER) && (_MSC_VER<=1400)
+#if _MSC_VER<=1400
     #define vsnprintf _vsnprintf
+#endif
 #endif
 
 namespace harness_internal {

@@ -32,11 +32,11 @@ endif
 
 # TODO give an error if archs doesn't match
 ifndef arch
-  export arch:=$(shell cmd /C "cscript /nologo /E:jscript $(tbb_root)/build/detect.js /arch")
+  export arch:=$(shell cmd /C "cscript /nologo /E:jscript $(tbb_root)/build/detect.js /arch $(compiler)")
 endif
 
 ifndef runtime
-  export runtime:=$(shell cmd /C "cscript /nologo /E:jscript $(tbb_root)/build/detect.js /runtime")
+  export runtime:=$(shell cmd /C "cscript /nologo /E:jscript $(tbb_root)/build/detect.js /runtime $(compiler)")
 endif
 
 native_compiler := cl
@@ -69,8 +69,8 @@ TBB.RES = tbb_resource.res
 # But for cross-configuration testing, need to link explicitly
 LINK_TBB.LIB = $(if $(crosstest),$(TBB.LIB))
 TBB.MANIFEST = 
-ifneq ($(runtime),vc7.1)
-TBB.MANIFEST = tbbmanifest.exe.manifest
+ifneq ($(filter vc8 vc9,$(runtime)),)
+    TBB.MANIFEST = tbbmanifest.exe.manifest
 endif
 
 MALLOC.DEF = $(MALLOC_ROOT)/$(def_prefix)-tbbmalloc-export.def
@@ -84,6 +84,7 @@ endif
 LINK_MALLOC.LIB = $(MALLOC.LIB)
 
 MALLOCPROXY.DLL = tbbmalloc_proxy$(DEBUG_SUFFIX).$(DLL)
+MALLOCPROXY.LIB = tbbmalloc_proxy$(DEBUG_SUFFIX).$(LIBEXT)
 
 
 MAKE_VERSIONS = cmd /C cscript /nologo /E:jscript $(subst \,/,$(tbb_root))/build/version_info_windows.js $(compiler) $(arch) $(subst \,/,"$(CPLUS) $(CPLUS_FLAGS) $(INCLUDES)") > version_string.tmp

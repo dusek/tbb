@@ -31,7 +31,6 @@
 #include "tbb/atomic.h"
 #include "harness.h"
 #include "harness_cpu.h"
-#include <memory>
 
 #if defined(_MSC_VER) && defined(_Wp64)
     // Workaround for overzealous compiler warnings in /Wp64 mode
@@ -52,45 +51,7 @@ public:
     size_t value() const volatile { return x; }
 };
 
-template <class T>
-class InputIterator {
-    value_t * my_ptr;
-public:
-    typedef std::input_iterator_tag iterator_category;
-    typedef T value_type;
-    typedef typename std::allocator<T>::difference_type difference_type;
-    typedef typename std::allocator<T>::pointer pointer;
-    typedef typename std::allocator<T>::reference reference;
-   
-    InputIterator( value_t * ptr): my_ptr(ptr){}
-    
-    value_t& operator* () { return *my_ptr; }
-    
-    InputIterator& operator++ () { ++my_ptr; return *this; }
-
-    bool operator== ( const InputIterator& r ) { return my_ptr == r.my_ptr; }
-};
-
-template <class T>
-class ForwardIterator {
-    value_t * my_ptr;
-public:
-    typedef std::forward_iterator_tag iterator_category;
-    typedef T value_type;
-    typedef typename std::allocator<T>::difference_type difference_type;
-    typedef typename std::allocator<T>::pointer pointer;
-    typedef typename std::allocator<T>::reference reference;
-   
-    ForwardIterator ( value_t * ptr ) : my_ptr(ptr){}
-    
-    ForwardIterator ( const ForwardIterator& r ) : my_ptr(r.my_ptr){}
-    
-    value_t& operator* () { return *my_ptr; }
-    
-    ForwardIterator& operator++ () { ++my_ptr; return *this; }
-
-    bool operator== ( const ForwardIterator& r ) { return my_ptr == r.my_ptr; }
-};
+#include "harness_iterator.h"
 
 static size_t g_tasks_expected = 0;
 static tbb::atomic<size_t> g_tasks_observed;
@@ -250,9 +211,9 @@ void Run( int nthread ) {
         // Test for random access iterators
         TestIterator<value_t*>(nthread, depth);
         // Test for input iterators
-        TestIterator<InputIterator<value_t> >(nthread, depth);
+        TestIterator<Harness::InputIterator<value_t> >(nthread, depth);
         // Test for forward iterators
-        TestIterator<ForwardIterator<value_t> >(nthread, depth);
+        TestIterator<Harness::ForwardIterator<value_t> >(nthread, depth);
     }
 }
 

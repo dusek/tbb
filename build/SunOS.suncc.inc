@@ -24,8 +24,8 @@
 # invalidate any other reasons why the executable file might be covered by
 # the GNU General Public License.
 
-COMPILE_ONLY = -c -MMD -errtags
-PREPROC_ONLY = -E -MMD
+COMPILE_ONLY = -c -xMMD -errtags
+PREPROC_ONLY = -E -xMMD
 INCLUDE_KEY = -I
 DEFINE_KEY = -D
 OUTPUT_KEY = -o #

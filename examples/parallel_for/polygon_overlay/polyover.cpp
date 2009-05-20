@@ -191,6 +191,7 @@ void NaiveParallelOverlay(Polygon_map_t *&result_map, Polygon_map_t &polymap1, P
         }
         result_map->clear();
     }
+    delete resultMutex;
     if(gCsvFile.is_open()) {
         gCsvFile << std::endl;
     }
@@ -328,6 +329,7 @@ public:
 
         delete fmap1;
         delete fmap2;
+        RPolygon::free_RPolygon( slicePolygon );
     }
 
     ApplySplitOverlay(Polygon_map_t *resultMap, Polygon_map_t *map1, Polygon_map_t *map2, tbb::spin_mutex *rmutex) :
@@ -398,6 +400,7 @@ void SplitParallelOverlay(Polygon_map_t **result_map, Polygon_map_t *polymap1, P
         (*result_map)->clear();
 
     }
+    delete resultMutex;
     if(gCsvFile.is_open()) {
         gCsvFile << std::endl;
     }

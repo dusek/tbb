@@ -39,9 +39,10 @@ namespace tbb {
 
 class task;
 class task_list;
+class task_group;
+
 #if __TBB_EXCEPTIONS
 class task_group_context;
-class tbb_exception;
 #endif /* __TBB_EXCEPTIONS */
 
 //! @cond INTERNAL
@@ -127,6 +128,7 @@ namespace internal {
         friend class internal::allocate_child_proxy;
         friend class internal::allocate_continuation_proxy;
         friend class internal::allocate_additional_child_of_proxy;
+        friend class tbb::task_group;
 
 #if __TBB_EXCEPTIONS
         //! Shared context that is used to communicate asynchronous state changes
@@ -188,6 +190,13 @@ namespace internal {
 
 #if __TBB_EXCEPTIONS
 
+#if TBB_USE_CAPTURED_EXCEPTION
+    class tbb_exception;
+#else
+    namespace internal {
+        class tbb_exception_ptr;
+    }
+#endif /* !TBB_USE_CAPTURED_EXCEPTION */
 
 //! Used to form groups of tasks 
 /** @ingroup task_scheduling 
@@ -204,13 +213,42 @@ namespace internal {
     The context can be bound to another one, and other contexts can be bound to it,
     forming a tree-like structure: parent -> this -> children. Arrows here designate
     cancellation propagation direction. If a task in a cancellation group is canceled
-    all the other tasks in this group and groups bound to it (as children) get canceled too. **/
+    all the other tasks in this group and groups bound to it (as children) get canceled too.
+
+    IMPLEMENTATION NOTE: 
+    When adding new members to task_group_context or changing types of existing ones, 
+    update the size of both padding buffers (_leading_padding and _trailing_padding)
+    appropriately. See also VERSIONING NOTE at the constructor definition below. **/
 class task_group_context : internal::no_copy
 {
+private:
+#if TBB_USE_CAPTURED_EXCEPTION
+    typedef tbb_exception exception_container_type;
+#else
+    typedef internal::tbb_exception_ptr exception_container_type;
+#endif
+
+    enum version_traits_word_layout {
+        traits_offset = 16,
+        version_mask = 0xFFFF,
+        traits_mask = 0xFFFFul << traits_offset
+    };
+
 public:
     enum kind_type {
         isolated,
         bound
+    };
+
+    enum traits_type {
+        exact_exception = 0x0001ul << traits_offset,
+        no_cancellation = 0x0002ul << traits_offset,
+        concurrent_wait = 0x0004ul << traits_offset,
+#if TBB_USE_CAPTURED_EXCEPTION
+        default_traits = 0
+#else
+        default_traits = exact_exception
+#endif /* !TBB_USE_CAPTURED_EXCEPTION */
     };
 
 private:
@@ -232,19 +270,20 @@ private:
     /** Read accesses to the field my_cancellation_requested are on the hot path inside
         the scheduler. This padding ensures that this field never shares the same cache 
         line with a local variable that is frequently written to. **/
-    char _leading_padding[internal::NFS_MaxLineSize - 2 * sizeof(uintptr_t)- sizeof(void*) - sizeof(internal::context_list_node_t)];
+    char _leading_padding[internal::NFS_MaxLineSize - 
+                    2 * sizeof(uintptr_t)- sizeof(void*) - sizeof(internal::context_list_node_t)];
     
     //! Specifies whether cancellation was request for this task group.
     uintptr_t my_cancellation_requested;
     
-    //! Version for run-time checks.
-    /** Run-time version checks may become necessary in the scheduler implementation
-        if in the future the meaning of the existing members will be changed or 
-        new members requiring non-zero initialization. **/
-    uintptr_t  my_version;
+    //! Version for run-time checks and behavioral traits of the context.
+    /** Version occupies low 16 bits, and traits (zero or more ORed enumerators
+        from the traits_type enumerations) take the next 16 bits.
+        Original (zeroth) version of the context did not support any traits. **/
+    uintptr_t  my_version_and_traits;
 
-    //! Pointer to the exception being propagated across this task group.
-    tbb_exception *my_exception;
+    //! Pointer to the container storing exception being propagated across this task group.
+    exception_container_type *my_exception;
 
     //! Scheduler that registered this context in its thread specific list.
     /** This field is not terribly necessary, but it allows to get a small performance 
@@ -257,8 +296,6 @@ private:
     char _trailing_padding[internal::NFS_MaxLineSize - sizeof(intptr_t) - 2 * sizeof(void*)];
 
 public:
-
-
     //! Default & binding constructor.
     /** By default a bound context is created. That is this context will be bound 
         (as child) to the context of the task calling task::allocate_root(this_context) 
@@ -268,30 +305,41 @@ public:
         If task_group_context::isolated is used as the argument, then the tasks associated
         with this context will never be affected by events in any other context.
         
-        Creating isolated context is involves much less overhead, but they have limited
-        utility. Normally when an exception occur in an algorithm that has nested
-        algorithms running one would want all the nested ones canceled as well. Such
-        behavior requires nested algorithms to use bound contexts.
+        Creating isolated contexts involve much less overhead, but they have limited
+        utility. Normally when an exception occurs in an algorithm that has nested
+        ones running, it is desirably to have all the nested algorithms canceled 
+        as well. Such a behavior requires nested algorithms to use bound contexts.
         
         There is one good place where using isolated algorithms is beneficial. It is
         a master thread. That is if a particular algorithm is invoked directly from
         the master thread (not from a TBB task), supplying it with explicitly 
-        created isolated context will result in a faster algorithm startup. */
-    task_group_context ( kind_type relation_with_parent = bound )
+        created isolated context will result in a faster algorithm startup.
+        
+        VERSIONING NOTE: 
+        Implementation(s) of task_group_context constructor(s) cannot be made 
+        entirely out-of-line because the run-time version must be set by the user 
+        code. This will become critically important for binary compatibility, if 
+        we ever have to change the size of the context object.
+
+        Boosting the runtime version will also be necessary whenever new fields
+        are introduced in the currently unused padding areas or the meaning of 
+        the existing fields is changed or extended. **/
+    task_group_context ( kind_type relation_with_parent = bound,
+                         uintptr_t traits = default_traits )
         : my_kind(relation_with_parent)
-        , my_version(0)
+        , my_version_and_traits(1 | traits)
     {
         init();
     }
 
     __TBB_EXPORTED_METHOD ~task_group_context ();
 
-    //! Forcefully reinitializes context object after an algorithm it was used with finished.
-    /** Because the method assumes that the all the tasks that used to be associated with 
-        this context have already finished, you must be extremely careful to not invalidate 
-        the context while it is still in use somewhere in the task hierarchy.
+    //! Forcefully reinitializes the context after the task tree it was associated with is completed.
+    /** Because the method assumes that all the tasks that used to be associated with 
+        this context have already finished, calling it while the context is still 
+        in use somewhere in the task hierarchy leads to undefined behavior.
         
-        IMPORTANT: It is assumed that this method is not used concurrently!
+        IMPORTANT: This method is not thread safe!
 
         The method does not change the context's parent if it is set. **/ 
     void __TBB_EXPORTED_METHOD reset ();
@@ -302,16 +350,25 @@ public:
         Note that canceling never fails. When false is returned, it just means that 
         another thread (or this one) has already sent cancellation request to this
         context or to one of its ancestors (if this context is bound). It is guaranteed
-        that when this method is called on the same context, true may be returned by 
-        at most one invocation. **/
+        that when this method is concurrently called on the same not yet cancelled 
+        context, true will be returned by one and only one invocation. **/
     bool __TBB_EXPORTED_METHOD cancel_group_execution ();
 
     //! Returns true if the context received cancellation request.
     bool __TBB_EXPORTED_METHOD is_group_execution_cancelled () const;
 
+    //! Records the pending exception, and cancels the task group.
+    /** May be called only from inside a catch-block. If the context is already 
+        canceled, does nothing. 
+        The method brings the task group associated with this context exactly into 
+        the state it would be in, if one of its tasks threw the currently pending 
+        exception during its execution. In other words, it emulates the actions 
+        of the scheduler's dispatch loop exception handler. **/
+    void __TBB_EXPORTED_METHOD register_pending_exception ();
+
 protected:
     //! Out-of-line part of the constructor. 
-    /** Separated to facilitate future support for backward binary compatibility. **/
+    /** Singled out to ensure backward binary compatibility of the future versions. **/
     void __TBB_EXPORTED_METHOD init ();
 
 private:
@@ -324,6 +381,15 @@ private:
     //! Checks if any of the ancestors has a cancellation request outstanding, 
     //! and propagates it back to descendants.
     void propagate_cancellation_from_ancestors ();
+
+    //! For debugging purposes only.
+    bool is_alive () { 
+#if TBB_USE_DEBUG
+        return my_version_and_traits != 0xDeadBeef;
+#else
+        return true;
+#endif /* TBB_USE_DEBUG */
+    }
 }; // class task_group_context
 
 #endif /* __TBB_EXCEPTIONS */
@@ -610,6 +676,7 @@ private:
     friend class internal::allocate_continuation_proxy;
     friend class internal::allocate_child_proxy;
     friend class internal::allocate_additional_child_of_proxy;
+    friend class tbb::task_group;
 
     //! Get reference to corresponding task_prefix.
     /** Version tag prevents loader on Linux from using the wrong symbol in debug builds. **/

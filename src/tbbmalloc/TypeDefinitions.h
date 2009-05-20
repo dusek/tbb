@@ -35,7 +35,7 @@
 #       define __ARCH_x86_64 1
 #   elif defined(_M_IA64)
 #       define __ARCH_ipf 1
-#   elif defined(_M_IX86)
+#   elif defined(_M_IX86)||defined(__i386__) // the latter for MinGW support
 #       define __ARCH_x86_32 1
 #   else
 #       error Unknown processor architecture for Windows
@@ -55,7 +55,7 @@
 #endif
 
 // Include files containing declarations of intptr_t and uintptr_t
-#if _WIN32
+#if _MSC_VER
 #include <stddef.h>
 typedef unsigned __int32 uint32_t;
 typedef unsigned __int64 uint64_t;

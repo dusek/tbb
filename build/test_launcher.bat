@@ -27,7 +27,7 @@ REM invalidate any other reasons why the executable file might be covered by
 REM the GNU General Public License.
 REM
 
-REM i.e., no LD_PRELOAD under Windows
+REM no LD_PRELOAD under Windows
 if "%1"=="-l" (
     echo skip
     exit

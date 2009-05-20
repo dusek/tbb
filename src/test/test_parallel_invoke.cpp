@@ -32,7 +32,6 @@
 #include "tbb/tbb_exception.h"
 #include "harness.h"
 #include "harness_trace.h"
-#include "harness_sleep.h"
 
 static const size_t MAX_NUMBER_OF_PINVOKE_ARGS = 10;
 tbb::atomic<size_t> function_counter;
@@ -182,65 +181,17 @@ void test_parallel_invoke()
 }
 
 // Exception handling support test
-// Some variables and macros to test exceptions
-tbb::atomic<size_t> g_cur_executed;
-volatile bool g_exception_occured = false;
-volatile bool g_unknown_exception = false;
-int g_max_concurrency = 0;
-#define EXCEPTION_DESCR "Test exception"
 
-class test_exception : public std::exception
-{
-public:
-    test_exception ( ) {}
-
-    const char* what() const throw() {
-        REMARK ("About to throw test_exception... :");
-        return EXCEPTION_DESCR;
-    }
-};
+#define HARNESS_EH_SIMPLE_MODE 1
+#include "harness_eh.h"
 
 volatile size_t exception_mask; // each bit represents whether the function should throw exception or not
 
-#define TRY()   \
-    try {
-#define CATCH() \
-    } catch ( tbb::captured_exception& e ) {    \
-        REMARK("tbb::captured_exception is caught");   \
-        ASSERT (strcmp(e.what(), EXCEPTION_DESCR) == 0, "Unexpected original exception info");   \
-        g_exception_occured = true;   \
-    }   \
-    catch ( ... ) { \
-        g_exception_occured = true;   \
-        g_unknown_exception = true;   \
-    }
-
-#define ASSERT_EXCEPTION()    \
-    ASSERT (g_exception_occured, "no exception occurred");  \
-    ASSERT (!g_unknown_exception, "unknown exception was caught");
-
-#define CATCH_AND_ASSERT()    \
-    CATCH() \
-    ASSERT_EXCEPTION()
-
-void reset_globals () {
-    INIT_TEST;
-    g_cur_executed = 0;
-    g_exception_occured = false;
-    g_unknown_exception = false;
-}
-
-void throw_test_exception () {
-    throw test_exception();
-}
-
 // throws exception if corresponding exception_mask bit is set
-#define TEST_FUNCTION_WITH_THROW(value) void test_with_throw##value () \
-{   \
+#define TEST_FUNCTION_WITH_THROW(value) void test_with_throw##value () {\
     if (exception_mask & (1 << value)){   \
-        throw_test_exception();    \
-    }else{  \
-    }   \
+        ThrowTestException();    \
+    } \
 }
 
 TEST_FUNCTION_WITH_THROW(0)
@@ -254,14 +205,14 @@ TEST_FUNCTION_WITH_THROW(7)
 TEST_FUNCTION_WITH_THROW(8)
 TEST_FUNCTION_WITH_THROW(9)
 
-void test_exception_handling()
+void TestExceptionHandling()
 {
     REMARK (__FUNCTION__);
     for( size_t n = 2; n <= 10; ++n ) {
         for( exception_mask = 1; exception_mask < (size_t) (1 << n); ++exception_mask ) {
-            reset_globals();
+            ResetEhGlobals();
             TRY();
-                REMARK("Calling parallel_invoke, number of functions = %d, exeption_mask = %d\n", n, exception_mask);
+                REMARK("Calling parallel_invoke, number of functions = %d, exception_mask = %d\n", n, exception_mask);
                 call_parallel_invoke(n, test_with_throw0, test_with_throw1, test_with_throw2, test_with_throw3,
                     test_with_throw4, test_with_throw5, test_with_throw6, test_with_throw7, test_with_throw8, test_with_throw9, NULL);
             CATCH_AND_ASSERT();
@@ -270,84 +221,55 @@ void test_exception_handling()
 }
 
 // Cancellaton support test
-
-class my_cancellator_task : public tbb::task
-{
-    tbb::task_group_context &my_ctx_to_cancel;
-    size_t my_cancel_threshold;
-
-    tbb::task* execute () {
-        s_cancellator_ready = true;
-        while ( g_cur_executed < my_cancel_threshold )
-            __TBB_Yield();
-        my_ctx_to_cancel.cancel_group_execution();
-        return NULL;
-    }
-public:
-    my_cancellator_task ( tbb::task_group_context& ctx, size_t threshold )
-        : my_ctx_to_cancel(ctx), my_cancel_threshold(threshold)
-    {}    
-    static volatile bool s_cancellator_ready;
-};
-
-volatile bool my_cancellator_task::s_cancellator_ready = false;
-
 void function_to_cancel() {
-    ++g_cur_executed;
-    do {
-        Harness::Sleep(10);
-        __TBB_Yield();
-    } while( !my_cancellator_task::s_cancellator_ready );
+    ++g_CurExecuted;
+    CancellatorTask::WaitUntilReady();
 }
 
 // The function is used to test cancellation
 void simple_test_nothrow (){
-    g_cur_executed++;
+    ++g_CurExecuted;
 }
 
-class my_worker_pinvoke_task : public tbb::task
+size_t g_numFunctions,
+       g_functionToCancel;
+
+class ParInvokeLauncherTask : public tbb::task
 {
     tbb::task_group_context &my_ctx;
-    size_t my_number_of_functions;
-    size_t my_number_of_function_to_cancel;
     void(*func_array[10])(void);
 
     tbb::task* execute () {
-        func_array[my_number_of_function_to_cancel] = &function_to_cancel;
-        call_parallel_invoke(my_number_of_functions, func_array[0], func_array[1], func_array[2], func_array[3],
+        func_array[g_functionToCancel] = &function_to_cancel;
+        call_parallel_invoke(g_numFunctions, func_array[0], func_array[1], func_array[2], func_array[3],
             func_array[4], func_array[5], func_array[6], func_array[7], func_array[8], func_array[9], &my_ctx);
         return NULL;
     }
 public:
-    my_worker_pinvoke_task ( tbb::task_group_context& ctx, size_t number_of_functions, size_t number_of_function_to_cancel ) 
-        : my_ctx(ctx), my_number_of_functions (number_of_functions), my_number_of_function_to_cancel(number_of_function_to_cancel)
-    {
+    ParInvokeLauncherTask ( tbb::task_group_context& ctx ) : my_ctx(ctx) {
         for (int i = 0; i <=9; ++i)
             func_array[i] = &simple_test_nothrow;
     }
 };
 
-void test_cancellation(size_t number_of_functions, size_t number_of_function_to_cancel)
+void TestCancellation ()
 {
     REMARK (__FUNCTION__);
-    reset_globals();
-    tbb::task_group_context  ctx;
-    my_cancellator_task::s_cancellator_ready = false;
-    tbb::empty_task &r = *new( tbb::task::allocate_root(ctx) ) tbb::empty_task;
-    r.set_ref_count(3);
-    r.spawn( *new( r.allocate_child() ) my_cancellator_task(ctx, 1) );
-    __TBB_Yield();
-    r.spawn( *new( r.allocate_child() ) my_worker_pinvoke_task(ctx, number_of_functions, number_of_function_to_cancel) );
-    TRY();
-        r.wait_for_all();
-    CATCH();
-    r.destroy(r);
-    ASSERT (!g_exception_occured, "Cancelling tasks should not cause any exceptions");
+    for ( int n = 2; n <= 10; ++n ) {
+        for ( int m = 0; m <= n - 1; ++m ) {
+            g_numFunctions = n;
+            g_functionToCancel = m;
+            ResetEhGlobals();
+            RunCancellationTest<ParInvokeLauncherTask, CancellatorTask>();
+        }
+    }
 }
 
 //------------------------------------------------------------------------
 // Entry point
 //------------------------------------------------------------------------
+
+#include "harness_cpu.h"
 
 int main(int argc, char* argv[]) {
     // Set default minimum number of threads
@@ -355,21 +277,18 @@ int main(int argc, char* argv[]) {
     ParseCommandLine( argc, argv );
     MinThread = min(MinThread, MaxThread);
     ASSERT (MinThread>=1, "Minimal number of threads must be 1 or more");
-    int step = max(MaxThread - MinThread, 1);
-    for ( int g_num_threads = MinThread; g_num_threads <= MaxThread; g_num_threads += step ) {
-        tbb::task_scheduler_init init( g_num_threads );
-        g_max_concurrency = min(g_num_threads, tbb::task_scheduler_init::default_num_threads());
+    for ( int p = MinThread; p <= MaxThread; ++p ) {
+        tbb::task_scheduler_init init(p);
         test_parallel_invoke();
-        if (g_num_threads > 1) {
-#if __GLIBC__==2&&__GLIBC_MINOR__==3
+        if (p > 1) {
+#if __TBB_EXCEPTION_HANDLING_BROKEN
             printf("Warning: Exception handling tests are skipped due to a known issue.\n");
 #else
-            test_exception_handling();
+            TestExceptionHandling();
 #endif
-            for(int n = 2; n <=10; ++n)
-                for (int m = 0; m <= n - 1; ++m)
-                    test_cancellation(n, m);
+            TestCancellation();
         }
+        TestCPUUserTime(p);
     }
     printf("done\n");
     return 0;

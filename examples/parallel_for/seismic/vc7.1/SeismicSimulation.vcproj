@@ -47,8 +47,8 @@
 				Name="VCMIDLTool"/>
 			<Tool
 				Name="VCPostBuildEventTool"
-				Description="Copying tbb_debug.dll"
-				CommandLine="copy &quot;$(TBB21_INSTALL_DIR)\ia32\vc7.1\bin\tbb_debug.dll&quot; &quot;$(OutDir)&quot;"/>
+				Description="Copying DLLs and PDBs"
+				CommandLine="copy &quot;$(TBB21_INSTALL_DIR)\ia32\vc7.1\bin\tbb_debug.dll&quot; &quot;$(OutDir)&quot;&#x0D;&#x0A; copy  &quot;$(TBB21_INSTALL_DIR)\ia32\vc7.1\bin\tbb_debug.pdb&quot; &quot;$(OutDir)&quot;"/>
 			<Tool
 				Name="VCPreBuildEventTool"/>
 			<Tool
@@ -103,8 +103,8 @@
 				Name="VCMIDLTool"/>
 			<Tool
 				Name="VCPostBuildEventTool"
-				Description="Copying tbb.dll"
-				CommandLine="copy &quot;$(TBB21_INSTALL_DIR)\ia32\vc7.1\bin\tbb.dll&quot; &quot;$(OutDir)&quot;"/>
+				Description="Copying DLLs and PDBs"
+				CommandLine="copy &quot;$(TBB21_INSTALL_DIR)\ia32\vc7.1\bin\tbb.dll&quot; &quot;$(OutDir)&quot;&#x0D;&#x0A; copy  &quot;$(TBB21_INSTALL_DIR)\ia32\vc7.1\bin\tbb.pdb&quot; &quot;$(OutDir)&quot;"/>
 			<Tool
 				Name="VCPreBuildEventTool"/>
 			<Tool
@@ -159,8 +159,8 @@
 				Name="VCMIDLTool"/>
 			<Tool
 				Name="VCPostBuildEventTool"
-				Description="Copying tbb.dll"
-				CommandLine="copy &quot;$(TBB21_INSTALL_DIR)\ia32\vc7.1\bin\tbb.dll&quot; &quot;$(OutDir)&quot;"/>
+				Description="Copying DLLs and PDBs"
+				CommandLine="copy &quot;$(TBB21_INSTALL_DIR)\ia32\vc7.1\bin\tbb.dll&quot; &quot;$(OutDir)&quot;&#x0D;&#x0A; copy  &quot;$(TBB21_INSTALL_DIR)\ia32\vc7.1\bin\tbb.pdb&quot; &quot;$(OutDir)&quot;"/>
 			<Tool
 				Name="VCPreBuildEventTool"
 				CommandLine="..\..\..\common\gui\dxcheck.bat"/>
@@ -215,8 +215,8 @@
 				Name="VCMIDLTool"/>
 			<Tool
 				Name="VCPostBuildEventTool"
-				Description="Copying tbb_debug.dll"
-				CommandLine="copy &quot;$(TBB21_INSTALL_DIR)\ia32\vc7.1\bin\tbb_debug.dll&quot; &quot;$(OutDir)&quot;"/>
+				Description="Copying DLLs and PDBs"
+				CommandLine="copy &quot;$(TBB21_INSTALL_DIR)\ia32\vc7.1\bin\tbb_debug.dll&quot; &quot;$(OutDir)&quot;&#x0D;&#x0A; copy  &quot;$(TBB21_INSTALL_DIR)\ia32\vc7.1\bin\tbb_debug.pdb&quot; &quot;$(OutDir)&quot;"/>
 			<Tool
 				Name="VCPreBuildEventTool"
 				CommandLine="..\..\..\common\gui\dxcheck.bat"/>

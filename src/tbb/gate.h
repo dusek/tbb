@@ -94,17 +94,18 @@ private:
     HANDLE event;
 public:
     //! Initialize with count=0
-    Gate() :   
-    state(0) 
-    {
+    Gate() : state(0) {
         event = CreateEvent( NULL, true, false, NULL );
         InitializeCriticalSection( &critical_section );
-        ITT_SYNC_CREATE(event, SyncType_Scheduler, SyncObj_Gate);
+        ITT_SYNC_CREATE(&event, SyncType_Scheduler, SyncObj_Gate);
         ITT_SYNC_CREATE(&critical_section, SyncType_Scheduler, SyncObj_GateLock);
     }
     ~Gate() {
+        // Fake prepare/acquired pair for Amplifier to correctly attribute the operations below
+        ITT_NOTIFY( sync_prepare, &event );
         CloseHandle( event );
         DeleteCriticalSection( &critical_section );
+        ITT_NOTIFY( sync_acquired, &event );
     }
     //! Get current state of gate
     state_t get_state() const {

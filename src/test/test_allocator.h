@@ -37,6 +37,11 @@
 
 #include "harness.h"
 
+template<typename A>
+struct is_zero_filling {
+    static const bool value = false;
+};
+
 int NumberOfFoo;
 
 template<typename T, size_t N>
@@ -143,6 +148,11 @@ void TestBasic( A& a ) {
 
 #include "tbb/blocked_range.h"
 
+#if _MSC_VER && !defined(__INTEL_COMPILER)
+    // Workaround for erroneous "conditional expression is constant" warning in method check_allocate.
+    #pragma warning (disable: 4127)
+#endif
+
 // A is an allocator for some type
 template<typename A>
 struct Body: NoAssign {
@@ -155,8 +165,11 @@ struct Body: NoAssign {
         size_t size = i * (i&3);
         array[i] = i&1 ? a.allocate(size, array[i>>3]) : a.allocate(size);
         char* s = reinterpret_cast<char*>(reinterpret_cast<void*>(array[i]));
-        for( size_t j=0; j<size*sizeof(A); ++j )
+        for( size_t j=0; j<size*sizeof(A); ++j ) {
+            if(is_zero_filling<typename A::template rebind<void>::other>::value)
+                ASSERT( !s[j], NULL);
             s[j] = PseudoRandomValue(i, t);
+        }
     }
 
     void check_deallocate( typename A::pointer array[], size_t i, size_t t ) const

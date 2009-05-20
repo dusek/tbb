@@ -72,7 +72,7 @@ Software - Supported Operating Systems
 	Asianux* 3.0
 	Debian* GNU/Linux* 4.0
 	Ubuntu* 7.04, 7.10, 8.04, 8.10
-	SuSE* Linux* Enterprise Server (SLES) 9, 10
+	SuSE* Linux* Enterprise Server (SLES) 9, 10, 11
 	SGI* Propack* 4.0 (with Intel(R) Itanium(R) processors only)
 	SGI* Propack* 5.0 (not with IA-32 architecture processors)
 	Turbolinux* GreatTurbo Enterprise Server 10 SP1, Turbolinux* 11

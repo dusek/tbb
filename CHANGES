@@ -1,3 +1,52 @@
+20090511 open-source release
+
+Changes (w.r.t. previous open-source release):
+
+- Basic support for MinGW32 development kit.
+- Added tbb::zero_allocator class that initializes memory with zeros.
+    It can be used as an adaptor to any STL-compatible allocator class.
+- Added tbb::parallel_for_each template function as alias to parallel_do.
+- Added more overloads for tbb::parallel_for.
+- Added support for exact exception propagation (can only be used with 
+    compilers that support C++0x std::exception_ptr).
+- tbb::atomic template class can be used with enumerations.
+- mutex, recursive_mutex, spin_mutex, spin_rw_mutex classes extended
+    with explicit lock/unlock methods.
+- Fixed size() and grow_to_at_least() methods of tbb::concurrent_vector
+    to provide space allocation guarantees. More methods added for
+    compatibility with std::vector, including some from C++0x.
+- Preview of a lambda-friendly interface for low-level use of tasks.
+- scalable_msize function added to the scalable allocator (Windows only).
+- Rationalized internal auxiliary functions for spin-waiting and backoff.
+- Several tests undergo decent refactoring.
+
+Changes affecting backward compatibility:
+
+- Improvements in concurrent_queue, including limited API changes. 
+    The previous version is deprecated; its functionality is accessible 
+    via methods of the new tbb::concurrent_bounded_queue class.
+- grow* and push_back methods of concurrent_vector changed to return
+    iterators; old semantics is deprecated.
+
+------------------------------------------------------------------------
+TBB 2.1 Update 4 commercial-aligned release
+
+Changes (w.r.t. TBB 2.1 U3 commercial-aligned release):
+
+- Added tests for aligned memory allocations and malloc replacement.
+- Several improvements for better bundling with Intel(R) C++ Compiler.
+- A few other small changes in code and documentaion.
+
+Bugs fixed: 
+
+- 150 - request to build TBB examples with debug info in release mode.
+- backward compatibility issue with concurrent_queue on Windows.
+- dependency on VS 2005 SP1 runtime libraries removed.
+- compilation of GUI examples under XCode* 3.1 (1577).
+- On Windows, TBB allocator classes can be instantiated with const types 
+    for compatibility with MS implementation of STL containers (1566).
+
+------------------------------------------------------------------------
 20090313 open-source release
 
 Changes (w.r.t. 20081109 open-source release):
@@ -21,12 +70,8 @@ Changes (w.r.t. 20081109 open-source release):
     examples and documents.
 
 Bugs fixed: 
-- 150 - request to build TBB examples with debug info in release mode.
-- backward compatibility issue with concurrent_queue on Windows.
-- dependency on VS 2005 SP1 runtime libraries removed.
-- compilation of GUI examples under XCode* 3.1 (1577).
-- On Windows, TBB allocator classes can be instantiated with const types 
-    for compatibility with MS implementation of STL containers (1566).
+
+- The same list as in TBB 2.1 Update 4 right above.
 
 ------------------------------------------------------------------------
 TBB 2.1 Update 3 commercial-aligned release

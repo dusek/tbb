@@ -187,7 +187,7 @@ endif
 $(EXE): $(SOURCE)
 ifeq ($(UI),mac)
 	mkdir -p $(RES)/English.lproj $(NAME).$(VERSION).app/Contents/MacOS
-	$(PBXCP) xcode/English.lproj/InfoPlist.strings xcode/English.lproj/main.nib $(RES)/English.lproj
+	$(PBXCP) xcode/English.lproj/main.nib $(RES)/English.lproj
 	$(PBXCP) xcode/Info.plist $(RES)
 endif
 	$(CXX) $(MYCXXFLAGS) -o $@ $(SOURCE) $(LIBS)

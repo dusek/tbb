@@ -41,6 +41,9 @@
 #endif /* OPEN_INTERNAL_NAMESPACE */
 
 #include <stddef.h>
+#if _WIN32||_WIN64
+#include <windows.h>
+#endif /* _WIN32||_WIN64 */
 
 OPEN_INTERNAL_NAMESPACE
 
@@ -73,16 +76,28 @@ struct dynamic_link_descriptor {
 
 #endif /* !__TBB_WEAK_SYMBOLS */
 
+#if _WIN32||_WIN64
+typedef HMODULE dynamic_link_handle;
+#else 
+typedef void* dynamic_link_handle;
+#endif /* _WIN32||_WIN64 */
+
 //! Fill in dynamically linked handlers.
 /** 'n' is the length of the array descriptors[].
     'required' is the number of the initial entries in the array descriptors[] 
     that have to be found in order for the call to succeed. If the library and 
     all the required handlers are found, then the corresponding handler pointers 
-    are set. Otherwise the original array of descriptors is left untouched. **/
+    are set, and the return value is true.  Otherwise the original array of 
+    descriptors is left untouched and the return value is false. **/
 bool dynamic_link( const char* libraryname, 
                    const dynamic_link_descriptor descriptors[], 
                    size_t n, 
-                   size_t required = ~(size_t)0 );
+                   size_t required = ~(size_t)0,
+                   dynamic_link_handle* handle = 0 );
+
+#if !__TBB_WEAK_SYMBOLS
+void dynamic_unlink( dynamic_link_handle handle );
+#endif /* !__TBB_WEAK_SYMBOLS */
 
 CLOSE_INTERNAL_NAMESPACE
 

@@ -35,10 +35,16 @@
 // the real body of the test is there:
 #include "test_allocator.h"
 
+template<>
+struct is_zero_filling<tbb::zero_allocator<void> > {
+    static const bool value = true;
+};
+
 int main(void)
 {
     int result = TestMain<tbb::cache_aligned_allocator<void> >();
-    result += TestMain<tbb::tbb_allocator<void> >();   
+    result += TestMain<tbb::tbb_allocator<void> >();
+    result += TestMain<tbb::zero_allocator<void> >();
 
     printf("done\n");
     return result;

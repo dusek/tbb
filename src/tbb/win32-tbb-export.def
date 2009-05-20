@@ -76,16 +76,19 @@ __TBB_machine_trylockbyte
 ?observe@task_scheduler_observer_v3@internal@tbb@@QAEX_N@Z
 
 ; exception handling support
+#if __TBB_EXCEPTIONS
 ?allocate@allocate_root_with_context_proxy@internal@tbb@@QBEAAVtask@3@I@Z
 ?free@allocate_root_with_context_proxy@internal@tbb@@QBEXAAVtask@3@@Z
 ?is_group_execution_cancelled@task_group_context@tbb@@QBE_NXZ
 ?cancel_group_execution@task_group_context@tbb@@QAE_NXZ
 ?reset@task_group_context@tbb@@QAEXXZ
 ?init@task_group_context@tbb@@IAEXXZ
+?register_pending_exception@task_group_context@tbb@@QAEXXZ
 ??1task_group_context@tbb@@QAE@XZ
 ?name@captured_exception@tbb@@UBEPBDXZ
 ?what@captured_exception@tbb@@UBEPBDXZ
 ??1captured_exception@tbb@@UAE@XZ
+#endif /* __TBB_EXCEPTIONS */
 
 ; tbb_misc.cpp
 ?assertion_failure@tbb@@YAXPBDH00@Z
@@ -94,6 +97,7 @@ __TBB_machine_trylockbyte
 ?set_assertion_handler@tbb@@YAP6AXPBDH00@ZP6AX0H00@Z@Z
 ?runtime_warning@internal@tbb@@YAXPBDZZ
 TBB_runtime_interface_version
+?throw_bad_last_alloc_exception_v4@internal@tbb@@YAXXZ
 
 ; itt_notify.cpp
 ?itt_load_pointer_with_acquire_v3@internal@tbb@@YAPAXPBX@Z
@@ -110,7 +114,9 @@ TBB_runtime_interface_version
 ?clear@pipeline@tbb@@QAEXXZ
 ?inject_token@pipeline@tbb@@AAEXAAVtask@2@@Z
 ?run@pipeline@tbb@@QAEXI@Z
+#if __TBB_EXCEPTIONS
 ?run@pipeline@tbb@@QAEXIAAVtask_group_context@2@@Z
+#endif
 
 ; queuing_rw_mutex.cpp
 ?internal_construct@queuing_rw_mutex@tbb@@QAEXXZ
@@ -201,6 +207,7 @@ TBB_runtime_interface_version
 ?internal_push@concurrent_queue_base_v3@internal@tbb@@IAEXPBX@Z
 ?internal_push_if_not_full@concurrent_queue_base_v3@internal@tbb@@IAE_NPBX@Z
 ?internal_size@concurrent_queue_base_v3@internal@tbb@@IBEHXZ
+?internal_empty@concurrent_queue_base_v3@internal@tbb@@IBE_NXZ
 ?internal_set_capacity@concurrent_queue_base_v3@internal@tbb@@IAEXHI@Z
 ?internal_finish_clear@concurrent_queue_base_v3@internal@tbb@@IAEXXZ
 ?internal_throw_exception@concurrent_queue_base_v3@internal@tbb@@IBEXXZ
@@ -231,6 +238,8 @@ TBB_runtime_interface_version
 ?internal_compact@concurrent_vector_base_v3@internal@tbb@@IAEPAXIPAXP6AX0I@ZP6AX0PBXI@Z@Z
 ?internal_swap@concurrent_vector_base_v3@internal@tbb@@IAEXAAV123@@Z
 ?internal_throw_exception@concurrent_vector_base_v3@internal@tbb@@IBEXI@Z
+?internal_resize@concurrent_vector_base_v3@internal@tbb@@IAEXIIIPBXP6AXPAXI@ZP6AX10I@Z@Z
+?internal_grow_to_at_least_with_result@concurrent_vector_base_v3@internal@tbb@@IAEIIIP6AXPAXPBXI@Z1@Z
 
 ; tbb_thread
 ?join@tbb_thread_v3@internal@tbb@@QAEXXZ

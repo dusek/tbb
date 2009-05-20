@@ -474,8 +474,12 @@ namespace tbb {
             if ( pointer local_ptr = static_cast< pointer >(my_tls_manager::get_tls(my_key)) ) {
                return *local_ptr;
             } else {
+#if TBB_DEPRECATED
                 typename internal_collection_type::size_type local_index = my_locals.push_back( my_exemplar );
                 reference local_ref = my_locals[local_index].value;
+#else
+                reference local_ref = my_locals.push_back( my_exemplar )->value;
+#endif
                 my_tls_manager::set_tls( my_key, static_cast<void *>(&local_ref) );
                 return local_ref;
             }

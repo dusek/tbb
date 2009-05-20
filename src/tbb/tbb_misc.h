@@ -46,10 +46,6 @@
 #include <unistd.h>
 #endif
 
-#if USE_PTHREAD
-#include <pthread.h>
-#endif /* USE_PTHREAD */
-
 namespace tbb {
 
 namespace internal {
@@ -126,84 +122,6 @@ void PrintVersion();
 //! Print extra TBB version information on stderr
 void PrintExtraVersionInfo( const char* category, const char* description );
 
-//! Class that implements exponential backoff.
-/** See implementation of SpinwaitWhileEq for an example. */
-class ExponentialBackoff {
-    //! Time delay, in units of "pause" instructions. 
-    /** Should be equal to approximately the number of "pause" instructions
-        that take the same time as an context switch. */
-    static const int LOOPS_BEFORE_YIELD = 0x10;
-    int count;
-public:
-    ExponentialBackoff() : count(1) {}
-
-    //! Pause for a while.
-    void pause() {
-        if( count<=LOOPS_BEFORE_YIELD ) {
-            __TBB_Pause(count);
-            // Pause twice as long the next time.
-            count*=2;
-        } else {
-            // Pause is so long that we might as well yield CPU to scheduler.
-            __TBB_Yield();
-        }
-    }
-    void reset() {
-        count = 1;
-    }
-};
-
-//! Spin WHILE the value of the variable is equal to a given value
-/** T and U should be comparable types. */
-template<typename T, typename U>
-static inline void SpinwaitWhileEq( const volatile T& location, U value ) {
-    ExponentialBackoff backoff;
-    while( location==value ) {
-        backoff.pause();
-    }
-}
-
-//! Spin UNTIL the value of the variable is equal to a given value
-/** T and U should be comparable types. */
-template<typename T, typename U>
-static inline void SpinwaitUntilEq( const volatile T& location, const U value ) {
-    ExponentialBackoff backoff;
-    while( location!=value ) {
-        backoff.pause();
-    }
-}
-
-typedef void (*tls_dtor_t)(void*);
-
-//! Class to use native TLS support directly
-template <typename T>
-class tls {
-#if USE_WINTHREAD
-    typedef DWORD tls_key_t;
-public:
-    int create() {
-        tls_key_t tmp = TlsAlloc();
-        if( tmp==TLS_OUT_OF_INDEXES )
-            return TLS_OUT_OF_INDEXES;
-        my_key = tmp;
-        return 0;
-    }
-    int  destroy()      { TlsFree(my_key); my_key=0; return 0; }
-    void set( T value ) { TlsSetValue(my_key, (LPVOID)value); }
-    T    get()          { return (T)TlsGetValue(my_key); }
-#else /* USE_PTHREAD */
-    typedef pthread_key_t tls_key_t;
-public:
-    int  create( tls_dtor_t dtor = NULL ) {
-        return pthread_key_create(&my_key, dtor);
-    }
-    int  destroy()      { return pthread_key_delete(my_key); }
-    void set( T value ) { pthread_setspecific(my_key, (void*)value); }
-    T    get()          { return (T)pthread_getspecific(my_key); }
-#endif
-private:
-    tls_key_t my_key;
-};
 
 } // namespace internal
 

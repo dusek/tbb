@@ -39,7 +39,6 @@ VPATH = $(tbb_root)/src/tbb/$(ASSEMBLY_SOURCE) $(tbb_root)/src/tbb $(tbb_root)/s
 VPATH += $(MALLOC_ROOT) $(MALLOC_SOURCE_ROOT)
 
 KNOWN_NOSTRICT = test_ScalableAllocator_STL.$(OBJ) test_malloc_compliance.$(OBJ) test_malloc_overload.$(OBJ)
-KNOWN_WARNINGS =
 
 CPLUS_FLAGS += $(if $(crosstest),$(DEFINE_KEY)__TBBMALLOC_NO_IMPLICIT_LINKAGE=1)
 
@@ -139,6 +138,10 @@ MALLOC_MAIN_TESTS = test_ScalableAllocator.exe test_ScalableAllocator_STL.exe te
 MALLOC_C_TESTS = test_malloc_pure_c.exe
 MALLOC_OVERLOAD_TESTS =  test_malloc_overload.exe test_malloc_overload_proxy.exe
 
+ifeq (windows.gcc,$(tbb_os).$(compiler))
+test_malloc_overload.exe: LIBS += $(call cross_suffix,$(MALLOCPROXY.LIB))
+endif
+
 test_malloc_overload.exe: test_malloc_overload.$(OBJ) 
 	$(CPLUS) $(OUTPUT_KEY)$@ $(CPLUS_FLAGS) $^ $(LIBDL) $(LIBS) $(LINK_FLAGS)
 test_malloc_overload_proxy.exe: test_malloc_overload.$(OBJ) $(call cross_suffix,$(MALLOCPROXY.LIB))
@@ -151,7 +154,7 @@ $(MALLOC_C_TESTS): %.exe: %.$(OBJ) $(call cross_suffix,$(MALLOC.LIB))
 
 # run_cmd is usually empty
 malloc_test: $(call cross_suffix,$(MALLOC.DLL)) $(MALLOC_MAIN_TESTS) $(MALLOC_C_TESTS) $(MALLOC_OVERLOAD_TESTS)
-	$(run_cmd) $(TEST_LAUNCHER) -l $(MALLOCPROXY.DLL) test_malloc_overload.exe
+	$(run_cmd) $(TEST_LAUNCHER) -l $(call cross_suffix,$(MALLOCPROXY.DLL)) test_malloc_overload.exe
 	$(run_cmd) $(TEST_LAUNCHER) test_malloc_overload_proxy.exe
 	$(run_cmd) $(TEST_LAUNCHER) test_malloc_compliance.exe 1:4
 	$(run_cmd) ./test_ScalableAllocator.exe

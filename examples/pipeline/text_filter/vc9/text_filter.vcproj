@@ -94,8 +94,8 @@
 			/>
 			<Tool
 				Name="VCPostBuildEventTool"
-				Description="Copying tbb_debug.dll"
-				CommandLine="copy &quot;$(TBB21_INSTALL_DIR)\ia32\vc9\bin\tbb_debug.dll&quot; &quot;$(OutDir)&quot;"
+				Description="Copying DLLs and PDBs"
+				CommandLine="copy &quot;$(TBB21_INSTALL_DIR)\ia32\vc9\bin\tbb_debug.dll&quot; &quot;$(OutDir)&quot;&#x0D;&#x0A; copy  &quot;$(TBB21_INSTALL_DIR)\ia32\vc9\bin\tbb_debug.pdb&quot; &quot;$(OutDir)&quot;"
 			/>
 		</Configuration>
 		<Configuration
@@ -174,8 +174,8 @@
 			/>
 			<Tool
 				Name="VCPostBuildEventTool"
-				Description="Copying tbb.dll"
-				CommandLine="copy &quot;$(TBB21_INSTALL_DIR)\ia32\vc9\bin\tbb.dll&quot; &quot;$(OutDir)&quot;"
+				Description="Copying DLLs and PDBs"
+				CommandLine="copy &quot;$(TBB21_INSTALL_DIR)\ia32\vc9\bin\tbb.dll&quot; &quot;$(OutDir)&quot;&#x0D;&#x0A; copy  &quot;$(TBB21_INSTALL_DIR)\ia32\vc9\bin\tbb.pdb&quot; &quot;$(OutDir)&quot;"
 			/>
 		</Configuration>
 		<Configuration
@@ -255,8 +255,8 @@
 			/>
 			<Tool
 				Name="VCPostBuildEventTool"
-				Description="Copying tbb_debug.dll"
-				CommandLine="copy &quot;$(TBB21_INSTALL_DIR)\em64t\vc9\bin\tbb_debug.dll&quot; &quot;$(OutDir)&quot;"
+				Description="Copying DLLs and PDBs"
+				CommandLine="copy &quot;$(TBB21_INSTALL_DIR)\em64t\vc9\bin\tbb_debug.dll&quot; &quot;$(OutDir)&quot;&#x0D;&#x0A; copy  &quot;$(TBB21_INSTALL_DIR)\em64t\vc9\bin\tbb_debug.pdb&quot; &quot;$(OutDir)&quot;"
 			/>
 		</Configuration>
 		<Configuration
@@ -337,8 +337,8 @@
 			/>
 			<Tool
 				Name="VCPostBuildEventTool"
-				Description="Copying tbb.dll"
-				CommandLine="copy &quot;$(TBB21_INSTALL_DIR)\em64t\vc9\bin\tbb.dll&quot; &quot;$(OutDir)&quot;"
+				Description="Copying DLLs and PDBs"
+				CommandLine="copy &quot;$(TBB21_INSTALL_DIR)\em64t\vc9\bin\tbb.dll&quot; &quot;$(OutDir)&quot;&#x0D;&#x0A; copy  &quot;$(TBB21_INSTALL_DIR)\em64t\vc9\bin\tbb.pdb&quot; &quot;$(OutDir)&quot;"
 			/>
 		</Configuration>
 	</Configurations>

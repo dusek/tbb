@@ -27,7 +27,7 @@
 */
 
 #include "concurrent_vector_v2.h"
-#include "../tbb/tbb_misc.h"
+#include "tbb/tbb_machine.h"
 #include <stdexcept>
 #include "../tbb/itt_notify.h"
 #include "tbb/task.h"
@@ -82,7 +82,7 @@ void concurrent_vector_base::helper::extend_segment( concurrent_vector_base& v )
     std::memset( s, 0, pointers_per_long_segment*sizeof(segment_t) );
     // If other threads are trying to set pointers in the short segment, wait for them to finish their
     // assigments before we copy the short segment to the long segment.
-    ExponentialBackoff backoff;
+    atomic_backoff backoff;
     while( !v.my_storage[0].array || !v.my_storage[1].array ) {
         backoff.pause();
     }
@@ -178,7 +178,7 @@ void* concurrent_vector_base::internal_push_back( size_type element_size, size_t
 	    s.array = array;
 	} else {
 	    ITT_NOTIFY(sync_prepare, &s.array);
-	    internal::SpinwaitWhileEq( s.array, (void*)0 );
+	    spin_wait_while_eq( s.array, (void*)0 );
 	    ITT_NOTIFY(sync_acquired, &s.array);
 	    array = s.array;
 	}
@@ -211,7 +211,7 @@ void concurrent_vector_base::internal_grow( const size_type start, size_type fin
                 s.array = array;
             } else {
                 ITT_NOTIFY(sync_prepare, &s.array);
-                internal::SpinwaitWhileEq( s.array, (void*)0 );
+                spin_wait_while_eq( s.array, (void*)0 );
                 ITT_NOTIFY(sync_acquired, &s.array);
                 array = s.array;
             }

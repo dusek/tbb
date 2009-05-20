@@ -396,7 +396,7 @@ static inline unsigned int highestBitPos(unsigned int n)
     unsigned int pos;
 #if __ARCH_x86_32||__ARCH_x86_64
 
-# if __linux__||__APPLE__||__FreeBSD__ || __sun
+# if __linux__||__APPLE__||__FreeBSD__||__sun||__MINGW32__
     __asm__ ("bsr %1,%0" : "=r"(pos) : "r"(n));
 # elif (_WIN32 && (!_WIN64 || __INTEL_COMPILER))
     __asm
@@ -1668,9 +1668,25 @@ extern "C" void safer_scalable_free (void *object, void (*original_free)(void*))
         return;
 
     // Check if the memory was allocated by scalable_malloc
-    uint64_t id = isLargeObject(object)?
+    uint64_t id;
+#if _MSC_VER
+	__try
+	{
+#endif
+	id = isLargeObject(object)?
                     ((LargeObjectHeader*)((uintptr_t)object-sizeof(LargeObjectHeader)))->mallocUniqueID:
                     ((Block *)alignDown(object, blockSize))->mallocUniqueID;
+#if _MSC_VER
+	}
+	__except( GetExceptionCode() == EXCEPTION_ACCESS_VIOLATION ? EXCEPTION_EXECUTE_HANDLER : EXCEPTION_CONTINUE_SEARCH )
+	{
+        //Not our memory.
+        if (original_free)
+            original_free(object);		
+        else
+            return;
+	}
+#endif
     if (id==theMallocUniqueID)
         scalable_free(object);
     else if (original_free)
@@ -1714,9 +1730,25 @@ extern "C" void* safer_scalable_realloc (void* ptr, size_t sz, void* (*original_
         return scalable_malloc(sz);
     }
     // Check if the memory was allocated by scalable_malloc
-    uint64_t id = isLargeObject(ptr)?
+    uint64_t id;
+#if _MSC_VER
+	__try
+	{
+#endif
+	id = isLargeObject(ptr)?
                     ((LargeObjectHeader*)((uintptr_t)ptr-sizeof(LargeObjectHeader)))->mallocUniqueID:
                     ((Block *)alignDown(ptr, blockSize))->mallocUniqueID;
+#if _MSC_VER
+	}
+	__except( GetExceptionCode() == EXCEPTION_ACCESS_VIOLATION ? EXCEPTION_EXECUTE_HANDLER : EXCEPTION_CONTINUE_SEARCH )
+	{
+        //Not our memory
+        if (original_realloc)
+            return original_realloc(ptr,sz);
+        else
+            return NULL;
+	}
+#endif
     if (id==theMallocUniqueID) {
         if (!sz) {
             scalable_free(ptr);
@@ -1814,3 +1846,29 @@ extern "C" void scalable_aligned_free(void *ptr)
 }
 
 /********* end code for aligned allocation API **********/
+
+/********* Code for scalable_msize       ***********/
+
+/*
+ * Returns the size of a memory block allocated in the heap.
+ */
+extern "C" size_t scalable_msize(void* ptr)
+{
+    if (ptr) {
+        if (isLargeObject(ptr)) {
+            LargeObjectHeader* loh = (LargeObjectHeader*)((uintptr_t)ptr - sizeof(LargeObjectHeader));
+            if (loh->mallocUniqueID==theMallocUniqueID)
+                return loh->unalignedSize-((uintptr_t)ptr-(uintptr_t)loh->unalignedResult);
+        } else {
+            Block* block = (Block *)alignDown(ptr, blockSize);
+            if (block->mallocUniqueID==theMallocUniqueID)
+                return block->objectSize;
+        }
+    }
+    errno = EINVAL;
+    // Unlike _msize, return 0 in case of parameter error.
+    // Returning size_t(-1) looks more like the way to troubles.
+    return 0;
+}
+
+/********* End code for scalable_msize   ***********/

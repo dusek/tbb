@@ -45,11 +45,14 @@
 #if defined(__INTEL_COMPILER)
 #define __TBB_fence_for_acquire() __asm { __asm nop }
 #define __TBB_fence_for_release() __asm { __asm nop }
+inline void __TBB_rel_acq_fence() { __asm { __asm mfence } }
 #elif _MSC_VER >= 1300
 extern "C" void _ReadWriteBarrier();
 #pragma intrinsic(_ReadWriteBarrier)
 #define __TBB_fence_for_acquire() _ReadWriteBarrier()
 #define __TBB_fence_for_release() _ReadWriteBarrier()
+#pragma intrinsic(_mm_mfence)
+inline void __TBB_rel_acq_fence() { _mm_mfence(); }
 #endif
 
 #define __TBB_WORDSIZE 8

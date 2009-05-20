@@ -27,7 +27,6 @@
 */
 
 #include "tbb/atomic.h"
-#include "../tbb/tbb_misc.h"
 
 #ifndef harness_barrier_H
 #define harness_barrier_H
@@ -64,7 +63,7 @@ public:
         ASSERT(threadsLeft>=0, "Broken barrier");
         if (threadsLeft > 0) {
             /* not the last threading reaching barrier, wait until epoch changes & return 0 */
-            tbb::internal::SpinwaitWhileEq(epoch, myEpoch);
+            tbb::internal::spin_wait_while_eq(epoch, myEpoch);
             return false;
         }
         /* No more threads left to enter, so I'm the last one reaching this epoch;

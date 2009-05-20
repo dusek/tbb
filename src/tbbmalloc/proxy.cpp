@@ -216,8 +216,10 @@ void* safer_scalable_realloc2( void *ptr, size_t size )
 
 #include <new>
 
+#if _MSC_VER && !defined(__INTEL_COMPILER)
 #pragma warning( push )
 #pragma warning( disable : 4290 )
+#endif
 
 void * operator_new(size_t sz) throw (std::bad_alloc) {
     void *res = scalable_malloc(sz);
@@ -232,7 +234,9 @@ void* operator_new_arr(size_t sz) throw (std::bad_alloc) {
 void operator_delete(void* ptr) throw() {
     safer_scalable_free2(ptr);
 }
+#if _MSC_VER && !defined(__INTEL_COMPILER)
 #pragma warning( pop )
+#endif
 
 void operator_delete_arr(void* ptr) throw() {
     safer_scalable_free2(ptr);
@@ -250,13 +254,13 @@ void operator_delete_arr_t(void* ptr, const std::nothrow_t&) throw() {
     safer_scalable_free2(ptr);
 }
 
-char* modules_to_replace[] = {
+const char* modules_to_replace[] = {
     "msvcr80d.dll",
     "msvcr80.dll",
     "msvcr90d.dll",
     "msvcr90.dll",
-    "msvcrd.dll",
-    "msvcr.dll",
+    "msvcrtd.dll",
+    "msvcrt.dll",
     "msvcr70d.dll",
     "msvcr70.dll",
     "msvcr71d.dll",
@@ -269,6 +273,7 @@ malloc
 calloc
 realloc
 free
+_msize
 _aligned_malloc
 _aligned_realloc
 _aligned_free
@@ -286,7 +291,7 @@ _aligned_free
 
 typedef struct FRData_t {
     //char *_module;
-    char *_func;
+    const char *_func;
     FUNCPTR _fptr;
     FRR_ON_ERROR _on_error;
 } FRDATA;
@@ -296,6 +301,7 @@ FRDATA routines_to_replace[] = {
     { "calloc",  (FUNCPTR)scalable_calloc, FRR_FAIL },
     { "realloc", (FUNCPTR)safer_scalable_realloc2, FRR_FAIL },
     { "free",    (FUNCPTR)safer_scalable_free2, FRR_FAIL },
+    { "_msize",  (FUNCPTR)scalable_msize, FRR_FAIL },
     { "_aligned_malloc",  (FUNCPTR)scalable_aligned_malloc, FRR_FAIL },
     { "_aligned_realloc", (FUNCPTR)scalable_aligned_realloc, FRR_FAIL },
     { "_aligned_free",    (FUNCPTR)safer_scalable_free2, FRR_FAIL },
@@ -352,7 +358,7 @@ void initializeMallocReplacement()
 
 }
 
-BOOL WINAPI DllMain( HINSTANCE hInst, DWORD callReason, LPVOID reserved )
+extern "C" BOOL WINAPI DllMain( HINSTANCE hInst, DWORD callReason, LPVOID reserved )
 {
 
     if ( callReason==DLL_PROCESS_ATTACH && reserved && hInst )

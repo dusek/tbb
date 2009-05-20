@@ -177,10 +177,9 @@ public:
     UINT_PTR GetLocation(UINT_PTR addr)
     {
         MemoryBuffer *pBuff = m_pages;
-        while (pBuff < m_lastBuffer)
+        for (; pBuff<m_lastBuffer && IsInDistance(pBuff->m_base, addr, MAX_DISTANCE); ++pBuff)
         {
-            if (IsInDistance(pBuff->m_base, addr, MAX_DISTANCE) && 
-                pBuff->m_next < pBuff->m_base + pBuff->m_size)
+            if (pBuff->m_next < pBuff->m_base + pBuff->m_size)
             {
                 UINT_PTR loc = pBuff->m_next;
                 pBuff->m_next += SIZE_OF_ADDRESS;
@@ -286,7 +285,7 @@ static BOOL InsertTrampoline(void *inpAddr, void *targetAddr)
     return TRUE;
 }
 
-FRR_TYPE ReplaceFunctionA(char *dllName, char *funcName, FUNCPTR newFunc)
+FRR_TYPE ReplaceFunctionA(const char *dllName, const char *funcName, FUNCPTR newFunc)
 {
     // Cache the results of the last search for the module
     // Assume that there was no DLL unload between 
@@ -318,7 +317,7 @@ FRR_TYPE ReplaceFunctionA(char *dllName, char *funcName, FUNCPTR newFunc)
         return FRR_NOFUNC;
     }
 
-    if (!InsertTrampoline(inpFunc, newFunc))
+    if (!InsertTrampoline((void*)inpFunc, (void*)newFunc))
     {
         // Failed to insert the trampoline to the target address
         return FRR_FAILED;
@@ -327,7 +326,7 @@ FRR_TYPE ReplaceFunctionA(char *dllName, char *funcName, FUNCPTR newFunc)
     return FRR_OK;
 }
 
-FRR_TYPE ReplaceFunctionW(wchar_t *dllName, char *funcName, FUNCPTR newFunc)
+FRR_TYPE ReplaceFunctionW(const wchar_t *dllName, const char *funcName, FUNCPTR newFunc)
 {
     // Cache the results of the last search for the module
     // Assume that there was no DLL unload between 
@@ -359,7 +358,7 @@ FRR_TYPE ReplaceFunctionW(wchar_t *dllName, char *funcName, FUNCPTR newFunc)
         return FRR_NOFUNC;
     }
 
-    if (!InsertTrampoline(inpFunc, newFunc))
+    if (!InsertTrampoline((void*)inpFunc, (void*)newFunc))
     {
         // Failed to insert the trampoline to the target address
         return FRR_FAILED;

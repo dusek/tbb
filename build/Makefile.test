@@ -65,13 +65,10 @@ KNOWN_NOSTRICT += \
 	test_parallel_do.o	\
 	test_eh_algorithms.o	\
 	test_parallel_sort.o    \
+	test_parallel_for_each.o	\
 	test_tbb_version.o
 
 endif
-
-# KNOWN_WARNINGS is empty now! Kept here as a placeholder
-# KNOWN_WARNINGS = 
-
 
 include $(tbb_root)/build/common_rules.inc
 
@@ -83,12 +80,11 @@ include $(tbb_root)/build/common_rules.inc
 %.$(DLL).$(OBJ): %.cpp
 	$(CPLUS) $(COMPILE_ONLY) $(OUTPUTOBJ_KEY)$@ $(CPLUS_FLAGS_NOSTRICT) $(PIC_KEY) $(DEFINE_KEY)_USRDLL $(INCLUDES) $<
 %.$(DLL): %.$(DLL).$(OBJ) $(TBB.LIB)
-	$(CPLUS) $(OUTPUT_KEY)$@ $(CPLUS_FLAGS) $< $(LINK_TBB.LIB) $(LIBS) $(LINK_FLAGS) $(PIC_KEY) $(DYLIB_KEY)
+	$(CPLUS) $(OUTPUT_KEY)$@ $(CPLUS_FLAGS) $(PIC_KEY) $< $(LINK_TBB.LIB) $(LIBS) $(LINK_FLAGS) $(DYLIB_KEY)
 
 # Rules for the tests, which use TBB in a dynamically loadable library
 test_model_plugin.exe: test_model_plugin.$(OBJ) test_model_plugin.$(DLL)
 	$(CPLUS) $(OUTPUT_KEY)$@ $(CPLUS_FLAGS) $< $(LIBDL) $(LIBS) $(LINK_FLAGS)
-
 
 TASK_CPP_DEPENDENCIES = $(TBB_ASM.OBJ) cache_aligned_allocator.$(OBJ) dynamic_link.$(OBJ) tbb_misc.$(OBJ) itt_notify.$(OBJ) mutex.$(OBJ) spin_rw_mutex.$(OBJ) spin_mutex.$(OBJ) itt_notify_proxy.$(OBJ)
 
@@ -113,46 +109,48 @@ test_concurrent_hash_map_string.exe: test_concurrent_hash_map_string.$(OBJ)
 
 
 # These are in alphabetical order
-TEST_TBB_PLAIN.EXE = test_assembly.exe 	\
-	test_aligned_space.exe		\
-	test_task_assertions.exe 	\
-	test_atomic.exe 		\
-	test_blocked_range.exe 		\
-	test_blocked_range2d.exe 	\
-	test_blocked_range3d.exe 	\
-	test_compiler.exe       	\
-	test_concurrent_queue.exe	\
-	test_concurrent_vector.exe	\
-	test_concurrent_hash_map.exe	\
-	test_enumerable_thread_specific.exe		\
-	test_handle_perror.exe		\
-	test_halt.exe 			\
-	test_model_plugin.exe		\
-	test_mutex.exe			\
-	test_mutex_native_threads.exe	\
-	test_rwm_upgrade_downgrade.exe	\
-	test_cache_aligned_allocator_STL.exe	\
-	test_cache_aligned_allocator.exe	\
-	test_parallel_for.exe 		\
-	test_parallel_reduce.exe 	\
-	test_parallel_sort.exe 		\
-	test_parallel_scan.exe 		\
-	test_parallel_while.exe 	\
-	test_parallel_do.exe 	        \
-	test_pipeline.exe 		\
-	test_task_scheduler_init.exe	\
-	test_task_scheduler_observer.exe	\
-	test_task.exe			\
-	test_task_leaks.exe		\
-	test_tbb_thread.exe		\
-	test_tick_count.exe		\
-	test_inits_loop.exe      	\
-	test_yield.exe           	\
-	test_tbb_version.exe           	\
-	test_eh_tasks.exe        \
-	test_eh_algorithms.exe   \
-	test_parallel_invoke.exe        \
-	test_ittnotify.exe
+TEST_TBB_PLAIN.EXE = test_assembly.exe   \
+	test_aligned_space.exe               \
+	test_task_assertions.exe             \
+	test_atomic.exe                      \
+	test_blocked_range.exe               \
+	test_blocked_range2d.exe             \
+	test_blocked_range3d.exe             \
+	test_compiler.exe                    \
+	test_concurrent_queue.exe            \
+	test_concurrent_vector.exe           \
+	test_concurrent_hash_map.exe         \
+	test_enumerable_thread_specific.exe  \
+	test_handle_perror.exe               \
+	test_halt.exe                        \
+	test_model_plugin.exe                \
+	test_mutex.exe                       \
+	test_mutex_native_threads.exe        \
+	test_rwm_upgrade_downgrade.exe       \
+	test_cache_aligned_allocator_STL.exe \
+	test_cache_aligned_allocator.exe     \
+	test_parallel_for.exe                \
+	test_parallel_reduce.exe             \
+	test_parallel_sort.exe               \
+	test_parallel_scan.exe               \
+	test_parallel_while.exe              \
+	test_parallel_do.exe                 \
+	test_pipeline.exe                    \
+	test_task_scheduler_init.exe         \
+	test_task_scheduler_observer.exe     \
+	test_task.exe                        \
+	test_task_leaks.exe                  \
+	test_tbb_thread.exe                  \
+	test_tick_count.exe                  \
+	test_inits_loop.exe                  \
+	test_yield.exe                       \
+	test_eh_tasks.exe                    \
+	test_eh_algorithms.exe               \
+	test_parallel_invoke.exe             \
+	test_task_group.exe                  \
+	test_ittnotify.exe                   \
+	test_parallel_for_each.exe           \
+	test_tbb_version.exe                 # insert new files right above
 
 ifdef OPENMP_FLAG
 	TEST_TBB_PLAIN.EXE += test_tbb_openmp
@@ -207,32 +205,51 @@ test_tbb_plain: $(TEST_TBB_PLAIN.EXE)
 	$(run_cmd) ./test_concurrent_hash_map.exe 1:4
 	$(run_cmd) ./test_enumerable_thread_specific.exe 0:4
 	$(run_cmd) ./test_model_plugin.exe 4
-	$(run_cmd) ./test_tbb_version.exe
 	$(run_cmd) ./test_eh_tasks.exe 2:4
 	$(run_cmd) ./test_eh_algorithms.exe 2:4
 	$(run_cmd) ./test_tbb_thread.exe
-	$(run_cmd) ./test_parallel_invoke.exe 1:4	
+	$(run_cmd) ./test_parallel_invoke.exe 1:4
+	$(run_cmd) ./test_task_group.exe 1:4
 	$(run_cmd) ./test_ittnotify.exe 2:2
+	$(run_cmd) ./test_parallel_for_each.exe 1:4
+	$(run_cmd) ./test_tbb_version.exe
+
+CPLUS_FLAGS_DEPRECATED = $(DEFINE_KEY)TBB_DEPRECATED=1 $(subst $(WARNING_KEY),,$(CPLUS_FLAGS_NOSTRICT)) $(WARNING_SUPPRESS)
 
 TEST_TBB_OLD.OBJ = test_concurrent_vector_v2.$(OBJ) test_concurrent_queue_v2.$(OBJ) test_mutex_v2.$(OBJ)
 
-TEST_TBB_DEPRECATED.OBJ =
+TEST_TBB_DEPRECATED.OBJ = test_concurrent_queue_deprecated.$(OBJ) \
+	test_concurrent_vector_deprecated.$(OBJ) \
 
-# For old files, we don't mind warnings etc., thus compilation rules are most relaxed
+
+# For deprecated files, we don't mind warnings etc., thus compilation rules are most relaxed
 $(TEST_TBB_OLD.OBJ): %.$(OBJ): %.cpp
-	$(CPLUS) $(COMPILE_ONLY) $(subst $(WARNING_KEY),,$(CPLUS_FLAGS_NOSTRICT)) $(WARNING_SUPPRESS) $(INCLUDES) $<
+	$(CPLUS) $(COMPILE_ONLY) $(CPLUS_FLAGS_DEPRECATED) $(INCLUDES) $<
+
+%_deprecated.$(OBJ): %.cpp
+	$(CPLUS) $(COMPILE_ONLY) $(OUTPUTOBJ_KEY)$@ $(CPLUS_FLAGS_DEPRECATED) $(INCLUDES) $<
 
 TEST_TBB_OLD.EXE = $(subst .$(OBJ),.exe,$(TEST_TBB_OLD.OBJ) $(TEST_TBB_DEPRECATED.OBJ))
 
 test_tbb_old: $(TEST_TBB_OLD.EXE)
 	$(run_cmd) ./test_concurrent_vector_v2.exe 1:4
+	$(run_cmd) ./test_concurrent_vector_deprecated.exe 1:4
 	$(run_cmd) ./test_concurrent_queue_v2.exe 1:4
+	$(run_cmd) ./test_concurrent_queue_deprecated.exe 1:4
 	$(run_cmd) ./test_mutex_v2.exe 1
 	$(run_cmd) ./test_mutex_v2.exe 2
 	$(run_cmd) ./test_mutex_v2.exe 4
 
 test_% debug_%: test_%.exe
+ifeq (,$(repeat))
 	$(run_cmd) ./$^ $(args)
+else
+ifeq (windows,$(tbb_os))
+	for /L %%i in (1,1,$(repeat)) do echo %%i of $(repeat): && $^ $(args)
+else
+	for ((i=1;i<=$(repeat);++i)); do echo $$i of $(repeat): && ./$^ $(args); done
+endif
+endif # repeat
 ifneq (,$(codecov))
 	profmerge
 	codecov $(if $(findstring -,$(codecov)),$(codecov),) -demang -comp $(tbb_root)/build/codecov.txt
@@ -242,7 +259,7 @@ time_%: time_%.exe
 	$(run_cmd) ./$^ $(args)
 
 clean_%: 
-	$(RM) $*.$(OBJ) $*.exe $*.$(DLL) $*.$(LIBEXT) $*.res $*.map $*.ilk $*.pdb $*.exp $*.*manifest $*.tmp $*.d pgopti.* *.dyn
+	$(RM) $*.$(OBJ) $*.exe $*.$(DLL) $*.$(LIBEXT) $*.res $*.map $*.ilk $*.pdb $*.exp $*.*manifest $*.tmp $*.d
 
 clean:
 	$(RM) *.$(OBJ) *.exe *.$(DLL) *.$(LIBEXT) *.res *.map *.ilk *.pdb *.exp *.manifest *.tmp *.d pgopti.* *.dyn core core.*[0-9][0-9]

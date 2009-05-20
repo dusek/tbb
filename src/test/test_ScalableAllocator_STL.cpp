@@ -35,7 +35,7 @@
 #include "test_allocator_STL.h"
 
 int main() {
-    TestAllocatorWithSTL<tbb::scalable_allocator>();
+    TestAllocatorWithSTL<tbb::scalable_allocator<void> >();
     printf("done\n");
     return 0;
 }

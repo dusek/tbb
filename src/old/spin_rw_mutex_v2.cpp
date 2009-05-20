@@ -28,7 +28,6 @@
 
 #include "spin_rw_mutex_v2.h"
 #include "tbb/tbb_machine.h"
-#include "../tbb/tbb_misc.h"
 #include "../tbb/itt_notify.h"
 
 namespace tbb {
@@ -50,7 +49,7 @@ void spin_rw_mutex::internal_itt_releasing(spin_rw_mutex *mutex) {
 bool spin_rw_mutex::internal_acquire_writer(spin_rw_mutex *mutex)
 {
     ITT_NOTIFY(sync_prepare, mutex);
-    ExponentialBackoff backoff;
+    atomic_backoff backoff;
     for(;;) {
         state_t s = mutex->state;
         if( !(s & BUSY) ) { // no readers, no writers
@@ -77,7 +76,7 @@ void spin_rw_mutex::internal_release_writer(spin_rw_mutex *mutex) {
 //! Acquire lock on given mutex.
 void spin_rw_mutex::internal_acquire_reader(spin_rw_mutex *mutex) {
     ITT_NOTIFY(sync_prepare, mutex);
-    ExponentialBackoff backoff;
+    atomic_backoff backoff;
     for(;;) {
         state_t s = mutex->state;
         if( !(s & (WRITER|WRITER_PENDING)) ) { // no writer or write requests
@@ -104,7 +103,7 @@ bool spin_rw_mutex::internal_upgrade(spin_rw_mutex *mutex) {
     while( (s & READERS)==ONE_READER || !(s & WRITER_PENDING) ) {
         if( CAS(mutex->state, s | WRITER_PENDING, s) )
         {
-            ExponentialBackoff backoff;
+            atomic_backoff backoff;
             ITT_NOTIFY(sync_prepare, mutex);
             while( (mutex->state & READERS) != ONE_READER ) // more than 1 reader
                 backoff.pause();

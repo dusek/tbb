@@ -32,6 +32,10 @@
 #include "tbb_stddef.h"
 #include <stdexcept>
 
+#if __TBB_EXCEPTIONS && !defined(__EXCEPTIONS) && !defined(_CPPUNWIND) && !defined(__SUNPRO_CC)
+#error The current compilation environment does not support exception handling. Please set __TBB_EXCEPTIONS to 0 in tbb_config.h
+#endif
+
 namespace tbb {
 
 //! Exception for concurrent containers
@@ -40,6 +44,10 @@ public:
     virtual const char* what() const throw() { return "bad allocation in previous or concurrent attempt"; }
     virtual ~bad_last_alloc() throw() {}
 };
+
+namespace internal {
+void __TBB_EXPORTED_FUNC throw_bad_last_alloc_exception_v4() ;
+} // namespace internal
 
 } // namespace tbb
 
@@ -234,6 +242,35 @@ private:
     /** We rely on the fact that RTTI names are static string constants. **/
     const char* my_exception_name;
 };
+
+#if !TBB_USE_CAPTURED_EXCEPTION
+namespace internal {
+
+//! Exception container that preserves the exact copy of the original exception
+/** This class can be used only when the appropriate runtime support (mandated 
+    by C++0x) is present **/
+class tbb_exception_ptr {
+    std::exception_ptr  my_ptr;
+
+public:
+    static tbb_exception_ptr* allocate ();
+    static tbb_exception_ptr* allocate ( const tbb_exception& );
+    static tbb_exception_ptr* allocate ( const captured_exception& );
+    
+    //! Destroys this objects
+    /** Note that objects of this type can be created only by the allocate() method. **/
+    void destroy () throw();
+
+    //! Throws the contained exception .
+    void throw_self () { std::rethrow_exception(my_ptr); }
+
+private:
+    tbb_exception_ptr ( const std::exception_ptr& src ) : my_ptr(src) {}
+    tbb_exception_ptr ( const captured_exception& src ) : my_ptr(std::copy_exception(src)) {}
+}; // class tbb::internal::tbb_exception_ptr
+
+} // namespace internal
+#endif /* !TBB_USE_CAPTURED_EXCEPTION */
 
 } // namespace tbb
 

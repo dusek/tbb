@@ -47,6 +47,8 @@ tbbmalloc_proxy.lib /INCLUDE:"__TBB_malloc_proxy"
 #ifndef __TBB_tbbmalloc_proxy_H
 #define __TBB_tbbmalloc_proxy_H
 
+#if _MSC_VER
+
 #ifdef _DEBUG
     #pragma comment(lib, "tbbmalloc_proxy_debug.lib")
 #else
@@ -58,5 +60,15 @@ tbbmalloc_proxy.lib /INCLUDE:"__TBB_malloc_proxy"
 #else
     #pragma comment(linker, "/include:___TBB_malloc_proxy")
 #endif
+
+#else
+/* Primarily to support MinGW */
+
+extern "C" void __TBB_malloc_proxy();
+struct __TBB_malloc_proxy_caller {
+    __TBB_malloc_proxy_caller() { __TBB_malloc_proxy(); }
+} volatile __TBB_malloc_proxy_helper_object;
+
+#endif // _MSC_VER
 
 #endif //__TBB_tbbmalloc_proxy_H

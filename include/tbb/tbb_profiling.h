@@ -35,7 +35,7 @@
 #if _WIN32||_WIN64
 #include <stdlib.h>  /* mbstowcs_s */
 #endif
-#include "tbb/tbb_stddef.h"
+#include "tbb_stddef.h"
 
 namespace tbb {
     namespace internal {

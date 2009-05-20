@@ -34,7 +34,7 @@
 #define TBB_VERSION_MINOR 1
 
 // Engineering-focused interface version
-#define TBB_INTERFACE_VERSION 3016
+#define TBB_INTERFACE_VERSION 3017
 #define TBB_INTERFACE_VERSION_MAJOR TBB_INTERFACE_VERSION/1000
 
 // The oldest major interface version still supported
@@ -105,7 +105,7 @@
 #       define __TBB_x86_64 1
 #   elif defined(_M_IA64)
 #       define __TBB_ipf 1
-#   elif defined(_M_IX86)
+#   elif defined(_M_IX86)||defined(__i386__) // the latter for MinGW support
 #       define __TBB_x86_32 1
 #   endif
 #else /* Assume generic Unix */
@@ -123,7 +123,7 @@
 #   endif
 #endif
 
-#if _WIN32||_WIN64
+#if _MSC_VER
 // define the parts of stdint.h that are needed, but put them inside tbb::internal
 namespace tbb {
 namespace internal {
@@ -139,7 +139,7 @@ namespace internal {
 } // namespace tbb
 #else
 #include <stdint.h>
-#endif
+#endif /* _MSC_VER */
 
 #if _MSC_VER >=1400
 #define __TBB_EXPORTED_FUNC   __cdecl
@@ -151,11 +151,11 @@ namespace internal {
 
 #include <cstddef>      /* Need size_t and ptrdiff_t (the latter on Windows only) from here. */
 
-#if _WIN32||_WIN64
+#if _MSC_VER
 #define __TBB_tbb_windef_H
 #include "_tbb_windef.h"
 #undef __TBB_tbb_windef_H
-#endif /* _WIN32||_WIN64 */
+#endif
 
 #include "tbb_config.h"
 
@@ -269,13 +269,13 @@ struct allocator_type {
     typedef T value_type;
 };
 
-#if _WIN32||_WIN64
+#if _MSC_VER
 //! Microsoft std::allocator has non-standard extension that strips const from a type. 
 template<typename T>
 struct allocator_type<const T> {
     typedef T value_type;
 };
-#endif /* _WIN32||_WIN64 */
+#endif
 
 // Struct to be used as a version tag for inline functions.
 /** Version tag can be necessary to prevent loader on Linux from using the wrong 

@@ -31,6 +31,7 @@
 #define MALLOC_REPLACEMENT_AVAILABLE 1
 #elif _WIN32
 #define MALLOC_REPLACEMENT_AVAILABLE 2
+#include "tbb/tbbmalloc_proxy.h"
 #endif
 
 #if MALLOC_REPLACEMENT_AVAILABLE
@@ -45,11 +46,23 @@
 #include <dlfcn.h>
 #include <unistd.h> // for sysconf
 #include <stdint.h> // for uintptr_t
+
 #elif _WIN32
 #include <stddef.h>
+#if __MINGW32__
+#include <unistd.h>
+#else
 typedef unsigned __int32 uint32_t;
 typedef unsigned __int64 uint64_t;
-#include "tbb/tbbmalloc_proxy.h"
+#endif
+
+#endif /* OS selection */
+
+#if _WIN32
+// On Windows, the tricky way to print "done" is necessary to create 
+// dependence on msvcpXX.dll, for sake of a regression test.
+// On Linux, C++ RTL headers are undesirable because of breaking strict ANSI mode.
+#include <string>
 #endif
 
 
@@ -83,10 +96,14 @@ const uint32_t minLargeObjectSize = 8065;
 
 /* end of inclusion from MemoryAllocator.cpp */
 
-/* Correct only for arge blocks, i.e. not smaller then minLargeObjectSize */
+/* Correct only for large blocks, i.e. not smaller then minLargeObjectSize */
 static bool scalableMallocLargeBlock(void *object, size_t size)
 {
     ASSERT(size >= minLargeObjectSize, NULL);
+#if MALLOC_REPLACEMENT_AVAILABLE == 2
+    // Check that _msize works correctly
+    ASSERT(_msize(object) >= size, NULL);
+#endif
 
     LargeObjectHeader *h = (LargeObjectHeader*)((uintptr_t)object-sizeof(LargeObjectHeader));
     return h->mallocUniqueID==theMallocUniqueID && h->objectSize==size;
@@ -171,7 +188,13 @@ int main(int , char *[])
     ASSERT(f!=NULL && scalableMallocLargeBlock(f, 2*sizeof(BigStruct)), NULL);
     delete []f;
 
-    printf("done\n");
+#if _WIN32
+    std::string stdstring = "done";
+    const char* s = stdstring.c_str();
+#else
+    const char* s = "done";
+#endif
+    printf("%s\n", s);
     return 0;
 }
 

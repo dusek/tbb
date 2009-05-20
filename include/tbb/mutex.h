@@ -45,6 +45,8 @@ extern void handle_perror( int error_code, const char* what );
 } } //namespaces
 #endif /* _WIN32||_WIN64 */
 
+#include <new>
+#include "aligned_space.h"
 #include "tbb_stddef.h"
 #include "tbb_profiling.h"
 
@@ -111,12 +113,8 @@ public:
 #if TBB_USE_ASSERT
             internal_acquire(mutex);
 #else
+            mutex.lock();
             my_mutex = &mutex;
-  #if _WIN32||_WIN64
-            EnterCriticalSection(&mutex.impl);
-  #else
-            pthread_mutex_lock(&mutex.impl);
-  #endif /* _WIN32||_WIN64 */
 #endif /* TBB_USE_ASSERT */
         }
 
@@ -125,12 +123,7 @@ public:
 #if TBB_USE_ASSERT
             return internal_try_acquire (mutex);
 #else
-            bool result;
-  #if _WIN32||_WIN64
-            result = TryEnterCriticalSection(&mutex.impl)!=0;
-  #else
-            result = pthread_mutex_trylock(&mutex.impl)==0;
-  #endif /* _WIN32||_WIN64 */
+            bool result = mutex.try_lock();
             if( result )
                 my_mutex = &mutex;
             return result;
@@ -142,11 +135,7 @@ public:
 #if TBB_USE_ASSERT
             internal_release ();
 #else
-  #if _WIN32||_WIN64
-            LeaveCriticalSection(&my_mutex->impl);
-  #else
-            pthread_mutex_unlock(&my_mutex->impl);
-  #endif /* _WIN32||_WIN64 */
+            my_mutex->unlock();
             my_mutex = NULL;
 #endif /* TBB_USE_ASSERT */
         }
@@ -163,12 +152,63 @@ public:
 
         //! All checks from release using mutex.state were moved here
         void __TBB_EXPORTED_METHOD internal_release();
+
+        friend class mutex;
     };
 
     // Mutex traits
     static const bool is_rw_mutex = false;
     static const bool is_recursive_mutex = false;
     static const bool is_fair_mutex = false;
+
+    // ISO C++0x compatibility methods
+
+    //! Acquire lock
+    void lock() {
+#if TBB_USE_ASSERT
+        aligned_space<scoped_lock,1> tmp;
+        new(tmp.begin()) scoped_lock(*this);
+#else
+  #if _WIN32||_WIN64
+        EnterCriticalSection(&impl);
+  #else
+        pthread_mutex_lock(&impl);
+  #endif /* _WIN32||_WIN64 */
+#endif /* TBB_USE_ASSERT */
+    }
+
+    //! Try acquiring lock (non-blocking)
+    /** Return true if lock acquired; false otherwise. */
+    bool try_lock() {
+#if TBB_USE_ASSERT
+        aligned_space<scoped_lock,1> tmp;
+        scoped_lock& s = *tmp.begin();
+        s.my_mutex = NULL;
+        return s.internal_try_acquire(*this);
+#else
+  #if _WIN32||_WIN64
+        return TryEnterCriticalSection(&impl)!=0;
+  #else
+        return pthread_mutex_trylock(&impl)==0;
+  #endif /* _WIN32||_WIN64 */
+#endif /* TBB_USE_ASSERT */
+    }
+
+    //! Release lock
+    void unlock() {
+#if TBB_USE_ASSERT
+        aligned_space<scoped_lock,1> tmp;
+        scoped_lock& s = *tmp.begin();
+        s.my_mutex = this;
+        s.internal_release();
+#else
+  #if _WIN32||_WIN64
+        LeaveCriticalSection(&impl);
+  #else
+        pthread_mutex_unlock(&impl);
+  #endif /* _WIN32||_WIN64 */
+#endif /* TBB_USE_ASSERT */
+    }
 
 private:
 #if _WIN32||_WIN64

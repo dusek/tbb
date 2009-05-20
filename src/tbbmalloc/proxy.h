@@ -38,15 +38,16 @@
 extern "C" {
     void * scalable_malloc(size_t size);
     void * scalable_calloc(size_t nobj, size_t size);
-    void   scalable_free(void *object);
+    void   scalable_free(void *ptr);
     void * scalable_realloc(void* ptr, size_t size);
     void * scalable_aligned_malloc(size_t size, size_t alignment);
     void * scalable_aligned_realloc(void* ptr, size_t size, size_t alignment);
     int    scalable_posix_memalign(void **memptr, size_t alignment, size_t size);
+    size_t scalable_msize(void *ptr);
 
     void * __TBB_internal_malloc(size_t size);
     void * __TBB_internal_calloc(size_t num, size_t size);
-    void   __TBB_internal_free(void *object);
+    void   __TBB_internal_free(void *ptr);
     void * __TBB_internal_realloc(void* ptr, size_t sz);
     int    __TBB_internal_posix_memalign(void **memptr, size_t alignment, size_t size);
     

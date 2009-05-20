@@ -38,6 +38,7 @@
 #include <cstdlib>
 #include <cstring>
 #if defined(__EXCEPTIONS) || defined(_CPPUNWIND) || defined(__SUNPRO_CC)
+    #include "tbb/tbb_exception.h"
     #include <string> // std::string is used to construct runtime_error
     #include <stdexcept>
 #endif
@@ -63,6 +64,11 @@ void handle_perror( int error_code, const char* what ) {
     // Ensure that buffer ends in terminator.
     buf[sizeof(buf)-1] = 0; 
     throw runtime_error(buf);
+}
+
+void throw_bad_last_alloc_exception_v4() 
+{
+    throw bad_last_alloc();
 }
 #endif //__EXCEPTIONS || _CPPUNWIND
 
@@ -101,8 +107,8 @@ extern "C" int TBB_runtime_interface_version() {
 
 #include "tbb/atomic.h"
 
-//on Windows, int64_t defined in tbb::internal namespace only
-#if _WIN32||_WIN64 
+// in MSVC environment, int64_t defined in tbb::internal namespace only (see tbb_stddef.h)
+#if _MSC_VER
 using tbb::internal::int64_t;
 #endif
 
@@ -122,7 +128,7 @@ done:;
 
 //! Handle 8-byte store that crosses a cache line.
 extern "C" void __TBB_machine_store8_slow( volatile void *ptr, int64_t value ) {
-    for( tbb::internal::AtomicBackoff b;; b.pause() ) {
+    for( tbb::internal::atomic_backoff b;; b.pause() ) {
         int64_t tmp = *(int64_t*)ptr;
         if( __TBB_machine_cmpswp8(ptr,value,tmp)==tmp ) 
             break;
@@ -134,7 +140,7 @@ extern "C" void __TBB_machine_store8_slow( volatile void *ptr, int64_t value ) {
 #if __TBB_ipf
 extern "C" intptr_t __TBB_machine_lockbyte( volatile unsigned char& flag ) {
     if ( !__TBB_TryLockByte(flag) ) {
-        tbb::internal::AtomicBackoff b;
+        tbb::internal::atomic_backoff b;
         do {
             b.pause();
         } while ( !__TBB_TryLockByte(flag) );

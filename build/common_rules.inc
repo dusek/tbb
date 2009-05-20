@@ -66,11 +66,6 @@ CONLY ?= $(CPLUS)
 	$(ASM) $(ASM_FLAGS) -o $@ $*.tmp
 	rm $*.tmp
 
-%.$(OBJ): %.s
-	cpp <$< | grep -v '^#' >$*.tmp
-	$(ASM) $(ASM_FLAGS) -o $@ $*.tmp
-	rm $*.tmp
-
 # Rule for generating .E file if needed for visual inspection
 %.E: %.cpp
 	$(CPLUS) $(CPLUS_FLAGS) $(INCLUDES) $(PREPROC_ONLY) $< >$@
@@ -84,6 +79,7 @@ CONLY ?= $(CPLUS)
 	$(CPLUS) -S $(CPLUS_FLAGS) $(INCLUDES) $<
 
 # Customizations
+
 ifeq (1,$(TBB_NOSTRICT))
 # GNU 3.2.3 headers have a ISO syntax that is rejected by Intel compiler in -strict_ansi mode.
 # The Mac uses gcc, so the list is empty for that platform.
@@ -91,13 +87,7 @@ ifeq (1,$(TBB_NOSTRICT))
 
 $(KNOWN_NOSTRICT): %.$(OBJ): %.cpp
 	$(CPLUS) $(COMPILE_ONLY) $(CPLUS_FLAGS_NOSTRICT) $(INCLUDES) $<
-
 endif
-
-# For deprecated files, we don't mind warnings etc., thus compilation rules are most relaxed
-%_deprecated.$(OBJ): %.cpp
-	$(CPLUS) $(COMPILE_ONLY) $(OUTPUTOBJ_KEY)$@ $(subst $(WARNING_KEY),,$(CPLUS_FLAGS_NOSTRICT)) \
-                 $(WARNING_SUPPRESS) $(DEFINE_KEY)TBB_DEPRECATED $(INCLUDES) $<
 
 $(KNOWN_WARNINGS): %.$(OBJ): %.cpp
 	$(CPLUS) $(COMPILE_ONLY) $(subst $(WARNING_KEY),,$(CPLUS_FLAGS_NOSTRICT)) $(INCLUDES) $<

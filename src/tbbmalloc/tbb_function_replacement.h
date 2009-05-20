@@ -49,8 +49,8 @@ typedef void (*FUNCPTR)();
 #define ReplaceFunction ReplaceFunctionW
 #endif //UNICODE
 
-FRR_TYPE ReplaceFunctionA(char *dllName, char *funcName, FUNCPTR newFunc);
-FRR_TYPE ReplaceFunctionW(wchar_t *dllName, char *funcName, FUNCPTR newFunc);
+FRR_TYPE ReplaceFunctionA(const char *dllName, const char *funcName, FUNCPTR newFunc);
+FRR_TYPE ReplaceFunctionW(const wchar_t *dllName, const char *funcName, FUNCPTR newFunc);
 
 // Utilities to convert between ADDRESS and LPVOID
 union Int2Ptr {

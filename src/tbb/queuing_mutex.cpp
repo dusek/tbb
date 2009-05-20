@@ -55,7 +55,7 @@ void queuing_mutex::scoped_lock::acquire( queuing_mutex& m )
         ITT_NOTIFY(sync_prepare, mutex);
         __TBB_ASSERT( !pred->next, "the predecessor has another successor!");
         pred->next = this;
-        SpinwaitWhileEq( going, 0ul );
+        spin_wait_while_eq( going, 0ul );
     }
     ITT_NOTIFY(sync_acquired, mutex);
 
@@ -102,7 +102,7 @@ void queuing_mutex::scoped_lock::release( )
             goto done;
         }
         // Someone in the queue
-        SpinwaitWhileEq( next, (scoped_lock*)0 );
+        spin_wait_while_eq( next, (scoped_lock*)0 );
     }
     __TBB_ASSERT(next,NULL);
     __TBB_store_with_release(next->going, 1);

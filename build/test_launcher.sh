@@ -35,7 +35,8 @@ do #
     LD_PRELOAD=$OPTARG #
     shift `expr $OPTIND - 1` #
 done #
-# Set stack limit and run the command line passed via parameters
+# Set stack limit
 ulimit -s 10240 # 
+# Run the command line passed via parameters
 export LD_PRELOAD #
 ./$* # 

@@ -97,10 +97,10 @@ tbb_debug: mkdir_debug
 	$(MAKE) -C "$(work_dir)_debug"  -r -f $(tbb_root)/build/Makefile.tbb cfg=debug tbb_root=$(tbb_root)
 
 rml_release: mkdir_release
-	$(MAKE) -C "$(work_dir)_release"  -r -f $(tbb_root)/build/Makefile.rml cfg=release tbb_root=$(tbb_root)
+	$(MAKE) -C "$(work_dir)_release"  -r -f $(tbb_root)/build/Makefile.rml cfg=release tbb_root=$(tbb_root) rml
 
 rml_debug: mkdir_debug
-	$(MAKE) -C "$(work_dir)_debug"  -r -f $(tbb_root)/build/Makefile.rml cfg=debug tbb_root=$(tbb_root)
+	$(MAKE) -C "$(work_dir)_debug"  -r -f $(tbb_root)/build/Makefile.rml cfg=debug tbb_root=$(tbb_root) rml
 
 test_release: $(call cross_cfg,mkdir_release) $(call cross_cfg,tbb_release) test_release_no_depends
 test_release_no_depends: 
@@ -181,7 +181,7 @@ codecov:
 
 do_codecov:
 	$(MAKE) tbbmalloc_test_release test_release
-	$(RM) $(work_dir)_release$(SLASH)test_*.* >$(NUL) 2>$(NUL)
+	$(MAKE) clean_test_* cfg=release
 	$(MAKE) crosstest=yes tbbmalloc_test_debug test_debug
 
 info:

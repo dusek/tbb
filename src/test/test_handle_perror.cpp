@@ -31,13 +31,13 @@
 
 #include <cerrno>
 #include <stdexcept>
-#include "tbb/tbb_misc.h"
+#include "../tbb/tbb_misc.h"
 #include "harness.h"
 
 static void TestHandlePerror() {
     bool caught = false;
     try {
-	tbb::internal::handle_perror( EAGAIN, "apple" );
+        tbb::internal::handle_perror( EAGAIN, "apple" );
     } catch( std::runtime_error& e ) {
 	if( Verbose )
 	    printf("caught runtime_exception('%s')\n",e.what());

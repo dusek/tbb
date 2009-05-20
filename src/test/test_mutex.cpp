@@ -93,6 +93,86 @@ struct AddOne: NoAssign {
     AddOne( C& counter_ ) : counter(counter_) {}
 };
 
+//! Adaptor for using ISO C++0x style mutex as a TBB-style mutex.
+template<typename M>
+class TBB_MutexFromISO_Mutex {
+    M my_iso_mutex;
+public:
+    typedef TBB_MutexFromISO_Mutex mutex_type;
+
+    class scoped_lock;
+    friend class scoped_lock;
+
+    class scoped_lock {
+        mutex_type* my_mutex;
+    public:
+        scoped_lock() : my_mutex(NULL) {}
+        scoped_lock( mutex_type& m ) : my_mutex(NULL) {
+            acquire(m);
+        }
+        scoped_lock( mutex_type& m, bool is_writer ) : my_mutex(NULL) {
+            acquire(m,is_writer);
+        }
+        void acquire( mutex_type& m ) {
+            m.my_iso_mutex.lock();
+            my_mutex = &m;
+        }
+        bool try_acquire( mutex_type& m ) {
+            if( m.my_iso_mutex.try_lock() ) {
+                my_mutex = &m;
+                return true;
+            } else {
+                return false;
+            }
+        }
+        void release() {
+            my_mutex->my_iso_mutex.unlock();
+            my_mutex = NULL;
+        }
+
+        // Methods for reader-writer mutex
+        // These methods can be instantiated only if M supports lock_read() and try_lock_read().
+        
+        void acquire( mutex_type& m, bool is_writer ) {
+            if( is_writer ) m.my_iso_mutex.lock();
+            else m.my_iso_mutex.lock_read();
+            my_mutex = &m;
+        } 
+        bool try_acquire( mutex_type& m, bool is_writer ) {
+            if( is_writer ? m.my_iso_mutex.try_lock() : m.my_iso_mutex.try_lock_read() ) {
+                my_mutex = &m;
+                return true;
+            } else {
+                return false;
+            }
+        }
+        bool upgrade_to_writer() {
+            my_mutex->my_iso_mutex.unlock();
+            my_mutex->my_iso_mutex.lock(); 
+            return false;
+        }
+        bool downgrade_to_reader() {
+            my_mutex->my_iso_mutex.unlock();
+            my_mutex->my_iso_mutex.lock_read(); 
+            return false;
+        }
+        ~scoped_lock() {
+            if( my_mutex ) 
+                release();
+        }
+    };    
+  
+    static const bool is_recursive_mutex = M::is_recursive_mutex;
+    static const bool is_rw_mutex = M::is_rw_mutex;
+};
+
+namespace tbb {
+    namespace profiling {
+        template<typename M>
+        void set_name( const TBB_MutexFromISO_Mutex<M>&, const char* ) {}  
+    }
+}
+
 //! Generic test of a TBB mutex type M.
 /** Does not test features specific to reader-writer locks. */
 template<typename M>
@@ -451,6 +531,35 @@ void TestNullRWMutex( const char * name ) {
     tbb::parallel_for(tbb::blocked_range<size_t>(0,n,10),NullUpgradeDowngrade<M>(m, name));
 }
 
+//! Test ISO C++0x compatibility portion of TBB mutex 
+template<typename M>
+void TestISO( const char * name ) {
+    typedef TBB_MutexFromISO_Mutex<M> tbb_from_iso;
+    Test<tbb_from_iso>( name );
+}
+
+//! Test ISO C++0x try_lock functionality of a non-reenterable mutex */
+template<typename M>
+void TestTryAcquire_OneThreadISO( const char * name ) {
+    typedef TBB_MutexFromISO_Mutex<M> tbb_from_iso;
+    TestTryAcquire_OneThread<tbb_from_iso>( name );
+}
+
+//! Test ISO-like C++0x compatibility portion of TBB reader-writer mutex 
+template<typename M>
+void TestReaderWriterLockISO( const char * name ) {
+    typedef TBB_MutexFromISO_Mutex<M> tbb_from_iso;
+    TestReaderWriterLock<tbb_from_iso>( name );
+    TestTryAcquireReader_OneThread<tbb_from_iso>( name );
+}
+
+//! Test ISO C++0x compatibility portion of TBB recursive mutex 
+template<typename M>
+void TestRecursiveMutexISO( const char * name ) {
+    typedef TBB_MutexFromISO_Mutex<M> tbb_from_iso;
+    TestRecursiveMutex<tbb_from_iso>(name); 
+}
+
 #include "tbb/task_scheduler_init.h"
 
 int main( int argc, char * argv[] ) {
@@ -498,6 +607,21 @@ int main( int argc, char * argv[] ) {
             TestReaderWriterLock<tbb::spin_rw_mutex>( "Spin RW Mutex" );
 
             TestRecursiveMutex<tbb::recursive_mutex>( "Recursive Mutex" );
+
+            // Test ISO C++0x interface  
+            TestISO<tbb::spin_mutex>( "ISO Spin Mutex" );
+            TestISO<tbb::mutex>( "ISO Mutex" );
+            TestISO<tbb::spin_rw_mutex>( "ISO Spin RW Mutex" );
+            TestISO<tbb::recursive_mutex>( "ISO Recursive Mutex" );
+            TestTryAcquire_OneThreadISO<tbb::spin_mutex>( "ISO Spin Mutex" );
+#if USE_PTHREAD 
+            // under ifdef because on Windows tbb::mutex is reenterable and the test will fail
+            TestTryAcquire_OneThreadISO<tbb::mutex>( "ISO Mutex" );
+#endif /* USE_PTHREAD */
+            TestTryAcquire_OneThreadISO<tbb::spin_rw_mutex>( "ISO Spin RW Mutex" );
+            TestTryAcquire_OneThreadISO<tbb::recursive_mutex>( "ISO Recursive Mutex" );
+            TestReaderWriterLockISO<tbb::spin_rw_mutex>( "ISO Spin RW Mutex" );
+            TestRecursiveMutexISO<tbb::recursive_mutex>( "ISO Recursive Mutex" );
         }
         REMARK( "calling destructor for task_scheduler_init\n" );
     }

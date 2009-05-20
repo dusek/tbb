@@ -31,7 +31,9 @@
 
 #include "task.h"
 #include "partitioner.h"
+#include "blocked_range.h"
 #include <new>
+#include <stdexcept> // std::invalid_argument
 
 namespace tbb {
 
@@ -167,6 +169,54 @@ void parallel_for( const Range& range, const Body& body, affinity_partitioner& p
 }
 #endif /* __TBB_EXCEPTIONS */
 //@}
+
+//! @cond INTERNAL
+namespace internal {
+    //! Calls the function with values from range [begin, end) with a step provided
+template<typename Function, typename Index_type>
+class parallel_for_body : internal::no_assign {
+    Function &my_func;
+    const Index_type my_begin;
+    const Index_type my_step; 
+public:
+    parallel_for_body( Function& _func, Index_type& _begin, Index_type& _step) 
+        : my_func(_func), my_begin(_begin), my_step(_step) {}
+    
+    void operator()( tbb::blocked_range<Index_type>& r ) const {
+        for( Index_type i = r.begin(),  k = my_begin + i * my_step; i < r.end(); i++, k = k + my_step)
+            my_func( k );
+    }
+};
+} // namespace internal
+//! @endcond
+
+namespace strict_ppl {
+
+//@{
+//! Parallel iteration over a range of integers with a step provided
+template <typename Index_type, typename Function>
+Function parallel_for(Index_type _First, Index_type _Last, Index_type _Step, Function _Func) {
+    tbb::task_group_context context;
+    return parallel_for(_First, _Last, _Step, _Func, context);
+}
+template <typename Index_type, typename Function>
+Function parallel_for(Index_type _First, Index_type _Last, Index_type _Step, Function _Func, tbb::task_group_context &context) {
+    if (_Step <= 0 ) throw std::invalid_argument("_Step should be positive");
+
+    if (_Last > _First) {
+        Index_type end = (_Last - _First) / _Step;
+        if (_First + end * _Step < _Last) end++;
+        tbb::blocked_range<Index_type> range(static_cast<Index_type>(0), end);
+        internal::parallel_for_body<Function, Index_type> body(_Func, _First, _Step);
+        tbb::parallel_for(range, body, tbb::auto_partitioner(), context);
+    }
+    return _Func;
+}
+//@}
+
+} // namespace strict_ppl
+
+using strict_ppl::parallel_for;
 
 } // namespace tbb
 

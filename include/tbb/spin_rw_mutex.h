@@ -144,7 +144,7 @@ public:
             __TBB_ASSERT( is_writer, "not a writer" );
             mutex->internal_downgrade();
 #else
-	     __TBB_FetchAndAddW( &mutex->state, ((intptr_t)ONE_READER-WRITER));
+            __TBB_FetchAndAddW( &mutex->state, ((intptr_t)ONE_READER-WRITER));
 #endif /* TBB_USE_THREADING_TOOLS||TBB_USE_ASSERT */
             is_writer = false;
 
@@ -176,6 +176,35 @@ public:
     static const bool is_rw_mutex = true;
     static const bool is_recursive_mutex = false;
     static const bool is_fair_mutex = false;
+
+    // ISO C++0x compatibility methods
+
+    //! Acquire writer lock
+    void lock() {internal_acquire_writer();}
+
+    //! Try acquiring writer lock (non-blocking)
+    /** Return true if lock acquired; false otherwise. */
+    bool try_lock() {return internal_try_acquire_writer();}
+
+    //! Release lock
+    void unlock() {
+#if TBB_USE_THREADING_TOOLS||TBB_USE_ASSERT
+        if( state&WRITER ) internal_release_writer();
+        else               internal_release_reader();
+#else
+        if( state&WRITER ) __TBB_AtomicAND( &state, READERS ); 
+        else               __TBB_FetchAndAddWrelease( &state, -(intptr_t)ONE_READER);
+#endif /* TBB_USE_THREADING_TOOLS||TBB_USE_ASSERT */
+    }
+
+    // Methods for reader locks that resemble ISO C++0x compatibility methods.
+
+    //! Acquire reader lock
+    void lock_read() {internal_acquire_reader();}
+
+    //! Try acquiring reader lock (non-blocking)
+    /** Return true if reader lock acquired; false otherwise. */
+    bool try_lock_read() {return internal_try_acquire_reader();}
 
 private:
     typedef intptr_t state_t;
