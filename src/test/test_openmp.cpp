@@ -145,7 +145,7 @@ public:
 //! Test OpenMMP loop around TBB loop
 void OpenMP_TBB_Convolve( T c[], const T a[], int m, const T b[], int n ) {
     if( Verbose )
-        printf("testing OpenMP loop around TBB loop\n");
+        REPORT("testing OpenMP loop around TBB loop\n");
 #pragma omp parallel 
     {
         task_scheduler_init init;
@@ -187,7 +187,7 @@ public:
 //! Test TBB loop around OpenMP loop
 void TBB_OpenMP_Convolve( T c[], const T a[], int m, const T b[], int n ) {
     if( Verbose )
-        printf("testing TBB loop around OpenMP loop\n");
+        REPORT("testing TBB loop around OpenMP loop\n");
     parallel_for( blocked_range<int>(0,m+n-1,10), OuterBody( c, a, m, b, n ) );
 }
 
@@ -196,9 +196,10 @@ void TBB_OpenMP_Convolve( T c[], const T a[], int m, const T b[], int n ) {
 const int M = 17*17;
 const int N = 13*13;
 
+__TBB_TEST_EXPORT
 int main( int argc, char* argv[] ) {
 #ifdef _PGO_INSTRUMENT
-    printf("Warning: test_openmp.exe has problems if compiled with -prof-genx; skipping\n");
+    REPORT("Warning: test_openmp.exe has problems if compiled with -prof-genx; skipping\n");
     return 0;
 #endif
     ParseCommandLine(argc,argv);
@@ -231,6 +232,6 @@ int main( int argc, char* argv[] ) {
             }
         } 
     }
-    printf("done\n");
+    REPORT("done\n");
     return 0;
 }

@@ -65,7 +65,7 @@ ASM_FLAGS=
 
 TBB_ASM.OBJ=
 
-ifeq (itanium,$(arch))
+ifeq (ia64,$(arch))
 # Position-independent code (PIC) is a must on IA-64, even for regular (not shared) executables
     CPLUS_FLAGS += $(PIC_KEY)
 endif 
@@ -78,7 +78,7 @@ endif
 # Setting assembler data.
 #------------------------------------------------------------------------------
 ASSEMBLY_SOURCE=$(arch)-gas
-ifeq (itanium,$(arch))
+ifeq (ia64,$(arch))
     ASM=ias
     TBB_ASM.OBJ = atomic_support.o lock_byte.o log2.o pause.o ia64_misc.o
 endif 

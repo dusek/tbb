@@ -32,7 +32,6 @@
 #include "tbb_stddef.h"
 #include <algorithm>
 #include <iterator>
-#include <limits>
 #include <new>
 #include <cstring>
 #include "atomic.h"
@@ -40,6 +39,16 @@
 #include "blocked_range.h"
 
 #include "tbb_machine.h"
+
+#if _MSC_VER==1500 && !__INTEL_COMPILER
+    // VS2008/VC9 seems to have an issue; limits pull in math.h
+    #pragma warning( push )
+    #pragma warning( disable: 4985 )
+#endif
+#include <limits> /* std::numeric_limits */
+#if _MSC_VER==1500 && !__INTEL_COMPILER
+    #pragma warning( pop )
+#endif
 
 #if defined(_MSC_VER) && !defined(__INTEL_COMPILER) && defined(_Wp64)
     // Workaround for overzealous compiler warnings in /Wp64 mode
@@ -495,7 +504,13 @@ public:
         : internal::allocator_base<T, A>(a)
     {
         vector_allocator_ptr = &internal_allocator;
-        internal_copy(vector, sizeof(T), &copy_array);
+        try {
+            internal_copy(vector, sizeof(T), &copy_array);
+        } catch(...) {
+            segment_t *table = my_segment;
+            internal_free_segments( reinterpret_cast<void**>(table), internal_clear(&destroy_array), my_first_block );
+            throw;
+        }
     }
 
     //! Copying constructor for vector with different allocator type
@@ -504,14 +519,26 @@ public:
         : internal::allocator_base<T, A>(a)
     {
         vector_allocator_ptr = &internal_allocator;
-        internal_copy(vector.internal_vector_base(), sizeof(T), &copy_array);
+        try {
+            internal_copy(vector.internal_vector_base(), sizeof(T), &copy_array);
+        } catch(...) {
+            segment_t *table = my_segment;
+            internal_free_segments( reinterpret_cast<void**>(table), internal_clear(&destroy_array), my_first_block );
+            throw;
+        }
     }
 
     //! Construction with initial size specified by argument n
     explicit concurrent_vector(size_type n)
     {
         vector_allocator_ptr = &internal_allocator;
-        internal_resize( n, sizeof(T), max_size(), NULL, &destroy_array, &initialize_array );
+        try {
+            internal_resize( n, sizeof(T), max_size(), NULL, &destroy_array, &initialize_array );
+        } catch(...) {
+            segment_t *table = my_segment;
+            internal_free_segments( reinterpret_cast<void**>(table), internal_clear(&destroy_array), my_first_block );
+            throw;
+        }
     }
 
     //! Construction with initial size specified by argument n, initialization by copying of t, and given allocator instance
@@ -519,7 +546,13 @@ public:
         : internal::allocator_base<T, A>(a)
     {
         vector_allocator_ptr = &internal_allocator;
-        internal_resize( n, sizeof(T), max_size(), static_cast<const void*>(&t), &destroy_array, &initialize_array_by );
+        try {
+            internal_resize( n, sizeof(T), max_size(), static_cast<const void*>(&t), &destroy_array, &initialize_array_by );
+        } catch(...) {
+            segment_t *table = my_segment;
+            internal_free_segments( reinterpret_cast<void**>(table), internal_clear(&destroy_array), my_first_block );
+            throw;
+        }
     }
 
     //! Construction with copying iteration range and given allocator instance
@@ -528,7 +561,13 @@ public:
         : internal::allocator_base<T, A>(a)
     {
         vector_allocator_ptr = &internal_allocator;
-        internal_assign_range(first, last, static_cast<is_integer_tag<std::numeric_limits<I>::is_integer> *>(0) );
+        try {
+            internal_assign_range(first, last, static_cast<is_integer_tag<std::numeric_limits<I>::is_integer> *>(0) );
+        } catch(...) {
+            segment_t *table = my_segment;
+            internal_free_segments( reinterpret_cast<void**>(table), internal_clear(&destroy_array), my_first_block );
+            throw;
+        }
     }
 
     //! Assignment

@@ -39,8 +39,7 @@
  *  can be used from pure C programs; also some regression checks are done
  */
 
-int main(void)
-{
+int main(void) {
     size_t i, j;
     void *p1, *p2;
     for( i=0; i<=1<<16; ++i) {

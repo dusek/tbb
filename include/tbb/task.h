@@ -30,6 +30,7 @@
 #define __TBB_task_H
 
 #include "tbb_stddef.h"
+#include "tbb_machine.h"
 
 #if __TBB_EXCEPTIONS
 #include "cache_aligned_allocator.h"
@@ -39,7 +40,6 @@ namespace tbb {
 
 class task;
 class task_list;
-class task_group;
 
 #if __TBB_EXCEPTIONS
 class task_group_context;
@@ -113,6 +113,8 @@ namespace internal {
         void __TBB_EXPORTED_METHOD free( task& ) const;
     };
 
+    class task_group_base;
+
     //! Memory prefix to a task object.
     /** This class is internal to the library.
         Do not reference it directly, except within the library itself.
@@ -128,7 +130,7 @@ namespace internal {
         friend class internal::allocate_child_proxy;
         friend class internal::allocate_continuation_proxy;
         friend class internal::allocate_additional_child_of_proxy;
-        friend class tbb::task_group;
+        friend class internal::task_group_base;
 
 #if __TBB_EXCEPTIONS
         //! Shared context that is used to communicate asynchronous state changes
@@ -400,6 +402,9 @@ class task: internal::no_copy {
     //! Set reference count
     void __TBB_EXPORTED_METHOD internal_set_ref_count( int count );
 
+    //! Decrement reference count and return true if non-zero.
+    internal::reference_count __TBB_EXPORTED_METHOD internal_decrement_ref_count();
+
 protected:
     //! Default constructor.
     task() {prefix().extra_state=1;}
@@ -561,13 +566,31 @@ public:
 #endif /* TBB_USE_THREADING_TOOLS||TBB_USE_ASSERT */
     }
 
+    //! Atomically increment reference count.
+    /** Has acquire semantics */  
+    void increment_ref_count() {
+        __TBB_FetchAndIncrementWacquire( &prefix().ref_count );
+    }
+
+    //! Atomically decrement reference count.  
+    /** Has release semanics. */  
+    int decrement_ref_count() {
+#if TBB_USE_THREADING_TOOLS||TBB_USE_ASSERT
+        return int(internal_decrement_ref_count());
+#else
+        return int(__TBB_FetchAndDecrementWrelease( &prefix().ref_count ))-1;
+#endif /* TBB_USE_THREADING_TOOLS||TBB_USE_ASSERT */
+    }
+
     //! Schedule task for execution when a worker becomes available.
     /** After all children spawned so far finish their method task::execute,
         their parent's method task::execute may start running.  Therefore, it
         is important to ensure that at least one child has not completed until
         the parent is ready to run. */
     void spawn( task& child ) {
+#if !__TBB_RELAXED_OWNERSHIP
         __TBB_ASSERT( is_owned_by_current_thread(), "'this' not owned by current thread" );
+#endif /* !__TBB_RELAXED_OWNERSHIP */
         prefix().owner->spawn( child, child.prefix().next );
     }
 
@@ -577,7 +600,9 @@ public:
 
     //! Similar to spawn followed by wait_for_all, but more efficient.
     void spawn_and_wait_for_all( task& child ) {
+#if !__TBB_RELAXED_OWNERSHIP
         __TBB_ASSERT( is_owned_by_current_thread(), "'this' not owned by current thread" );
+#endif /* !__TBB_RELAXED_OWNERSHIP */
         prefix().owner->wait_for_all( *this, &child );
     }
 
@@ -588,7 +613,9 @@ public:
     /** The thread that calls spawn_root_and_wait must be the same thread
         that allocated the task. */
     static void spawn_root_and_wait( task& root ) {
+#if !__TBB_RELAXED_OWNERSHIP
         __TBB_ASSERT( root.is_owned_by_current_thread(), "root not owned by current thread" );
+#endif /* !__TBB_RELAXED_OWNERSHIP */
         root.prefix().owner->spawn_root_and_wait( root, root.prefix().next );
     }
 
@@ -600,7 +627,9 @@ public:
     //! Wait for reference count to become one, and set reference count to zero.
     /** Works on tasks while waiting. */
     void wait_for_all() {
+#if !__TBB_RELAXED_OWNERSHIP
         __TBB_ASSERT( is_owned_by_current_thread(), "'this' not owned by current thread" );
+#endif /* !__TBB_RELAXED_OWNERSHIP */
         prefix().owner->wait_for_all( *this, NULL );
     }
 
@@ -610,8 +639,19 @@ public:
     //! task on whose behalf this task is working, or NULL if this is a root.
     task* parent() const {return prefix().parent;}
 
+#if __TBB_EXCEPTIONS
+    //! Shared context that is used to communicate asynchronous state changes
+    task_group_context* context() {return prefix().context;}
+#endif /* __TBB_EXCEPTIONS */   
+
     //! True if task is owned by different thread than thread that owns its parent.
     bool is_stolen_task() const {
+#if __TBB_PROVIDE_VIRTUAL_SCHEDULER
+        // The virtual scheduler directly identifies stolen tasks.
+        int es_virtual_steal = 4;
+        if(prefix().extra_state & es_virtual_steal)
+            return true;
+#endif /* TBB_PROVIDE_VIRTUAL_SCHEDULER */
         internal::task_prefix& p = prefix();
         internal::task_prefix& q = parent()->prefix();
         return p.owner!=q.owner;
@@ -676,7 +716,8 @@ private:
     friend class internal::allocate_continuation_proxy;
     friend class internal::allocate_child_proxy;
     friend class internal::allocate_additional_child_of_proxy;
-    friend class tbb::task_group;
+    
+    friend class internal::task_group_base;
 
     //! Get reference to corresponding task_prefix.
     /** Version tag prevents loader on Linux from using the wrong symbol in debug builds. **/
@@ -735,7 +776,9 @@ public:
 };
 
 inline void task::spawn( task_list& list ) {
+#if !__TBB_RELAXED_OWNERSHIP
     __TBB_ASSERT( is_owned_by_current_thread(), "'this' not owned by current thread" );
+#endif /* !__TBB_RELAXED_OWNERSHIP */
     if( task* t = list.first ) {
         prefix().owner->spawn( *t, *list.next_ptr );
         list.clear();
@@ -744,7 +787,9 @@ inline void task::spawn( task_list& list ) {
 
 inline void task::spawn_root_and_wait( task_list& root_list ) {
     if( task* t = root_list.first ) {
+#if !__TBB_RELAXED_OWNERSHIP
         __TBB_ASSERT( t->is_owned_by_current_thread(), "'this' not owned by current thread" );
+#endif /* !__TBB_RELAXED_OWNERSHIP */
         t->prefix().owner->spawn_root_and_wait( *t, *root_list.next_ptr );
         root_list.clear();
     }

@@ -128,12 +128,13 @@ void TestCancellation()
 
 #include "harness_cpu.h"
 
+__TBB_TEST_EXPORT
 int main( int argc, char* argv[] ) {
     MinThread=1;
     MaxThread=2;
     ParseCommandLine( argc, argv );
     if( MinThread<1 ) {
-        printf("number of threads must be positive\n");
+        REPORT("number of threads must be positive\n");
         exit(1);
     }
 
@@ -157,8 +158,8 @@ int main( int argc, char* argv[] ) {
         TestCPUUserTime(p);
     }
 #if __TBB_EXCEPTION_HANDLING_BROKEN
-    printf("Warning: Exception handling tests are skipped due to a known issue.\n");
+    REPORT("Warning: Exception handling tests are skipped due to a known issue.\n");
 #endif
-    printf("done\n");
+    REPORT("done\n");
     return 0;
 }

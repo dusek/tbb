@@ -28,7 +28,7 @@ ifndef arch
         arch:=$(shell uname -p)
         ifeq ($(arch),i386)
             ifeq ($(shell isainfo -b),64)
-                arch:=em64t
+                arch:=intel64
             else
                 arch:=ia32
             endif

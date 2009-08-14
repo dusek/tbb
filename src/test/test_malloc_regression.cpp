@@ -87,7 +87,7 @@ bool test_bootstrap_leak(void) {
 
     ptrdiff_t memory_leak = GetMemoryUsage() - memory_in_use;
     if( memory_leak>0 ) { // possibly too strong?
-        printf( "Error: memory leak of up to %ld bytes\n", static_cast<long>(memory_leak));
+        REPORT( "Error: memory leak of up to %ld bytes\n", static_cast<long>(memory_leak));
     }
 
     for( int i=0; i<take_out_count; ++i )
@@ -96,13 +96,14 @@ bool test_bootstrap_leak(void) {
     return memory_leak<=0;
 }
 
+__TBB_TEST_EXPORT
 int main( int /*argc*/, char* argv[] ) {
     bool passed = true;
 
     passed &= test_bootstrap_leak();
 
-    if(passed) printf("done\n");
-    else       printf("%s failed\n", argv[0]);
+    if(passed) REPORT("done\n");
+    else       REPORT("%s failed\n", argv[0]);
 
     return passed?0:1;
 }

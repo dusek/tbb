@@ -87,13 +87,13 @@ void TestSimpleDelay( int ntrial, double duration, double tolerance ) {
     double worktime = total_worktime/ntrial;
     double delta = worktime-duration;
     if (Verbose)
-        printf("worktime=%g delta=%g tolerance=%g\n", worktime, delta, tolerance);
+        REPORT("worktime=%g delta=%g tolerance=%g\n", worktime, delta, tolerance);
 
     // Check that delta is acceptable
     if( delta<0 ) 
-        printf("ERROR: delta=%g < 0\n",delta); 
+        REPORT("ERROR: delta=%g < 0\n",delta); 
     if( delta>tolerance )
-        printf("%s: delta=%g > %g=tolerance where duration=%g\n",delta>3*tolerance?"ERROR":"Warning",delta,tolerance,duration);
+        REPORT("%s: delta=%g > %g=tolerance where duration=%g\n",delta>3*tolerance?"ERROR":"Warning",delta,tolerance,duration);
 }
 
 //------------------------------------------------------------------------
@@ -127,18 +127,14 @@ void Testtick_countDifference( int n ) {
                 double diff = (tick_countArray[i]-tick_countArray[j]).seconds();
                 if( diff<0 ) diff = -diff;
                 if( diff>tolerance ) {
-                    printf("%s: cross-thread tick_count difference = %g > %g = tolerance\n",
+                    REPORT("%s: cross-thread tick_count difference = %g > %g = tolerance\n",
                            diff>3*tolerance?"ERROR":"Warning",diff,tolerance);
                 }
             }
     }
 }
 
-//------------------------------------------------------------------------
-// Test driver
-//------------------------------------------------------------------------
-
-//! Top level test driver. 
+__TBB_TEST_EXPORT
 int main( int argc, char* argv[]) {
     ParseCommandLine(argc, argv);
 
@@ -152,6 +148,6 @@ int main( int argc, char* argv[]) {
     for( int n=MinThread; n<=MaxThread; ++n ) {
         Testtick_countDifference(n);
     }
-    printf("done\n");
+    REPORT("done\n");
     return 0;
 }

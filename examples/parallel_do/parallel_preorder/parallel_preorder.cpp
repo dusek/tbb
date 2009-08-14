@@ -34,6 +34,7 @@
 #include <vector>
 #include <algorithm>
 #include <cstring>
+#include <cstdio>
 #include "Graph.h"
 
 using namespace std;

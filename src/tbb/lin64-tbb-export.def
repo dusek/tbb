@@ -42,6 +42,7 @@ _ZN3tbb8internal17is_malloc_used_v3Ev;
 /* task.cpp v3 */
 _ZN3tbb4task13note_affinityEt;
 _ZN3tbb4task22internal_set_ref_countEi;
+_ZN3tbb4task28internal_decrement_ref_countEv;
 _ZN3tbb4task22spawn_and_wait_for_allERNS_9task_listE;
 _ZN3tbb4task4selfEv;
 _ZN3tbb4task7destroyERS0_;
@@ -134,6 +135,8 @@ _ZN3tbb8pipeline3runEm;
 _ZN3tbb8pipeline3runEmRNS_18task_group_contextE;
 #endif
 _ZN3tbb8pipeline5clearEv;
+_ZN3tbb19thread_bound_filter12process_itemEv;
+_ZN3tbb19thread_bound_filter16try_process_itemEv;
 _ZTIN3tbb8pipelineE;
 _ZTSN3tbb8pipelineE;
 _ZTVN3tbb8pipelineE;
@@ -201,10 +204,10 @@ _ZN3tbb13queuing_mutex11scoped_lock7acquireERS0_;
 _ZN3tbb13queuing_mutex11scoped_lock7releaseEv;
 _ZN3tbb13queuing_mutex11scoped_lock11try_acquireERS0_;
 
+#if !TBB_NO_LEGACY
 /* concurrent_hash_map */
 _ZNK3tbb8internal21hash_map_segment_base23internal_grow_predicateEv;
 
-#if !TBB_NO_LEGACY
 /* concurrent_queue.cpp v2 */
 _ZN3tbb8internal21concurrent_queue_base12internal_popEPv;
 _ZN3tbb8internal21concurrent_queue_base13internal_pushEPKv;
@@ -288,12 +291,6 @@ _ZN3tbb8internal19allocate_closure_v3Em;
 _ZN3tbb8internal7move_v3ERNS0_13tbb_thread_v3ES2_;
 _ZN3tbb8internal15thread_yield_v3Ev;
 _ZN3tbb8internal15thread_sleep_v3ERKNS_10tick_count10interval_tE;
-
-/* enumerable_thread_specific */
-_ZN3tbb8internal25tls_single_key_manager_v410create_keyERm;
-_ZN3tbb8internal25tls_single_key_manager_v411destroy_keyERm;
-_ZN3tbb8internal25tls_single_key_manager_v47get_tlsERm;
-_ZN3tbb8internal25tls_single_key_manager_v47set_tlsERmPv;
 
 local:
 

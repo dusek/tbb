@@ -59,7 +59,7 @@ void rt_sleep(int msec) {
 using namespace std;
 
 bool g_next_frame() {
-    if(++n_next_frame_calls >= frame_skips) {
+    if(++n_next_frame_calls >= frame_skips) { // the data race here is benign
         n_next_frame_calls = 0; 
         return gVideo->next_frame();
     } 

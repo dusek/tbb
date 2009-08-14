@@ -164,7 +164,7 @@ void GenericScheduler::test_assembly_routines() {
                         }
     ASSERT( array_size-array_size_proxy==0, NULL ); // check for any side effects affecting array_size
     if( Verbose )
-        printf("%ld successful gets and %ld successful steals\n", get_count, steal_count );
+        REPORT("%ld successful gets and %ld successful steals\n", get_count, steal_count );
 #endif /* !__TBB_TASK_DEQUE */
 }
 
@@ -172,7 +172,7 @@ void GenericScheduler::test_assembly_routines() {
 static void TestCompareExchange() {
     ASSERT( intptr(-10)<10, "intptr not a signed integral type?" ); 
     if( Verbose ) 
-        printf("testing __TBB_CompareAndSwapW\n");
+        REPORT("testing __TBB_CompareAndSwapW\n");
     for( intptr a=-10; a<10; ++a )
         for( intptr b=-10; b<10; ++b )
             for( intptr c=-10; c<10; ++c ) {
@@ -197,7 +197,7 @@ static void TestAtomicCounter() {
     // "canary" is a value used to detect illegal overwrites.
     const internal::reference_count canary = ~(internal::uintptr)0/3;
     if( Verbose ) 
-        printf("testing __TBB_FetchAndIncrement\n");
+        REPORT("testing __TBB_FetchAndIncrement\n");
     struct {
         internal::reference_count prefix, i, suffix;
     } x;
@@ -212,7 +212,7 @@ static void TestAtomicCounter() {
         ASSERT( j==k, NULL );
     }
     if( Verbose ) 
-        printf("testing __TBB_FetchAndDecrement\n");
+        REPORT("testing __TBB_FetchAndDecrement\n");
     x.i = 10;
     for( int k=10; k>0; --k ) {
         internal::reference_count j = __TBB_FetchAndDecrementWrelease((volatile void *)&x.i);
@@ -225,7 +225,7 @@ static void TestAtomicCounter() {
 
 static void TestTinyLock() {
     if( Verbose ) 
-        printf("testing __TBB_LockByte\n");
+        REPORT("testing __TBB_LockByte\n");
     unsigned char flags[16];
     for( int i=0; i<16; ++i )
         flags[i] = i;
@@ -241,7 +241,7 @@ static void TestTinyLock() {
 
 static void TestLog2() {
     if( Verbose ) 
-        printf("testing __TBB_Log2\n");
+        REPORT("testing __TBB_Log2\n");
     for( uintptr_t i=1; i; i<<=1 ) {
         for( uintptr_t j=1; j<1<<16; ++j ) {
             if( uintptr_t k = i*j ) {
@@ -256,7 +256,7 @@ static void TestLog2() {
 
 static void TestPause() {
     if( Verbose ) 
-        printf("testing __TBB_Pause\n");
+        REPORT("testing __TBB_Pause\n");
     __TBB_Pause(1);
 }
 
@@ -266,6 +266,7 @@ static void TestPause() {
 
 using namespace tbb;
 
+__TBB_TEST_EXPORT
 int main( int argc, char* argv[] ) {
     try {
         ParseCommandLine( argc, argv );
@@ -278,13 +279,13 @@ int main( int argc, char* argv[] ) {
         task_scheduler_init init(1);
 
         if( Verbose ) 
-            printf("testing __TBB_(scheduler assists)\n");
+            REPORT("testing __TBB_(scheduler assists)\n");
         GenericScheduler* scheduler = internal::Governor::local_scheduler();
         scheduler->test_assembly_routines();
 
     } catch(...) {
         ASSERT(0,"unexpected exception");
     }
-    printf("done\n");
+    REPORT("done\n");
     return 0;
 }

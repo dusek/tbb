@@ -34,7 +34,6 @@ PIC_KEY = -fPIC
 WARNING_AS_ERROR_KEY = -Werror
 WARNING_KEY = -Wall
 DYLIB_KEY = -shared
-#LIBDL = -ldl
 
 TBB_NOSTRICT = 1
 
@@ -56,12 +55,12 @@ ASM_FLAGS=
 
 TBB_ASM.OBJ=
 
-ifeq (itanium,$(arch))
+ifeq (ia64,$(arch))
 # Position-independent code (PIC) is a must on IA-64, even for regular (not shared) executables
     CPLUS_FLAGS += $(PIC_KEY)
 endif 
 
-ifeq (em64t,$(arch))
+ifeq (intel64,$(arch))
     CPLUS_FLAGS += -m64
     LIB_LINK_FLAGS += -m64
 endif 
@@ -75,7 +74,7 @@ endif
 # Setting assembler data.
 #------------------------------------------------------------------------------
 ASSEMBLY_SOURCE=$(arch)-gas
-ifeq (itanium,$(arch))
+ifeq (ia64,$(arch))
     ASM=as
     TBB_ASM.OBJ = atomic_support.o lock_byte.o log2.o pause.o
 endif 

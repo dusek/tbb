@@ -31,7 +31,6 @@
 #include "tbb/atomic.h"
 #include "tbb/tbb_exception.h"
 #include "harness.h"
-#include "harness_trace.h"
 
 static const size_t MAX_NUMBER_OF_PINVOKE_ARGS = 10;
 tbb::atomic<size_t> function_counter;
@@ -271,6 +270,7 @@ void TestCancellation ()
 
 #include "harness_cpu.h"
 
+__TBB_TEST_EXPORT
 int main(int argc, char* argv[]) {
     // Set default minimum number of threads
     MinThread = 2;
@@ -282,7 +282,7 @@ int main(int argc, char* argv[]) {
         test_parallel_invoke();
         if (p > 1) {
 #if __TBB_EXCEPTION_HANDLING_BROKEN
-            printf("Warning: Exception handling tests are skipped due to a known issue.\n");
+            REPORT("Warning: Exception handling tests are skipped due to a known issue.\n");
 #else
             TestExceptionHandling();
 #endif
@@ -290,7 +290,7 @@ int main(int argc, char* argv[]) {
         }
         TestCPUUserTime(p);
     }
-    printf("done\n");
+    REPORT("done\n");
     return 0;
 }
 

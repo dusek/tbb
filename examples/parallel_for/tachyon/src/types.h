@@ -55,7 +55,9 @@
     SUCH DAMAGE.
 */
 
-#ifdef _WIN32
+#if __MINGW32__
+#include <malloc.h>
+#elif _WIN32
 #include <malloc.h>
 #define alloca _alloca
 #elif __FreeBSD__

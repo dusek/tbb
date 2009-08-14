@@ -49,7 +49,7 @@ struct RoundRobin: NoAssign {
                 if( j%100==0 ) {
                     tbb::tick_count t1 = tbb::tick_count::now();
                     if( (t1-t0).seconds()>=1.0*number_of_threads ) {
-                        printf("Warning: __TBB_Yield failing to yield with %d threads (or system is heavily loaded)\n",number_of_threads);
+                        REPORT("Warning: __TBB_Yield failing to yield with %d threads (or system is heavily loaded)\n",number_of_threads);
                         Quit = true;
                         return;
                     }
@@ -61,17 +61,18 @@ struct RoundRobin: NoAssign {
     }
 };
 
+__TBB_TEST_EXPORT
 int main( int argc, char* argv[] ) {
     // Set defaults
     MaxThread = MinThread = 3;
     ParseCommandLine( argc, argv );
     for( int p=MinThread; p<=MaxThread; ++p ) {
-        if( Verbose ) printf("testing with %d threads\n", p );
+        if( Verbose ) REPORT("testing with %d threads\n", p );
         CyclicCounter = 0;
         Quit = false;
         NativeParallelFor( long(p), RoundRobin(p) );
     }
-    printf("done\n");
+    REPORT("done\n");
     return 0;
 }
 

@@ -33,7 +33,7 @@
 #define __TBB_TASK_CPP_DIRECTLY_INCLUDED 1
 #include "../tbb/task.cpp"
 
-#if __TBB_EXCEPTIONS
+#if __TBB_EXCEPTIONS && !__TBB_EXCEPTION_HANDLING_TOTALLY_BROKEN
 
 #include "tbb/task_scheduler_init.h"
 #include "tbb/spin_mutex.h"
@@ -106,7 +106,12 @@ inline void WaitForException () {
 class SimpleThrowingTask : public tbb::task {
 public:
     tbb::task* execute () { throw 0; }
-    ~SimpleThrowingTask() { ASSERT( tbb::task::self().is_owned_by_current_thread(), NULL ); }
+
+    ~SimpleThrowingTask() {
+#if !__TBB_RELAXED_OWNERSHIP
+        ASSERT( tbb::task::self().is_owned_by_current_thread(), NULL );
+#endif /* !__TBB_RELAXED_OWNERSHIP */
+    }
 };
 
 //! Checks if innermost running task information is updated correctly during cancellation processing
@@ -666,7 +671,7 @@ void RunTests ()
 }
 #endif /* __TBB_EXCEPTIONS */
 
-
+__TBB_TEST_EXPORT
 int main(int argc, char* argv[]) {
     ParseCommandLine( argc, argv );
     MinThread = min(NUM_ROOTS_IN_GROUP, max(2, MinThread));
@@ -681,9 +686,9 @@ int main(int argc, char* argv[]) {
             RunTests();
         }
     }
-    printf("done\n");
+    REPORT("done\n");
 #else
-    printf("skipped\n");
+    REPORT("skipped\n");
 #endif /* __TBB_EXCEPTIONS */
     return 0;
 }

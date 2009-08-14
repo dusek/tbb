@@ -40,6 +40,7 @@ namespace Concurrency {
     using tbb::task_group_status;
     using tbb::task_group;
     using tbb::structured_task_group;
+    using tbb::missing_wait;
 
     using tbb::not_complete;
     using tbb::complete;
@@ -48,7 +49,6 @@ namespace Concurrency {
     using tbb::is_current_task_group_canceling;
 
     using tbb::parallel_invoke;
-
     using tbb::strict_ppl::parallel_for;
     using tbb::parallel_for_each;
 

@@ -46,7 +46,7 @@ class SpinBarrier
     SpinBarrier( const SpinBarrier& );    // no copy ctor
     void operator=( const SpinBarrier& ); // no assignment 
 public:
-    SpinBarrier( unsigned nthreads ) { initialize(nthreads); };
+    SpinBarrier( unsigned nthreads = 0 ) { initialize(nthreads); };
 
     void initialize( unsigned nthreads ) {
         numThreads = nthreads;

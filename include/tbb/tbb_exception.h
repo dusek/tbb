@@ -114,7 +114,7 @@ class captured_exception : public tbb_exception
 {
 public:
     captured_exception ( const captured_exception& src )
-        : my_dynamic(false)
+        : tbb_exception(src), my_dynamic(false)
     {
         set(src.my_exception_name, src.my_exception_info);
     }
@@ -185,7 +185,8 @@ public:
     {}
 
     movable_exception ( const movable_exception& src ) throw () 
-        : my_exception_data(src.my_exception_data)
+        : tbb_exception(src)
+        , my_exception_data(src.my_exception_data)
         , my_dynamic(false)
         , my_exception_name(src.my_exception_name)
     {}

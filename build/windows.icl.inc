@@ -55,7 +55,7 @@ ifeq (ia32,$(arch))
 endif
 endif
 ifeq ($(cfg), debug)
-    CPLUS_FLAGS = $(MS_CRT_KEY) /Od /Ob0 /Zi $(EH_FLAGS) /Zc:forScope /Zc:wchar_t /DTBB_USE_DEBUG
+    CPLUS_FLAGS = $(MS_CRT_KEY) /Od /Ob0 /Zi $(EH_FLAGS) /Zc:forScope /Zc:wchar_t /DTBB_USE_DEBUG /DDO_ITT_ANNOTATE
     LINK_FLAGS += libmmds.lib /NODEFAULTLIB:libmmdd.lib
     ASM_FLAGS = /DUSE_FRAME_POINTER
 endif
@@ -72,7 +72,7 @@ WARNING_KEY = /W3
 DYLIB_KEY = /DLL
 EXPORT_KEY = /DEF:
 
-ifeq (em64t,$(arch))
+ifeq (intel64,$(arch))
     CPLUS_FLAGS += /GS-
 endif
 
@@ -117,7 +117,7 @@ export VCCOMPAT_FLAG
 # Setting assembler data.
 #------------------------------------------------------------------------------
 ASSEMBLY_SOURCE=$(arch)-masm
-ifeq (em64t,$(arch))
+ifeq (intel64,$(arch))
     ASM=ml64
     ASM_FLAGS += /DEM64T=1 /c /Zi
     TBB_ASM.OBJ = atomic_support.obj

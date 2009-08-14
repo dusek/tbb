@@ -27,7 +27,7 @@
 */
 
 
-#include "TypeDefinitions.h"
+#include "TypeDefinitions.h" /* Also includes customization layer Customize.h */
 
 #if USE_PTHREAD
     // Some pthreads documentation says that <pthreads.h> must be first header.
@@ -55,6 +55,14 @@
 #include <string.h>
 #include <errno.h>
 #include <stdlib.h>
+#if MALLOC_LD_PRELOAD 
+#include <new>        /* for placement new */
+#endif
+
+extern "C" {
+    void * scalable_malloc(size_t size);
+    void   scalable_free(void *object);
+}
 
 /********* Various compile-time options        **************/
 
@@ -73,10 +81,7 @@
 #define FINE_GRAIN_LOCKS
 #include "LifoQueue.h"
 
-#if MALLOC_DEBUG
-#define COLLECT_STATISTICS 1
-#endif
-
+#define COLLECT_STATISTICS MALLOC_DEBUG && defined(MALLOCENV_COLLECT_STATISTICS)
 #include "Statistics.h"
 
 #define FREELIST_NONBLOCKING 1
@@ -88,21 +93,11 @@
 #define USE_MALLOC_FOR_LARGE_OBJECT 1
 #endif
 
-
-extern "C" {
-    void * scalable_malloc(size_t size);
-    void   scalable_free(void *object);
-}
-
 /********* End compile-time options        **************/
 
-#if MALLOC_LD_PRELOAD 
-#include <new> /* for placement new */
-#endif
+namespace rml {
 
-namespace ThreadingSubstrate {
-
-namespace Internal {
+namespace internal {
 
 /******* A helper class to support overriding malloc with scalable_malloc *******/
 #if MALLOC_LD_PRELOAD 
@@ -115,12 +110,12 @@ public:
     recursive_malloc_call_protector(bool condition) : lock_acquired(NULL) {
         if (condition) {
             lock_acquired = new (scoped_lock_space) MallocMutex::scoped_lock( rmc_mutex );
-            lockRecursiveMallocFlag();
+            rml::internal::lockRecursiveMallocFlag();
         }
     }
     ~recursive_malloc_call_protector() {
         if (lock_acquired) {
-            unlockRecursiveMallocFlag();
+            rml::internal::unlockRecursiveMallocFlag();
             lock_acquired->~scoped_lock();
         }
     }
@@ -178,15 +173,20 @@ static inline void  setThreadMallocTLS( void * newvalue ) {
 /*********** End code to provide thread ID and a TLS pointer **********/
 
 /*
- * This number of bins in the TLS that leads to blocks that we can allocate in.
- */
-const uint32_t numBlockBinLimit = 32;
-
-/*
  * The identifier to make sure that memory is allocated by scalable_malloc.
  */
 const uint64_t theMallocUniqueID=0xE3C7AF89A1E2D8C1ULL; 
 
+/*
+ * This number of bins in the TLS that leads to blocks that we can allocate in.
+ */
+const uint32_t numBlockBinLimit = 32;
+
+ /*
+  * The number of bins to cache large objects.
+  */
+const uint32_t numLargeObjectBins = 1024; // for 1024 max cached size is near 8MB
+ 
 /********* The data structures and global objects        **************/
 
 struct FreeObject {
@@ -243,13 +243,6 @@ struct Bin {
 };
 
 /*
- * The size of the TLS should be enough to hold twice as many as numBlockBinLimit pointers
- * the first sequence of pointers is for lists of blocks to allocate from
- * the second sequence is for lists of blocks that have non-empty publicFreeList
- */
-const uint32_t tlsSize = numBlockBinLimit * sizeof(Bin);
-
-/*
  * This is a LIFO linked list that one can init, push or pop from
  */
 static LifoQueue freeBlockList;
@@ -258,14 +251,60 @@ static LifoQueue freeBlockList;
  * When a block that is not completely free is returned for reuse by other threads
  * this is where the block goes.
  *
+ * LifoQueue assumes zero initialization; so below its constructors are omitted,
+ * to avoid linking with C++ libraries on Linux.
  */
-
 static char globalBinSpace[sizeof(LifoQueue)*numBlockBinLimit];
 static LifoQueue* globalSizeBins = (LifoQueue*)globalBinSpace;
+
+static struct LargeObjectCacheStat {
+    uintptr_t age;
+    size_t cacheSize;
+} loCacheStat;
+
+class CachedObjectsList {
+    struct CachedObject {
+        CachedObject *next,
+                     *prev;
+        uintptr_t     age;
+    };
+
+    CachedObject *first,
+                 *last;
+    /* age of an oldest object in the list; equal to last->age, if last defined,
+       used for quick cheching it without acquiring the lock. */
+    uintptr_t     oldest;
+    /* currAge when something was excluded out of list because of the age,
+       not because of cache hit */
+    uintptr_t     lastCleanedAge;
+    /* Current threshold value for the objects of a particular size. 
+       Set on cache miss. */
+    uintptr_t     ageThreshold;
+
+    MallocMutex   lock;
+    /* CachedObjectsList should be placed in zero-initialized memory,
+       ctor not needed. */
+    CachedObjectsList();
+public:
+    inline void push(void *buf, uintptr_t currAge);
+    inline CachedObject* pop(uintptr_t currAge);
+    void releaseLastIfOld(uintptr_t currAge, size_t size);
+};
+
+/*
+ * Array of bins with lists of recently freed objects cached for re-use.
+ */
+static char globalCachedObjectBinsSpace[sizeof(CachedObjectsList)*numLargeObjectBins];
+static CachedObjectsList* globalCachedObjectBins = (CachedObjectsList*)globalCachedObjectBinsSpace;
 
 /********* End of the data structures                    **************/
 
 /********** Various numeric parameters controlling allocations ********/
+
+/*
+ * The size of the TLS should be enough to hold numBlockBinLimit bins.
+ */
+const uint32_t tlsSize = numBlockBinLimit * sizeof(Bin);
 
 /*
  * blockSize - the size of a block, it must be larger than maxSegregatedObjectSize.
@@ -307,11 +346,25 @@ const uint32_t fittingSize5 = SET_FITTING_SIZE(2);
 #undef SET_FITTING_SIZE
 
 /*
+ * The total number of thread-specific Block-based bins
+ */
+const uint32_t numBlockBins = minFittingIndex+numFittingBins;
+
+/*
  * Objects of this size and larger are considered large objects.
  */
 const uint32_t minLargeObjectSize = fittingSize5 + 1;
 
-const uint32_t numBlockBins = minFittingIndex+numFittingBins;
+/*
+ * Difference between object sizes in large object bins
+ */
+const uint32_t largeObjectCacheStep = 8*1024;
+
+/*
+ * Object cache cleanup frequency.
+ * It should be power of 2 for the fast checking.
+ */
+const unsigned cacheCleanupFreq = 256;
 
 /*
  * Get virtual memory in pieces of this size: 0x0100000 is 1 megabyte decimal
@@ -365,7 +418,42 @@ static void* getMemory (size_t bytes)
     return result;
 }
 
-#if !USE_MALLOC_FOR_LARGE_OBJECT
+#if USE_MALLOC_FOR_LARGE_OBJECT
+
+// (get|free)RawMemory only necessary for the USE_MALLOC_FOR_LARGE_OBJECT case
+static inline void* getRawMemory (size_t size)
+{
+    void *object;
+#if MALLOC_LD_PRELOAD
+    if (malloc_proxy) {
+        if ( rml::internal::original_malloc_found ){
+            object = (*rml::internal::original_malloc_ptr)(size);
+        }else{
+            MALLOC_ASSERT( 0, "Original allocators not found, can't allocate large object." );
+            return NULL;
+        }
+    } else
+#endif /* MALLOC_LD_PRELOAD */
+        object = malloc(size);
+    return object;
+}
+
+static inline void freeRawMemory (void *object, size_t /*size*/)
+{
+#if MALLOC_LD_PRELOAD
+    if (malloc_proxy) {
+        if ( rml::internal::original_malloc_found ){
+            (*rml::internal::original_free_ptr)(object);
+        }else{
+            MALLOC_ASSERT( 0, ASSERT_TEXT );
+        }
+    } else
+#endif /* MALLOC_LD_PRELOAD */
+        free(object);
+}
+
+#else /* USE_MALLOC_FOR_LARGE_OBJECT */
+
 static void returnMemory(void *area, size_t bytes)
 {
     int retcode = UnmapMemory(area, bytes);
@@ -376,6 +464,13 @@ static void returnMemory(void *area, size_t bytes)
 #endif
     return;
 }
+
+static inline void* getRawMemory (size_t size) { return getMemory(size); }
+
+static inline void freeRawMemory (void *object, size_t size) {
+    returnMemory(object, size);
+}
+
 #endif /* USE_MALLOC_FOR_LARGE_OBJECT */
 
 /********* End memory acquisition code ********************************/
@@ -1112,7 +1207,7 @@ static void initMemoryManager()
     MALLOC_ASSERT( 2*blockHeaderAlignment == sizeof(Block), ASSERT_TEXT );
 
 // Create keys for thread-local storage and for thread id
-// TODO: add error handling
+// TODO: add error handling, and on error do something better than exit(1)
 #if USE_WINTHREAD
     TLS_pointer_key = TlsAlloc();
     Tid_key = TlsAlloc();
@@ -1120,14 +1215,14 @@ static void initMemoryManager()
     int status1 = pthread_key_create( &TLS_pointer_key, mallocThreadShutdownNotification );
     int status2 = pthread_key_create( &Tid_key, NULL );
     if ( status1 || status2 ) {
-        fprintf (stderr, "The memory manager cannot create tls key during initialisation; exiting \n");
+        fprintf (stderr, "The memory manager cannot create tls key during initialization; exiting \n");
         exit(1);
     }
 #endif /* USE_WINTHREAD */
 #if COLLECT_STATISTICS
-    if (NULL != getenv("TBB_MALLOC_STAT"))
-        reportAllocationStatistics = true;
+    initStatisticsCollection();
 #endif
+
     TRACEF(( "[ScalableMalloc trace] Asking for a mallocBigBlock\n" ));
     if (!mallocBigBlock()) {
         fprintf (stderr, "The memory manager cannot access sufficient memory to initialize; exiting \n");
@@ -1158,7 +1253,10 @@ static inline void checkInitialization()
 
 /********* End library initialization *************/
 
-/********* The malloc show          *************/
+/********* The malloc show begins     *************/
+
+
+/********* Allocation of large objects ************/
 
 /*
  * The program wants a large object that we are not prepared to deal with.
@@ -1175,72 +1273,183 @@ struct LargeObjectHeader {
     size_t       objectSize;        /* The size originally requested by a client */
 };
 
+void CachedObjectsList::push(void *buf, uintptr_t currAge)
+{   
+    CachedObject *ptr = (CachedObject*)buf;
+    ptr->prev = NULL;
+    ptr->age  = currAge;
+
+    MallocMutex::scoped_lock scoped_cs(lock);
+    ptr->next = first;
+    first = ptr;
+    if (ptr->next) ptr->next->prev = ptr;
+    if (!last) {
+        MALLOC_ASSERT(0 == oldest, ASSERT_TEXT);
+        oldest = currAge;
+        last = ptr;
+    }
+}
+
+CachedObjectsList::CachedObject *CachedObjectsList::pop(uintptr_t currAge)
+{   
+    CachedObject *result=NULL;
+    {
+        MallocMutex::scoped_lock scoped_cs(lock);
+        if (first) {
+            result = first;
+            first = result->next;
+            if (first)  
+                first->prev = NULL;
+            else {
+                last = NULL;
+                oldest = 0;
+            }
+        } else {
+            /* If cache miss occured, set ageThreshold to twice the difference 
+               between current time and last time cache was cleaned. */
+            ageThreshold = 2*(currAge - lastCleanedAge);
+        }
+    }
+    return result;
+}
+
+void CachedObjectsList::releaseLastIfOld(uintptr_t currAge, size_t size)
+{
+    CachedObject *toRelease = NULL;
+ 
+    /* oldest may be more recent then age, that's why cast to signed type
+       was used. age overflow is also processed correctly. */
+    if (last && (intptr_t)(currAge - oldest) > ageThreshold) {
+        MallocMutex::scoped_lock scoped_cs(lock);
+        // double check
+        if (last && (intptr_t)(currAge - last->age) > ageThreshold) {
+            do {
+                last = last->prev;
+            } while (last && (intptr_t)(currAge - last->age) > ageThreshold);
+            if (last) {
+                toRelease = last->next;
+                oldest = last->age;
+                last->next = NULL;
+            } else {
+                toRelease = first;
+                first = NULL;
+                oldest = 0;
+            }
+            MALLOC_ASSERT( toRelease, ASSERT_TEXT );
+            lastCleanedAge = toRelease->age;
+        } 
+        else 
+            return;
+    }
+    while ( toRelease ) {
+        CachedObject *helper = toRelease->next;
+        freeRawMemory(toRelease, size);
+        toRelease = helper;
+    }
+}
+
 /* A predicate checks whether an object starts on blockSize boundary */
 static inline unsigned int isLargeObject(void *object)
 {
     return isAligned(object, blockSize);
 }
 
-static inline void *mallocLargeObject (size_t size, size_t alignment)
+static uintptr_t cleanupCacheIfNeed ()
 {
-    void *alignedArea;
-    void *unalignedArea;
-    LargeObjectHeader *header;
+    /* loCacheStat.age overflow is OK, as we only want difference between 
+     * its current value and some recent.
+     *
+     * Both malloc and free should increment loCacheStat.age, as in 
+     * a different case mulitiple cache object would have same age,
+     * and accuracy of predictors suffers.
+     */
+    uintptr_t currAge = AtomicIncrement(loCacheStat.age);
 
-    // TODO: can the requestedSize be optimized somehow?
-    size_t requestedSize = size + sizeof(LargeObjectHeader) + alignment;
-#if USE_MALLOC_FOR_LARGE_OBJECT
-#if MALLOC_LD_PRELOAD
-    if (malloc_proxy) {
-        if ( original_malloc_found ){
-            unalignedArea = (*original_malloc_ptr)(requestedSize);
-        }else{
-            MALLOC_ASSERT( 0, ASSERT_TEXT );
-            return NULL;
+    if ( 0 == currAge % cacheCleanupFreq ) {
+        size_t objSize;
+        int i;
+
+        for (i = numLargeObjectBins-1, 
+             objSize = (numLargeObjectBins-1)*largeObjectCacheStep+blockSize; 
+             i >= 0; 
+             i--, objSize-=largeObjectCacheStep) {
+            /* cached object size on iteration is
+             * i*largeObjectCacheStep+blockSize, it seems iterative
+             * computation of it improves performance.
+             */
+            // release from cache objects that are older then ageThreshold
+            globalCachedObjectBins[i].releaseLastIfOld(currAge, objSize);
         }
-    } else
-#endif /* MALLOC_LD_PRELOAD */
-        unalignedArea = malloc(requestedSize);
-#else
-    unalignedArea = getMemory(requestedSize);
-#endif /* USE_MALLOC_FOR_LARGE_OBJECT */
-    if (!unalignedArea) {
-        /* We can't get any more memory from the OS or executive so return 0 */
-        return 0;
     }
-    alignedArea = (void*) alignUp((uintptr_t)unalignedArea+sizeof(LargeObjectHeader),
-                                   alignment);
-    header = (LargeObjectHeader*) ((uintptr_t)alignedArea-sizeof(LargeObjectHeader));
+    return currAge;
+}
+
+static void* allocateCachedLargeObject (size_t size)
+{
+    MALLOC_ASSERT( size%largeObjectCacheStep==0, ASSERT_TEXT );
+    void *block = NULL;
+    // blockSize is the minimal alignment and thus the minimal size of a large object.
+    size_t idx = (size-blockSize)/largeObjectCacheStep;
+    if (idx<numLargeObjectBins) {
+        uintptr_t currAge = cleanupCacheIfNeed();
+        block = globalCachedObjectBins[idx].pop(currAge);
+        if (block) {
+            STAT_increment(getThreadId(), ThreadCommonCounters, allocCachedLargeObj);
+        }
+    }
+    return block;
+}
+
+static inline void* mallocLargeObject (size_t size, size_t alignment)
+{
+    size_t allocationSize = alignUp(size+sizeof(LargeObjectHeader)+alignment, 
+                                    largeObjectCacheStep);
+
+    void * unalignedArea  = allocateCachedLargeObject(allocationSize);
+    if (!unalignedArea) {
+        unalignedArea = getRawMemory(allocationSize);
+        if (!unalignedArea)
+            return NULL; /* We can't get any more memory from the OS or executive */
+        STAT_increment(getThreadId(), ThreadCommonCounters, allocNewLargeObj);
+    }
+    void *alignedArea = (void*)alignUp((uintptr_t)unalignedArea+sizeof(LargeObjectHeader), alignment);
+    LargeObjectHeader *header = (LargeObjectHeader*)((uintptr_t)alignedArea-sizeof(LargeObjectHeader));
     header->unalignedResult = unalignedArea;
     header->mallocUniqueID=theMallocUniqueID;
-    header->unalignedSize = requestedSize;
+    header->unalignedSize = allocationSize;
     header->objectSize = size;
     MALLOC_ASSERT( isLargeObject(alignedArea), ASSERT_TEXT );
-    STAT_increment(getThreadId(), ThreadCommonCounters, allocLargeSize);
     return alignedArea;
 }
 
-static inline void freeLargeObject(void *object)
+static bool freeLargeObjectToCache (LargeObjectHeader* header)
+{
+    size_t size = header->unalignedSize;
+    size_t idx = (size-blockSize)/largeObjectCacheStep;
+    if (idx<numLargeObjectBins) {
+        MALLOC_ASSERT( size%largeObjectCacheStep==0, ASSERT_TEXT );
+        uintptr_t currAge = cleanupCacheIfNeed ();
+        globalCachedObjectBins[idx].push(header->unalignedResult, currAge);
+
+        STAT_increment(getThreadId(), ThreadCommonCounters, cacheLargeObj);
+        return true;
+    }
+    return false;
+}
+
+static inline void freeLargeObject (void *object)
 {
     LargeObjectHeader *header;
-    STAT_increment(getThreadId(), ThreadCommonCounters, freeLargeSize);
     header = (LargeObjectHeader *)((uintptr_t)object - sizeof(LargeObjectHeader));
     header->mallocUniqueID = 0;
-#if USE_MALLOC_FOR_LARGE_OBJECT
-#if MALLOC_LD_PRELOAD
-    if (malloc_proxy) {
-        if ( original_malloc_found ){
-            original_free_ptr(header->unalignedResult);
-        }else{
-            MALLOC_ASSERT( 0, ASSERT_TEXT );
-        }
-    } else
-#endif /* MALLOC_LD_PRELOAD */
-        free(header->unalignedResult);
-#else
-    returnMemory(header->unalignedResult, header->unalignedSize);
-#endif /* USE_MALLOC_FOR_LARGE_OBJECT */
+    if (!freeLargeObjectToCache(header)) {
+        freeRawMemory(header->unalignedResult, header->unalignedSize);
+        STAT_increment(getThreadId(), ThreadCommonCounters, freeLargeObj);
+    }
 }
+
+/*********** End allocation of large objects **********/
+
 
 static FreeObject *allocateFromFreeList(Block *mallocBlock)
 {
@@ -1371,8 +1580,8 @@ static void *reallocAligned(void *ptr, size_t size, size_t alignment = 0)
             loh->objectSize = size;
             return ptr;
         } else {
-           copySize = loh->objectSize;
-           result = alignment ? allocateAligned(size, alignment) : scalable_malloc(size);
+            copySize = loh->objectSize;
+            result = alignment ? allocateAligned(size, alignment) : scalable_malloc(size);
         }
     } else {
         Block* block = (Block *)alignDown(ptr, blockSize);
@@ -1409,11 +1618,10 @@ static inline FreeObject *findAllocatedObject(const void *address, const Block *
     return (FreeObject*)((uintptr_t)address - (offset? block->objectSize-offset: 0));
 }
 
-} // namespace Internal
-} // namespace ThreadingSubstrate
+} // namespace internal
+} // namespace rml
 
-using namespace ThreadingSubstrate;
-using namespace ThreadingSubstrate::Internal;
+using namespace rml::internal;
 
 /*
  * When a thread is shutting down this routine should be called to remove all the thread ids
@@ -1658,6 +1866,27 @@ extern "C" void scalable_free (void *object) {
     }
 }
 
+/* 
+ * Unsuccessful dereference is possible only here, not before this call. 
+ * Separate function created to isolate SEH code here, as it has bad influence
+ * on compiler optimization.
+ */
+static inline uint64_t safer_dereference (uint64_t *ptr)
+{
+    uint64_t id;
+#if _MSC_VER
+    __try {
+#endif
+        id = *ptr;
+#if _MSC_VER
+    } __except( GetExceptionCode() == EXCEPTION_ACCESS_VIOLATION? 
+                EXCEPTION_EXECUTE_HANDLER : EXCEPTION_CONTINUE_SEARCH ) {
+        id = 0;
+    }
+#endif
+    return id;
+}
+
 /*
  * A variant that provides additional memory safety, by checking whether the given address
  * was obtained with this allocator, and if not redirecting to the provided alternative call.
@@ -1668,25 +1897,11 @@ extern "C" void safer_scalable_free (void *object, void (*original_free)(void*))
         return;
 
     // Check if the memory was allocated by scalable_malloc
-    uint64_t id;
-#if _MSC_VER
-	__try
-	{
-#endif
-	id = isLargeObject(object)?
-                    ((LargeObjectHeader*)((uintptr_t)object-sizeof(LargeObjectHeader)))->mallocUniqueID:
-                    ((Block *)alignDown(object, blockSize))->mallocUniqueID;
-#if _MSC_VER
-	}
-	__except( GetExceptionCode() == EXCEPTION_ACCESS_VIOLATION ? EXCEPTION_EXECUTE_HANDLER : EXCEPTION_CONTINUE_SEARCH )
-	{
-        //Not our memory.
-        if (original_free)
-            original_free(object);		
-        else
-            return;
-	}
-#endif
+    uint64_t id =
+        safer_dereference( isLargeObject(object)?
+                           &((LargeObjectHeader*)((uintptr_t)object-sizeof(LargeObjectHeader)))->mallocUniqueID :
+                           &((Block *)alignDown(object, blockSize))->mallocUniqueID );
+
     if (id==theMallocUniqueID)
         scalable_free(object);
     else if (original_free)
@@ -1730,25 +1945,11 @@ extern "C" void* safer_scalable_realloc (void* ptr, size_t sz, void* (*original_
         return scalable_malloc(sz);
     }
     // Check if the memory was allocated by scalable_malloc
-    uint64_t id;
-#if _MSC_VER
-	__try
-	{
-#endif
-	id = isLargeObject(ptr)?
-                    ((LargeObjectHeader*)((uintptr_t)ptr-sizeof(LargeObjectHeader)))->mallocUniqueID:
-                    ((Block *)alignDown(ptr, blockSize))->mallocUniqueID;
-#if _MSC_VER
-	}
-	__except( GetExceptionCode() == EXCEPTION_ACCESS_VIOLATION ? EXCEPTION_EXECUTE_HANDLER : EXCEPTION_CONTINUE_SEARCH )
-	{
-        //Not our memory
-        if (original_realloc)
-            return original_realloc(ptr,sz);
-        else
-            return NULL;
-	}
-#endif
+    uint64_t id =
+        safer_dereference( isLargeObject(ptr)?
+                           &((LargeObjectHeader*)((uintptr_t)ptr-sizeof(LargeObjectHeader)))->mallocUniqueID :
+                           &((Block *)alignDown(ptr, blockSize))->mallocUniqueID );
+
     if (id==theMallocUniqueID) {
         if (!sz) {
             scalable_free(ptr);
@@ -1760,8 +1961,21 @@ extern "C" void* safer_scalable_realloc (void* ptr, size_t sz, void* (*original_
     }
     else if (original_realloc)
         return original_realloc(ptr,sz);
-    else
-        return NULL;
+#if USE_WINTHREAD
+    // old memory is leaked, not much can be done with it, as original_free is not available
+    else if (sz) {
+        // tring to find maximal size of safe copy
+        MEMORY_BASIC_INFORMATION memInfo;
+        if (sizeof(memInfo) != VirtualQuery(ptr, &memInfo, sizeof(memInfo)))
+            return NULL;
+        size_t oldSize = 
+            memInfo.RegionSize - ((uintptr_t)ptr - (uintptr_t)memInfo.BaseAddress);
+        void *newBuf = scalable_malloc(sz);
+        memcpy(newBuf, ptr, sz<oldSize? sz : oldSize);
+        return newBuf;
+    }
+#endif
+    return NULL;
 }
 
 /********* End code for scalable_realloc   ***********/
@@ -1807,7 +2021,8 @@ extern "C" void * scalable_aligned_malloc(size_t size, size_t alignment)
         return NULL;
     }
     void* tmp = allocateAligned(size, alignment);
-    if (!tmp) errno = ENOMEM;
+    if (!tmp) 
+        errno = ENOMEM;
     return tmp;
 }
 

@@ -119,7 +119,7 @@ To perform different build and/or test operations, use the following steps.
     <DT><TT>make compiler=<B>{</B>icl, icc<B>}</B> <B>[</B>(above options or targets)<B>]</B></TT>
     <DD>Build and run as above, but use Intel&reg; compilers instead of default, native compilers
 	(e.g., icl instead of cl.exe on Windows* systems, or icc instead of g++ on Linux* or Mac OS* X systems).
-    <DT><TT>make arch=<B>{</B>ia32, em64t, itanium<B>}</B> <B>[</B>(above options or targets)<B>]</B></TT>
+    <DT><TT>make arch=<B>{</B>ia32, intel64, ia64<B>}</B> <B>[</B>(above options or targets)<B>]</B></TT>
     <DD>Build and run as above, but build libraries for the selected ABI.
         Might be useful for cross-compilation; ensure proper environment is set before running this command.
     <DT><TT>make tbb_root=<B>{</B>(TBB directory)<B>}</B> <B>[</B>(above options or targets)<B>]</B></TT>

@@ -31,11 +31,15 @@
 
 namespace tbb {
     
+//! A rw mutex which does nothing
+/** A null_rw_mutex is a rw mutex that does nothing and simulates successful operation.
+    @ingroup synchronization */
 class null_rw_mutex {
     //! Deny assignment and copy construction 
     null_rw_mutex( const null_rw_mutex& );   
     void operator=( const null_rw_mutex& );   
 public:   
+    //! Represents acquisition of a mutex.
     class scoped_lock {   
     public:   
         scoped_lock() {}

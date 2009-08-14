@@ -27,9 +27,11 @@
 # GNU Makefile that builds and runs example.
 PROG=square
 ARGS=input.txt output.txt
+GEN=gen_input
 
 # The C++ compiler
 #CXX=g++
+
 SQUARE = square.cpp
 
 all:	release test
@@ -41,11 +43,13 @@ debug: $(SQUARE)
 	$(CXX) -O0 -g -DTBB_USE_DEBUG $(CXXFLAGS) -o $(PROG) $^ -ltbb_debug $(LIBS)
 
 clean:
-	$(RM) $(PROG) *.o *.d input.txt output.txt gen_input
+	$(RM) $(PROG) $(GEN) *.o *.d input.txt output.txt
 
-gen_input: gen_input.cpp 
-	$(CXX) -O2 $(CXXFLAGS) -o $@ $^ $(LIBS)
+$(GEN): gen_input.cpp 
+	$(CXX) -O2 $(CXXFLAGS) -o $(GEN) $^ $(LIBS)
 
-test: gen_input
-	./gen_input >input.txt
+input.txt: $(GEN)
+	./$(GEN)  >input.txt
+
+test: input.txt
 	./$(PROG) $(ARGS)

@@ -26,13 +26,13 @@
     the GNU General Public License.
 */
 
+#include "tbb/tbb_stddef.h"
 #include "tbb/pipeline.h"
 #include "tbb/spin_mutex.h"
 #include "tbb/atomic.h"
 #include <cstdlib>
 #include <cstdio>
 #include "harness.h"
-#include "harness_trace.h"
 
 // In the test, variables related to token counting are declared
 // as unsigned long to match definition of tbb::internal::Token.
@@ -97,7 +97,7 @@ public:
             if( is_ordered() ) {
                 if( b->sequence_number == Buffer::unused ) 
                     b->sequence_number = current_token-1;
-                else 
+                else
                     ASSERT( b->sequence_number==current_token-1, "item arrived out of order" );
             } else if( is_serial() ) {
                 if( b->sequence_number != current_token-1 && b->sequence_number != Buffer::unused )
@@ -163,33 +163,37 @@ struct hacked_pipeline {
     tbb::filter* filter_end;
     tbb::empty_task* end_counter;
     tbb::atomic<tbb::internal::Token> input_tokens;
-    tbb::internal::Token token_counter;
+    tbb::atomic<tbb::internal::Token> token_counter;
     bool end_of_input;
+    bool has_thread_bound_filters;
 
     virtual ~hacked_pipeline();
 };
 
-//! The struct below repeats layout of tbb::internal::ordered_buffer.
-struct hacked_ordered_buffer {
+//! The struct below repeats layout of tbb::internal::input_buffer.
+struct hacked_input_buffer {
     void* array; // This should be changed to task_info* if ever used
     tbb::internal::Token array_size;
     tbb::internal::Token low_token;
     tbb::spin_mutex array_mutex;
     tbb::internal::Token high_token;
     bool is_ordered;
+    bool is_bound;
 };
 
 //! The struct below repeats layout of tbb::filter.
 struct hacked_filter {
     tbb::filter* next_filter_in_pipeline;
-    hacked_ordered_buffer* input_buffer;
+    hacked_input_buffer* my_input_buffer;
     unsigned char my_filter_mode;
     tbb::filter* prev_filter_in_pipeline;
     tbb::pipeline* my_pipeline;
+    tbb::filter* next_segment;
 
     virtual ~hacked_filter();
 };
 
+bool do_hacking_tests = true;
 const tbb::internal::Token tokens_before_wraparound = 0xF;
 
 void TestTrivialPipeline( unsigned nthread, unsigned number_of_filters ) {
@@ -209,8 +213,10 @@ void TestTrivialPipeline( unsigned nthread, unsigned number_of_filters ) {
     for( unsigned numeral=0; numeral<limit; ++numeral ) {
         // Build pipeline
         tbb::pipeline pipeline;
-        // A private member of pipeline is hacked there for sake of testing wrap-around immunity.
-        ((hacked_pipeline*)(void*)&pipeline)->token_counter = ~tokens_before_wraparound;
+        if( do_hacking_tests ) {
+            // A private member of pipeline is hacked there for sake of testing wrap-around immunity.
+            ((hacked_pipeline*)(void*)&pipeline)->token_counter = ~tokens_before_wraparound;
+        }
         tbb::filter* filter[MaxFilters];
         unsigned temp = numeral;
         // parallelism_limit is the upper bound on the possible parallelism
@@ -225,12 +231,13 @@ void TestTrivialPipeline( unsigned nthread, unsigned number_of_filters ) {
             pipeline.add_filter(*filter[i]);
             // The ordered buffer of serial filters is hacked as well.
             if ( filter[i]->is_serial() ) {
-                ((hacked_filter*)(void*)filter[i])->input_buffer->low_token = ~tokens_before_wraparound;
-                if ( !filter[i]->is_ordered() )
-                    ((hacked_filter*)(void*)filter[i])->input_buffer->high_token = ~tokens_before_wraparound;
+                if( do_hacking_tests ) {
+                    ((hacked_filter*)(void*)filter[i])->my_input_buffer->low_token = ~tokens_before_wraparound;
+                    ((hacked_filter*)(void*)filter[i])->my_input_buffer->high_token = ~tokens_before_wraparound;
+                }
                 parallelism_limit += 1;
             } else {
-               parallelism_limit = nthread;
+                parallelism_limit = nthread;
             }
         }
         // Account for clipping of parallelism.
@@ -284,14 +291,20 @@ void waiting_probe::probe( ) {
 
 #include "tbb/task_scheduler_init.h"
 
+__TBB_TEST_EXPORT
 int main( int argc, char* argv[] ) {
     // Default is at least one thread.
     MinThread = 1;
     out_of_order_count = 0;
     ParseCommandLine(argc,argv);
     if( MinThread<1 ) {
-        printf("must have at least one thread");
+        REPORT("must have at least one thread");
         exit(1);
+    }
+    if( tbb::TBB_runtime_interface_version()>TBB_INTERFACE_VERSION) {
+        if( Verbose )
+            REPORT("Warning: implementation dependent tests disabled\n");
+        do_hacking_tests = false;
     }
 
     // Test with varying number of threads.
@@ -307,7 +320,7 @@ int main( int argc, char* argv[] ) {
         TestCPUUserTime(nthread);
     }
     if( !out_of_order_count )
-        printf("Warning: out of order serial filter received tokens in order\n");
-    printf("done\n");
+        REPORT("Warning: out of order serial filter received tokens in order\n");
+    REPORT("done\n");
     return 0;
 }

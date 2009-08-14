@@ -39,8 +39,8 @@
 #include <windows.h>
 #endif /* _MSC_VER */
 
-int main(void)
-{
+__TBB_TEST_EXPORT
+int main() {
 #if _MSC_VER && !__TBBMALLOC_NO_IMPLICIT_LINKAGE
     #ifdef _DEBUG
         ASSERT(!GetModuleHandle("tbbmalloc.dll") && GetModuleHandle("tbbmalloc_debug.dll"),
@@ -51,6 +51,6 @@ int main(void)
     #endif
 #endif /* _MSC_VER && !__TBBMALLOC_NO_IMPLICIT_LINKAGE */
     int result = TestMain<tbb::scalable_allocator<void> >();
-    printf("done\n");
+    REPORT("done\n");
     return result;
 }

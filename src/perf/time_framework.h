@@ -101,6 +101,9 @@ public:
         return Format("test %d", testn);
     }
 
+    //! optionally override to init test mode just before execution for a given thread number.
+    virtual void test_prefix(int testn, int threadn) { }
+
     //! Override to provide main test's entry function returns a value to record
     virtual value_t test(int testn, int threadn) = 0;
 
@@ -124,7 +127,7 @@ public:
     tester() : TesterBase(<user-specified tests count>) { ... }
 
     //! run a test with sequental number @arg test_number for @arg thread.
-	/ *override* / value_t test(int test_number, int thread);
+    / *override* / value_t test(int test_number, int thread);
 };
 
 ******/
@@ -145,6 +148,16 @@ class NanosecPerValue : public Tester {
         Tester::test(testn, threadn);
         // return time (ns) per value
         return timer.get_time()*1000000.0/double(Tester::value);
+    }
+};
+
+template<typename Tester, int scale = 1>
+class ValuePerSecond : public Tester {
+    /*override*/ value_t test(int testn, int threadn) {
+        Timer timer;
+        Tester::test(testn, threadn);
+        // return time value per seconds/scale
+        return double(Tester::value)/(timer.get_time()*scale);
     }
 };
 
@@ -182,6 +195,7 @@ public:
 
     void run_test(int threadn) {
         for(int testn = 0; testn < tester.tests_count; testn++) {
+            tester.test_prefix(testn, threadn);
             tester.barrier->wait();                                 // <<<<<<<<<<<<<<<<< Barrier before running test mode
             value_t result = tester.test(testn, threadn);
             stat->AddRoundResult(keys[testn][threadn], result);

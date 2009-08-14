@@ -1,3 +1,31 @@
+20090809 open-source release
+
+Changes (w.r.t. TBB 2.2 commercial-aligned release):
+
+- Fixed known exception safety issues in concurrent_vector.
+- Improved scalability of concurrent_vector
+- TBB allocator further improves performance of large object allocation.
+- Problem with source of text relocations was fixed on Linux
+- Fixed bugs related to malloc replacement under Windows
+- A few other small changes in code and documentation.
+
+------------------------------------------------------------------------
+TBB 2.2 commercial-aligned release
+
+Changes (w.r.t. TBB 2.1 U4 commercial-aligned release):
+
+- Incorporates all changes from open-source releases below.
+- Architecture folders renamed from em64t to intel64 and from itanium
+    to ia64.
+- Major Interface version changed from 3 to 4. Deprecated interfaces 
+    might be removed in future releases.
+- Improved memory allocator performance for allocations bigger than 8K.
+- Added new thread-bound filters functionality for pipeline.
+- New implementation of concurrent_hash_map that improves performance 
+    significantly.
+- A few other small changes in code and documentation.
+
+------------------------------------------------------------------------
 20090511 open-source release
 
 Changes (w.r.t. previous open-source release):
@@ -26,7 +54,7 @@ Changes affecting backward compatibility:
     The previous version is deprecated; its functionality is accessible 
     via methods of the new tbb::concurrent_bounded_queue class.
 - grow* and push_back methods of concurrent_vector changed to return
-    iterators; old semantics is deprecated.
+    iterators; old semantics is deprecated. 
 
 ------------------------------------------------------------------------
 TBB 2.1 Update 4 commercial-aligned release
@@ -53,7 +81,7 @@ Changes (w.r.t. 20081109 open-source release):
 
 - Includes all changes introduced in TBB 2.1 Update 2 & Update 3
     commercial-aligned releases (see below for details).
-- Added parallel_invoke template function. It runs up to 10 
+- Added tbb::parallel_invoke template function. It runs up to 10 
     user-defined functions in parallel and waits for them to complete.
 - Added a special library providing ability to replace the standard
     memory allocation routines in Microsoft* C/C++ RTL (malloc/free,

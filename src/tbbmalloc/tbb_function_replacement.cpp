@@ -48,13 +48,6 @@ inline LPVOID Addrint2Ptr(UINT_PTR ptr)
     return i2p.lpv;
 }
 
-// We need to remember which pointer was allocated from myHeap and which
-// was allocated before replacing malloc (therefore allocated from the 
-// CRT heap).
-// Keep page database, since entire pages belong to the same heap, just
-// remember the pages.
-#define PAGE_SIZE 0x1000
-
 // Use this value as the maximum size the trampoline region
 const int MAX_PROBE_SIZE = 16;
 
@@ -67,18 +60,19 @@ const int SIZE_OF_INDJUMP = 6;
 // The size of address we put in the location (in Intel64)
 const int SIZE_OF_ADDRESS = 8;
 
-// The max distance covered in 32 bits
-const __int64 MAX_DISTANCE = (((__int64)1 << 31) - 1);
+// The max distance covered in 32 bits: 2^31 - 1 - C
+// where C should not be smaller than any of SIZE_OF_* costants.
+// The latter is important to correctly handle "backward" jumps.
+const __int64 MAX_DISTANCE = (((__int64)1 << 31) - 1) - SIZE_OF_ADDRESS;
 
 // The maximum number of distinct buffers in memory
 const int MAX_NUM_BUFFERS = 256;
 
 // Is the distance between addr1 and addr2 smaller than dist
-inline BOOL IsInDistance(UINT_PTR addr1, UINT_PTR addr2, __int64 dist)
+inline bool IsInDistance(UINT_PTR addr1, UINT_PTR addr2, __int64 dist)
 {
-    __int64 diff = addr1 - addr2;
-    if (diff < 0) diff = -diff;
-    return (diff < dist);
+    __int64 diff = addr1>addr2 ? addr1-addr2 : addr2-addr1;
+    return diff<dist;
 }
 
 /*
@@ -177,7 +171,7 @@ public:
     UINT_PTR GetLocation(UINT_PTR addr)
     {
         MemoryBuffer *pBuff = m_pages;
-        for (; pBuff<m_lastBuffer && IsInDistance(pBuff->m_base, addr, MAX_DISTANCE); ++pBuff)
+        for (; pBuff<m_lastBuffer && IsInDistance(pBuff->m_next, addr, MAX_DISTANCE); ++pBuff)
         {
             if (pBuff->m_next < pBuff->m_base + pBuff->m_size)
             {
@@ -210,13 +204,15 @@ static DWORD InsertTrampoline32(void *inpAddr, void *targetAddr)
 {
     UINT_PTR srcAddr = Ptr2Addrint(inpAddr);
     UINT_PTR tgtAddr = Ptr2Addrint(targetAddr);
-    UINT_PTR offset = tgtAddr - srcAddr - SIZE_OF_RELJUMP;
-    UINT offset32 = (UINT)(offset & 0xFFFFFFFF);
-    UCHAR *codePtr = (UCHAR *)inpAddr;
-
     // Check that the target fits in 32 bits
     if (!IsInDistance(srcAddr, tgtAddr, MAX_DISTANCE))
         return 0;
+
+    // The following will work correctly even if srcAddr>tgtAddr, as long as
+    // address difference is less than 2^31, which is guaranteed by IsInDistance.
+    UINT_PTR offset = tgtAddr - srcAddr - SIZE_OF_RELJUMP;
+    UINT offset32 = (UINT)(offset & 0xFFFFFFFF);
+    UCHAR *codePtr = (UCHAR *)inpAddr;
 
     // Fill the buffer
     *codePtr++ = 0xE9;
@@ -262,7 +258,7 @@ static DWORD InsertTrampoline64(void *inpAddr, void *targetAddr)
 // 3. Call InsertTrampoline32 or InsertTrampoline64
 // 4. Restore memory protection
 // RETURN: FALSE on failure, TRUE on success
-static BOOL InsertTrampoline(void *inpAddr, void *targetAddr)
+static bool InsertTrampoline(void *inpAddr, void *targetAddr)
 {
     DWORD probeSize;
 

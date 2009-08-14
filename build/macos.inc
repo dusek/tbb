@@ -34,7 +34,7 @@ ifndef arch
    endif
  else
    ifeq ($(shell /usr/sbin/sysctl -n hw.optional.x86_64 2>/dev/null),1)
-     export arch:=em64t
+     export arch:=intel64
    else
      export arch:=ia32
    endif

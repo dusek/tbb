@@ -78,7 +78,7 @@ MALLOC.DLL = tbbmalloc$(DEBUG_SUFFIX).$(DLL)
 MALLOC.LIB = tbbmalloc$(DEBUG_SUFFIX).$(LIBEXT)
 MALLOC.RES = tbbmalloc.res
 MALLOC.MANIFEST =
-ifneq ($(runtime),vc7.1)
+ifneq ($(filter vc8 vc9,$(runtime)),)
 MALLOC.MANIFEST = tbbmanifest.exe.manifest
 endif
 LINK_MALLOC.LIB = $(MALLOC.LIB)
@@ -86,6 +86,13 @@ LINK_MALLOC.LIB = $(MALLOC.LIB)
 MALLOCPROXY.DLL = tbbmalloc_proxy$(DEBUG_SUFFIX).$(DLL)
 MALLOCPROXY.LIB = tbbmalloc_proxy$(DEBUG_SUFFIX).$(LIBEXT)
 
+RML.DEF = $(RML_SERVER_ROOT)/$(def_prefix)-rml-export.def
+RML.DLL = irml$(DEBUG_SUFFIX).$(DLL)
+RML.LIB = irml$(DEBUG_SUFFIX).$(LIBEXT)
+RML.RES = irml.res
+ifneq ($(runtime),vc7.1)
+RML.MANIFEST = tbbmanifest.exe.manifest
+endif
 
 MAKE_VERSIONS = cmd /C cscript /nologo /E:jscript $(subst \,/,$(tbb_root))/build/version_info_windows.js $(compiler) $(arch) $(subst \,/,"$(CPLUS) $(CPLUS_FLAGS) $(INCLUDES)") > version_string.tmp
 MAKE_TBBVARS  = cmd /C "$(subst /,\,$(tbb_root))\build\generate_tbbvars.bat"

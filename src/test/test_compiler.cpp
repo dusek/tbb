@@ -26,7 +26,8 @@
     the GNU General Public License.
 */
 
-#include <stdio.h>
+#define HARNESS_NO_PARSE_COMMAND_LINE 1
+#include "harness.h"
 
 union char2bool {
     unsigned char c;
@@ -44,17 +45,18 @@ int test_bool_representation() {
         u.c = (unsigned char)i;
         unsigned char x = (unsigned char)u.b;
         if( x != i ) {
-            printf("Test failed at iteration i=%d\n",i);
+            REPORT("Test failed at iteration i=%d\n",i);
             return 1;
         }
     }
     return 0;
 }
 
+__TBB_TEST_EXPORT
 int main() {
     if( test_bool_representation()!=0 )
-        printf("ERROR: bool representation test failed\n");
+        REPORT("ERROR: bool representation test failed\n");
     else
-        printf("done\n");
+        REPORT("done\n");
     return 0;
 }

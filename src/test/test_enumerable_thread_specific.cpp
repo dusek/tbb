@@ -45,6 +45,10 @@
 #include "harness_assert.h"
 #include "harness.h"
 
+#if __TBB_GCC_WARNING_SUPPRESSION_ENABLED
+#pragma GCC diagnostic ignored "-Wuninitialized"
+#endif
+
 static tbb::atomic<int> construction_counter;
 static tbb::atomic<int> destruction_counter;
 
@@ -63,7 +67,7 @@ class minimal: NoAssign {
 private:
     int my_value;
 public:
-    minimal() : my_value(0) { ++construction_counter; }
+    minimal(int val=0) : my_value(val) { ++construction_counter; }
     minimal( const minimal &m ) : my_value(m.my_value) { ++construction_counter; }
     ~minimal() { ++destruction_counter; }
     void set_value( const int i ) { my_value = i; }
@@ -81,7 +85,7 @@ struct test_helper {
    static inline void sum(T &e, const int addend ) { e += static_cast<T>(addend); }
    static inline void sum(T &e, const double addend ) { e += static_cast<T>(addend); }
    static inline void set(T &e, const int value ) { e = static_cast<T>(value); }
-   static inline double get(T &e ) { return static_cast<double>(e); }
+   static inline double get(const T &e ) { return static_cast<double>(e); }
 };
 
 template< >
@@ -91,9 +95,94 @@ struct test_helper<minimal> {
    static inline void sum(minimal &sum, const double addend ) { sum.set_value( sum.value() + static_cast<int>(addend)); }
    static inline void sum(minimal &sum, const minimal &addend ) { sum.set_value( sum.value() + addend.value()); }
    static inline void set(minimal &v, const int value ) { v.set_value( static_cast<int>(value) ); }
-   static inline double get(minimal &sum ) { return static_cast<double>(sum.value()); }
+   static inline double get(const minimal &sum ) { return static_cast<double>(sum.value()); }
 };
 
+//// functors for initialization and combine
+
+// Addition
+template <typename T>
+struct FunctorAddFinit {
+    T operator()() { return 0; }
+};
+
+template <>
+struct FunctorAddFinit<minimal> {
+    minimal operator()() { return minimal(0); }
+};
+
+template <typename T>
+struct FunctorAddFinit7 {
+    T operator()() { return 7; }
+};
+
+template <>
+struct FunctorAddFinit7<minimal> {
+    minimal operator()() { return minimal(7); }
+};
+
+template <typename T>
+struct FunctorAddCombine {
+    T operator()(T left, T right ) const {
+        return left + right;
+    }
+};
+
+template <>
+struct FunctorAddCombine<minimal> {
+    minimal operator()(minimal left, minimal right ) {
+        return minimal(left.value() + right.value()); 
+    }
+};
+
+template <typename T>
+struct FunctorAddCombineRef {
+    T operator()(const T& left, const T& right ) const {
+        return left + right;
+    }
+};
+
+template <>
+struct FunctorAddCombineRef<minimal> {
+    minimal operator()(const minimal& left, const minimal& right ) const {
+        return minimal(left.value() + right.value());
+    }
+};
+
+template <typename T>
+T my_finit( ) { return 0; }
+
+template <typename T>
+T my_combine( T left, T right) { return left + right; }
+
+template <typename T>
+T my_combine_ref( const T &left, const T &right) { return left + right; }
+
+template <>
+minimal my_finit( ) { return minimal(0); }
+
+template <>
+minimal my_combine( minimal left, minimal right) { return minimal(left.value() + right.value()); }
+
+template <>
+minimal my_combine_ref( const minimal &left, const minimal &right) { return minimal(left.value() + right.value()); }
+
+template <typename T>
+class combine_one_helper {
+public:
+    combine_one_helper(T& _result) : my_result(_result) {}
+    void operator()(const T& new_bit) { test_helper<T>::sum(my_result, new_bit); }
+    combine_one_helper& operator=(const combine_one_helper& other) { 
+        test_helper<T>::set(my_result, test_helper<T>::get(other)); 
+        return *this; 
+    }
+private:
+    T& my_result;
+};
+
+
+
+//// end functors
 
 template< typename T >
 void run_serial_scalar_tests(const char *test_name) {
@@ -101,7 +190,7 @@ void run_serial_scalar_tests(const char *test_name) {
     T sum;
     test_helper<T>::init(sum);
 
-    if (Verbose) printf("Testing serial %s... ", test_name);  
+    if (Verbose) REPORT("Testing serial %s... ", test_name);  
     for (int t = -1; t < REPETITIONS; ++t) {
         if (Verbose && t == 0) t0 = tbb::tick_count::now(); 
         for (int i = 0; i < N; ++i) {
@@ -112,7 +201,7 @@ void run_serial_scalar_tests(const char *test_name) {
     double result_value = test_helper<T>::get(sum);
     ASSERT( EXPECTED_SUM == result_value, NULL);
     if (Verbose)
-        printf("done\nserial %s, 0, %g, %g\n", test_name, result_value, ( tbb::tick_count::now() - t0).seconds());
+        REPORT("done\nserial %s, 0, %g, %g\n", test_name, result_value, ( tbb::tick_count::now() - t0).seconds());
 }
 
 
@@ -135,22 +224,29 @@ public:
 template< typename T >
 void run_parallel_scalar_tests(const char *test_name) {
 
+    static tbb::enumerable_thread_specific<T> static_sums(static_cast<T>(0));
+
     tbb::task_scheduler_init init(tbb::task_scheduler_init::deferred);
     T exemplar;
     test_helper<T>::init(exemplar);
+    T exemplar23;
+    test_helper<T>::set(exemplar23,23);
 
     for (int p = MinThread; p <= MaxThread; ++p) { 
 
 
         if (p == 0) continue;
 
-        if (Verbose) printf("Testing parallel %s on %d thread(s)... ", test_name, p);
+        if (Verbose) REPORT("Testing parallel %s on %d thread(s)... ", test_name, p); 
         init.initialize(p);
 
         tbb::tick_count t0;
 
         T iterator_sum;
         test_helper<T>::init(iterator_sum);
+
+        T finit_ets_sum;
+        test_helper<T>::init(finit_ets_sum);
 
         T const_iterator_sum; 
         test_helper<T>::init(const_iterator_sum);
@@ -161,14 +257,58 @@ void run_parallel_scalar_tests(const char *test_name) {
         T const_range_sum;
         test_helper<T>::init(const_range_sum);
 
+        T cconst_sum;
+        test_helper<T>::init(cconst_sum);
+
+        T assign_sum;
+        test_helper<T>::init(assign_sum);
+
+        T cassgn_sum;
+        test_helper<T>::init(cassgn_sum);
+        T non_cassgn_sum;
+        test_helper<T>::init(non_cassgn_sum);
+
+        T combine_sum;
+        test_helper<T>::init(combine_sum);
+
+        T combine_ref_sum;
+        test_helper<T>::init(combine_ref_sum);
+
+        T combine_one_sum;
+        test_helper<T>::init(combine_one_sum);
+
+        T static_sum;
+        test_helper<T>::init(static_sum);
+
         for (int t = -1; t < REPETITIONS; ++t) {
             if (Verbose && t == 0) t0 = tbb::tick_count::now(); 
 
+            static_sums.clear();
+
             tbb::enumerable_thread_specific<T> sums(exemplar);
+            FunctorAddFinit<T> my_finit;
+            tbb::enumerable_thread_specific<T> finit_ets(my_finit);
 
             ASSERT( sums.empty(), NULL);
             tbb::parallel_for( tbb::blocked_range<int>( 0, N, 10000 ), parallel_scalar_body<T>( sums ) );
             ASSERT( !sums.empty(), NULL);
+
+            ASSERT( finit_ets.empty(), NULL);
+            tbb::parallel_for( tbb::blocked_range<int>( 0, N, 10000 ), parallel_scalar_body<T>( finit_ets ) );
+            ASSERT( !finit_ets.empty(), NULL);
+
+            ASSERT(static_sums.empty(), NULL);
+            tbb::parallel_for( tbb::blocked_range<int>( 0, N, 10000 ), parallel_scalar_body<T>( static_sums ) );
+            ASSERT( !static_sums.empty(), NULL);
+
+
+            // Use combine
+            test_helper<T>::sum(combine_sum, sums.combine(my_combine<T>));
+            test_helper<T>::sum(combine_ref_sum, sums.combine(my_combine_ref<T>));
+            test_helper<T>::sum(static_sum, static_sums.combine(my_combine<T>));
+
+            combine_one_helper<T> my_helper(combine_one_sum);
+            sums.combine_each(my_helper);
 
             // use iterator
             typename tbb::enumerable_thread_specific<T>::size_type size = 0;
@@ -195,6 +335,43 @@ void run_parallel_scalar_tests(const char *test_name) {
                  test_helper<T>::sum(const_range_sum, *i);
             }
 
+            // test copy constructor, with TLS-cached locals
+
+            typedef typename tbb::enumerable_thread_specific<T, tbb::cache_aligned_allocator<T>, tbb::ets_key_per_instance> cached_ets_type;
+
+            cached_ets_type cconst(sums); 
+            /// tbb::enumerable_thread_specific<T> cconst(sums);
+
+            for ( typename cached_ets_type::const_iterator i = cconst.begin(); i != cconst.end(); ++i ) {
+                 test_helper<T>::sum(cconst_sum, *i);
+            }
+           
+            // test assignment
+            tbb::enumerable_thread_specific<T> assigned;
+            assigned = sums;
+
+            for ( typename tbb::enumerable_thread_specific<T>::const_iterator i = assigned.begin(); i != assigned.end(); ++i ) {
+                 test_helper<T>::sum(assign_sum, *i);
+            }
+
+            // test assign to and from cached locals
+            cached_ets_type cassgn;
+            cassgn = sums;
+            for ( typename cached_ets_type::const_iterator i = cassgn.begin(); i != cassgn.end(); ++i ) {
+                 test_helper<T>::sum(cassgn_sum, *i);
+            }
+
+            tbb::enumerable_thread_specific<T> non_cassgn;
+            non_cassgn = cassgn;
+            for ( typename tbb::enumerable_thread_specific<T>::const_iterator i = non_cassgn.begin(); i != non_cassgn.end(); ++i ) {
+                 test_helper<T>::sum(non_cassgn_sum, *i);
+            }
+
+            // test finit-initialized ets
+            for(typename tbb::enumerable_thread_specific<T>::const_iterator i = finit_ets.begin(); i != finit_ets.end(); ++i) {
+                test_helper<T>::sum(finit_ets_sum, *i);
+            }
+
         }
 
         ASSERT( EXPECTED_SUM == test_helper<T>::get(iterator_sum), NULL);
@@ -202,8 +379,17 @@ void run_parallel_scalar_tests(const char *test_name) {
         ASSERT( EXPECTED_SUM == test_helper<T>::get(range_sum), NULL);
         ASSERT( EXPECTED_SUM == test_helper<T>::get(const_range_sum), NULL);
 
+        ASSERT( EXPECTED_SUM == test_helper<T>::get(combine_sum), NULL);
+        ASSERT( EXPECTED_SUM == test_helper<T>::get(combine_ref_sum), NULL);
+        ASSERT( EXPECTED_SUM == test_helper<T>::get(cconst_sum), NULL);
+        ASSERT( EXPECTED_SUM == test_helper<T>::get(assign_sum), NULL);
+        ASSERT( EXPECTED_SUM == test_helper<T>::get(cassgn_sum), NULL);
+        ASSERT( EXPECTED_SUM == test_helper<T>::get(non_cassgn_sum), NULL);
+        ASSERT( EXPECTED_SUM == test_helper<T>::get(finit_ets_sum), NULL);
+        ASSERT( EXPECTED_SUM == test_helper<T>::get(static_sum), NULL);
+
         if (Verbose)
-            printf("done\nparallel %s, %d, %g, %g\n", test_name, p, test_helper<T>::get(iterator_sum), 
+            REPORT("done\nparallel %s, %d, %g, %g\n", test_name, p, test_helper<T>::get(iterator_sum), 
                                                       ( tbb::tick_count::now() - t0).seconds());
         init.terminate();
     }
@@ -265,7 +451,7 @@ void run_parallel_vector_tests(const char *test_name) {
     for (int p = MinThread; p <= MaxThread; ++p) { 
 
         if (p == 0) continue;
-        if (Verbose) printf("Testing parallel %s on %d thread(s)... ", test_name, p);
+        if (Verbose) REPORT("Testing parallel %s on %d thread(s)... ", test_name, p);
         init.initialize(p);
 
         T sum;
@@ -279,6 +465,13 @@ void run_parallel_vector_tests(const char *test_name) {
             ASSERT( vs.empty(), NULL);
             tbb::parallel_for ( tbb::blocked_range<int> (0, N, 10000), parallel_vector_for_body<T>( vs ) );
             ASSERT( !vs.empty(), NULL);
+
+            // copy construct
+            ets_type vs2(vs); // this causes an assertion failure, related to allocators...
+
+            // assign
+            ets_type vs3;
+            vs3 = vs;
 
             parallel_vector_reduce_body< typename tbb::enumerable_thread_specific< std::vector< T, tbb::tbb_allocator<T>  > >::const_range_type, T > pvrb;
             tbb::parallel_reduce ( vs.range(1), pvrb );
@@ -305,7 +498,69 @@ void run_parallel_vector_tests(const char *test_name) {
         double result_value = test_helper<T>::get(sum);
         ASSERT( EXPECTED_SUM == result_value, NULL);
         if (Verbose)
-            printf("done\nparallel %s, %d, %g, %g\n", test_name, p, result_value, ( tbb::tick_count::now() - t0).seconds());
+            REPORT("done\nparallel %s, %d, %g, %g\n", test_name, p, result_value, ( tbb::tick_count::now() - t0).seconds());
+        init.terminate();
+    }
+}
+
+template<typename T>
+void run_cross_type_vector_tests(const char *test_name) {
+    tbb::tick_count t0;
+    tbb::task_scheduler_init init(tbb::task_scheduler_init::deferred);
+    typedef std::vector<T, tbb::tbb_allocator<T> > container_type;
+
+    for (int p = MinThread; p <= MaxThread; ++p) { 
+
+        if (p == 0) continue;
+        if (Verbose) REPORT("Testing parallel %s on %d thread(s)... ", test_name, p);
+        init.initialize(p);
+
+        T sum;
+        test_helper<T>::init(sum);
+
+        for (int t = -1; t < REPETITIONS; ++t) {
+            if (Verbose && t == 0) t0 = tbb::tick_count::now(); 
+            typedef typename tbb::enumerable_thread_specific< container_type, tbb::cache_aligned_allocator<container_type>, tbb::ets_no_key > ets_nokey_type;
+            typedef typename tbb::enumerable_thread_specific< container_type, tbb::cache_aligned_allocator<container_type>, tbb::ets_key_per_instance > ets_tlskey_type;
+            ets_nokey_type vs;
+
+            ASSERT( vs.empty(), NULL);
+            tbb::parallel_for ( tbb::blocked_range<int> (0, N, 10000), parallel_vector_for_body<T>( vs ) );
+            ASSERT( !vs.empty(), NULL);
+
+            // copy construct
+            ets_tlskey_type vs2(vs);
+
+            // assign
+            ets_nokey_type vs3;
+            vs3 = vs2;
+
+            parallel_vector_reduce_body< typename tbb::enumerable_thread_specific< std::vector< T, tbb::tbb_allocator<T>  > >::const_range_type, T > pvrb;
+            tbb::parallel_reduce ( vs3.range(1), pvrb );
+
+            test_helper<T>::sum(sum, pvrb.sum);
+
+            ASSERT( vs3.size() == pvrb.count, NULL);
+
+            tbb::flattened2d<ets_nokey_type> fvs = flatten2d(vs3);
+            size_t ccount = fvs.size();
+            size_t elem_cnt = 0;
+            for(typename tbb::flattened2d<ets_nokey_type>::const_iterator i = fvs.begin(); i != fvs.end(); ++i) {
+                ++elem_cnt;
+            };
+            ASSERT(ccount == elem_cnt, NULL);
+
+            elem_cnt = 0;
+            for(typename tbb::flattened2d<ets_nokey_type>::iterator i = fvs.begin(); i != fvs.end(); ++i) {
+                ++elem_cnt;
+            };
+            ASSERT(ccount == elem_cnt, NULL);
+        }
+
+        double result_value = test_helper<T>::get(sum);
+        ASSERT( EXPECTED_SUM == result_value, NULL);
+        if (Verbose)
+            REPORT("done\nparallel %s, %d, %g, %g\n", test_name, p, result_value, ( tbb::tick_count::now() - t0).seconds());
         init.terminate();
     }
 }
@@ -318,7 +573,7 @@ void run_serial_vector_tests(const char *test_name) {
     T one;
     test_helper<T>::set(one, 1);
 
-    if (Verbose) printf("Testing serial %s... ", test_name);
+    if (Verbose) REPORT("Testing serial %s... ", test_name);
     for (int t = -1; t < REPETITIONS; ++t) {
         if (Verbose && t == 0) t0 = tbb::tick_count::now(); 
         std::vector<T, tbb::tbb_allocator<T> > v; 
@@ -332,7 +587,7 @@ void run_serial_vector_tests(const char *test_name) {
     double result_value = test_helper<T>::get(sum);
     ASSERT( EXPECTED_SUM == result_value, NULL);
     if (Verbose)
-        printf("done\nserial %s, 0, %g, %g\n", test_name, result_value, ( tbb::tick_count::now() - t0).seconds());
+        REPORT("done\nserial %s, 0, %g, %g\n", test_name, result_value, ( tbb::tick_count::now() - t0).seconds());
 }
 
 void 
@@ -350,6 +605,13 @@ run_parallel_tests() {
     run_parallel_scalar_tests<double>("double");
     run_parallel_scalar_tests<minimal>("minimal");
     run_parallel_vector_tests<int>("std::vector<int, tbb::tbb_allocator<int> >");
+    run_parallel_vector_tests<double>("std::vector<double, tbb::tbb_allocator<double> >");
+}
+
+void
+run_cross_type_tests() {
+    // cross-type scalar tests are part of run_serial_scalar_tests
+    run_cross_type_vector_tests<int>("std::vector<int, tbb::tbb_allocator<int> >");
     run_parallel_vector_tests<double>("std::vector<double, tbb::tbb_allocator<double> >");
 }
 
@@ -379,6 +641,9 @@ void do_tbb_threads( int max_threads, minimal_ptr *a ) {
     for (int p = 0; p < max_threads; ++p) {
         threads[p]->join();
     }
+    for(int p = 0; p < max_threads; ++p) {
+        delete threads[p];
+    }
 }
 
 void
@@ -392,7 +657,7 @@ flog_key_creation_and_deletion() {
 
         if (p == 0) continue;
 
-        if (Verbose) printf("Testing repeated deletes on %d threads... ", p);
+        if (Verbose) REPORT("Testing repeated deletes on %d threads... ", p);
 
         for (int j = 0; j < FLOG_REPETITIONS; ++j) {
             construction_counter = 0;
@@ -419,7 +684,7 @@ flog_key_creation_and_deletion() {
         ASSERT( int(construction_counter) == (p+1)*VALID_NUMBER_OF_KEYS, NULL );
         ASSERT( int(destruction_counter) == (p+1)*VALID_NUMBER_OF_KEYS, NULL );
 
-        if (Verbose) printf("done\nTesting repeated clears on %d threads... ", p);
+        if (Verbose) REPORT("done\nTesting repeated clears on %d threads... ", p);
 
         construction_counter = 0;
         destruction_counter = 0;
@@ -453,7 +718,7 @@ flog_key_creation_and_deletion() {
         ASSERT( int(construction_counter) == (FLOG_REPETITIONS*p+1)*VALID_NUMBER_OF_KEYS, NULL );
         ASSERT( int(destruction_counter) == (FLOG_REPETITIONS*p+1)*VALID_NUMBER_OF_KEYS, NULL );
 
-        if (Verbose) printf("done\n");
+        if (Verbose) REPORT("done\n");
     }
 
 }
@@ -484,7 +749,7 @@ flog_segmented_interator() {
     for(my_si=my_vec.begin(), ii=0; my_si != my_vec.end(); ++my_si, ++ii) {
         if((*my_si) != ii) {
             found_error = true;
-            if(Verbose) printf( "*my_si=%d\n", int(*my_si));
+            if(Verbose) REPORT( "*my_si=%d\n", int(*my_si));
         }
     }
 
@@ -516,7 +781,7 @@ flog_segmented_interator() {
     for(my_si = my_vec.begin(), ii=0; my_si != my_vec.end(); ++my_si, ++ii) {
         if((*my_si) != ii) {
             found_error = true;
-            if(Verbose) printf("*my_si=%d, ii=%d\n", (int)(*my_si), (int)ii);
+            if(Verbose) REPORT("*my_si=%d, ii=%d\n", (int)(*my_si), (int)ii);
         }
     }
 
@@ -524,7 +789,7 @@ flog_segmented_interator() {
     for(my_csi=my_vec.begin(), ii=0; my_csi != my_vec.end(); ++my_csi, ++ii) {
         if((*my_csi) != ii) {
             found_error = true;
-            if(Verbose) printf( "*my_csi=%d\n", int(*my_csi));
+            if(Verbose) REPORT( "*my_csi=%d\n", int(*my_csi));
         }
     }
 
@@ -556,12 +821,12 @@ flog_segmented_interator() {
     for(my_csi = my_vec.begin(), ii=0; my_csi != my_vec.end(); ++my_csi, ++ii) {
         if((*my_csi) != ii) {
             found_error = true;
-            if(Verbose) printf("*my_csi=%d, ii=%d\n", (int)(*my_csi), (int)ii);
+            if(Verbose) REPORT("*my_csi=%d, ii=%d\n", (int)(*my_csi), (int)ii);
         }
     }
 
 
-    if(found_error) printf("segmented_iterator failed\n");
+    if(found_error) REPORT("segmented_iterator failed\n");
 }
 
 template <typename Key, typename Val>
@@ -589,7 +854,7 @@ flog_segmented_iterator_map() {
    for(my_si=my_vec.begin(), ii=0; my_si != my_vec.end(); ++my_si, ++ii) {
        if(((*my_si).first != ii) || ((*my_si).second != 2*ii)) {
            found_error = true;
-           if(Verbose) printf( "ii=%d, (*my_si).first=%d, second=%d\n",ii, int((*my_si).first), int((*my_si).second));
+           if(Verbose) REPORT( "ii=%d, (*my_si).first=%d, second=%d\n",ii, int((*my_si).first), int((*my_si).second));
        }
    }
 
@@ -597,7 +862,7 @@ flog_segmented_iterator_map() {
    for(my_csi=my_vec.begin(), ii=0; my_csi != my_vec.end(); ++my_csi, ++ii) {
        if(((*my_csi).first != ii) || ((*my_csi).second != 2*ii)) {
            found_error = true;
-           if(Verbose) printf( "ii=%d, (*my_csi).first=%d, second=%d\n",ii, int((*my_csi).first), int((*my_csi).second));
+           if(Verbose) REPORT( "ii=%d, (*my_csi).first=%d, second=%d\n",ii, int((*my_csi).first), int((*my_csi).second));
        }
    }
 }
@@ -605,7 +870,7 @@ flog_segmented_iterator_map() {
 void
 run_segmented_iterator_tests() {
    // only the following containers can be used with the segmented iterator.
-    if(Verbose) printf("Running Segmented Iterator Tests\n");
+    if(Verbose) REPORT("Running Segmented Iterator Tests\n");
    flog_segmented_interator<std::vector< int > >();
    flog_segmented_interator<std::vector< double > >();
    flog_segmented_interator<std::deque< int > >();
@@ -617,6 +882,53 @@ run_segmented_iterator_tests() {
    flog_segmented_iterator_map<int, double>(); 
 }
 
+template <typename T>
+void
+run_assign_and_copy_constructor_test(const char *test_name) {
+    if (Verbose) REPORT("Testing assignment and copy construction for %s\n", test_name);
+
+    // test initializer with exemplar (combine returns the exemplar value if no threads have created locals.)
+    T initializer0;
+    test_helper<T>::init(initializer0);
+    T initializer7;
+    test_helper<T>::set(initializer7,7);
+    tbb::enumerable_thread_specific<T> create1(initializer7);
+    ASSERT(7 == test_helper<T>::get(create1.combine(my_combine<T>)), NULL);
+
+    // test copy construction with exemplar initializer
+    tbb::enumerable_thread_specific<T> copy1(create1);
+    ASSERT(7 == test_helper<T>::get(copy1.combine(my_combine<T>)), NULL);
+
+    // test copy assignment with exemplar initializer
+    tbb::enumerable_thread_specific<T> assign1(initializer0);
+    assign1 = create1;
+    ASSERT(7 == test_helper<T>::get(assign1.combine(my_combine<T>)), NULL);
+
+    // test creation with finit function (combine returns finit return value if no threads have created locals)
+    FunctorAddFinit7<T> my_finit7;
+    tbb::enumerable_thread_specific<T> create2(my_finit7);
+    ASSERT(7 == test_helper<T>::get(create2.combine(my_combine<T>)), NULL);
+
+    // test copy construction with function initializer
+    tbb::enumerable_thread_specific<T> copy2(create2);
+    ASSERT(7 == test_helper<T>::get(copy2.combine(my_combine<T>)), NULL);
+
+    // test copy assignment with function initializer
+    FunctorAddFinit<T> my_finit;
+    tbb::enumerable_thread_specific<T> assign2(my_finit);
+    assign2 = create2;
+    ASSERT(7 == test_helper<T>::get(assign2.combine(my_combine<T>)), NULL);
+}
+
+void
+run_assignment_and_copy_constructor_tests() {
+    if(Verbose) REPORT("Running assignment and copy constructor tests\n");
+    run_assign_and_copy_constructor_test<int>("int");
+    run_assign_and_copy_constructor_test<double>("double");
+    run_assign_and_copy_constructor_test<minimal>("minimal");
+}
+
+__TBB_TEST_EXPORT
 int main(int argc, char *argv[]) {
    ParseCommandLine(argc, argv);
    run_segmented_iterator_tests();
@@ -626,10 +938,14 @@ int main(int argc, char *argv[]) {
    if (MinThread == 0) 
       run_serial_tests();
 
-   if (MaxThread > 0)
+   if (MaxThread > 0) {
       run_parallel_tests();
+      run_cross_type_tests();
+   }
 
-   printf("done\n");
+    run_assignment_and_copy_constructor_tests();
+
+   REPORT("done\n");
    return 0;
 }
 

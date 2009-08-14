@@ -61,103 +61,6 @@ namespace internal {
 #endif /* TBB_USE_THREADING_TOOLS */
     }
 
-    //! Task type use to combine the partial results of parallel_reduce.
-    /** @ingroup algorithms */
-    template<typename Body>
-    class finish_reduce: public task {
-        Body* const my_body;
-        bool has_right_zombie;
-        aligned_space<Body,1> zombie_space;
-        finish_reduce( Body* body ) : 
-            my_body(body),
-            has_right_zombie(false)
-        {
-        }
-        task* execute() {
-            if( has_right_zombie ) {
-                // Right child was stolen.
-                Body* s = zombie_space.begin();
-                my_body->join( *s );
-                s->~Body();
-            }
-            return NULL;
-        }       
-        template<typename Range,typename Body_, typename Partitioner>
-        friend class start_reduce;
-    };
-
-    //! Task type used to split the work of parallel_reduce.
-    /** @ingroup algorithms */
-    template<typename Range, typename Body, typename Partitioner>
-    class start_reduce: public task {
-        typedef finish_reduce<Body> finish_type;
-        Body* my_body;
-        Range my_range;
-        typename Partitioner::partition_type my_partition;
-        /*override*/ task* execute();
-        template<typename Body_>
-        friend class finish_reduce;
-    
-        //! Constructor used for root task
-        start_reduce( const Range& range, Body* body, const Partitioner &partitioner ) :
-            my_body(body),
-            my_range(range),
-            my_partition(partitioner)
-        {
-        }
-        //! Splitting constructor used to generate children.
-        /** this becomes left child.  Newly constructed object is right child. */
-        start_reduce( start_reduce& parent, split ) :
-            my_body(parent.my_body),
-            my_range(parent.my_range,split()),
-            my_partition(parent.my_partition,split())
-        {
-        }
-        //! Process a steal.
-        /** Affinity is never set, so if this method is called, it must arise because this is stolen. */
-        /*override*/ void note_affinity( affinity_id /*id*/ ) {
-            finish_type* p = static_cast<finish_type*>(parent() );
-            Body* body = new( p->zombie_space.begin() ) Body(*my_body,split());
-            p->has_right_zombie = true;
-            my_body = body;
-        }
-    public:
-#if !__TBB_EXCEPTIONS
-        static void run( const Range& range, Body& body, const Partitioner &partitioner ) {
-            if( !range.empty() ) 
-                task::spawn_root_and_wait( *new(task::allocate_root()) start_reduce(range,&body,partitioner) );
-        }
-#else /* __TBB_EXCEPTIONS */
-        static void run( const Range& range, Body& body, const Partitioner &partitioner ) {
-            // Bound context prevents exceptions from body to affect nesting or sibling algorithms,
-            // and allows users to handle exceptions safely by wrapping parallel_for in the try-block.
-            if( !range.empty() )  {
-                task_group_context context;
-                task::spawn_root_and_wait( *new(task::allocate_root(context)) start_reduce(range,&body,partitioner) );
-            }
-        }
-        static void run( const Range& range, Body& body, const Partitioner &partitioner, task_group_context& context ) {
-            if( !range.empty() ) 
-                task::spawn_root_and_wait( *new(task::allocate_root(context)) start_reduce(range,&body,partitioner) );
-        }
-#endif /* __TBB_EXCEPTIONS */
-    };
-
-    template<typename Range, typename Body, typename Partitioner>
-    task* start_reduce<Range,Body,Partitioner>::execute() {
-        if( !my_range.is_divisible() || my_partition.should_execute_range(*this) ) {
-            (*my_body)( my_range );
-            return NULL;
-        } else {
-            finish_type& c = *new( allocate_continuation()) finish_type(my_body);
-            recycle_as_child_of(c);
-            c.set_ref_count(2);    
-            start_reduce& b = *new( c.allocate_child() ) start_reduce(*this,split());
-            spawn(b);
-            return this;
-        }
-    }
- 
     //! 0 if root, 1 if a left child, 2 if a right child.
     /** Represented as a char, not enum, for compactness. */
     typedef char reduction_context;
@@ -165,13 +68,13 @@ namespace internal {
     //! Task type use to combine the partial results of parallel_reduce with affinity_partitioner.
     /** @ingroup algorithms */
     template<typename Body>
-    class finish_reduce_with_affinity: public task {
+    class finish_reduce: public task {
         //! Pointer to body, or NULL if the left child has not yet finished. 
         Body* my_body;
         bool has_right_zombie;
         const reduction_context my_context;
         aligned_space<Body,1> zombie_space;
-        finish_reduce_with_affinity( char context ) : 
+        finish_reduce( char context ) : 
             my_body(NULL),
             has_right_zombie(false),
             my_context(context)
@@ -185,28 +88,28 @@ namespace internal {
                 s->~Body();
             }
             if( my_context==1 ) 
-                parallel_reduce_store_body( static_cast<finish_reduce_with_affinity*>(parent())->my_body, my_body );
+                parallel_reduce_store_body( static_cast<finish_reduce*>(parent())->my_body, my_body );
             return NULL;
         }       
-        template<typename Range,typename Body_>
-        friend class start_reduce_with_affinity;
+        template<typename Range,typename Body_, typename Partitioner>
+        friend class start_reduce;
     };
 
     //! Task type used to split the work of parallel_reduce with affinity_partitioner.
     /** @ingroup algorithms */
-    template<typename Range, typename Body>
-    class start_reduce_with_affinity: public task {
-        typedef finish_reduce_with_affinity<Body> finish_type;
+    template<typename Range, typename Body, typename Partitioner>
+    class start_reduce: public task {
+        typedef finish_reduce<Body> finish_type;
         Body* my_body;
         Range my_range;
-        typename affinity_partitioner::partition_type my_partition;
+        typename Partitioner::partition_type my_partition;
         reduction_context my_context;
         /*override*/ task* execute();
         template<typename Body_>
-        friend class finish_reduce_with_affinity;
+        friend class finish_reduce;
     
         //! Constructor used for root task
-        start_reduce_with_affinity( const Range& range, Body* body, affinity_partitioner& partitioner ) :
+        start_reduce( const Range& range, Body* body, Partitioner& partitioner ) :
             my_body(body),
             my_range(range),
             my_partition(partitioner),
@@ -215,7 +118,7 @@ namespace internal {
         }
         //! Splitting constructor used to generate children.
         /** this becomes left child.  Newly constructed object is right child. */
-        start_reduce_with_affinity( start_reduce_with_affinity& parent, split ) :
+        start_reduce( start_reduce& parent, split ) :
             my_body(parent.my_body),
             my_range(parent.my_range,split()),
             my_partition(parent.my_partition,split()),
@@ -230,28 +133,28 @@ namespace internal {
         }
 
 public:
-        static void run( const Range& range, Body& body, affinity_partitioner& partitioner ) {
+        static void run( const Range& range, Body& body, Partitioner& partitioner ) {
             if( !range.empty() ) {
 #if !__TBB_EXCEPTIONS || TBB_JOIN_OUTER_TASK_GROUP
-                task::spawn_root_and_wait( *new(task::allocate_root()) start_reduce_with_affinity(range,&body,partitioner) );
+                task::spawn_root_and_wait( *new(task::allocate_root()) start_reduce(range,&body,partitioner) );
 #else
                 // Bound context prevents exceptions from body to affect nesting or sibling algorithms,
                 // and allows users to handle exceptions safely by wrapping parallel_for in the try-block.
                 task_group_context context;
-                task::spawn_root_and_wait( *new(task::allocate_root(context)) start_reduce_with_affinity(range,&body,partitioner) );
+                task::spawn_root_and_wait( *new(task::allocate_root(context)) start_reduce(range,&body,partitioner) );
 #endif /* __TBB_EXCEPTIONS && !TBB_JOIN_OUTER_TASK_GROUP */
             }
         }
 #if __TBB_EXCEPTIONS
-        static void run( const Range& range, Body& body, affinity_partitioner& partitioner, task_group_context& context ) {
+        static void run( const Range& range, Body& body, Partitioner& partitioner, task_group_context& context ) {
             if( !range.empty() ) 
-                task::spawn_root_and_wait( *new(task::allocate_root(context)) start_reduce_with_affinity(range,&body,partitioner) );
+                task::spawn_root_and_wait( *new(task::allocate_root(context)) start_reduce(range,&body,partitioner) );
         }
 #endif /* __TBB_EXCEPTIONS */
     };
 
-    template<typename Range, typename Body>
-    task* start_reduce_with_affinity<Range,Body>::execute() {
+    template<typename Range, typename Body, typename Partitioner>
+    task* start_reduce<Range,Body,Partitioner>::execute() {
         if( my_context==2 ) {
             finish_type* p = static_cast<finish_type*>(parent() );
             if( !parallel_reduce_load_body(p->my_body) ) {
@@ -269,7 +172,7 @@ public:
             recycle_as_child_of(c);
             c.set_ref_count(2);    
             bool delay = my_partition.decide_whether_to_delay();
-            start_reduce_with_affinity& b = *new( c.allocate_child() ) start_reduce_with_affinity(*this,split());
+            start_reduce& b = *new( c.allocate_child() ) start_reduce(*this,split());
             my_partition.spawn_or_delay(delay,*this,b);
             return this;
         }
@@ -290,6 +193,7 @@ public:
         const RealBody&  my_real_body;
         const Reduction& my_reduction;
         Value            my_value;
+        lambda_reduce_body& operator= ( const lambda_reduce_body& other );
     public:
         lambda_reduce_body( const Value& identity, const RealBody& body, const Reduction& reduction )
             : identity_element(identity)
@@ -344,25 +248,32 @@ public:
     See also requirements on \ref range_req "Range" and \ref parallel_reduce_body_req "parallel_reduce Body". **/
 //@{
 
-//! Parallel iteration with reduction and simple_partitioner, or no partitioner specified.
+//! Parallel iteration with reduction and default partitioner.
 /** @ingroup algorithms **/
 template<typename Range, typename Body>
-void parallel_reduce( const Range& range, Body& body, const simple_partitioner& partitioner = simple_partitioner() ) {
-    internal::start_reduce<Range,Body,simple_partitioner>::run( range, body, partitioner );
+void parallel_reduce( const Range& range, Body& body ) {
+    internal::start_reduce<Range,Body, const __TBB_DEFAULT_PARTITIONER>::run( range, body, __TBB_DEFAULT_PARTITIONER() );
+}
+
+//! Parallel iteration with reduction and simple_partitioner
+/** @ingroup algorithms **/
+template<typename Range, typename Body>
+void parallel_reduce( const Range& range, Body& body, const simple_partitioner& partitioner ) {
+    internal::start_reduce<Range,Body,const simple_partitioner>::run( range, body, partitioner );
 }
 
 //! Parallel iteration with reduction and auto_partitioner
 /** @ingroup algorithms **/
 template<typename Range, typename Body>
 void parallel_reduce( const Range& range, Body& body, const auto_partitioner& partitioner ) {
-    internal::start_reduce<Range,Body,auto_partitioner>::run( range, body, partitioner );
+    internal::start_reduce<Range,Body,const auto_partitioner>::run( range, body, partitioner );
 }
 
 //! Parallel iteration with reduction and affinity_partitioner
 /** @ingroup algorithms **/
 template<typename Range, typename Body>
 void parallel_reduce( const Range& range, Body& body, affinity_partitioner& partitioner ) {
-    internal::start_reduce_with_affinity<Range,Body>::run( range, body, partitioner );
+    internal::start_reduce<Range,Body,affinity_partitioner>::run( range, body, partitioner );
 }
 
 #if __TBB_EXCEPTIONS
@@ -370,34 +281,44 @@ void parallel_reduce( const Range& range, Body& body, affinity_partitioner& part
 /** @ingroup algorithms **/
 template<typename Range, typename Body>
 void parallel_reduce( const Range& range, Body& body, const simple_partitioner& partitioner, task_group_context& context ) {
-    internal::start_reduce<Range,Body,simple_partitioner>::run( range, body, partitioner, context );
+    internal::start_reduce<Range,Body,const simple_partitioner>::run( range, body, partitioner, context );
 }
 
 //! Parallel iteration with reduction, auto_partitioner and user-supplied context
 /** @ingroup algorithms **/
 template<typename Range, typename Body>
 void parallel_reduce( const Range& range, Body& body, const auto_partitioner& partitioner, task_group_context& context ) {
-    internal::start_reduce<Range,Body,auto_partitioner>::run( range, body, partitioner, context );
+    internal::start_reduce<Range,Body,const auto_partitioner>::run( range, body, partitioner, context );
 }
 
 //! Parallel iteration with reduction, affinity_partitioner and user-supplied context
 /** @ingroup algorithms **/
 template<typename Range, typename Body>
 void parallel_reduce( const Range& range, Body& body, affinity_partitioner& partitioner, task_group_context& context ) {
-    internal::start_reduce_with_affinity<Range,Body>::run( range, body, partitioner, context );
+    internal::start_reduce<Range,Body,affinity_partitioner>::run( range, body, partitioner, context );
 }
 #endif /* __TBB_EXCEPTIONS */
 
 /** parallel_reduce overloads that work with anonymous function objects
     (see also \ref parallel_reduce_lambda_req "requirements on parallel_reduce anonymous function objects"). **/
 
-//! Parallel iteration with reduction and simple_partitioner, or no partitioner specified.
+//! Parallel iteration with reduction and default partitioner.
+/** @ingroup algorithms **/
+template<typename Range, typename Value, typename RealBody, typename Reduction>
+Value parallel_reduce( const Range& range, const Value& identity, const RealBody& real_body, const Reduction& reduction ) {
+    internal::lambda_reduce_body<Range,Value,RealBody,Reduction> body(identity, real_body, reduction);
+    internal::start_reduce<Range,internal::lambda_reduce_body<Range,Value,RealBody,Reduction>,const __TBB_DEFAULT_PARTITIONER>
+                          ::run(range, body, __TBB_DEFAULT_PARTITIONER() );
+    return body.result();
+}
+
+//! Parallel iteration with reduction and simple_partitioner.
 /** @ingroup algorithms **/
 template<typename Range, typename Value, typename RealBody, typename Reduction>
 Value parallel_reduce( const Range& range, const Value& identity, const RealBody& real_body, const Reduction& reduction,
-                       const simple_partitioner& partitioner = simple_partitioner() ) {
+                       const simple_partitioner& partitioner ) {
     internal::lambda_reduce_body<Range,Value,RealBody,Reduction> body(identity, real_body, reduction);
-    internal::start_reduce<Range,internal::lambda_reduce_body<Range,Value,RealBody,Reduction>,simple_partitioner>
+    internal::start_reduce<Range,internal::lambda_reduce_body<Range,Value,RealBody,Reduction>,const simple_partitioner>
                           ::run(range, body, partitioner );
     return body.result();
 }
@@ -408,7 +329,7 @@ template<typename Range, typename Value, typename RealBody, typename Reduction>
 Value parallel_reduce( const Range& range, const Value& identity, const RealBody& real_body, const Reduction& reduction,
                        const auto_partitioner& partitioner ) {
     internal::lambda_reduce_body<Range,Value,RealBody,Reduction> body(identity, real_body, reduction);
-    internal::start_reduce<Range,internal::lambda_reduce_body<Range,Value,RealBody,Reduction>,auto_partitioner>
+    internal::start_reduce<Range,internal::lambda_reduce_body<Range,Value,RealBody,Reduction>,const auto_partitioner>
                           ::run( range, body, partitioner );
     return body.result();
 }
@@ -419,7 +340,7 @@ template<typename Range, typename Value, typename RealBody, typename Reduction>
 Value parallel_reduce( const Range& range, const Value& identity, const RealBody& real_body, const Reduction& reduction,
                        affinity_partitioner& partitioner ) {
     internal::lambda_reduce_body<Range,Value,RealBody,Reduction> body(identity, real_body, reduction);
-    internal::start_reduce_with_affinity<Range,internal::lambda_reduce_body<Range,Value,RealBody,Reduction> >
+    internal::start_reduce<Range,internal::lambda_reduce_body<Range,Value,RealBody,Reduction>,affinity_partitioner>
                                         ::run( range, body, partitioner );
     return body.result();
 }
@@ -431,7 +352,7 @@ template<typename Range, typename Value, typename RealBody, typename Reduction>
 Value parallel_reduce( const Range& range, const Value& identity, const RealBody& real_body, const Reduction& reduction,
                        const simple_partitioner& partitioner, task_group_context& context ) {
     internal::lambda_reduce_body<Range,Value,RealBody,Reduction> body(identity, real_body, reduction);
-    internal::start_reduce<Range,internal::lambda_reduce_body<Range,Value,RealBody,Reduction>,simple_partitioner>
+    internal::start_reduce<Range,internal::lambda_reduce_body<Range,Value,RealBody,Reduction>,const simple_partitioner>
                           ::run( range, body, partitioner, context );
     return body.result();
 }
@@ -442,7 +363,7 @@ template<typename Range, typename Value, typename RealBody, typename Reduction>
 Value parallel_reduce( const Range& range, const Value& identity, const RealBody& real_body, const Reduction& reduction,
                        const auto_partitioner& partitioner, task_group_context& context ) {
     internal::lambda_reduce_body<Range,Value,RealBody,Reduction> body(identity, real_body, reduction);
-    internal::start_reduce<Range,internal::lambda_reduce_body<Range,Value,RealBody,Reduction>,auto_partitioner>
+    internal::start_reduce<Range,internal::lambda_reduce_body<Range,Value,RealBody,Reduction>,const auto_partitioner>
                           ::run( range, body, partitioner, context );
     return body.result();
 }
@@ -453,7 +374,7 @@ template<typename Range, typename Value, typename RealBody, typename Reduction>
 Value parallel_reduce( const Range& range, const Value& identity, const RealBody& real_body, const Reduction& reduction,
                        affinity_partitioner& partitioner, task_group_context& context ) {
     internal::lambda_reduce_body<Range,Value,RealBody,Reduction> body(identity, real_body, reduction);
-    internal::start_reduce_with_affinity<Range,internal::lambda_reduce_body<Range,Value,RealBody,Reduction> >
+    internal::start_reduce<Range,internal::lambda_reduce_body<Range,Value,RealBody,Reduction>,affinity_partitioner>
                                         ::run( range, body, partitioner, context );
     return body.result();
 }

@@ -28,6 +28,9 @@
 
 #include "tbb/tbb_thread.h"
 #include "tbb/atomic.h"
+
+#define HARNESS_NO_PARSE_COMMAND_LINE 1
+#include "harness_report.h"
 #include "harness_assert.h"
 
 static const int THRDS = 3;
@@ -222,7 +225,9 @@ void RunTests() {
     ASSERT( ! thrs[2].joinable(), NULL );
     ASSERT( BaseCount==4, "object leak detected" );
 
+#if !__TBB_EXCEPTION_HANDLING_TOTALLY_BROKEN
     CheckExceptionSafety(); 
+#endif
 
     // Note: all tests involving BaseCount should be put before the tests
     // involing detached threads, because there is no way of knowing when 
@@ -267,12 +272,13 @@ id_relation CheckSignatures() {
     return r[1];
 }
 
+#define HARNESS_NO_PARSE_COMMAND_LINE 1
+#include "harness.h"
+
+__TBB_TEST_EXPORT
 int main( int , char *[] ) {
     CheckSignatures();
     RunTests();
-    std::printf("done\n");
+    REPORT("done\n");
     return 0;
 }
-
-#define HARNESS_NO_PARSE_COMMAND_LINE 1
-#include "harness.h"

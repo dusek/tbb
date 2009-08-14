@@ -23,7 +23,7 @@
 				Optimization="0"
 				FavorSizeOrSpeed="1"
 				OmitFramePointers="TRUE"
-				AdditionalIncludeDirectories="$(TBB21_INSTALL_DIR)\include"
+				AdditionalIncludeDirectories="$(TBB22_INSTALL_DIR)\include"
 				PreprocessorDefinitions="TBB_USE_DEBUG;WIN32;_WINDOWS;_DEBUG"
 				BasicRuntimeChecks="3"
 				RuntimeLibrary="3"
@@ -40,7 +40,7 @@
 				Name="VCLinkerTool"
 				AdditionalDependencies="$(OutDir)/tachyon.common.lib tbb_debug.lib"
 				LinkIncremental="1"
-				AdditionalLibraryDirectories="$(TBB21_INSTALL_DIR)\ia32\vc7.1\lib"
+				AdditionalLibraryDirectories="$(TBB22_INSTALL_DIR)\ia32\vc7.1\lib"
 				GenerateDebugInformation="TRUE"
 				ProgramDatabaseFile="$(OutDir)/$(ProjectName).pdb"
 				SubSystem="2"
@@ -51,7 +51,7 @@
 			<Tool
 				Name="VCPostBuildEventTool"
 				Description="Copying DLLs and PDBs"
-				CommandLine="copy &quot;$(TBB21_INSTALL_DIR)\ia32\vc7.1\bin\tbb_debug.dll&quot; &quot;$(OutDir)&quot;&#x0D;&#x0A; copy  &quot;$(TBB21_INSTALL_DIR)\ia32\vc7.1\bin\tbb_debug.pdb&quot; &quot;$(OutDir)&quot;"/>
+				CommandLine="copy &quot;$(TBB22_INSTALL_DIR)\ia32\vc7.1\bin\tbb_debug.dll&quot; &quot;$(OutDir)&quot;&#x0D;&#x0A; copy  &quot;$(TBB22_INSTALL_DIR)\ia32\vc7.1\bin\tbb_debug.pdb&quot; &quot;$(OutDir)&quot;"/>
 			<Tool
 				Name="VCPreBuildEventTool"/>
 			<Tool
@@ -80,7 +80,7 @@
 				Name="VCCLCompilerTool"
 				FavorSizeOrSpeed="1"
 				OmitFramePointers="TRUE"
-				AdditionalIncludeDirectories="$(TBB21_INSTALL_DIR)\include"
+				AdditionalIncludeDirectories="$(TBB22_INSTALL_DIR)\include"
 				PreprocessorDefinitions="WIN32;_WINDOWS;NDEBUG"
 				RuntimeLibrary="2"
 				EnableFunctionLevelLinking="TRUE"
@@ -96,7 +96,7 @@
 				Name="VCLinkerTool"
 				AdditionalDependencies="$(OutDir)/tachyon.common.lib tbb.lib"
 				LinkIncremental="1"
-				AdditionalLibraryDirectories="$(TBB21_INSTALL_DIR)\ia32\vc7.1\lib"
+				AdditionalLibraryDirectories="$(TBB22_INSTALL_DIR)\ia32\vc7.1\lib"
 				SubSystem="2"
 				GenerateDebugInformation="TRUE"
 				ProgramDatabaseFile="$(OutDir)/$(ProjectName).pdb"
@@ -109,7 +109,7 @@
 			<Tool
 				Name="VCPostBuildEventTool"
 				Description="Copying DLLs and PDBs"
-				CommandLine="copy &quot;$(TBB21_INSTALL_DIR)\ia32\vc7.1\bin\tbb.dll&quot; &quot;$(OutDir)&quot;&#x0D;&#x0A; copy  &quot;$(TBB21_INSTALL_DIR)\ia32\vc7.1\bin\tbb.pdb&quot; &quot;$(OutDir)&quot;"/>
+				CommandLine="copy &quot;$(TBB22_INSTALL_DIR)\ia32\vc7.1\bin\tbb.dll&quot; &quot;$(OutDir)&quot;&#x0D;&#x0A; copy  &quot;$(TBB22_INSTALL_DIR)\ia32\vc7.1\bin\tbb.pdb&quot; &quot;$(OutDir)&quot;"/>
 			<Tool
 				Name="VCPreBuildEventTool"/>
 			<Tool
@@ -138,7 +138,7 @@
 				Name="VCCLCompilerTool"
 				FavorSizeOrSpeed="1"
 				OmitFramePointers="TRUE"
-				AdditionalIncludeDirectories="$(TBB21_INSTALL_DIR)\include"
+				AdditionalIncludeDirectories="$(TBB22_INSTALL_DIR)\include"
 				PreprocessorDefinitions="WIN32;_WINDOWS;NDEBUG"
 				RuntimeLibrary="2"
 				EnableFunctionLevelLinking="TRUE"
@@ -154,7 +154,7 @@
 				Name="VCLinkerTool"
 				AdditionalDependencies="$(OutDir)/tachyon.common.lib tbb.lib"
 				LinkIncremental="1"
-				AdditionalLibraryDirectories="&quot;$(TBB21_INSTALL_DIR)\ia32\vc7.1\lib&quot;;&quot;$(DXSDK_DIR)\lib\x86&quot;"
+				AdditionalLibraryDirectories="&quot;$(TBB22_INSTALL_DIR)\ia32\vc7.1\lib&quot;;&quot;$(DXSDK_DIR)\lib\x86&quot;"
 				SubSystem="2"
 				GenerateDebugInformation="TRUE"
 				ProgramDatabaseFile="$(OutDir)/$(ProjectName).pdb"
@@ -167,7 +167,7 @@
 			<Tool
 				Name="VCPostBuildEventTool"
 				Description="Copying DLLs and PDBs"
-				CommandLine="copy &quot;$(TBB21_INSTALL_DIR)\ia32\vc7.1\bin\tbb.dll&quot; &quot;$(OutDir)&quot;&#x0D;&#x0A; copy  &quot;$(TBB21_INSTALL_DIR)\ia32\vc7.1\bin\tbb.pdb&quot; &quot;$(OutDir)&quot;"/>
+				CommandLine="copy &quot;$(TBB22_INSTALL_DIR)\ia32\vc7.1\bin\tbb.dll&quot; &quot;$(OutDir)&quot;&#x0D;&#x0A; copy  &quot;$(TBB22_INSTALL_DIR)\ia32\vc7.1\bin\tbb.pdb&quot; &quot;$(OutDir)&quot;"/>
 			<Tool
 				Name="VCPreBuildEventTool"/>
 			<Tool
@@ -197,7 +197,7 @@
 				Optimization="0"
 				FavorSizeOrSpeed="1"
 				OmitFramePointers="TRUE"
-				AdditionalIncludeDirectories="$(TBB21_INSTALL_DIR)\include"
+				AdditionalIncludeDirectories="$(TBB22_INSTALL_DIR)\include"
 				PreprocessorDefinitions="TBB_USE_DEBUG;WIN32;_WINDOWS;_DEBUG"
 				BasicRuntimeChecks="3"
 				RuntimeLibrary="3"
@@ -214,7 +214,7 @@
 				Name="VCLinkerTool"
 				AdditionalDependencies="$(OutDir)/tachyon.common.lib tbb_debug.lib"
 				LinkIncremental="1"
-				AdditionalLibraryDirectories="&quot;$(TBB21_INSTALL_DIR)\ia32\vc7.1\lib&quot;;&quot;$(DXSDK_DIR)\lib\x86&quot;"
+				AdditionalLibraryDirectories="&quot;$(TBB22_INSTALL_DIR)\ia32\vc7.1\lib&quot;;&quot;$(DXSDK_DIR)\lib\x86&quot;"
 				GenerateDebugInformation="TRUE"
 				ProgramDatabaseFile="$(OutDir)/$(ProjectName).pdb"
 				SubSystem="2"
@@ -225,7 +225,7 @@
 			<Tool
 				Name="VCPostBuildEventTool"
 				Description="Copying DLLs and PDBs"
-				CommandLine="copy &quot;$(TBB21_INSTALL_DIR)\ia32\vc7.1\bin\tbb_debug.dll&quot; &quot;$(OutDir)&quot;&#x0D;&#x0A; copy  &quot;$(TBB21_INSTALL_DIR)\ia32\vc7.1\bin\tbb_debug.pdb&quot; &quot;$(OutDir)&quot;"/>
+				CommandLine="copy &quot;$(TBB22_INSTALL_DIR)\ia32\vc7.1\bin\tbb_debug.dll&quot; &quot;$(OutDir)&quot;&#x0D;&#x0A; copy  &quot;$(TBB22_INSTALL_DIR)\ia32\vc7.1\bin\tbb_debug.pdb&quot; &quot;$(OutDir)&quot;"/>
 			<Tool
 				Name="VCPreBuildEventTool"/>
 			<Tool

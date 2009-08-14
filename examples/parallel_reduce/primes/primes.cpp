@@ -294,7 +294,10 @@ Number ParallelCountPrimes( Number n ) {
         count += s.multiples.n_factor;
         if( PrintPrimes ) 
             printf("---\n");
-        parallel_reduce( SieveRange( s.multiples.m, n, s.multiples.m, GrainSize ), s );
+        // Explicit grain size and simple_partitioner() used here instead of automatic grainsize 
+        // determination becase we want SieveRange to be decomposed down to GrainSize or smaller.  
+        // Doing so improves odds that the working set fits in cache when evaluating Sieve::operator().
+        parallel_reduce( SieveRange( s.multiples.m, n, s.multiples.m, GrainSize ), s, simple_partitioner() );
         count += s.count;
     }
     return count;

@@ -50,23 +50,27 @@ struct AbuseOneTask {
     void operator()( int ) const {
         tbb::task_scheduler_init init;
         // Thread 1 attempts to incorrectly use the task created by thread 0.
+        tbb::task_list list;
+#if !__TBB_RELAXED_OWNERSHIP
         TRY_BAD_EXPR(AbusedTask->spawn(*AbusedTask),"owne");
         TRY_BAD_EXPR(AbusedTask->spawn_and_wait_for_all(*AbusedTask),"owne");
         TRY_BAD_EXPR(tbb::task::spawn_root_and_wait(*AbusedTask),"owne");
 
         // Try variant that operate on a tbb::task_list
-        tbb::task_list list;
         TRY_BAD_EXPR(AbusedTask->spawn(list),"owne");
         TRY_BAD_EXPR(AbusedTask->spawn_and_wait_for_all(list),"owne");
+#endif /* !__TBB_RELAXED_OWNERSHIP */
         // spawn_root_and_wait over empty list should vacuously succeed.
         tbb::task::spawn_root_and_wait(list);
 
         // Check that spawn_root_and_wait fails on non-empty list. 
         list.push_back(*AbusedTask);
+#if !__TBB_RELAXED_OWNERSHIP
         TRY_BAD_EXPR(tbb::task::spawn_root_and_wait(list),"owne");
 
         TRY_BAD_EXPR(AbusedTask->destroy(*AbusedTask),"owne");
         TRY_BAD_EXPR(AbusedTask->wait_for_all(),"owne");
+#endif /* !__TBB_RELAXED_OWNERSHIP */
 
         // Try abusing recycle_as_continuation
         TRY_BAD_EXPR(AbusedTask->recycle_as_continuation(), "execute" );
@@ -110,13 +114,13 @@ void TestTaskAssertions() {
 #endif /* TBB_USE_ASSERT */
 }
 
-//------------------------------------------------------------------------
+__TBB_TEST_EXPORT
 int main(int argc, char* argv[]) {
-#if __GLIBC__==2&&__GLIBC_MINOR__==3
-    printf("skip\n");
+#if __GLIBC__==2 && __GLIBC_MINOR__==3 || __TBB_EXCEPTION_HANDLING_TOTALLY_BROKEN
+    REPORT("skip\n");
 #else
     TestTaskAssertions();
-    printf("done\n");
+    REPORT("done\n");
 #endif
     return 0;
 }

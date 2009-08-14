@@ -269,7 +269,7 @@ void video::main_loop()
 bool video::next_frame()
 {
     if(!running) return false;
-    g_updates++; // fast but inaccurate counter. The race is possible here
+    g_updates++; // Fast but inaccurate counter. The data race here is benign.
     if(!threaded) while(loop_once(this));
     else if(g_handles[1]) {
         SetEvent(g_handles[1]);

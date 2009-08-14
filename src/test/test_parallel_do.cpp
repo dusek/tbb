@@ -217,12 +217,13 @@ void Run( int nthread ) {
     }
 }
 
+__TBB_TEST_EXPORT
 int main( int argc, char* argv[] ) {
     MinThread=1;
     MaxThread=2;
     ParseCommandLine( argc, argv );
     if( MinThread<1 ) {
-        printf("number of threads must be positive\n");
+        REPORT("number of threads must be positive\n");
         exit(1);
     }
     for( int p=MinThread; p<=MaxThread; ++p ) {
@@ -234,6 +235,6 @@ int main( int argc, char* argv[] ) {
     // This check must be performed after the scheduler terminated because only in this 
     // case there is a guarantee that the workers already destroyed their last tasks. 
     ASSERT( g_values_counter == 0, "Value objects were leaked" );
-    printf("done\n");
+    REPORT("done\n");
     return 0;
 }

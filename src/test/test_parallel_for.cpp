@@ -135,7 +135,7 @@ void Flog( int nthread ) {
     }
     tbb::tick_count T1 = tbb::tick_count::now();
     if( Verbose )
-        printf("time=%g\tnthread=%d\tpad=%d\n",(T1-T0).seconds(),nthread,int(Pad));
+        REPORT("time=%g\tnthread=%d\tpad=%d\n",(T1-T0).seconds(),nthread,int(Pad));
 }
 
 // Testing parallel_for with step support
@@ -175,12 +175,14 @@ void TestParallelForWithStepSupport()
 
     // Testing some corner cases
     tbb::parallel_for(static_cast<T>(2), static_cast<T>(1), static_cast<T>(1), TestFunction<T>);
+#if !__TBB_EXCEPTION_HANDLING_TOTALLY_BROKEN
     try{
         tbb::parallel_for(static_cast<T>(1), static_cast<T>(100), static_cast<T>(0), TestFunction<T>);  // should cause std::invalid_argument
     }catch(std::invalid_argument){
         return;
     }
     ASSERT(0, "std::invalid_argument should be thrown");
+#endif
 }
 
 // Exception support test
@@ -202,7 +204,7 @@ void TestExceptionsSupport()
     CATCH_AND_ASSERT();
 }
 
-// Cancellaton support test
+// Cancellation support test
 void function_to_cancel(size_t ) {
     ++g_CurExecuted;
     CancellatorTask::WaitUntilReady();
@@ -231,11 +233,12 @@ void TestCancellation()
 #include "tbb/task_scheduler_init.h"
 #include "harness_cpu.h"
 
+__TBB_TEST_EXPORT
 int main( int argc, char* argv[] ) {
     MinThread = 1;
     ParseCommandLine(argc,argv);
     if( MinThread<1 ) {
-        printf("number of threads must be positive\n");
+        REPORT("number of threads must be positive\n");
         exit(1);
     }
     for( int p=MinThread; p<=MaxThread; ++p ) {
@@ -266,8 +269,8 @@ int main( int argc, char* argv[] ) {
         }
     }
 #if __TBB_EXCEPTION_HANDLING_BROKEN || (__GNUC__==4 && __GNUC_MINOR__==1 && __TBB_ipf)
-    printf("Warning: Exception handling tests are skipped due to a known issue.\n");
+    REPORT("Warning: Exception handling tests are skipped due to a known issue.\n");
 #endif
-    printf("done\n");
+    REPORT("done\n");
     return 0;
 }

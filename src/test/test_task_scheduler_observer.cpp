@@ -119,6 +119,7 @@ void TestObserver( int p, int q ) {
     NativeParallelFor( p, DoTest(q) );
 }
 
+__TBB_TEST_EXPORT
 int main(int argc, char* argv[]) {
     ParseCommandLine( argc, argv );
 
@@ -127,6 +128,6 @@ int main(int argc, char* argv[]) {
             TestObserver(p,q);
     ASSERT( EntryCount>0, "on_scheduler_entry not exercised" );
     ASSERT( ExitCount>0, "on_scheduler_exit not exercised" );
-    printf("done\n");
+    REPORT("done\n");
     return 0;
 }

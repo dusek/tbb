@@ -196,14 +196,14 @@ inline void CheckAllocator(MyTable &table, size_t expected_allocs, size_t expect
     size_t items_allocated = table.get_allocator().items_allocated, items_freed = table.get_allocator().items_freed;
     size_t allocations = table.get_allocator().allocations, frees = table.get_allocator().frees;
     if(Verbose)
-        printf("checking allocators: items %u/%u, allocs %u/%u\n",
+        REPORT("checking allocators: items %u/%u, allocs %u/%u\n",
             unsigned(items_allocated), unsigned(items_freed), unsigned(allocations), unsigned(frees) );
     ASSERT( items_allocated == allocations, NULL); ASSERT( items_freed == frees, NULL);
     if(exact) {
         ASSERT( allocations == expected_allocs, NULL); ASSERT( frees == expected_frees, NULL);
     } else {
         ASSERT( allocations >= expected_allocs, NULL); ASSERT( frees >= expected_frees, NULL);
-        ASSERT( allocations == frees, NULL );
+        ASSERT( allocations - frees == expected_allocs - expected_frees, NULL );
     }
 }
 
@@ -243,7 +243,7 @@ struct Find {
         ASSERT( b==!a.empty(), NULL );
         if( b ) {
             if( !UseKey(i) )
-                printf("Line %d: unexpected key %d present\n",__LINE__,i);
+                REPORT("Line %d: unexpected key %d present\n",__LINE__,i);
             AssertSameType( &*a, static_cast<MyTable::value_type*>(0) );
             ASSERT( ca->second.value_of()==i*i, NULL );
             ASSERT( (*ca).second.value_of()==i*i, NULL );
@@ -253,7 +253,7 @@ struct Find {
                 (*ca).second.set_value( ~ca->second.value_of() );
         } else {
             if( UseKey(i) ) 
-                printf("Line %d: key %d missing\n",__LINE__,i);
+                REPORT("Line %d: key %d missing\n",__LINE__,i);
         }
     }
 };
@@ -345,18 +345,18 @@ public:
 template<typename Op, typename TableType>
 void DoConcurrentOperations( TableType& table, int n, const char* what, int nthread ) {
     if( Verbose ) 
-        printf("testing %s with %d threads\n",what,nthread);
+        REPORT("testing %s with %d threads\n",what,nthread);
     tbb::tick_count t0 = tbb::tick_count::now();
     tbb::parallel_for( tbb::blocked_range<int>(0,n,100), TableOperation<Op,TableType>(table) );
     tbb::tick_count t1 = tbb::tick_count::now();
     if( Verbose )
-        printf("time for %s = %g with %d threads\n",what,(t1-t0).seconds(),nthread);
+        REPORT("time for %s = %g with %d threads\n",what,(t1-t0).seconds(),nthread);
 }
 
 //! Test traversing the table with an iterator.
 void TraverseTable( MyTable& table, size_t n, size_t expected_size ) {
     if( Verbose ) 
-        printf("testing traversal\n");
+        REPORT("testing traversal\n");
     size_t actual_size = table.size();
     ASSERT( actual_size==expected_size, NULL );
     size_t count = 0;
@@ -389,7 +389,7 @@ void TraverseTable( MyTable& table, size_t n, size_t expected_size ) {
     ASSERT( ci==const_table.end(), NULL );
     delete[] array;
     if( count!=expected_size ) {
-        printf("Line %d: count=%ld but should be %ld\n",__LINE__,long(count),long(expected_size));
+        REPORT("Line %d: count=%ld but should be %ld\n",__LINE__,long(count),long(expected_size));
     }
 }
 
@@ -416,7 +416,7 @@ void Check( AtomicByte array[], size_t n, size_t expected_size ) {
     if( expected_size )
         for( size_t k=0; k<n; ++k ) {
             if( array[k] != int(UseKey(k)) ) {
-                printf("array[%d]=%d != %d=UseKey(%d)\n",
+                REPORT("array[%d]=%d != %d=UseKey(%d)\n",
                        int(k), int(array[k]), int(UseKey(k)), int(k));
                 ASSERT(false,NULL);
             }
@@ -426,7 +426,7 @@ void Check( AtomicByte array[], size_t n, size_t expected_size ) {
 //! Test travering the tabel with a parallel range
 void ParallelTraverseTable( MyTable& table, size_t n, size_t expected_size ) {
     if( Verbose ) 
-        printf("testing parallel traversal\n");
+        REPORT("testing parallel traversal\n");
     ASSERT( table.size()==expected_size, NULL );
     AtomicByte* array = new AtomicByte[n];
 
@@ -561,7 +561,7 @@ public:
 //! Test for memory leak in concurrent_hash_map (TR #153).
 void TestConcurrency( int nthread ) {
     if( Verbose ) 
-        printf("testing multiple insertions/deletions of same key with %d threads\n", nthread);
+        REPORT("testing multiple insertions/deletions of same key with %d threads\n", nthread);
     {
         ASSERT( MyDataCount==0, NULL );
         MyTable table;
@@ -571,7 +571,7 @@ void TestConcurrency( int nthread ) {
         NativeParallelFor( nthread, AddToTable(table,nthread,m) );
         tbb::tick_count t1 = tbb::tick_count::now();
         if( Verbose )
-            printf("time for %u insertions = %g with %d threads\n",unsigned(MyDataCount),(t1-t0).seconds(),nthread);
+            REPORT("time for %u insertions = %g with %d threads\n",unsigned(MyDataCount),(t1-t0).seconds(),nthread);
         ASSERT( MyDataCount==m, "memory leak detected" );
 
         EraseCount = 0;
@@ -579,7 +579,7 @@ void TestConcurrency( int nthread ) {
         NativeParallelFor( nthread, RemoveFromTable(table,nthread,m) );
         t1 = tbb::tick_count::now();
         if( Verbose )
-            printf("time for %u deletions = %g with %d threads\n",unsigned(EraseCount),(t1-t0).seconds(),nthread);
+            REPORT("time for %u deletions = %g with %d threads\n",unsigned(EraseCount),(t1-t0).seconds(),nthread);
         ASSERT( MyDataCount==0, "memory leak detected" );
         ASSERT( EraseCount==m, "return value of erase() is broken" );
 
@@ -627,7 +627,7 @@ void TestRangeAssignment( Range2 r2 ) {
 //------------------------------------------------------------------------
 
 template<typename MyTable>
-void FillTable( MyTable& x, int n ) {
+static void FillTable( MyTable& x, int n ) {
     for( int i=1; i<=n; ++i ) {
         MyKey key( MyKey::make(i) );
         typename MyTable::accessor a;
@@ -638,7 +638,7 @@ void FillTable( MyTable& x, int n ) {
 }
 
 template<typename MyTable>
-void CheckTable( const MyTable& x, int n ) {
+static void CheckTable( const MyTable& x, int n ) {
     ASSERT( x.size()==size_t(n), "table is different size than expected" );
     ASSERT( x.empty()==(n==0), NULL );
     ASSERT( x.size()<=x.max_size(), NULL );
@@ -659,9 +659,9 @@ void CheckTable( const MyTable& x, int n ) {
     ASSERT( key_sum==n*(n+1)/2, NULL );
 }
 
-void TestCopy() {
+static void TestCopy() {
     if( Verbose )
-        printf("testing copy\n");
+        REPORT("testing copy\n");
     MyTable t1;
     for( int i=0; i<10000; i=(i<100 ? i+1 : i*3) ) {
         MyDataCount = 0;
@@ -693,7 +693,7 @@ void TestCopy() {
 
 void TestAssignment() {
     if( Verbose )
-        printf("testing assignment\n");
+        REPORT("testing assignment\n");
     for( int i=0; i<1000; i=(i<30 ? i+1 : i*5) ) {
         for( int j=0; j<1000; j=(j<30 ? j+1 : j*7) ) {
             MyTable t1;
@@ -724,7 +724,7 @@ void TestAssignment() {
 
 void TestIteratorsAndRanges() {
     if( Verbose )
-        printf("testing iterators compliance\n");
+        REPORT("testing iterators compliance\n");
     TestIteratorTraits<MyTable::iterator,MyTable::value_type>();
     TestIteratorTraits<MyTable::const_iterator,const MyTable::value_type>();
 
@@ -741,14 +741,14 @@ void TestIteratorsAndRanges() {
     ASSERT(u.equal_range(MyKey::make(-1)) == std::make_pair(u.end(), u.end()), NULL);
 
     if( Verbose )
-        printf("testing ranges compliance\n");
+        REPORT("testing ranges compliance\n");
     TestRangeAssignment<MyTable::const_range_type>( u.range() );
     TestRangeAssignment<MyTable::const_range_type>( v.range() );
     TestRangeAssignment<MyTable::range_type>( v.range() );
     // doesn't compile as expected: TestRangeAssignment<typename V::range_type>( u.range() );
 
     if( Verbose )
-        printf("testing construction and insertion from iterators range\n");
+        REPORT("testing construction and insertion from iterators range\n");
     FillTable( v, 1000 );
     MyTable2 t(v.begin(), v.end());
     CheckTable(t, 1000);
@@ -759,7 +759,7 @@ void TestIteratorsAndRanges() {
     CheckTable(t, 1000);
 
     if( Verbose )
-        printf("testing comparison\n");
+        REPORT("testing comparison\n");
     typedef tbb::concurrent_hash_map<MyKey,MyData2,YourHashCompare,MyAllocator> YourTable1;
     typedef tbb::concurrent_hash_map<MyKey,MyData2,YourHashCompare> YourTable2;
     YourTable1 t1;
@@ -785,7 +785,7 @@ void TestExceptions() {
         all_methods
     };
     if( Verbose )
-        printf("testing exception-safety guarantees\n");
+        REPORT("testing exception-safety guarantees\n");
     ThrowingTable src;
     FillTable( src, 1000 );
     ASSERT( MyDataCount==1000, NULL );
@@ -834,7 +834,7 @@ void TestExceptions() {
 
                 default:; // nothing to check here
                 }
-                if( Verbose ) printf("Exception %d: %s\t- ok ()\n", m, e.what());
+                if( Verbose ) REPORT("Exception %d: %s\t- ok ()\n", m, e.what());
             }
         }
     } catch(...) {
@@ -849,14 +849,14 @@ void TestExceptions() {
 
 #include "tbb/task_scheduler_init.h"
 
-//! Test driver
+__TBB_TEST_EXPORT
 int main( int argc, char* argv[] ) {
     // Default minimum number of threads is 1.
     MinThread = 1;
 
     ParseCommandLine(argc,argv);
     if( MinThread<0 ) {
-        printf("ERROR: must use at least one thread\n");
+        REPORT("ERROR: must use at least one thread\n");
         exit(1);
     }
 
@@ -865,7 +865,9 @@ int main( int argc, char* argv[] ) {
     TestCopy();
     TestAssignment();
     TestIteratorsAndRanges();
+#if !__TBB_EXCEPTION_HANDLING_TOTALLY_BROKEN
     TestExceptions();
+#endif
 
     // Do concurrency tests.
     for( int nthread=MinThread; nthread<=MaxThread; ++nthread ) {
@@ -878,6 +880,6 @@ int main( int argc, char* argv[] ) {
         tbb::internal::runtime_warning("none\nERROR: it must not be executed");
     }
 
-    printf("done\n");
+    REPORT("done\n");
     return 0;
 }

@@ -268,7 +268,7 @@ public:
     //! Enqueue an item at tail of queue if queue is not already full.
     /** Does not wait for queue to become not full.
         Returns true if item is pushed; false if queue was already full. */
-    bool push_if_not_full( const T& source ) {
+    bool try_push( const T& source ) {
         return internal_push_if_not_full( &source );
     }
 
@@ -294,7 +294,7 @@ public:
     }
 
     //! Set the capacity
-    /** Setting the capacity to 0 causes subsequent push_if_not_full operations to always fail,
+    /** Setting the capacity to 0 causes subsequent try_push operations to always fail,
         and subsequent push operations to block forever. */
     void set_capacity( size_type capacity ) {
         internal_set_capacity( capacity, sizeof(T) );
@@ -365,6 +365,13 @@ public:
     concurrent_queue( InputIterator begin, InputIterator end, const A& a = A()) :
         concurrent_bounded_queue<T,A>( begin, end, a )
     {
+    }
+
+    //! Enqueue an item at tail of queue if queue is not already full.
+    /** Does not wait for queue to become not full.
+        Returns true if item is pushed; false if queue was already full. */
+    bool push_if_not_full( const T& source ) {
+        return try_push( source );
     }
 
     //! Attempt to dequeue an item from head of queue.

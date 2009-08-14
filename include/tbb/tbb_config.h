@@ -91,10 +91,29 @@
 #define __TBB_TASK_DEQUE 1
 #endif /* !__TBB_TASK_DEQUE */
 
+#if __TBB_TASK_DEQUE
+#ifndef __TBB_RELAXED_OWNERSHIP
+#define __TBB_RELAXED_OWNERSHIP 1
+#endif /* !__TBB_RELAXED_OWNERSHIP */
+#else
+#ifdef __TBB_RELAXED_OWNERSHIP
+#undef __TBB_RELAXED_OWNERSHIP
+#endif /* __TBB_RELAXED_OWNERSHIP */
+#endif /* !__TBB_TASK_DEQUE */
+
 #ifndef __TBB_NEW_ITT_NOTIFY
 #define __TBB_NEW_ITT_NOTIFY 1
 #endif /* !__TBB_NEW_ITT_NOTIFY */
 
+#ifndef __TBB_PROVIDE_VIRTUAL_SCHEDULER
+#define __TBB_PROVIDE_VIRTUAL_SCHEDULER 0
+#endif /* !__TBB_PROVIDE_VIRTUAL_SCHEDULER */
+
+#if !__TBB_PROVIDE_VIRTUAL_SCHEDULER
+#ifdef DO_ITT_ANNOTATE
+#undef DO_ITT_ANNOTATE
+#endif
+#endif /* !__TBB_PROVIDE_VIRTUAL_SCHEDULER */
 
 /* TODO: The following condition should be extended as soon as new compilers/runtimes 
          with std::exception_ptr support appear. */
@@ -114,7 +133,21 @@
 #endif /* defined TBB_USE_CAPTURED_EXCEPTION */
 
 
+#ifndef __TBB_DEFAULT_PARTITIONER
+#if TBB_DEPRECATED
+/** Default partitioner for parallel loop templates in TBB 1.0-2.1 */
+#define __TBB_DEFAULT_PARTITIONER tbb::simple_partitioner
+#else
+/** Default partitioner for parallel loop templates in TBB 2.2 */
+#define __TBB_DEFAULT_PARTITIONER tbb::auto_partitioner
+#endif /* TBB_DEFAULT_PARTITIONER */
+#endif /* !defined(__TBB_DEFAULT_PARTITIONER */
+
 /** Workarounds presence **/
+
+#if __GNUC__==4 && __GNUC_MINOR__==4
+    #define __TBB_GCC_WARNING_SUPPRESSION_ENABLED 1
+#endif
 
 /** Macros of the form __TBB_XXX_BROKEN denote known issues that are caused by
     the bugs in compilers, standard or OS specific libraries. They should be 
@@ -143,5 +176,8 @@
     #define __TBB_PLACEMENT_NEW_EXCEPTION_SAFETY_BROKEN 1
 #endif /* __FreeBSD__ */
 
+#if __LRB__
+#include "tbb_config_lrb.h"
+#endif
 
 #endif /* __TBB_tbb_config_H */

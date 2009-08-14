@@ -11,14 +11,17 @@
 		<Platform
 			Name="Win32"
 		/>
+		<Platform
+			Name="x64"
+		/>
 	</Platforms>
 	<ToolFiles>
 	</ToolFiles>
 	<Configurations>
 		<Configuration
 			Name="Debug|Win32"
-			OutputDirectory="$(SolutionDir)$(ConfigurationName)"
-			IntermediateDirectory="$(ConfigurationName)"
+			OutputDirectory="$(TEMP)\tbb_examples\$(ConfigurationName)"
+			IntermediateDirectory="$(TEMP)\tbb_examples\$(SolutionName)\$(ConfigurationName)"
 			ConfigurationType="1"
 			CharacterSet="1"
 			ManagedExtensions="1"
@@ -41,7 +44,7 @@
 			<Tool
 				Name="VCCLCompilerTool"
 				Optimization="0"
-				AdditionalIncludeDirectories="D:\atupikov\trunk\tbb\1.0\include"
+				AdditionalIncludeDirectories="$(TBB22_INSTALL_DIR)\include"
 				PreprocessorDefinitions="WIN32;_WINDOWS;_DEBUG;"
 				MinimalRebuild="false"
 				BasicRuntimeChecks="0"
@@ -63,7 +66,7 @@
 				IgnoreImportLibrary="false"
 				AdditionalDependencies="tbb_debug.lib user32.lib $(NOINHERIT)"
 				LinkIncremental="2"
-				AdditionalLibraryDirectories="D:\atupikov\trunk\tbb\1.0\build\windows_ia32_cl_vc9_debug"
+				AdditionalLibraryDirectories="$(TBB22_INSTALL_DIR)\ia32\vc9\lib"
 				GenerateDebugInformation="true"
 				AssemblyDebug="1"
 				SubSystem="2"
@@ -92,12 +95,14 @@
 			/>
 			<Tool
 				Name="VCPostBuildEventTool"
+				Description="Copying DLLs and PDBs"
+				CommandLine="copy &quot;$(TBB22_INSTALL_DIR)\ia32\vc9\bin\tbb_debug.dll&quot; &quot;$(OutDir)&quot;&#x0D;&#x0A;copy  &quot;$(TBB22_INSTALL_DIR)\ia32\vc9\bin\tbb_debug.pdb&quot; &quot;$(OutDir)&quot;&#x0D;&#x0A;"
 			/>
 		</Configuration>
 		<Configuration
 			Name="Release|Win32"
-			OutputDirectory="$(SolutionDir)$(ConfigurationName)"
-			IntermediateDirectory="$(ConfigurationName)"
+			OutputDirectory="$(TEMP)\tbb_examples\$(ConfigurationName)"
+			IntermediateDirectory="$(TEMP)\tbb_examples\$(SolutionName)\$(ConfigurationName)"
 			ConfigurationType="1"
 			CharacterSet="2"
 			WholeProgramOptimization="1"
@@ -121,6 +126,8 @@
 				Name="VCCLCompilerTool"
 				Optimization="2"
 				EnableIntrinsicFunctions="true"
+				AdditionalIncludeDirectories="$(TBB22_INSTALL_DIR)\include"
+				PreprocessorDefinitions="WIN32;_WINDOWS;_DEBUG;"
 				RuntimeLibrary="2"
 				EnableFunctionLevelLinking="true"
 				WarningLevel="3"
@@ -137,6 +144,8 @@
 			/>
 			<Tool
 				Name="VCLinkerTool"
+				AdditionalDependencies="tbb.lib"
+				AdditionalLibraryDirectories="$(TBB22_INSTALL_DIR)\ia32\vc9\lib"
 				GenerateDebugInformation="true"
 				OptimizeReferences="2"
 				EnableCOMDATFolding="2"
@@ -162,6 +171,467 @@
 			/>
 			<Tool
 				Name="VCPostBuildEventTool"
+				Description="Copying DLLs and PDBs"
+				CommandLine="copy &quot;$(TBB22_INSTALL_DIR)\ia32\vc9\bin\tbb.dll&quot; &quot;$(OutDir)&quot;&#x0D;&#x0A;copy  &quot;$(TBB22_INSTALL_DIR)\ia32\vc9\bin\tbb.pdb&quot; &quot;$(OutDir)&quot;&#x0D;&#x0A;"
+			/>
+		</Configuration>
+		<Configuration
+			Name="Debug(console)|Win32"
+			OutputDirectory="$(TEMP)\tbb_examples\$(ConfigurationName)"
+			IntermediateDirectory="$(TEMP)\tbb_examples\$(SolutionName)\$(ConfigurationName)"
+			ConfigurationType="1"
+			CharacterSet="2"
+			>
+			<Tool
+				Name="VCPreBuildEventTool"
+			/>
+			<Tool
+				Name="VCCustomBuildTool"
+			/>
+			<Tool
+				Name="VCXMLDataGeneratorTool"
+			/>
+			<Tool
+				Name="VCWebServiceProxyGeneratorTool"
+			/>
+			<Tool
+				Name="VCMIDLTool"
+			/>
+			<Tool
+				Name="VCCLCompilerTool"
+				Optimization="0"
+				AdditionalIncludeDirectories="$(TBB22_INSTALL_DIR)\include"
+				PreprocessorDefinitions="WIN32;_DEBUG;_CONSOLE;_CRT_SECURE_NO_DEPRECATE;USE_SSE"
+				RuntimeLibrary="3"
+				Detect64BitPortabilityProblems="true"
+				DebugInformationFormat="3"
+			/>
+			<Tool
+				Name="VCManagedResourceCompilerTool"
+			/>
+			<Tool
+				Name="VCResourceCompilerTool"
+			/>
+			<Tool
+				Name="VCPreLinkEventTool"
+			/>
+			<Tool
+				Name="VCLinkerTool"
+				AdditionalDependencies="tbb_debug.lib"
+				LinkIncremental="1"
+				AdditionalLibraryDirectories="$(TBB22_INSTALL_DIR)\ia32\vc9\lib"
+				GenerateDebugInformation="true"
+				SubSystem="1"
+				TargetMachine="1"
+			/>
+			<Tool
+				Name="VCALinkTool"
+			/>
+			<Tool
+				Name="VCManifestTool"
+			/>
+			<Tool
+				Name="VCXDCMakeTool"
+			/>
+			<Tool
+				Name="VCBscMakeTool"
+			/>
+			<Tool
+				Name="VCFxCopTool"
+			/>
+			<Tool
+				Name="VCAppVerifierTool"
+			/>
+			<Tool
+				Name="VCPostBuildEventTool"
+				Description="Copying DLLs and PDBs"
+				CommandLine="copy &quot;$(TBB22_INSTALL_DIR)\ia32\vc9\bin\tbb_debug.dll&quot; &quot;$(OutDir)&quot;&#x0D;&#x0A;copy  &quot;$(TBB22_INSTALL_DIR)\ia32\vc9\bin\tbb_debug.pdb&quot; &quot;$(OutDir)&quot;&#x0D;&#x0A;"
+			/>
+		</Configuration>
+		<Configuration
+			Name="Release(console)|Win32"
+			OutputDirectory="$(TEMP)\tbb_examples\$(ConfigurationName)"
+			IntermediateDirectory="$(TEMP)\tbb_examples\$(SolutionName)\$(ConfigurationName)"
+			ConfigurationType="1"
+			CharacterSet="2"
+			>
+			<Tool
+				Name="VCPreBuildEventTool"
+			/>
+			<Tool
+				Name="VCCustomBuildTool"
+			/>
+			<Tool
+				Name="VCXMLDataGeneratorTool"
+			/>
+			<Tool
+				Name="VCWebServiceProxyGeneratorTool"
+			/>
+			<Tool
+				Name="VCMIDLTool"
+			/>
+			<Tool
+				Name="VCCLCompilerTool"
+				Optimization="2"
+				AdditionalIncludeDirectories="$(TBB22_INSTALL_DIR)\include"
+				PreprocessorDefinitions="WIN32;NDEBUG;_CONSOLE;_CRT_SECURE_NO_DEPRECATE;USE_SSE"
+				RuntimeLibrary="2"
+				Detect64BitPortabilityProblems="true"
+				DebugInformationFormat="3"
+			/>
+			<Tool
+				Name="VCManagedResourceCompilerTool"
+			/>
+			<Tool
+				Name="VCResourceCompilerTool"
+			/>
+			<Tool
+				Name="VCPreLinkEventTool"
+			/>
+			<Tool
+				Name="VCLinkerTool"
+				AdditionalDependencies="tbb.lib"
+				LinkIncremental="1"
+				AdditionalLibraryDirectories="$(TBB22_INSTALL_DIR)\ia32\vc9\lib"
+				GenerateDebugInformation="true"
+				SubSystem="1"
+				OptimizeReferences="2"
+				EnableCOMDATFolding="2"
+				FixedBaseAddress="1"
+				TargetMachine="1"
+			/>
+			<Tool
+				Name="VCALinkTool"
+			/>
+			<Tool
+				Name="VCManifestTool"
+			/>
+			<Tool
+				Name="VCXDCMakeTool"
+			/>
+			<Tool
+				Name="VCBscMakeTool"
+			/>
+			<Tool
+				Name="VCFxCopTool"
+			/>
+			<Tool
+				Name="VCAppVerifierTool"
+			/>
+			<Tool
+				Name="VCPostBuildEventTool"
+				Description="Copying DLLs and PDBs"
+				CommandLine="copy &quot;$(TBB22_INSTALL_DIR)\ia32\vc9\bin\tbb.dll&quot; &quot;$(OutDir)&quot;&#x0D;&#x0A;copy  &quot;$(TBB22_INSTALL_DIR)\ia32\vc9\bin\tbb.pdb&quot; &quot;$(OutDir)&quot;&#x0D;&#x0A;"
+			/>
+		</Configuration>
+		<Configuration
+			Name="Debug|x64"
+			OutputDirectory="$(TEMP)\tbb_examples\$(PlatformName)\$(ConfigurationName)"
+			IntermediateDirectory="$(TEMP)\tbb_examples\$(SolutionName)\$(PlatformName)\$(ConfigurationName)"
+			ConfigurationType="1"
+			CharacterSet="1"
+			ManagedExtensions="1"
+			>
+			<Tool
+				Name="VCPreBuildEventTool"
+			/>
+			<Tool
+				Name="VCCustomBuildTool"
+			/>
+			<Tool
+				Name="VCXMLDataGeneratorTool"
+			/>
+			<Tool
+				Name="VCWebServiceProxyGeneratorTool"
+			/>
+			<Tool
+				Name="VCMIDLTool"
+				TargetEnvironment="3"
+			/>
+			<Tool
+				Name="VCCLCompilerTool"
+				Optimization="0"
+				AdditionalIncludeDirectories="$(TBB22_INSTALL_DIR)\include"
+				PreprocessorDefinitions="WIN64;_WINDOWS;_DEBUG;"
+				MinimalRebuild="false"
+				BasicRuntimeChecks="0"
+				RuntimeLibrary="3"
+				WarningLevel="3"
+				DebugInformationFormat="3"
+			/>
+			<Tool
+				Name="VCManagedResourceCompilerTool"
+			/>
+			<Tool
+				Name="VCResourceCompilerTool"
+			/>
+			<Tool
+				Name="VCPreLinkEventTool"
+			/>
+			<Tool
+				Name="VCLinkerTool"
+				IgnoreImportLibrary="false"
+				AdditionalDependencies="tbb_debug.lib user32.lib $(NOINHERIT)"
+				LinkIncremental="2"
+				AdditionalLibraryDirectories="$(TBB22_INSTALL_DIR)\intel64\vc9\lib"
+				GenerateDebugInformation="true"
+				AssemblyDebug="1"
+				SubSystem="2"
+				EntryPointSymbol="main"
+				RandomizedBaseAddress="1"
+				DataExecutionPrevention="0"
+				TargetMachine="17"
+			/>
+			<Tool
+				Name="VCALinkTool"
+			/>
+			<Tool
+				Name="VCManifestTool"
+			/>
+			<Tool
+				Name="VCXDCMakeTool"
+			/>
+			<Tool
+				Name="VCBscMakeTool"
+			/>
+			<Tool
+				Name="VCFxCopTool"
+			/>
+			<Tool
+				Name="VCAppVerifierTool"
+			/>
+			<Tool
+				Name="VCPostBuildEventTool"
+				Description="Copying DLLs and PDBs"
+				CommandLine="copy &quot;$(TBB22_INSTALL_DIR)\intel64\vc9\bin\tbb_debug.dll&quot; &quot;$(OutDir)&quot;&#x0D;&#x0A;copy  &quot;$(TBB22_INSTALL_DIR)\intel64\vc9\bin\tbb_debug.pdb&quot; &quot;$(OutDir)&quot;&#x0D;&#x0A;"
+			/>
+		</Configuration>
+		<Configuration
+			Name="Release|x64"
+			OutputDirectory="$(TEMP)\tbb_examples\$(PlatformName)\$(ConfigurationName)"
+			IntermediateDirectory="$(TEMP)\tbb_examples\$(SolutionName)\$(PlatformName)\$(ConfigurationName)"
+			ConfigurationType="1"
+			CharacterSet="2"
+			WholeProgramOptimization="1"
+			>
+			<Tool
+				Name="VCPreBuildEventTool"
+			/>
+			<Tool
+				Name="VCCustomBuildTool"
+			/>
+			<Tool
+				Name="VCXMLDataGeneratorTool"
+			/>
+			<Tool
+				Name="VCWebServiceProxyGeneratorTool"
+			/>
+			<Tool
+				Name="VCMIDLTool"
+				TargetEnvironment="3"
+			/>
+			<Tool
+				Name="VCCLCompilerTool"
+				Optimization="2"
+				EnableIntrinsicFunctions="true"
+				AdditionalIncludeDirectories="$(TBB22_INSTALL_DIR)\include"
+				PreprocessorDefinitions="WIN64;_WINDOWS;_DEBUG;"
+				RuntimeLibrary="2"
+				EnableFunctionLevelLinking="true"
+				WarningLevel="3"
+				DebugInformationFormat="3"
+			/>
+			<Tool
+				Name="VCManagedResourceCompilerTool"
+			/>
+			<Tool
+				Name="VCResourceCompilerTool"
+			/>
+			<Tool
+				Name="VCPreLinkEventTool"
+			/>
+			<Tool
+				Name="VCLinkerTool"
+				AdditionalDependencies="tbb.lib"
+				AdditionalLibraryDirectories="$(TBB22_INSTALL_DIR)\intel64\vc9\lib"
+				GenerateDebugInformation="true"
+				OptimizeReferences="2"
+				EnableCOMDATFolding="2"
+				TargetMachine="17"
+			/>
+			<Tool
+				Name="VCALinkTool"
+			/>
+			<Tool
+				Name="VCManifestTool"
+			/>
+			<Tool
+				Name="VCXDCMakeTool"
+			/>
+			<Tool
+				Name="VCBscMakeTool"
+			/>
+			<Tool
+				Name="VCFxCopTool"
+			/>
+			<Tool
+				Name="VCAppVerifierTool"
+			/>
+			<Tool
+				Name="VCPostBuildEventTool"
+				Description="Copying DLLs and PDBs"
+				CommandLine="copy &quot;$(TBB22_INSTALL_DIR)\intel64\vc9\bin\tbb.dll&quot; &quot;$(OutDir)&quot;&#x0D;&#x0A;copy  &quot;$(TBB22_INSTALL_DIR)\intel64\vc9\bin\tbb.pdb&quot; &quot;$(OutDir)&quot;&#x0D;&#x0A;"
+			/>
+		</Configuration>
+		<Configuration
+			Name="Debug(console)|x64"
+			OutputDirectory="$(TEMP)\tbb_examples\$(PlatformName)\$(ConfigurationName)"
+			IntermediateDirectory="$(TEMP)\tbb_examples\$(SolutionName)\$(PlatformName)\$(ConfigurationName)"
+			ConfigurationType="1"
+			CharacterSet="2"
+			>
+			<Tool
+				Name="VCPreBuildEventTool"
+			/>
+			<Tool
+				Name="VCCustomBuildTool"
+			/>
+			<Tool
+				Name="VCXMLDataGeneratorTool"
+			/>
+			<Tool
+				Name="VCWebServiceProxyGeneratorTool"
+			/>
+			<Tool
+				Name="VCMIDLTool"
+				TargetEnvironment="3"
+			/>
+			<Tool
+				Name="VCCLCompilerTool"
+				Optimization="0"
+				AdditionalIncludeDirectories="$(TBB22_INSTALL_DIR)\include"
+				PreprocessorDefinitions="WIN64;_DEBUG;_CONSOLE;_CRT_SECURE_NO_DEPRECATE"
+				RuntimeLibrary="3"
+				Detect64BitPortabilityProblems="true"
+				DebugInformationFormat="3"
+			/>
+			<Tool
+				Name="VCManagedResourceCompilerTool"
+			/>
+			<Tool
+				Name="VCResourceCompilerTool"
+			/>
+			<Tool
+				Name="VCPreLinkEventTool"
+			/>
+			<Tool
+				Name="VCLinkerTool"
+				AdditionalDependencies="tbb_debug.lib"
+				LinkIncremental="1"
+				AdditionalLibraryDirectories="$(TBB22_INSTALL_DIR)\intel64\vc9\lib"
+				GenerateDebugInformation="true"
+				SubSystem="1"
+				TargetMachine="17"
+			/>
+			<Tool
+				Name="VCALinkTool"
+			/>
+			<Tool
+				Name="VCManifestTool"
+			/>
+			<Tool
+				Name="VCXDCMakeTool"
+			/>
+			<Tool
+				Name="VCBscMakeTool"
+			/>
+			<Tool
+				Name="VCFxCopTool"
+			/>
+			<Tool
+				Name="VCAppVerifierTool"
+			/>
+			<Tool
+				Name="VCPostBuildEventTool"
+				Description="Copying DLLs and PDBs"
+				CommandLine="copy &quot;$(TBB22_INSTALL_DIR)\intel64\vc9\bin\tbb_debug.dll&quot; &quot;$(OutDir)&quot;&#x0D;&#x0A;copy  &quot;$(TBB22_INSTALL_DIR)\intel64\vc9\bin\tbb_debug.pdb&quot; &quot;$(OutDir)&quot;&#x0D;&#x0A;"
+			/>
+		</Configuration>
+		<Configuration
+			Name="Release(console)|x64"
+			OutputDirectory="$(TEMP)\tbb_examples\$(PlatformName)\$(ConfigurationName)"
+			IntermediateDirectory="$(TEMP)\tbb_examples\$(SolutionName)\$(PlatformName)\$(ConfigurationName)"
+			ConfigurationType="1"
+			CharacterSet="2"
+			>
+			<Tool
+				Name="VCPreBuildEventTool"
+			/>
+			<Tool
+				Name="VCCustomBuildTool"
+			/>
+			<Tool
+				Name="VCXMLDataGeneratorTool"
+			/>
+			<Tool
+				Name="VCWebServiceProxyGeneratorTool"
+			/>
+			<Tool
+				Name="VCMIDLTool"
+				TargetEnvironment="3"
+			/>
+			<Tool
+				Name="VCCLCompilerTool"
+				Optimization="2"
+				AdditionalIncludeDirectories="$(TBB22_INSTALL_DIR)\include"
+				PreprocessorDefinitions="WIN64;NDEBUG;_CONSOLE;_CRT_SECURE_NO_DEPRECATE"
+				RuntimeLibrary="2"
+				Detect64BitPortabilityProblems="true"
+				DebugInformationFormat="3"
+			/>
+			<Tool
+				Name="VCManagedResourceCompilerTool"
+			/>
+			<Tool
+				Name="VCResourceCompilerTool"
+			/>
+			<Tool
+				Name="VCPreLinkEventTool"
+			/>
+			<Tool
+				Name="VCLinkerTool"
+				AdditionalDependencies="tbb.lib"
+				LinkIncremental="1"
+				AdditionalLibraryDirectories="$(TBB22_INSTALL_DIR)\intel64\vc9\lib"
+				GenerateDebugInformation="true"
+				SubSystem="1"
+				OptimizeReferences="2"
+				EnableCOMDATFolding="2"
+				FixedBaseAddress="1"
+				TargetMachine="17"
+			/>
+			<Tool
+				Name="VCALinkTool"
+			/>
+			<Tool
+				Name="VCManifestTool"
+			/>
+			<Tool
+				Name="VCXDCMakeTool"
+			/>
+			<Tool
+				Name="VCBscMakeTool"
+			/>
+			<Tool
+				Name="VCFxCopTool"
+			/>
+			<Tool
+				Name="VCAppVerifierTool"
+			/>
+			<Tool
+				Name="VCPostBuildEventTool"
+				Description="Copying DLLs and PDBs"
+				CommandLine="copy &quot;$(TBB22_INSTALL_DIR)\intel64\vc9\bin\tbb.dll&quot; &quot;$(OutDir)&quot;&#x0D;&#x0A;copy  &quot;$(TBB22_INSTALL_DIR)\intel64\vc9\bin\tbb.pdb&quot; &quot;$(OutDir)&quot;&#x0D;&#x0A;"
 			/>
 		</Configuration>
 	</Configurations>
@@ -201,6 +671,38 @@
 			<File
 				RelativePath="..\src\AssemblyInfo.cpp"
 				>
+				<FileConfiguration
+					Name="Debug(console)|Win32"
+					ExcludedFromBuild="true"
+					>
+					<Tool
+						Name="VCCLCompilerTool"
+					/>
+				</FileConfiguration>
+				<FileConfiguration
+					Name="Release(console)|Win32"
+					ExcludedFromBuild="true"
+					>
+					<Tool
+						Name="VCCLCompilerTool"
+					/>
+				</FileConfiguration>
+				<FileConfiguration
+					Name="Debug(console)|x64"
+					ExcludedFromBuild="true"
+					>
+					<Tool
+						Name="VCCLCompilerTool"
+					/>
+				</FileConfiguration>
+				<FileConfiguration
+					Name="Release(console)|x64"
+					ExcludedFromBuild="true"
+					>
+					<Tool
+						Name="VCCLCompilerTool"
+					/>
+				</FileConfiguration>
 			</File>
 			<File
 				RelativePath="..\src\Evolution.cpp"

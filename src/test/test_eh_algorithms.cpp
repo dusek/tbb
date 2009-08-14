@@ -26,6 +26,7 @@
     the GNU General Public License.
 */
 
+#include <limits.h> // for INT_MAX
 #include "tbb/task_scheduler_init.h"
 #include "tbb/tbb_exception.h"
 #include "tbb/task.h"
@@ -34,10 +35,11 @@
 #include "tbb/parallel_reduce.h"
 #include "tbb/parallel_do.h"
 #include "tbb/pipeline.h"
+#include "tbb/parallel_scan.h"
 #include "tbb/blocked_range.h"
 #include "harness_assert.h"
 
-#if __TBB_EXCEPTIONS
+#if __TBB_EXCEPTIONS && !__TBB_EXCEPTION_HANDLING_TOTALLY_BROKEN
 
 #define FLAT_RANGE  100000
 #define FLAT_GRAIN  1000
@@ -47,8 +49,6 @@
 #define NESTED_GRAIN  (FLAT_GRAIN / NESTING_GRAIN)
 
 tbb::atomic<intptr_t> g_FedTasksCount; // number of tasks added by parallel_do feeder
-
-#include <limits.h> // for INT_MAX
 
 inline intptr_t Existed () { return INT_MAX; }
 
@@ -1198,10 +1198,202 @@ void RunPipelineTests() {
 }
 #endif /* __TBB_EXCEPTIONS */
 
+////////////////////////////////////////////////////////////////////////////////
+// Tests for tbb::parallel_scan
+
+const int id = 0;
+const int PSCAN_SIZE_OF_BUFFER = 100;
+
+class PScanBodyNothrow : public tbb::internal::no_assign {
+    size_t sum;
+    const size_t* const x;
+    size_t* const y;
+public:
+    PScanBodyNothrow( size_t y_[], const size_t x_[] ) : sum(id), x(x_), y(y_) {}
+    size_t get_sum() const {return sum;}
+    template<typename Tag>
+    void operator()( const tbb::blocked_range<int>& r, Tag ) {
+        size_t temp = sum;
+        for( int i=r.begin(); i<r.end(); ++i ) {
+            temp = temp + x[i];
+            if( Tag::is_final_scan() )
+                y[i] = temp;
+        }
+        sum = temp;
+    }
+    PScanBodyNothrow( PScanBodyNothrow& b, tbb::split ) :  sum(id), x(b.x), y(b.y) {}
+    void reverse_join( PScanBodyNothrow& a ) { sum = a.sum + sum;}
+    void assign( PScanBodyNothrow& b ) {sum = b.sum;}
+};
+
+// Test parallel_scan without exceptions throwing
+void Test0_parallel_scan () {
+    ResetGlobals();
+
+    // TODO move to a function or macro
+    size_t x[100], y[100], y_ref[100], sum = 0;
+    for (size_t i = 0; i < 100; i ++)
+    {
+        x[i] = i;
+        y[i] = 0;
+        sum += x[i];
+        y_ref[i] = sum;
+    }
+
+    PScanBodyNothrow body(y,x);
+    tbb::parallel_scan( tbb::blocked_range<int>(0, 100, 1), body );
+    for (size_t i = 0; i < 100; i ++)
+    {
+        ASSERT(y[i] == y_ref[i], "Sum got from parallel_scan is different from serial one");
+    }
+    ASSERT(body.get_sum() == y_ref[99], "Sum got from parallel_scan is different from serial one");
+
+} // void Test0_parallel_scan ()
+
+// Simple parallel_scan body which throws an exception
+class SimplePscanBody {
+public:
+    SimplePscanBody( ) {}
+    template<typename Tag>
+    void operator()( const tbb::blocked_range<int>& , Tag ) {
+        ++g_CurExecuted;
+        Harness::ConcurrencyTracker ct;
+        WaitUntilConcurrencyPeaks();
+        ThrowTestException(1);
+    }
+    SimplePscanBody( SimplePscanBody&, tbb::split ) {}
+    void reverse_join( SimplePscanBody& ) {}
+    void assign( SimplePscanBody& ) {}
+};
+
+// Tests tbb::parallel_scan exceptions handling without nesting
+void Test1_parallel_scan()
+{
+    ResetGlobals();
+
+    TRY();
+        SimplePscanBody simple_body;
+        tbb::parallel_scan( tbb::blocked_range<int>(0, 100, 1), simple_body );
+    CATCH_AND_ASSERT();
+
+    ASSERT (g_CurExecuted <= g_ExecutedAtCatch + g_NumThreads, "Too many tasks survived exception");
+    ASSERT (g_Exceptions == 1, "No try_blocks in any body expected in this test");
+    if ( !g_SolitaryException )
+        ASSERT (g_CurExecuted <= g_ExecutedAtCatch + g_NumThreads, "Too many tasks survived exception");
+} // void Test1_parallel_scan()
+
+class NestingPScanBody {
+public:
+    NestingPScanBody( ) {}
+    template<typename Tag>
+    void operator()( const tbb::blocked_range<int>&, Tag ) {
+        ++g_CurExecuted;
+        if ( Harness::CurrentTid() == g_Master )
+            __TBB_Yield();
+
+        SimplePscanBody simple_body;
+        tbb::parallel_scan( tbb::blocked_range<int>(0, 100, 1), simple_body );
+    }
+    NestingPScanBody( NestingPScanBody& , tbb::split ) {}
+    void reverse_join( NestingPScanBody& ) {}
+    void assign( NestingPScanBody& ) {}
+};
+
+//! Uses parallel_scan body containing a nested parallel_scan with the default context not wrapped by a try-block.
+/** Nested algorithms are spawned inside the new bound context by default. Since
+    exceptions thrown from the nested parallel_scan are not handled by the caller
+    (nesting parallel_scan body) in this test, they will cancel all the sibling nested
+    algorithms. **/
+void Test2_parallel_scan () {
+    ResetGlobals();
+
+    TRY();
+        NestingPScanBody nesting_body;
+        tbb::parallel_scan( tbb::blocked_range<int>(0, 100, 1), nesting_body );
+    CATCH_AND_ASSERT();
+
+    ASSERT (g_ExceptionThrown, "No exception thrown from the nesting parallel_scan");
+    ASSERT (g_CurExecuted <= g_ExecutedAtCatch + g_NumThreads, "Too many tasks survived exception");
+    ASSERT (g_Exceptions == 1, "No try_blocks in any body expected in this test");
+    if ( !g_SolitaryException )
+        ASSERT (g_CurExecuted <= g_ExecutedAtCatch + g_NumThreads, "Too many tasks survived exception");
+} // void Test2_parallel_scan ()
+
+class PScanBodyToCancel {
+public:
+    PScanBodyToCancel( ) {}
+    template<typename Tag>
+    void operator()( const tbb::blocked_range<int>&, Tag ) {
+        ++g_CurExecuted;
+        CancellatorTask::WaitUntilReady();
+    }
+    PScanBodyToCancel( PScanBodyToCancel& , tbb::split ) {}
+    void reverse_join( PScanBodyToCancel& ) {}
+    void assign( PScanBodyToCancel& ) {}
+};
+
+typedef class EmptyClass {
+} Default_partitioner;
+
+template <typename Partitioner>
+class MyWorkerPScanTask : public tbb::task
+{
+    tbb::task_group_context &my_ctx;
+
+    tbb::task* execute () {
+        PScanBodyToCancel body_to_cancel;
+        tbb::parallel_scan( tbb::blocked_range<int>(0, 100, 1), body_to_cancel, Partitioner(), my_ctx );
+        return NULL;
+    }
+public:
+    MyWorkerPScanTask ( tbb::task_group_context& ctx ) : my_ctx(ctx) {}
+};
+
+template <>
+class MyWorkerPScanTask<Default_partitioner> : public tbb::task
+{
+    tbb::task_group_context &my_ctx;
+
+    tbb::task* execute () {
+        PScanBodyToCancel body_to_cancel;
+        tbb::parallel_scan( tbb::blocked_range<int>(0, 100, 1), body_to_cancel, my_ctx );
+        return NULL;
+    }
+public:
+    MyWorkerPScanTask ( tbb::task_group_context& ctx ) : my_ctx(ctx) {}
+};
+
+
+//! Test for cancelling an algorithm from outside (from a task running in parallel with the algorithm).
+template <typename Partitioner>
+void Test5_parallel_scan () {
+    ResetGlobals( false );
+    RunCancellationTest<MyWorkerPScanTask<Partitioner>, CancellatorTask>( 1 );
+    ASSERT (g_CurExecuted < g_ExecutedAtCatch + g_NumThreads, "Too many tasks were executed after cancellation");
+} // void Test5_parallel_scan ()
+
+
+void RunPScanTests()
+{
+    tbb::task_scheduler_init init (g_NumThreads);
+    g_Master = Harness::CurrentTid();
+
+    Test0_parallel_scan();
+#if !(__GLIBC__==2&&__GLIBC_MINOR__==3)
+    Test1_parallel_scan();
+    Test2_parallel_scan();
+#endif /* __GLIBC__ */
+    if (g_NumThreads > 2) {
+        Test5_parallel_scan<tbb::simple_partitioner>();
+        Test5_parallel_scan<tbb::auto_partitioner>();
+        Test5_parallel_scan<Default_partitioner>(); // default partitioner
+    }
+}
 
 /** If min and max thread numbers specified on the command line are different,
     the test is run only for 2 sizes of the thread pool (MinThread and MaxThread)
     to be able to test the high and low contention modes while keeping the test reasonably fast **/
+__TBB_TEST_EXPORT
 int main(int argc, char* argv[]) {
     ParseCommandLine( argc, argv );
     MinThread = max(2, MinThread);
@@ -1218,14 +1410,15 @@ int main(int argc, char* argv[]) {
             RunParForAndReduceTests();
             RunParDoTests();
             RunPipelineTests();
+            RunPScanTests();
         }
     }
 #if __TBB_EXCEPTION_HANDLING_BROKEN
-    printf("Warning: Exception handling tests are skipped due to a known issue.\n");
+    REPORT("Warning: Exception handling tests are skipped due to a known issue.\n");
 #endif
-    printf("done\n");
-#else  /* !__TBB_EXCEPTIONS */
-    printf("skipped\n");
+    REPORT("done\n");
+#else  /* !__TBB_EXCEPTION_HANDLING_BROKEN */
+    REPORT("skipped\n");
 #endif /* !__TBB_EXCEPTIONS */
     return 0;
 }

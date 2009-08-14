@@ -26,7 +26,9 @@
     the GNU General Public License.
 */
 
-#pragma once
+#ifndef _CONSOLE
+#ifndef __FORM1_H__
+#define __FORM1_H__
 
 #include <time.h>
 #include "Board.h"
@@ -308,4 +310,5 @@
         System::Void menuStrip1_ItemClicked(System::Object^  sender, System::Windows::Forms::ToolStripItemClickedEventArgs^  e) 
         {}
 };
-
+#endif
+#endif

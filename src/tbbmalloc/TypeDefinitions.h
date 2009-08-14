@@ -92,11 +92,16 @@ static inline bool isPowerOfTwoMultiple(uintptr_t arg, uintptr_t divisor) {
     return arg && (0==(arg & (arg-divisor)));
 }
 
+namespace rml {
+namespace internal {
+
 void lockRecursiveMallocFlag();
 void unlockRecursiveMallocFlag();
 
 extern bool  original_malloc_found;
 extern void* (*original_malloc_ptr)(size_t);
 extern void  (*original_free_ptr)(void*);
+
+} } // namespaces
 
 #endif /* _itt_shared_malloc_TypeDefinitions_H_ */

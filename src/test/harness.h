@@ -35,17 +35,23 @@
 #define tbb_tests_harness_H
 
 #define __TBB_LAMBDAS_PRESENT  ( _MSC_VER >= 1600 && !__INTEL_COMPILER || __INTEL_COMPILER >= 1100 && _TBB_CPP0X )
+#define __TBB_LAMBDA_AS_TEMPL_PARAM_BROKEN (__INTEL_COMPILER == 1100 || __INTEL_COMPILER == 1110)
 
 #if __SUNPRO_CC
-#include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 #else
-#include <cstdio>
 #include <cstdlib>
 #include <cstring>
 #endif
 #include <new>
+
+#if __LRB__
+#include "harness_lrb.h"
+#else
+#define __TBB_TEST_EXPORT
+#define REPORT_FATAL_ERROR REPORT
+#endif /* !__LRB__ */
 
 #if _WIN32||_WIN64
     #include <windows.h>
@@ -57,6 +63,8 @@
 #include <sys/utsname.h> /* for uname */
 #include <errno.h>       /* for use in LinuxKernelVersion() */
 #endif
+
+#include "harness_report.h"
 
 #if !HARNESS_NO_ASSERT
 #include "harness_assert.h"
@@ -70,10 +78,12 @@ void SetHarnessErrorProcessing( test_error_extra_t extra_call ) {
 }
 //! Reports errors issued by failed assertions
 void ReportError( const char* filename, int line, const char* expression, const char * message ) {
-    printf("%s:%d, assertion %s: %s\n", filename, line, expression, message ? message : "failed" );
+    REPORT_FATAL_ERROR("%s:%d, assertion %s: %s\n", filename, line, expression, message ? message : "failed" );
     if( ErrorExtraCall )
         (*ErrorExtraCall)();
-#if TBB_EXIT_ON_ASSERT
+#if TBB_TERMINATE_ON_ASSERT
+    TerminateProcess(GetCurrentProcess(), 1);
+#elif TBB_EXIT_ON_ASSERT
     exit(1);
 #else
     abort();
@@ -81,7 +91,7 @@ void ReportError( const char* filename, int line, const char* expression, const 
 }
 //! Reports warnings issued by failed warning assertions
 void ReportWarning( const char* filename, int line, const char* expression, const char * message ) {
-    printf("Warning: %s:%d, assertion %s: %s\n", filename, line, expression, message ? message : "failed" );
+    REPORT("Warning: %s:%d, assertion %s: %s\n", filename, line, expression, message ? message : "failed" );
 }
 #else
 #define ASSERT(p,msg) ((void)0)
@@ -122,21 +132,29 @@ static void ParseCommandLine( int argc, char* argv[] ) {
         else if( *endptr=='\0' ) 
             MaxThread = MinThread;
         if( *endptr!='\0' ) {
-            printf("garbled nthread range\n");
+            REPORT_FATAL_ERROR("garbled nthread range\n");
             exit(1);
         }    
         if( MinThread<0 ) {
-            printf("nthread must be nonnegative\n");
+            REPORT_FATAL_ERROR("nthread must be nonnegative\n");
             exit(1);
         }
         if( MaxThread<MinThread ) {
-            printf("nthread range is backwards\n");
+            REPORT_FATAL_ERROR("nthread range is backwards\n");
             exit(1);
         }
         ++i;
     }
+#if __TBB_STDARGS_BROKEN
+    if ( !argc )
+        argc = 1;
+    else {
+        while ( i < argc && argv[i][0] == 0 )
+            ++i;
+    }
+#endif /* __TBB_STDARGS_BROKEN */
     if( i!=argc ) {
-        printf("Usage: %s [-v] [nthread|minthread:maxthread]\n", argv[0] );
+        REPORT_FATAL_ERROR("Usage: %s [-v] [nthread|minthread:maxthread]\n", argv[0] );
         exit(1);
     }
 }
@@ -316,11 +334,11 @@ inline unsigned LinuxKernelVersion()
     struct utsname utsnameBuf;
     
     if (-1 == uname(&utsnameBuf)) {
-        printf("Can't call uname: errno %d\n", errno);
+        REPORT_FATAL_ERROR("Can't call uname: errno %d\n", errno);
         exit(1);
     }
     if (3 != sscanf(utsnameBuf.release, "%u.%u.%u", &a, &b, &c)) {
-        printf("Unable to parse OS release '%s'\n", utsnameBuf.release);
+        REPORT_FATAL_ERROR("Unable to parse OS release '%s'\n", utsnameBuf.release);
         exit(1);
     }
     return 1000000*a+1000*b+c;

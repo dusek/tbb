@@ -48,7 +48,7 @@
 using namespace std;
 
 #if _DEBUG
-char *faceNames[] = { "North", "East", "South", "West" };
+const char *faceNames[] = { "North", "East", "South", "West" };
 #endif
 
 /** 

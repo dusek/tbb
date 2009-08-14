@@ -156,7 +156,7 @@ namespace internal {
 // parallel_invoke with user-defined context
 // two arguments
 template<typename F0, typename F1 >
-void parallel_invoke(F0& f0, F1& f1, tbb::task_group_context& context) {
+void parallel_invoke(F0 f0, F1 f1, tbb::task_group_context& context) {
     internal::parallel_invoke_cleaner cleaner(2, context);
     internal::parallel_invoke_helper& root = cleaner.root;
 
@@ -167,7 +167,7 @@ void parallel_invoke(F0& f0, F1& f1, tbb::task_group_context& context) {
 
 // three arguments
 template<typename F0, typename F1, typename F2 >
-void parallel_invoke(F0& f0, F1& f1, F2& f2, tbb::task_group_context& context) {
+void parallel_invoke(F0 f0, F1 f1, F2 f2, tbb::task_group_context& context) {
     internal::parallel_invoke_cleaner cleaner(3, context);
     internal::parallel_invoke_helper& root = cleaner.root;
 
@@ -179,7 +179,7 @@ void parallel_invoke(F0& f0, F1& f1, F2& f2, tbb::task_group_context& context) {
 
 // four arguments
 template<typename F0, typename F1, typename F2, typename F3>
-void parallel_invoke(F0& f0, F1& f1, F2& f2, F3& f3, tbb::task_group_context& context) {
+void parallel_invoke(F0 f0, F1 f1, F2 f2, F3 f3, tbb::task_group_context& context) {
     internal::parallel_invoke_cleaner cleaner(4, context);
     internal::parallel_invoke_helper& root = cleaner.root;
 
@@ -192,7 +192,7 @@ void parallel_invoke(F0& f0, F1& f1, F2& f2, F3& f3, tbb::task_group_context& co
 
 // five arguments
 template<typename F0, typename F1, typename F2, typename F3, typename F4 >
-void parallel_invoke(F0& f0, F1& f1, F2& f2, F3& f3, F4& f4, tbb::task_group_context& context) {
+void parallel_invoke(F0 f0, F1 f1, F2 f2, F3 f3, F4 f4, tbb::task_group_context& context) {
     internal::parallel_invoke_cleaner cleaner(3, context);
     internal::parallel_invoke_helper& root = cleaner.root;
 
@@ -204,7 +204,7 @@ void parallel_invoke(F0& f0, F1& f1, F2& f2, F3& f3, F4& f4, tbb::task_group_con
 
 // six arguments
 template<typename F0, typename F1, typename F2, typename F3, typename F4, typename F5 >
-void parallel_invoke(F0& f0, F1& f1, F2& f2, F3& f3, F4& f4, F5& f5, tbb::task_group_context& context) {
+void parallel_invoke(F0 f0, F1 f1, F2 f2, F3 f3, F4 f4, F5 f5, tbb::task_group_context& context) {
     internal::parallel_invoke_cleaner cleaner(3, context);
     internal::parallel_invoke_helper& root = cleaner.root;
 
@@ -216,7 +216,7 @@ void parallel_invoke(F0& f0, F1& f1, F2& f2, F3& f3, F4& f4, F5& f5, tbb::task_g
 
 // seven arguments
 template<typename F0, typename F1, typename F2, typename F3, typename F4, typename F5, typename F6 >
-void parallel_invoke(F0& f0, F1& f1, F2& f2, F3& f3, F4& f4, F5& f5, F6& f6, tbb::task_group_context& context) {
+void parallel_invoke(F0 f0, F1 f1, F2 f2, F3 f3, F4 f4, F5 f5, F6 f6, tbb::task_group_context& context) {
     internal::parallel_invoke_cleaner cleaner(3, context);
     internal::parallel_invoke_helper& root = cleaner.root;
 
@@ -229,7 +229,7 @@ void parallel_invoke(F0& f0, F1& f1, F2& f2, F3& f3, F4& f4, F5& f5, F6& f6, tbb
 // eight arguments
 template<typename F0, typename F1, typename F2, typename F3, typename F4, typename F5, typename F6,
     typename F7>
-void parallel_invoke(F0& f0, F1& f1, F2& f2, F3& f3, F4& f4, F5& f5, F6& f6, F7& f7, tbb::task_group_context& context) {
+void parallel_invoke(F0 f0, F1 f1, F2 f2, F3 f3, F4 f4, F5 f5, F6 f6, F7 f7, tbb::task_group_context& context) {
     internal::parallel_invoke_cleaner cleaner(4, context);
     internal::parallel_invoke_helper& root = cleaner.root;
 
@@ -243,7 +243,7 @@ void parallel_invoke(F0& f0, F1& f1, F2& f2, F3& f3, F4& f4, F5& f5, F6& f6, F7&
 // nine arguments
 template<typename F0, typename F1, typename F2, typename F3, typename F4, typename F5, typename F6,
         typename F7, typename F8>
-void parallel_invoke(F0& f0, F1& f1, F2& f2, F3& f3, F4& f4, F5& f5, F6& f6, F7& f7, F8& f8, tbb::task_group_context& context) {
+void parallel_invoke(F0 f0, F1 f1, F2 f2, F3 f3, F4 f4, F5 f5, F6 f6, F7 f7, F8 f8, tbb::task_group_context& context) {
     internal::parallel_invoke_cleaner cleaner(4, context);
     internal::parallel_invoke_helper& root = cleaner.root;
 
@@ -257,7 +257,7 @@ void parallel_invoke(F0& f0, F1& f1, F2& f2, F3& f3, F4& f4, F5& f5, F6& f6, F7&
 // ten arguments
 template<typename F0, typename F1, typename F2, typename F3, typename F4, typename F5, typename F6,
         typename F7, typename F8, typename F9>
-void parallel_invoke(F0& f0, F1& f1, F2& f2, F3& f3, F4& f4, F5& f5, F6& f6, F7& f7, F8& f8, F9 &f9, tbb::task_group_context& context) {
+void parallel_invoke(F0 f0, F1 f1, F2 f2, F3 f3, F4 f4, F5 f5, F6 f6, F7 f7, F8 f8, F9 f9, tbb::task_group_context& context) {
     internal::parallel_invoke_cleaner cleaner(4, context);
     internal::parallel_invoke_helper& root = cleaner.root;
 
@@ -270,58 +270,58 @@ void parallel_invoke(F0& f0, F1& f1, F2& f2, F3& f3, F4& f4, F5& f5, F6& f6, F7&
 
 // two arguments
 template<typename F0, typename F1>
-void parallel_invoke(F0& f0, F1& f1) {
+void parallel_invoke(F0 f0, F1 f1) {
     task_group_context context;
     parallel_invoke<F0, F1>(f0, f1, context);
 }
 // three arguments
 template<typename F0, typename F1, typename F2>
-void parallel_invoke(F0& f0, F1& f1, F2& f2) {
+void parallel_invoke(F0 f0, F1 f1, F2 f2) {
     task_group_context context;
     parallel_invoke<F0, F1, F2>(f0, f1, f2, context);
 }
 // four arguments
 template<typename F0, typename F1, typename F2, typename F3 >
-void parallel_invoke(F0& f0, F1& f1, F2& f2, F3& f3) {
+void parallel_invoke(F0 f0, F1 f1, F2 f2, F3 f3) {
     task_group_context context;
     parallel_invoke<F0, F1, F2, F3>(f0, f1, f2, f3, context);
 }
 // five arguments
 template<typename F0, typename F1, typename F2, typename F3, typename F4>
-void parallel_invoke(F0& f0, F1& f1, F2& f2, F3& f3, F4& f4) {
+void parallel_invoke(F0 f0, F1 f1, F2 f2, F3 f3, F4 f4) {
     task_group_context context;
     parallel_invoke<F0, F1, F2, F3, F4>(f0, f1, f2, f3, f4, context);
 }
 // six arguments
 template<typename F0, typename F1, typename F2, typename F3, typename F4, typename F5>
-void parallel_invoke(F0& f0, F1& f1, F2& f2, F3& f3, F4& f4, F5& f5) {
+void parallel_invoke(F0 f0, F1 f1, F2 f2, F3 f3, F4 f4, F5 f5) {
     task_group_context context;
     parallel_invoke<F0, F1, F2, F3, F4, F5>(f0, f1, f2, f3, f4, f5, context);
 }
 // seven arguments
 template<typename F0, typename F1, typename F2, typename F3, typename F4, typename F5, typename F6>
-void parallel_invoke(F0& f0, F1& f1, F2& f2, F3& f3, F4& f4, F5& f5, F6& f6) {
+void parallel_invoke(F0 f0, F1 f1, F2 f2, F3 f3, F4 f4, F5 f5, F6 f6) {
     task_group_context context;
     parallel_invoke<F0, F1, F2, F3, F4, F5, F6>(f0, f1, f2, f3, f4, f5, f6, context);
 }
 // eigth arguments
 template<typename F0, typename F1, typename F2, typename F3, typename F4, typename F5, typename F6,
         typename F7>
-void parallel_invoke(F0& f0, F1& f1, F2& f2, F3& f3, F4& f4, F5& f5, F6& f6, F7& f7) {
+void parallel_invoke(F0 f0, F1 f1, F2 f2, F3 f3, F4 f4, F5 f5, F6 f6, F7 f7) {
     task_group_context context;
     parallel_invoke<F0, F1, F2, F3, F4, F5, F6, F7>(f0, f1, f2, f3, f4, f5, f6, f7, context);
 }
 // nine arguments
 template<typename F0, typename F1, typename F2, typename F3, typename F4, typename F5, typename F6,
         typename F7, typename F8>
-void parallel_invoke(F0& f0, F1& f1, F2& f2, F3& f3, F4& f4, F5& f5, F6& f6, F7& f7, F8& f8) {
+void parallel_invoke(F0 f0, F1 f1, F2 f2, F3 f3, F4 f4, F5 f5, F6 f6, F7 f7, F8 f8) {
     task_group_context context;
     parallel_invoke<F0, F1, F2, F3, F4, F5, F6, F7, F8>(f0, f1, f2, f3, f4, f5, f6, f7, f8, context);
 }
 // ten arguments
 template<typename F0, typename F1, typename F2, typename F3, typename F4, typename F5, typename F6,
         typename F7, typename F8, typename F9>
-void parallel_invoke(F0& f0, F1& f1, F2& f2, F3& f3, F4& f4, F5& f5, F6& f6, F7& f7, F8& f8, F9& f9) {
+void parallel_invoke(F0 f0, F1 f1, F2 f2, F3 f3, F4 f4, F5 f5, F6 f6, F7 f7, F8 f8, F9 f9) {
     task_group_context context;
     parallel_invoke<F0, F1, F2, F3, F4, F5, F6, F7, F8, F9>(f0, f1, f2, f3, f4, f5, f6, f7, f8, f9, context);
 }

@@ -43,7 +43,7 @@ namespace internal {
         parallel_for_each_body(Function &_func) : my_func(_func) {}
         parallel_for_each_body(const parallel_for_each_body<Function, Iterator> &_caller) : my_func(_caller.my_func) {}
 
-        void operator() ( typename Iterator::value_type value ) const {
+        void operator() ( typename std::iterator_traits<Iterator>::value_type value ) const {
             my_func(value);
         }
     };
@@ -53,23 +53,23 @@ namespace internal {
 /** \name parallel_for_each
     **/
 //@{
-//! Calls function _Func for all items from [_First, Last) interval using user-supplied context
+//! Calls function f for all items from [first, last) interval using user-supplied context
 /** @ingroup algorithms */
-template<typename Input_iterator, typename Function>
-Function parallel_for_each(Input_iterator _First, Input_iterator _Last, Function _Func, task_group_context &context) {
-    internal::parallel_for_each_body<Function, Input_iterator> body(_Func);
+template<typename InputIterator, typename Function>
+Function parallel_for_each(InputIterator first, InputIterator last, Function f, task_group_context &context) {
+    internal::parallel_for_each_body<Function, InputIterator> body(f);
 
-    tbb::parallel_do (_First, _Last, body, context);
-    return _Func;
+    tbb::parallel_do (first, last, body, context);
+    return f;
 }
 
-//! uses default context
-template<typename Input_iterator, typename Function>
-Function parallel_for_each(Input_iterator _First, Input_iterator _Last, Function _Func) {
-    tbb::task_group_context context;
+//! Uses default context
+template<typename InputIterator, typename Function>
+Function parallel_for_each(InputIterator first, InputIterator last, Function f) {
+    internal::parallel_for_each_body<Function, InputIterator> body(f);
 
-    tbb::parallel_for_each (_First, _Last, _Func, context);
-    return _Func;
+    tbb::parallel_do (first, last, body);
+    return f;
 }
 
 //@}

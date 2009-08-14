@@ -31,11 +31,15 @@
 
 namespace tbb {
     
+//! A mutex which does nothing
+/** A null_mutex does no operation and simulates success.
+    @ingroup synchronization */
 class null_mutex {   
     //! Deny assignment and copy construction 
     null_mutex( const null_mutex& );   
     void operator=( const null_mutex& );   
 public:   
+    //! Represents acquisition of a mutex.
     class scoped_lock {   
     public:   
         scoped_lock() {}

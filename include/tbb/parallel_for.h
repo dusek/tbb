@@ -34,6 +34,7 @@
 #include "blocked_range.h"
 #include <new>
 #include <stdexcept> // std::invalid_argument
+#include <string> // std::invalid_argument text
 
 namespace tbb {
 
@@ -125,10 +126,17 @@ namespace internal {
     See also requirements on \ref range_req "Range" and \ref parallel_for_body_req "parallel_for Body". **/
 //@{
 
-//! Parallel iteration over range with simple partitioner, or default partitioner if no partitioner is specified.
+//! Parallel iteration over range with default partitioner. 
 /** @ingroup algorithms **/
 template<typename Range, typename Body>
-void parallel_for( const Range& range, const Body& body, const simple_partitioner& partitioner=simple_partitioner() ) {
+void parallel_for( const Range& range, const Body& body ) {
+    internal::start_for<Range,Body,__TBB_DEFAULT_PARTITIONER>::run(range,body,__TBB_DEFAULT_PARTITIONER());
+}
+
+//! Parallel iteration over range with simple partitioner.
+/** @ingroup algorithms **/
+template<typename Range, typename Body>
+void parallel_for( const Range& range, const Body& body, const simple_partitioner& partitioner ) {
     internal::start_for<Range,Body,simple_partitioner>::run(range,body,partitioner);
 }
 
@@ -173,17 +181,17 @@ void parallel_for( const Range& range, const Body& body, affinity_partitioner& p
 //! @cond INTERNAL
 namespace internal {
     //! Calls the function with values from range [begin, end) with a step provided
-template<typename Function, typename Index_type>
+template<typename Function, typename Index>
 class parallel_for_body : internal::no_assign {
     Function &my_func;
-    const Index_type my_begin;
-    const Index_type my_step; 
+    const Index my_begin;
+    const Index my_step; 
 public:
-    parallel_for_body( Function& _func, Index_type& _begin, Index_type& _step) 
+    parallel_for_body( Function& _func, Index& _begin, Index& _step) 
         : my_func(_func), my_begin(_begin), my_step(_step) {}
     
-    void operator()( tbb::blocked_range<Index_type>& r ) const {
-        for( Index_type i = r.begin(),  k = my_begin + i * my_step; i < r.end(); i++, k = k + my_step)
+    void operator()( tbb::blocked_range<Index>& r ) const {
+        for( Index i = r.begin(),  k = my_begin + i * my_step; i < r.end(); i++, k = k + my_step)
             my_func( k );
     }
 };
@@ -194,23 +202,23 @@ namespace strict_ppl {
 
 //@{
 //! Parallel iteration over a range of integers with a step provided
-template <typename Index_type, typename Function>
-Function parallel_for(Index_type _First, Index_type _Last, Index_type _Step, Function _Func) {
+template <typename Index, typename Function>
+Function parallel_for(Index first, Index last, Index step, Function f) {
     tbb::task_group_context context;
-    return parallel_for(_First, _Last, _Step, _Func, context);
+    return parallel_for(first, last, step, f, context);
 }
-template <typename Index_type, typename Function>
-Function parallel_for(Index_type _First, Index_type _Last, Index_type _Step, Function _Func, tbb::task_group_context &context) {
-    if (_Step <= 0 ) throw std::invalid_argument("_Step should be positive");
+template <typename Index, typename Function>
+Function parallel_for(Index first, Index last, Index step, Function f, tbb::task_group_context &context) {
+    if (step <= 0 ) throw std::invalid_argument("step should be positive");
 
-    if (_Last > _First) {
-        Index_type end = (_Last - _First) / _Step;
-        if (_First + end * _Step < _Last) end++;
-        tbb::blocked_range<Index_type> range(static_cast<Index_type>(0), end);
-        internal::parallel_for_body<Function, Index_type> body(_Func, _First, _Step);
+    if (last > first) {
+        Index end = (last - first) / step;
+        if (first + end * step < last) end++;
+        tbb::blocked_range<Index> range(static_cast<Index>(0), end);
+        internal::parallel_for_body<Function, Index> body(f, first, step);
         tbb::parallel_for(range, body, tbb::auto_partitioner(), context);
     }
-    return _Func;
+    return f;
 }
 //@}
 

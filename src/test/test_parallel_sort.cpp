@@ -26,9 +26,6 @@
     the GNU General Public License.
 */
 
-#include "tbb/parallel_sort.h"
-
-#include "harness.h"
 #include <math.h>
 #include <algorithm>
 #include <iterator>
@@ -37,8 +34,10 @@
 #include <cstring>
 #include <exception>
 
+#include "tbb/parallel_sort.h"
 #include "tbb/task_scheduler_init.h"
 #include "tbb/concurrent_vector.h"
+#include "harness.h"
 
 /** Has tightly controlled interface so that we can verify
     that parallel_sort uses only the required interface. */
@@ -78,7 +77,7 @@ bool Validate<std::string *>(std::string * a, std::string * b, size_t n) {
     for (size_t i = 0; i < n; i++) {
         if ( Verbose && a[i] != b[i]) {
           for (size_t j = 0; j < n; j++) {
-              printf("a[%llu] == %s and b[%llu] == %s\n", static_cast<unsigned long long>(j), a[j].c_str(), static_cast<unsigned long long>(j), b[j].c_str());
+              REPORT("a[%llu] == %s and b[%llu] == %s\n", static_cast<unsigned long long>(j), a[j].c_str(), static_cast<unsigned long long>(j), b[j].c_str());
           }
         }
         ASSERT( a[i] == b[i], NULL );
@@ -338,7 +337,7 @@ bool parallel_sortTest(size_t n, RandomAccessIterator iter, RandomAccessIterator
     init_iter(iter, sorted_list, n, local_comp, true);
     do {
         if ( Verbose) 
-            printf("%s %s p=%llu n=%llu :",current_type.c_str(), test_type.c_str(), 
+            REPORT("%s %s p=%llu n=%llu :",current_type.c_str(), test_type.c_str(), 
                    static_cast<unsigned long long>(current_p), static_cast<unsigned long long>(n));
         if (comp != NULL) {
             tbb::parallel_sort(iter, iter + n, local_comp );
@@ -347,7 +346,7 @@ bool parallel_sortTest(size_t n, RandomAccessIterator iter, RandomAccessIterator
          }
         if (!Validate(iter, sorted_list, n)) 
             passed = false;
-        if ( Verbose ) printf("passed\n");
+        if ( Verbose ) REPORT("passed\n");
     } while (init_iter(iter, sorted_list, n, local_comp, false));
     return passed;
 }
@@ -362,14 +361,14 @@ bool parallel_sortTest(size_t n, Minimal * iter, Minimal * sorted_list, const Mi
     init_iter(iter, sorted_list, n, *compare, true);
     do {
         if ( Verbose) 
-            printf("%s %s p=%llu n=%llu :",current_type.c_str(), test_type.c_str(),
+            REPORT("%s %s p=%llu n=%llu :",current_type.c_str(), test_type.c_str(),
                     static_cast<unsigned long long>(current_p), static_cast<unsigned long long>(n));
 
         tbb::parallel_sort(iter, iter + n, *compare );
 
         if (!Validate(iter, sorted_list, n))
             passed = false;
-        if ( Verbose ) printf("passed\n");
+        if ( Verbose ) REPORT("passed\n");
     } while (init_iter(iter, sorted_list, n, *compare, false));
     return passed;
 }
@@ -385,14 +384,14 @@ bool parallel_sortTest(size_t n, tbb::concurrent_vector<Minimal>::iterator iter,
     init_iter(iter, sorted_list, n, *compare, true);
     do {
         if ( Verbose) 
-            printf("%s %s p=%llu n=%llu :",current_type.c_str(), test_type.c_str(),
+            REPORT("%s %s p=%llu n=%llu :",current_type.c_str(), test_type.c_str(),
                     static_cast<unsigned long long>(current_p), static_cast<unsigned long long>(n));
     
         tbb::parallel_sort(iter, iter + n, *compare );
 
         if (!Validate(iter, sorted_list, n))
             passed = false;
-        if ( Verbose ) printf("passed\n");
+        if ( Verbose ) REPORT("passed\n");
     } while (init_iter(iter, sorted_list, n, *compare, false));
     return passed;
 }
@@ -509,11 +508,11 @@ void Flog() {
 #include <cstdio>
 #include "harness_cpu.h"
 
-//! Parses the command line and iterates over the number of threads, calling Flog
+__TBB_TEST_EXPORT
 int main( int argc, char* argv[] ) {
     ParseCommandLine(argc,argv);
     if( MinThread<1 ) {
-        printf("Usage: number of threads must be positive\n");
+        REPORT("Usage: number of threads must be positive\n");
         exit(1);
     }
     for( int p=MinThread; p<=MaxThread; ++p ) {
@@ -526,7 +525,7 @@ int main( int argc, char* argv[] ) {
             TestCPUUserTime(p);
         }
     } 
-    printf("done\n");
+    REPORT("done\n");
     return 0;
 }
 

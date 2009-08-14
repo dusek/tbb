@@ -85,7 +85,7 @@ struct Invariant {
         long tmp;
         for( long k=0; k<N; ++k )
             if( (tmp=value[k])!=expected_value ) {
-                printf("ERROR: %ld!=%ld\n", tmp, expected_value);
+                REPORT("ERROR: %ld!=%ld\n", tmp, expected_value);
                 return false;
             }
         return true;
@@ -153,7 +153,7 @@ void Invariant<M,N>::flog_once( size_t mode )
         }
     }
     if( !okay ) {
-        printf( "ERROR for %s at %ld: %s %s %s %s\n",mutex_name, long(mode),
+        REPORT( "ERROR for %s at %ld: %s %s %s %s\n",mutex_name, long(mode),
                 write?"write,":"read,", write?(mode%16==7?"downgrade,":""):(mode%8==3?"upgrade,":""),
                 lock_kept?"lock kept,":"lock not kept,", (mode/8)&1?"imp/exp":"exp/imp" );
     }
@@ -179,7 +179,7 @@ struct Work: NoAssign {
 template<typename M>
 void Test( const char * name, int nthread ) {
     if( Verbose )
-        printf("testing %s\n",name);
+        REPORT("testing %s\n",name);
     Counter<M> counter;
     counter.value = 0;
     Order = 0;
@@ -189,9 +189,9 @@ void Test( const char * name, int nthread ) {
     tbb::tick_count t1 = tbb::tick_count::now();
 
     if( Verbose )
-        printf("%s time = %g usec\n",name, (t1-t0).seconds() );
+        REPORT("%s time = %g usec\n",name, (t1-t0).seconds() );
     if( counter.value!=test_size )
-        printf("ERROR for %s: counter.value=%ld != %ld=test_size\n",name,counter.value,test_size);
+        REPORT("ERROR for %s: counter.value=%ld != %ld=test_size\n",name,counter.value,test_size);
 }
 
 
@@ -199,7 +199,7 @@ void Test( const char * name, int nthread ) {
 template<typename M>
 void TestReaderWriter( const char * mutex_name, int nthread ) {
     if( Verbose )
-        printf("testing %s\n",mutex_name);
+        REPORT("testing %s\n",mutex_name);
     Invariant<M,8> invariant(mutex_name);
     Order = 0;
     static const long test_size = 1000000;
@@ -209,16 +209,17 @@ void TestReaderWriter( const char * mutex_name, int nthread ) {
     // There is either a writer or a reader upgraded to a writer for each 4th iteration
     long expected_value = test_size/4;
     if( !invariant.value_is(expected_value) )
-        printf("ERROR for %s: final invariant value is wrong\n",mutex_name);
+        REPORT("ERROR for %s: final invariant value is wrong\n",mutex_name);
     if( Verbose )
-        printf("%s readers & writers time = %g usec\n",mutex_name,(t1-t0).seconds());
+        REPORT("%s readers & writers time = %g usec\n",mutex_name,(t1-t0).seconds());
 }
 
+__TBB_TEST_EXPORT
 int main( int argc, char * argv[] ) {
     ParseCommandLine( argc, argv );
     for( int p=MinThread; p<=MaxThread; ++p ) {
         if( Verbose )
-            printf( "testing with %d threads\n", p );
+            REPORT( "testing with %d threads\n", p );
         Test<tbb::spin_mutex>( "spin_mutex", p );
         Test<tbb::queuing_mutex>( "queuing_mutex", p );
         Test<tbb::queuing_rw_mutex>( "queuing_rw_mutex", p );
@@ -226,6 +227,6 @@ int main( int argc, char * argv[] ) {
         TestReaderWriter<tbb::queuing_rw_mutex>( "queuing_rw_mutex", p );
         TestReaderWriter<tbb::spin_rw_mutex>( "spin_rw_mutex", p );
     }
-    printf("done\n");
+    REPORT("done\n");
     return 0;
 }

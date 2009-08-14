@@ -67,6 +67,7 @@ struct Hammer: NoAssign {
 queuing_rw_mutex QRW_mutex;
 spin_rw_mutex SRW_mutex;
 
+__TBB_TEST_EXPORT
 int main( int argc, char* argv[]) {
     ParseCommandLine( argc, argv );
     for( int p=MinThread; p<=MaxThread; ++p ) {
@@ -75,6 +76,6 @@ int main( int argc, char* argv[]) {
         Count = 0;
         NativeParallelFor( p, Hammer<spin_rw_mutex>(SRW_mutex) );
     }
-    printf("done\n");
+    REPORT("done\n");
     return 0;
 }

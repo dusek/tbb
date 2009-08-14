@@ -2,10 +2,8 @@
 <BODY>
 
 <H2>Overview</H2>
-Text filter that demonstrates class pipeline. Example program 
-reads a file contains decimal integers in text format and changes each 
-to its square.
-The <A href=" ../../../doc/Tutorial.pdf">Tutorial</A> explains this example in detail.
+Text filter that demonstrates class pipeline. Example program reads a file 
+containing decimal integers in text format, and changes each to its square.
 
 <H2>Files</H2>
 <DL>
@@ -32,6 +30,14 @@ The <A href=" ../../../doc/Tutorial.pdf">Tutorial</A> explains this example in d
 <H2>To Build</H2>
 General build directions can be found <A HREF=../../index.html#build>here</A>.
 <P></P>
+Two additional targets for this example:
+<DL>
+    <DT><TT>make gen_input</TT>
+    <DD>Create an input generator program that prints out a sequence of integers.
+    <DT><TT>make input.txt</TT>
+    <DD>Create an input file for the example (with help of <TT>gen_input</TT>).
+</DL>
+<P></P>
 
 <H2>Usage</H2>
 <DL>
@@ -39,11 +45,14 @@ General build directions can be found <A HREF=../../index.html#build>here</A>.
 <DD>Run the example on the named <I>inputfile</I> (optional, default value is "input.txt") and produce the named <I>outputfile</I> (optional, default value is "output.txt").
     <I>N</I> is the number of threads to be used (optional).
     
+<DT><TT>gen_input [<I>LN</I>] &gt; <I>inputfile</I></TT>
+<DD>Generate a file named <I>inputfile</I> consisting of <I>LN</I> lines each containing one integer.
+    If not specified, <I>LN</I> is assumed to be 1000000.
+    
 <DT>To run a short version of this example, e.g., for use with Intel&reg; Threading Tools:
 <DD>Build a <I>debug</I> version of the example
     (see the <A HREF=../../index.html#build>build directions</A>).
-    <BR>Prepare an <I>inputfile</I> with about 5,000 lines of text (e.g., by 
-        <TT>gen_input 5000</TT>).
+    <BR>Prepare an <I>inputfile</I> with about 5,000 lines of text (see the instruction above).
     <BR>Run it with this <I>inputfile</I> and the desired number of threads,
 	e.g., <TT>square <I>inputfile</I> <I>outputfile</I> 4</TT>.
 </DL>

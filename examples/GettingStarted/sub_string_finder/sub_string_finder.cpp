@@ -29,7 +29,7 @@
 #include <iostream>
 #include <string>
 #include <algorithm>
-#include "tbb/task_scheduler_init.h"
+
 #include "tbb/parallel_for.h"
 #include "tbb/blocked_range.h"
 
@@ -66,7 +66,7 @@ class SubStringFinder {
 };
 
 int main(int argc, char *argv[]) {
- task_scheduler_init init;
+ 
 
  string str[N] = { string("a"), string("b") };
  for (size_t i = 2; i < N; ++i) str[i] = str[i-1]+str[i-2];

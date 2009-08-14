@@ -70,7 +70,6 @@ void InitializeAndTerminate( int maxthread ) {
 #if _WIN64
 namespace std {      // 64-bit Windows compilers have not caught up with 1998 ISO C++ standard
     using ::srand;
-    using ::printf;
 }
 #endif /* _WIN64 */
 
@@ -79,7 +78,7 @@ struct ThreadedInit {
         try {
             InitializeAndTerminate(MaxThread);
         } catch( std::runtime_error& error ) {
-            std::printf("ERROR: %s\n", error.what() );
+            REPORT("ERROR: %s\n", error.what() );
         }
     }
 };
@@ -89,7 +88,7 @@ struct ThreadedInit {
 #include <tchar.h>
 #endif /* _MSC_VER */
 
-//! Test driver
+__TBB_TEST_EXPORT
 int main(int argc, char* argv[]) {
 #if _MSC_VER && !__TBB_NO_IMPLICIT_LINKAGE
     #ifdef _DEBUG
@@ -107,12 +106,12 @@ int main(int argc, char* argv[]) {
     try {
         InitializeAndTerminate(MaxThread);
     } catch( std::runtime_error& error ) {
-        std::printf("ERROR: %s\n", error.what() );
+        REPORT("ERROR: %s\n", error.what() );
     }
     for( int p=MinThread; p<=MaxThread; ++p ) {
-        if( Verbose ) printf("testing with %d threads\n", p );
+        if( Verbose ) REPORT("testing with %d threads\n", p );
         NativeParallelFor( p, ThreadedInit() );
     }
-    std::printf("done\n");
+    REPORT("done\n");
     return 0;
 }

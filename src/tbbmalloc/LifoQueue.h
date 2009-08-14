@@ -38,9 +38,9 @@
 #define FINE_GRAIN_LOCKS
 #endif
 
-namespace ThreadingSubstrate {
+namespace rml {
 
-namespace Internal {
+namespace internal {
 
 class LifoQueue {
 public:
@@ -90,8 +90,8 @@ done:
 
 #endif /* FINE_GRAIN_LOCKS     */
 
-} // namespace Internal
-} // namespace ThreadingSubstrate
+} // namespace internal
+} // namespace rml
 
 #endif /* _itt_common_malloc_LifoQueue_H_ */
 

@@ -51,15 +51,19 @@ bool __TBB_internal_find_original_malloc(int num, const char *names[], void *tab
 
 #define malloc_proxy __TBB_malloc_proxy
 
+#endif /* MALLOC_LD_PRELOAD */
+
+namespace rml {
+namespace internal {
+
+#if MALLOC_LD_PRELOAD
+
 void* (*original_malloc_ptr)(size_t) = 0;
 void  (*original_free_ptr)(void*) = 0;
 static void* (*original_calloc_ptr)(size_t,size_t) = 0;
 static void* (*original_realloc_ptr)(void*,size_t) = 0;
 
 #endif /* MALLOC_LD_PRELOAD */
-
-namespace tbb {
-namespace internal {
 
 #if __TBB_NEW_ITT_NOTIFY
 extern "C" 
@@ -70,7 +74,7 @@ void ITT_DoOneTimeInitialization() {} // required for itt_notify.cpp to work
 /** Caller is responsible for ensuring this routine is called exactly once. */
 void MallocInitializeITT() {
 #if __TBB_NEW_ITT_NOTIFY
-    __TBB_load_ittnotify();
+    tbb::internal::__TBB_load_ittnotify();
 #else
     bool success = false;
     // Check if we are running under control of VTune.
@@ -122,27 +126,6 @@ struct RegisterProcessShutdownNotification {
 
 static RegisterProcessShutdownNotification reg;
 #endif
-
-} } // namespaces
-
-#ifdef _WIN32
-#include <windows.h>
-
-extern "C" BOOL WINAPI DllMain( HINSTANCE hInst, DWORD callReason, LPVOID )
-{
-
-    if (callReason==DLL_THREAD_DETACH)
-    {
-        mallocThreadShutdownNotification(NULL);
-    }
-    else if (callReason==DLL_PROCESS_DETACH)
-    {
-        mallocProcessShutdownNotification();
-    }
-    return TRUE;
-}
-
-#endif //_WIN32
 
 #if MALLOC_LD_PRELOAD
 
@@ -223,3 +206,25 @@ void __TBB_internal_free(void *object)
 } /* extern "C" */
 
 #endif /* MALLOC_LD_PRELOAD */
+
+} } // namespaces
+
+#ifdef _WIN32
+#include <windows.h>
+
+extern "C" BOOL WINAPI DllMain( HINSTANCE hInst, DWORD callReason, LPVOID )
+{
+
+    if (callReason==DLL_THREAD_DETACH)
+    {
+        mallocThreadShutdownNotification(NULL);
+    }
+    else if (callReason==DLL_PROCESS_DETACH)
+    {
+        mallocProcessShutdownNotification();
+    }
+    return TRUE;
+}
+
+#endif //_WIN32
+

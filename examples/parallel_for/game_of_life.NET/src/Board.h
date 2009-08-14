@@ -26,9 +26,12 @@
     the GNU General Public License.
 */
 
-#pragma once
+#ifndef __BOARD_H__ 
+#define __BOARD_H__
 
 #define WIN32_LEAN_AND_MEAN
+
+#ifndef _CONSOLE
 #include <windows.h>
 
 using namespace System;
@@ -37,6 +40,12 @@ using namespace System::Collections;
 using namespace System::Windows::Forms;
 using namespace System::Data;
 using namespace System::Drawing;
+#define LabelPtr Label^
+#define BoardPtr Board^
+#else
+#define LabelPtr int*
+#define BoardPtr Board*
+#endif
 
 struct Matrix 
 {
@@ -45,21 +54,18 @@ struct Matrix
     char* data;
 };
 
-    public ref class Board : public System::Windows::Forms::UserControl
+#ifndef _CONSOLE
+public ref class Board : public System::Windows::Forms::UserControl
+#else
+class Board
+#endif
     {
     public:
-        Board(int width, int height, int squareSize, Label^ counter);        
-        virtual ~Board()
-        {
-            if (components)
-            {
-                delete components;
-            }
-        }
-
+        Board(int width, int height, int squareSize, LabelPtr counter);        
+        virtual ~Board();
         void seed(int s);
-        void seed(const Board^ s);
-    
+        void seed(const BoardPtr s);
+#ifndef _CONSOLE
     protected: 
         virtual void OnPaint(PaintEventArgs^ e) override;        
         void Board::draw(Graphics^ g);
@@ -89,19 +95,21 @@ struct Matrix
             m_counter->Text = nCurIteration.ToString();
             Invalidate();
         }
-    
+#endif
     public:
         Matrix *m_matrix;    
 
     private:
+#ifndef _CONSOLE
         SolidBrush^ m_occupiedBrush;
         SolidBrush^ m_freeBrush;
         Graphics^ m_graphics;
         Graphics^ m_mem_dc;
         Bitmap^ m_bmp;
+#endif
         int m_width;
         int m_height;
         int m_squareSize;
-        Label^ m_counter;
+        LabelPtr m_counter;
     };
-
+#endif

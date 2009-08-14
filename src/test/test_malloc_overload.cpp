@@ -36,6 +36,7 @@
 
 #if MALLOC_REPLACEMENT_AVAILABLE
 
+#include "harness_report.h"
 #include "harness_assert.h"
 #include <stdlib.h>
 #include <malloc.h>
@@ -113,13 +114,12 @@ struct BigStruct {
     char f[minLargeObjectSize];
 };
 
-int main(int , char *[])
-{
+int main(int , char *[]) {
     void *ptr, *ptr1;
 
 #if MALLOC_REPLACEMENT_AVAILABLE == 1
     if (NULL == dlsym(RTLD_DEFAULT, "scalable_malloc")) {
-        printf("libtbbmalloc not found\nfail\n");
+        REPORT("libtbbmalloc not found\nfail\n");
         return 1;
     }
 #endif
@@ -194,18 +194,17 @@ int main(int , char *[])
 #else
     const char* s = "done";
 #endif
-    printf("%s\n", s);
+    REPORT("%s\n", s);
     return 0;
 }
 
 #define HARNESS_NO_PARSE_COMMAND_LINE 1
 #include "harness.h"
 
-#else  /* MALLOC_REPLACEMENT_AVAILABLE */
+#else  /* !MALLOC_REPLACEMENT_AVAILABLE */
 #include <stdio.h>
 
-int main(int , char *[])
-{
+int main(int , char *[]) {
     printf("skip\n");
 }
-#endif /* MALLOC_REPLACEMENT_AVAILABLE */
+#endif /* !MALLOC_REPLACEMENT_AVAILABLE */

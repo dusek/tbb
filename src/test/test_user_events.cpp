@@ -200,10 +200,10 @@ void Test()
 }  // namespace internal
 }  // namespace tbb
 
-int main()
-{
+__TBB_TEST_EXPORT
+int main() {
     tbb::internal::Test();
-    std::printf("done\n");
+    REPORT("done\n");
 }
 
 #define HARNESS_NO_PARSE_COMMAND_LINE 1

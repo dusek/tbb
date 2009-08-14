@@ -185,21 +185,6 @@ void operator delete[](void* ptr, const std::nothrow_t&) throw() {
 #include <stdio.h>
 #include "tbb_function_replacement.h"
 
-#define HEAP_INIT_SIZE 0x100000
-#define HEAP_MAX_SIZE 0x1000000
-
-// Replace the CRT malloc with heap allocation, using my private heap
-HANDLE myHeap = 0;
-
-typedef struct PAGE_DB_t {
-    CRITICAL_SECTION cs;
-    DWORD alloc;
-    DWORD last;
-    LPVOID *db;
-} PAGE_DB;
-
-static PAGE_DB pageDB;
-
 extern "C" void safer_scalable_free( void *ptr, void*);
 extern "C" void* safer_scalable_realloc( void *ptr, size_t, void* );
 
@@ -259,8 +244,6 @@ const char* modules_to_replace[] = {
     "msvcr80.dll",
     "msvcr90d.dll",
     "msvcr90.dll",
-    "msvcrtd.dll",
-    "msvcrt.dll",
     "msvcr70d.dll",
     "msvcr70.dll",
     "msvcr71d.dll",
@@ -320,25 +303,9 @@ FRDATA routines_to_replace[] = {
     { "??_U@YAPAXIABUnothrow_t@std@@@Z", (FUNCPTR)operator_new_arr_t, FRR_IGNORE }
 };
 
-// Initialize the malloc replacement data structures
-void initializeMallocReplacement()
+void doMallocReplacement()
 {
     int i,j;
-    myHeap = HeapCreate(HEAP_NO_SERIALIZE, HEAP_INIT_SIZE, HEAP_MAX_SIZE);
-    if (myHeap == 0)
-    {
-        fprintf(stderr, "Can't create private heap\n");
-        exit(1);
-    }
-    pageDB.alloc = 100;
-    pageDB.last = 0;
-    pageDB.db = (LPVOID *)HeapAlloc(myHeap, HEAP_ZERO_MEMORY, pageDB.alloc * sizeof(LPVOID));
-    if (pageDB.db == 0)
-    {
-        fprintf(stderr, "Can't create my pointer database\n");
-        exit(1);
-    }
-    InitializeCriticalSection(&pageDB.cs);
 
     // Replace malloc functions
     int modules_to_replace_count = sizeof(modules_to_replace) / sizeof(modules_to_replace[0]);
@@ -361,16 +328,15 @@ void initializeMallocReplacement()
 extern "C" BOOL WINAPI DllMain( HINSTANCE hInst, DWORD callReason, LPVOID reserved )
 {
 
-    if ( callReason==DLL_PROCESS_ATTACH && reserved && hInst )
-    {
+    if ( callReason==DLL_PROCESS_ATTACH && reserved && hInst ) {
 #if TBBMALLOC_USE_TBB_FOR_ALLOCATOR_ENV_CONTROLLED
         char pinEnvVariable[50];
         if( GetEnvironmentVariable("TBBMALLOC_USE_TBB_FOR_ALLOCATOR", pinEnvVariable, 50))
         {
-            initializeMallocReplacement();
+            doMallocReplacement();
         }
 #else
-    initializeMallocReplacement();
+        doMallocReplacement();
 #endif
     }
 

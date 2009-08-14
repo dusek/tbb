@@ -24,7 +24,7 @@
 				InlineFunctionExpansion="2"
 				FavorSizeOrSpeed="1"
 				OmitFramePointers="TRUE"
-				AdditionalIncludeDirectories="&quot;$(TBB21_INSTALL_DIR)\include&quot;"
+				AdditionalIncludeDirectories="&quot;$(TBB22_INSTALL_DIR)\include&quot;"
 				PreprocessorDefinitions="WIN32;_WINDOWS;_DEBUG;_CONSOLE"
 				RuntimeLibrary="3"
 				EnableFunctionLevelLinking="TRUE"
@@ -37,7 +37,7 @@
 				Name="VCLinkerTool"
 				AdditionalDependencies="tbb_debug.lib tbbmalloc_debug.lib"
 				LinkIncremental="1"
-				AdditionalLibraryDirectories="&quot;$(TBB21_INSTALL_DIR)\ia32\vc7.1\lib&quot;"
+				AdditionalLibraryDirectories="&quot;$(TBB22_INSTALL_DIR)\ia32\vc7.1\lib&quot;"
 				GenerateDebugInformation="TRUE"
 				SubSystem="1"
 				TargetMachine="1"
@@ -47,8 +47,8 @@
 			<Tool
 				Name="VCPostBuildEventTool"
 				Description="Copying DLLs and PDBs"
-				CommandLine="copy &quot;$(TBB21_INSTALL_DIR)\ia32\vc7.1\bin\tbb_debug.dll&quot; &quot;$(OutDir)&quot;&#x0D;&#x0A; copy  &quot;$(TBB21_INSTALL_DIR)\ia32\vc7.1\bin\tbb_debug.pdb&quot; &quot;$(OutDir)&quot;
-copy &quot;$(TBB21_INSTALL_DIR)\ia32\vc7.1\bin\tbbmalloc_debug.dll&quot; &quot;$(OutDir)&quot;&#x0D;&#x0A; copy &quot;$(TBB21_INSTALL_DIR)\ia32\vc7.1\bin\tbbmalloc_debug.pdb&quot; &quot;$(OutDir)&quot;
+				CommandLine="copy &quot;$(TBB22_INSTALL_DIR)\ia32\vc7.1\bin\tbb_debug.dll&quot; &quot;$(OutDir)&quot;&#x0D;&#x0A; copy  &quot;$(TBB22_INSTALL_DIR)\ia32\vc7.1\bin\tbb_debug.pdb&quot; &quot;$(OutDir)&quot;
+copy &quot;$(TBB22_INSTALL_DIR)\ia32\vc7.1\bin\tbbmalloc_debug.dll&quot; &quot;$(OutDir)&quot;&#x0D;&#x0A; copy &quot;$(TBB22_INSTALL_DIR)\ia32\vc7.1\bin\tbbmalloc_debug.pdb&quot; &quot;$(OutDir)&quot;
 "/>
 			<Tool
 				Name="VCPreBuildEventTool"/>
@@ -80,7 +80,7 @@ copy &quot;$(TBB21_INSTALL_DIR)\ia32\vc7.1\bin\tbbmalloc_debug.dll&quot; &quot;$
 				InlineFunctionExpansion="2"
 				FavorSizeOrSpeed="1"
 				OmitFramePointers="TRUE"
-				AdditionalIncludeDirectories="&quot;$(TBB21_INSTALL_DIR)\include&quot;"
+				AdditionalIncludeDirectories="&quot;$(TBB22_INSTALL_DIR)\include&quot;"
 				PreprocessorDefinitions="WIN32;_WINDOWS;NDEBUG;_CONSOLE"
 				RuntimeLibrary="2"
 				EnableFunctionLevelLinking="TRUE"
@@ -93,7 +93,7 @@ copy &quot;$(TBB21_INSTALL_DIR)\ia32\vc7.1\bin\tbbmalloc_debug.dll&quot; &quot;$
 				Name="VCLinkerTool"
 				AdditionalDependencies="tbb.lib tbbmalloc.lib"
 				LinkIncremental="1"
-				AdditionalLibraryDirectories="&quot;$(TBB21_INSTALL_DIR)\ia32\vc7.1\lib&quot;"
+				AdditionalLibraryDirectories="&quot;$(TBB22_INSTALL_DIR)\ia32\vc7.1\lib&quot;"
 				GenerateDebugInformation="TRUE"
 				SubSystem="1"
 				OptimizeReferences="2"
@@ -105,8 +105,8 @@ copy &quot;$(TBB21_INSTALL_DIR)\ia32\vc7.1\bin\tbbmalloc_debug.dll&quot; &quot;$
 			<Tool
 				Name="VCPostBuildEventTool"
 				Description="Copying DLLs and PDBs"
-				CommandLine="copy &quot;$(TBB21_INSTALL_DIR)\ia32\vc7.1\bin\tbb.dll&quot; &quot;$(OutDir)&quot;&#x0D;&#x0A; copy  &quot;$(TBB21_INSTALL_DIR)\ia32\vc7.1\bin\tbb.pdb&quot; &quot;$(OutDir)&quot;
-copy &quot;$(TBB21_INSTALL_DIR)\ia32\vc7.1\bin\tbbmalloc.dll&quot; &quot;$(OutDir)&quot;&#x0D;&#x0A; copy  &quot;$(TBB21_INSTALL_DIR)\ia32\vc7.1\bin\tbbmalloc.pdb&quot; &quot;$(OutDir)&quot;
+				CommandLine="copy &quot;$(TBB22_INSTALL_DIR)\ia32\vc7.1\bin\tbb.dll&quot; &quot;$(OutDir)&quot;&#x0D;&#x0A; copy  &quot;$(TBB22_INSTALL_DIR)\ia32\vc7.1\bin\tbb.pdb&quot; &quot;$(OutDir)&quot;
+copy &quot;$(TBB22_INSTALL_DIR)\ia32\vc7.1\bin\tbbmalloc.dll&quot; &quot;$(OutDir)&quot;&#x0D;&#x0A; copy  &quot;$(TBB22_INSTALL_DIR)\ia32\vc7.1\bin\tbbmalloc.pdb&quot; &quot;$(OutDir)&quot;
 "/>
 			<Tool
 				Name="VCPreBuildEventTool"/>
@@ -138,7 +138,7 @@ copy &quot;$(TBB21_INSTALL_DIR)\ia32\vc7.1\bin\tbbmalloc.dll&quot; &quot;$(OutDi
 				InlineFunctionExpansion="2"
 				FavorSizeOrSpeed="1"
 				OmitFramePointers="TRUE"
-				AdditionalIncludeDirectories="&quot;$(TBB21_INSTALL_DIR)\include&quot;"
+				AdditionalIncludeDirectories="&quot;$(TBB22_INSTALL_DIR)\include&quot;"
 				PreprocessorDefinitions="WIN32;NDEBUG;_CONSOLE;_WINDOWS"
 				RuntimeLibrary="2"
 				EnableFunctionLevelLinking="TRUE"
@@ -151,7 +151,7 @@ copy &quot;$(TBB21_INSTALL_DIR)\ia32\vc7.1\bin\tbbmalloc.dll&quot; &quot;$(OutDi
 				Name="VCLinkerTool"
 				AdditionalDependencies="tbb.lib tbbmalloc.lib"
 				LinkIncremental="1"
-				AdditionalLibraryDirectories="&quot;$(TBB21_INSTALL_DIR)\ia32\vc7.1\lib&quot;"
+				AdditionalLibraryDirectories="&quot;$(TBB22_INSTALL_DIR)\ia32\vc7.1\lib&quot;"
 				GenerateDebugInformation="TRUE"
 				SubSystem="2"
 				OptimizeReferences="2"
@@ -163,8 +163,8 @@ copy &quot;$(TBB21_INSTALL_DIR)\ia32\vc7.1\bin\tbbmalloc.dll&quot; &quot;$(OutDi
 			<Tool
 				Name="VCPostBuildEventTool"
 				Description="Copying DLLs and PDBs"
-				CommandLine="copy &quot;$(TBB21_INSTALL_DIR)\ia32\vc7.1\bin\tbb.dll&quot; &quot;$(OutDir)&quot;&#x0D;&#x0A; copy  &quot;$(TBB21_INSTALL_DIR)\ia32\vc7.1\bin\tbb.pdb&quot; &quot;$(OutDir)&quot;
-copy &quot;$(TBB21_INSTALL_DIR)\ia32\vc7.1\bin\tbbmalloc.dll&quot; &quot;$(OutDir)&quot;&#x0D;&#x0A; copy  &quot;$(TBB21_INSTALL_DIR)\ia32\vc7.1\bin\tbbmalloc.pdb&quot; &quot;$(OutDir)&quot;
+				CommandLine="copy &quot;$(TBB22_INSTALL_DIR)\ia32\vc7.1\bin\tbb.dll&quot; &quot;$(OutDir)&quot;&#x0D;&#x0A; copy  &quot;$(TBB22_INSTALL_DIR)\ia32\vc7.1\bin\tbb.pdb&quot; &quot;$(OutDir)&quot;
+copy &quot;$(TBB22_INSTALL_DIR)\ia32\vc7.1\bin\tbbmalloc.dll&quot; &quot;$(OutDir)&quot;&#x0D;&#x0A; copy  &quot;$(TBB22_INSTALL_DIR)\ia32\vc7.1\bin\tbbmalloc.pdb&quot; &quot;$(OutDir)&quot;
 "/>
 			<Tool
 				Name="VCPreBuildEventTool"/>
@@ -197,7 +197,7 @@ copy &quot;$(TBB21_INSTALL_DIR)\ia32\vc7.1\bin\tbbmalloc.dll&quot; &quot;$(OutDi
 				InlineFunctionExpansion="0"
 				FavorSizeOrSpeed="1"
 				OmitFramePointers="TRUE"
-				AdditionalIncludeDirectories="&quot;$(TBB21_INSTALL_DIR)\include&quot;"
+				AdditionalIncludeDirectories="&quot;$(TBB22_INSTALL_DIR)\include&quot;"
 				PreprocessorDefinitions="WIN32;_DEBUG;_CONSOLE;_WINDOWS"
 				RuntimeLibrary="3"
 				EnableFunctionLevelLinking="TRUE"
@@ -210,7 +210,7 @@ copy &quot;$(TBB21_INSTALL_DIR)\ia32\vc7.1\bin\tbbmalloc.dll&quot; &quot;$(OutDi
 				Name="VCLinkerTool"
 				AdditionalDependencies="tbb_debug.lib tbbmalloc_debug.lib"
 				LinkIncremental="1"
-				AdditionalLibraryDirectories="&quot;$(TBB21_INSTALL_DIR)\ia32\vc7.1\lib&quot;"
+				AdditionalLibraryDirectories="&quot;$(TBB22_INSTALL_DIR)\ia32\vc7.1\lib&quot;"
 				GenerateDebugInformation="TRUE"
 				SubSystem="2"
 				TargetMachine="1"
@@ -220,8 +220,8 @@ copy &quot;$(TBB21_INSTALL_DIR)\ia32\vc7.1\bin\tbbmalloc.dll&quot; &quot;$(OutDi
 			<Tool
 				Name="VCPostBuildEventTool"
 				Description="Copying DLLs and PDBs"
-				CommandLine="copy &quot;$(TBB21_INSTALL_DIR)\ia32\vc7.1\bin\tbb_debug.dll&quot; &quot;$(OutDir)&quot;&#x0D;&#x0A; copy  &quot;$(TBB21_INSTALL_DIR)\ia32\vc7.1\bin\tbb_debug.pdb&quot; &quot;$(OutDir)&quot;
-copy &quot;$(TBB21_INSTALL_DIR)\ia32\vc7.1\bin\tbbmalloc_debug.dll&quot; &quot;$(OutDir)&quot;&#x0D;&#x0A; copy  &quot;$(TBB21_INSTALL_DIR)\ia32\vc7.1\bin\tbbmalloc_debug.pdb&quot; &quot;$(OutDir)&quot;
+				CommandLine="copy &quot;$(TBB22_INSTALL_DIR)\ia32\vc7.1\bin\tbb_debug.dll&quot; &quot;$(OutDir)&quot;&#x0D;&#x0A; copy  &quot;$(TBB22_INSTALL_DIR)\ia32\vc7.1\bin\tbb_debug.pdb&quot; &quot;$(OutDir)&quot;
+copy &quot;$(TBB22_INSTALL_DIR)\ia32\vc7.1\bin\tbbmalloc_debug.dll&quot; &quot;$(OutDir)&quot;&#x0D;&#x0A; copy  &quot;$(TBB22_INSTALL_DIR)\ia32\vc7.1\bin\tbbmalloc_debug.pdb&quot; &quot;$(OutDir)&quot;
 "/>
 			<Tool
 				Name="VCPreBuildEventTool"/>
@@ -254,7 +254,7 @@ copy &quot;$(TBB21_INSTALL_DIR)\ia32\vc7.1\bin\tbbmalloc_debug.dll&quot; &quot;$
 				InlineFunctionExpansion="0"
 				FavorSizeOrSpeed="1"
 				OmitFramePointers="TRUE"
-				AdditionalIncludeDirectories="&quot;$(TBB21_INSTALL_DIR)\include&quot;;&quot;$(DXSDK_DIR)\include&quot;"
+				AdditionalIncludeDirectories="&quot;$(TBB22_INSTALL_DIR)\include&quot;;&quot;$(DXSDK_DIR)\include&quot;"
 				PreprocessorDefinitions="WIN32;_DEBUG;_CONSOLE;_WINDOWS"
 				RuntimeLibrary="3"
 				EnableFunctionLevelLinking="TRUE"
@@ -267,7 +267,7 @@ copy &quot;$(TBB21_INSTALL_DIR)\ia32\vc7.1\bin\tbbmalloc_debug.dll&quot; &quot;$
 				Name="VCLinkerTool"
 				AdditionalDependencies="tbb_debug.lib tbbmalloc_debug.lib"
 				LinkIncremental="1"
-				AdditionalLibraryDirectories="&quot;$(TBB21_INSTALL_DIR)\ia32\vc7.1\lib&quot;;&quot;$(DXSDK_DIR)\lib\x86&quot;"
+				AdditionalLibraryDirectories="&quot;$(TBB22_INSTALL_DIR)\ia32\vc7.1\lib&quot;;&quot;$(DXSDK_DIR)\lib\x86&quot;"
 				GenerateDebugInformation="TRUE"
 				SubSystem="2"
 				TargetMachine="1"
@@ -277,8 +277,8 @@ copy &quot;$(TBB21_INSTALL_DIR)\ia32\vc7.1\bin\tbbmalloc_debug.dll&quot; &quot;$
 			<Tool
 				Name="VCPostBuildEventTool"
 				Description="Copying DLLs and PDBs"
-				CommandLine="copy &quot;$(TBB21_INSTALL_DIR)\ia32\vc7.1\bin\tbb_debug.dll&quot; &quot;$(OutDir)&quot;&#x0D;&#x0A; copy  &quot;$(TBB21_INSTALL_DIR)\ia32\vc7.1\bin\tbb_debug.pdb&quot; &quot;$(OutDir)&quot;
-copy &quot;$(TBB21_INSTALL_DIR)\ia32\vc7.1\bin\tbbmalloc_debug.dll&quot; &quot;$(OutDir)&quot;&#x0D;&#x0A; copy  &quot;$(TBB21_INSTALL_DIR)\ia32\vc7.1\bin\tbbmalloc_debug.pdb&quot; &quot;$(OutDir)&quot;
+				CommandLine="copy &quot;$(TBB22_INSTALL_DIR)\ia32\vc7.1\bin\tbb_debug.dll&quot; &quot;$(OutDir)&quot;&#x0D;&#x0A; copy  &quot;$(TBB22_INSTALL_DIR)\ia32\vc7.1\bin\tbb_debug.pdb&quot; &quot;$(OutDir)&quot;
+copy &quot;$(TBB22_INSTALL_DIR)\ia32\vc7.1\bin\tbbmalloc_debug.dll&quot; &quot;$(OutDir)&quot;&#x0D;&#x0A; copy  &quot;$(TBB22_INSTALL_DIR)\ia32\vc7.1\bin\tbbmalloc_debug.pdb&quot; &quot;$(OutDir)&quot;
 "/>
 			<Tool
 				Name="VCPreBuildEventTool"
@@ -311,7 +311,7 @@ copy &quot;$(TBB21_INSTALL_DIR)\ia32\vc7.1\bin\tbbmalloc_debug.dll&quot; &quot;$
 				InlineFunctionExpansion="2"
 				FavorSizeOrSpeed="1"
 				OmitFramePointers="TRUE"
-				AdditionalIncludeDirectories="&quot;$(TBB21_INSTALL_DIR)\include&quot;;&quot;$(DXSDK_DIR)\include&quot;"
+				AdditionalIncludeDirectories="&quot;$(TBB22_INSTALL_DIR)\include&quot;;&quot;$(DXSDK_DIR)\include&quot;"
 				PreprocessorDefinitions="WIN32;NDEBUG;_CONSOLE;_WINDOWS"
 				RuntimeLibrary="2"
 				EnableFunctionLevelLinking="TRUE"
@@ -324,7 +324,7 @@ copy &quot;$(TBB21_INSTALL_DIR)\ia32\vc7.1\bin\tbbmalloc_debug.dll&quot; &quot;$
 				Name="VCLinkerTool"
 				AdditionalDependencies="tbb.lib tbbmalloc.lib"
 				LinkIncremental="1"
-				AdditionalLibraryDirectories="&quot;$(TBB21_INSTALL_DIR)\ia32\vc7.1\lib&quot;;&quot;$(DXSDK_DIR)\lib\x86&quot;"
+				AdditionalLibraryDirectories="&quot;$(TBB22_INSTALL_DIR)\ia32\vc7.1\lib&quot;;&quot;$(DXSDK_DIR)\lib\x86&quot;"
 				GenerateDebugInformation="TRUE"
 				SubSystem="2"
 				OptimizeReferences="2"
@@ -336,8 +336,8 @@ copy &quot;$(TBB21_INSTALL_DIR)\ia32\vc7.1\bin\tbbmalloc_debug.dll&quot; &quot;$
 			<Tool
 				Name="VCPostBuildEventTool"
 				Description="Copying DLLs and PDBs"
-				CommandLine="copy &quot;$(TBB21_INSTALL_DIR)\ia32\vc7.1\bin\tbb.dll&quot; &quot;$(OutDir)&quot;&#x0D;&#x0A; copy  &quot;$(TBB21_INSTALL_DIR)\ia32\vc7.1\bin\tbb.pdb&quot; &quot;$(OutDir)&quot;
-copy &quot;$(TBB21_INSTALL_DIR)\ia32\vc7.1\bin\tbbmalloc.dll&quot; &quot;$(OutDir)&quot;&#x0D;&#x0A; copy  &quot;$(TBB21_INSTALL_DIR)\ia32\vc7.1\bin\tbbmalloc.pdb&quot; &quot;$(OutDir)&quot;
+				CommandLine="copy &quot;$(TBB22_INSTALL_DIR)\ia32\vc7.1\bin\tbb.dll&quot; &quot;$(OutDir)&quot;&#x0D;&#x0A; copy  &quot;$(TBB22_INSTALL_DIR)\ia32\vc7.1\bin\tbb.pdb&quot; &quot;$(OutDir)&quot;
+copy &quot;$(TBB22_INSTALL_DIR)\ia32\vc7.1\bin\tbbmalloc.dll&quot; &quot;$(OutDir)&quot;&#x0D;&#x0A; copy  &quot;$(TBB22_INSTALL_DIR)\ia32\vc7.1\bin\tbbmalloc.pdb&quot; &quot;$(OutDir)&quot;
 "/>
 			<Tool
 				Name="VCPreBuildEventTool"

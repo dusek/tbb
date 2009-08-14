@@ -55,9 +55,9 @@ template<typename T, typename A> class concurrent_queue;
 #endif
 
 //! For internal use only.
-//! @cond INTERNAL
 namespace strict_ppl {
 
+//! @cond INTERNAL
 namespace internal {
 
 using namespace tbb::internal;
@@ -617,7 +617,12 @@ protected:
 
 public:
     //! Default constructor
-    concurrent_queue_iterator_base_v3() : my_rep(NULL), my_item(NULL) {}
+    concurrent_queue_iterator_base_v3() : my_rep(NULL), my_item(NULL) {
+#if __GNUC__==4&&__GNUC_MINOR__==3
+        // to get around a possible gcc 4.3 bug
+        __asm__ __volatile__("": : :"memory");
+#endif
+    }
 
     //! Copy constructor
     concurrent_queue_iterator_base_v3( const concurrent_queue_iterator_base_v3& i ) : my_rep(NULL), my_item(NULL) {
@@ -762,6 +767,8 @@ bool operator!=( const concurrent_queue_iterator<C,T>& i, const concurrent_queue
 }
 
 } // namespace internal
+
+//! @endcond
 
 } // namespace strict_ppl
 

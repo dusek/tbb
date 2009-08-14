@@ -40,12 +40,12 @@ struct is_zero_filling<tbb::zero_allocator<void> > {
     static const bool value = true;
 };
 
-int main(void)
-{
+__TBB_TEST_EXPORT
+int main() {
     int result = TestMain<tbb::cache_aligned_allocator<void> >();
     result += TestMain<tbb::tbb_allocator<void> >();
     result += TestMain<tbb::zero_allocator<void> >();
 
-    printf("done\n");
+    REPORT("done\n");
     return result;
 }

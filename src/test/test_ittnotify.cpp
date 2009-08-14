@@ -43,7 +43,6 @@
 #include "tbb/parallel_for.h"
 #include "tbb/blocked_range.h"
 #include "tbb/task_scheduler_init.h"
-#include "harness_trace.h"
 
 
 #include "../tbb/itt_notify.h"
@@ -82,6 +81,7 @@ void Test( const char * name ) {
 
 #endif /* !DO_ITT_NOTIFY */
 
+__TBB_TEST_EXPORT
 int main( int argc, char * argv[] ) {
     // Default is to run on two threads
     MinThread = MaxThread = 2;
@@ -95,9 +95,9 @@ int main( int argc, char * argv[] ) {
         TEST_MUTEX( queuing_rw_mutex, "Queuing RW Mutex" );
         TEST_MUTEX( spin_rw_mutex, "Spin RW Mutex" );
     }
-    std::printf("done\n");
+    REPORT("done\n");
 #else /* !DO_ITT_NOTIFY */
-    std::printf("skip\n");
+    REPORT("skip\n");
 #endif /* !DO_ITT_NOTIFY */
     return 0;
 }

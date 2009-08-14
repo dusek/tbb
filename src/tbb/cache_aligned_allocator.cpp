@@ -143,13 +143,15 @@ void initialize_cache_aligned_allocator() {
         padded_free_handler = FreeHandler;
 #endif // __TBB_IS_SCALABLE_MALLOC_FIX_READY 
     }
+#if !__TBB_RML_STATIC
     PrintExtraVersionInfo( "ALLOCATOR", success?"scalable_malloc":"malloc" );
+#endif
 }
 
 //! Defined in task.cpp
 extern void DoOneTimeInitializations();
 
-//! Executed on very first call throught MallocHandler
+//! Executed on very first call through MallocHandler
 static void* DummyMalloc( size_t size ) {
     DoOneTimeInitializations();
     __TBB_ASSERT( MallocHandler!=&DummyMalloc, NULL );
@@ -164,7 +166,7 @@ static void DummyFree( void * ptr ) {
 }
 
 #if __TBB_IS_SCALABLE_MALLOC_FIX_READY 
-//! Executed on very first call throught padded_allocate_handler
+//! Executed on very first call through padded_allocate_handler
 static void* dummy_padded_allocate( size_t bytes, size_t alignment ) {
     DoOneTimeInitializations();
     __TBB_ASSERT( padded_allocate_handler!=&dummy_padded_allocate, NULL );
@@ -305,3 +307,23 @@ bool __TBB_EXPORTED_FUNC is_malloc_used_v3() {
 } // namespace internal
 
 } // namespace tbb
+
+#if __TBB_RML_STATIC
+#include "tbb/atomic.h"
+static tbb::atomic<int> module_inited;
+namespace tbb {
+namespace internal {
+void DoOneTimeInitializations() {
+    if( module_inited!=2 ) {
+        if( module_inited.compare_and_swap(1, 0)==0 ) {
+            initialize_cache_aligned_allocator();
+            module_inited = 2;
+        } else {
+            do {
+                __TBB_Yield();
+            } while( module_inited!=2 );
+        }
+    }
+}
+}} //namespace tbb::internal
+#endif

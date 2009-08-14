@@ -254,11 +254,11 @@ typedef struct ___itt_jit_method_load
  * @brief General behavior: application continues to run, but no profiling information is being collected
 
  * - Pausing occurs not only for the current thread but for all process as well as spawned processes
- * - Intel Parallel Inspector: does not analyze or report errors that involve memory access.
- * - Intel Parallel Inspector: Other errors are reported as usual. Pausing data collection in
-     Intel Parallel Inspector only pauses tracing and analyzing memory access. It does not pause
+ * - Intel(R) Parallel Inspector: does not analyze or report errors that involve memory access.
+ * - Intel(R) Parallel Inspector: Other errors are reported as usual. Pausing data collection in
+     Intel(R) Parallel Inspector only pauses tracing and analyzing memory access. It does not pause
      tracing or analyzing threading APIs.
- * - Intel Parallel Amplifier: does continue to record when new threads are started
+ * - Intel(R) Parallel Amplifier: does continue to record when new threads are started
  * - Other effects: possible reduction of runtime overhead
  */
 void ITTAPI_CALL __itt_pause(void);

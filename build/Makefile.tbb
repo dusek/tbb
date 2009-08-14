@@ -28,7 +28,7 @@
 # Define rules for making the TBB shared library.
 #------------------------------------------------------------------------------
 
-tbb_root ?= "$(TBB21_INSTALL_DIR)"
+tbb_root ?= "$(TBB22_INSTALL_DIR)"
 BUILDING_PHASE=1
 include $(tbb_root)/build/common.inc
 DEBUG_SUFFIX=$(findstring _debug,_$(cfg))
@@ -53,7 +53,6 @@ ifeq (1,$(TBB_NOSTRICT))
 
 KNOWN_NOSTRICT = concurrent_hash_map.o \
 	concurrent_queue.o    \
-	enumerable_thread_specific.o    \
 	concurrent_vector_v2.o \
 	concurrent_vector.o
 
@@ -76,8 +75,8 @@ TBB_CPLUS.OBJ = concurrent_hash_map.$(OBJ) \
 		mutex.$(OBJ) \
 		recursive_mutex.$(OBJ) \
 		tbb_thread.$(OBJ) \
-		enumerable_thread_specific.$(OBJ) \
-		itt_notify_proxy.$(OBJ)
+		itt_notify_proxy.$(OBJ) \
+		itt_annotate.$(OBJ)
 
 # OLD/Legacy object files for backward binary compatibility
 ifeq (,$(findstring $(DEFINE_KEY)TBB_NO_LEGACY,$(CPLUS_FLAGS)))
@@ -93,6 +92,12 @@ TBB.OBJ = $(TBB_CPLUS.OBJ) $(TBB_CPLUS_OLD.OBJ) $(TBB_ASM.OBJ)
 # Suppress superfluous warnings for TBB compilation
 WARNING_KEY += $(WARNING_SUPPRESS)
 
+ifneq (,$(RML))
+VPATH += $(tbb_root)/src/rml/client
+TBB.OBJ += rml_tbb.$(OBJ) private_server.$(OBJ)
+CPLUS_FLAGS += $(DEFINE_KEY)__TBB_RML=1 $(INCLUDE_KEY)$(tbb_root)/src/rml/include
+CXX_WARN_SUPPRESS = $(RML_WARNING_SUPPRESS)
+endif 
 
 include $(tbb_root)/build/common_rules.inc
 

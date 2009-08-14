@@ -64,6 +64,7 @@ __TBB_machine_trylockbyte
 ?free@allocate_continuation_proxy@internal@tbb@@QBEXAAVtask@3@@Z
 ?free@allocate_root_proxy@internal@tbb@@SAXAAVtask@3@@Z
 ?internal_set_ref_count@task@tbb@@AAEXH@Z
+?internal_decrement_ref_count@task@tbb@@AAEHXZ
 ?is_owned_by_current_thread@task@tbb@@QBE_NXZ
 ?note_affinity@task@tbb@@UAEXG@Z
 ?resize@affinity_partitioner_base_v3@internal@tbb@@AAEXI@Z
@@ -117,6 +118,8 @@ TBB_runtime_interface_version
 #if __TBB_EXCEPTIONS
 ?run@pipeline@tbb@@QAEXIAAVtask_group_context@2@@Z
 #endif
+?process_item@thread_bound_filter@tbb@@QAE?AW4result_type@12@XZ
+?try_process_item@thread_bound_filter@tbb@@QAE?AW4result_type@12@XZ
 
 ; queuing_rw_mutex.cpp
 ?internal_construct@queuing_rw_mutex@tbb@@QAEXXZ
@@ -176,10 +179,10 @@ TBB_runtime_interface_version
 ?release@scoped_lock@queuing_mutex@tbb@@QAEXXZ
 ?try_acquire@scoped_lock@queuing_mutex@tbb@@QAE_NAAV23@@Z
 
+#if !TBB_NO_LEGACY
 ; concurrent_hash_map.cpp
 ?internal_grow_predicate@hash_map_segment_base@internal@tbb@@QBE_NXZ
 
-#if !TBB_NO_LEGACY
 ; concurrent_queue.cpp v2
 ?advance@concurrent_queue_iterator_base@internal@tbb@@IAEXXZ
 ?assign@concurrent_queue_iterator_base@internal@tbb@@IAEXABV123@@Z
@@ -252,9 +255,3 @@ TBB_runtime_interface_version
 ?thread_sleep_v3@internal@tbb@@YAXABVinterval_t@tick_count@2@@Z
 ?move_v3@internal@tbb@@YAXAAVtbb_thread_v3@12@0@Z
 ?thread_get_id_v3@internal@tbb@@YA?AVid@tbb_thread_v3@12@XZ
-
-; enumerable_thread_specific
-?create_key@tls_single_key_manager_v4@internal@tbb@@SAXAAI@Z
-?destroy_key@tls_single_key_manager_v4@internal@tbb@@SAXAAI@Z
-?get_tls@tls_single_key_manager_v4@internal@tbb@@SAPAXAAI@Z
-?set_tls@tls_single_key_manager_v4@internal@tbb@@SAXAAIPAX@Z

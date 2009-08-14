@@ -67,13 +67,13 @@ void AssertionFailureHandler( const char* filename, int line, const char* expres
 
 void CheckAssertionFailure( int line, const char* expression, bool okay, const char* message, const char* substr ) {
     if( !okay ) {
-        printf("Line %d, %s failed to fail\n", line, expression );
+        REPORT("Line %d, %s failed to fail\n", line, expression );
         abort();
     } else if( !message ) {
-        printf("Line %d, %s failed without a message\n", line, expression );
+        REPORT("Line %d, %s failed without a message\n", line, expression );
         abort();
     } else if( strstr(message,substr)==0 ) {                            
-        printf("Line %d, %s failed with message '%s' missing substring '%s'\n", __LINE__, expression, message, substr );
+        REPORT("Line %d, %s failed with message '%s' missing substring '%s'\n", __LINE__, expression, message, substr );
         abort();
     }
 }

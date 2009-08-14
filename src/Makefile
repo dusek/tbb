@@ -39,6 +39,9 @@ rml: rml_release rml_debug
 
 test: tbbmalloc_test_release test_release tbbmalloc_test_debug test_debug
 
+# Suffix _ni stands for "no ingnore", meaning that the first error during the test session will stop it
+test_ni: tbbmalloc_test_release_ni test_release_ni tbbmalloc_test_debug_ni test_debug_ni
+
 test_no_depends: tbbmalloc_test_release_no_depends test_release_no_depends tbbmalloc_test_debug_no_depends test_debug_no_depends
 	@echo done
 
@@ -61,10 +64,10 @@ ifeq ($(tbb_os),windows)
 else
 	$(MAKE) -s -i -r --no-print-directory -f Makefile tbb_root=. compiler=icc clean all native_examples
 endif
-ifeq ($(arch),em64t)
+ifeq ($(arch),intel64)
 	$(MAKE) -s -i -r --no-print-directory -f Makefile tbb_root=. arch=ia32 clean all
 endif
-# it doesn't test compiler=icc arch=ia32 on em64t systems due to enviroment settings of icc
+# it doesn't test compiler=icc arch=ia32 on intel64 systems due to enviroment settings of icc
 
 native_examples: tbb tbbmalloc
 	$(MAKE) -C $(examples_root) -r -f Makefile tbb_root=.. compiler=$(native_compiler) tbb_build_prefix=$(tbb_build_prefix) debug test
@@ -110,10 +113,10 @@ test_debug: $(call cross_cfg,mkdir_debug) $(call cross_cfg,tbb_debug) test_debug
 test_debug_no_depends:
 	-$(MAKE) -C "$(call cross_cfg,$(work_dir)_debug)"  -r -f $(tbb_root)/build/Makefile.test cfg=debug tbb_root=$(tbb_root)
 
-test_release_no_ignore: 
+test_release_ni: 
 	$(MAKE) -C "$(call cross_cfg,$(work_dir)_release)"  -r -f $(tbb_root)/build/Makefile.test cfg=release tbb_root=$(tbb_root) 
 
-test_debug_no_ignore:
+test_debug_ni:
 	$(MAKE) -C "$(call cross_cfg,$(work_dir)_debug)"  -r -f $(tbb_root)/build/Makefile.test cfg=debug tbb_root=$(tbb_root)
 
 .PHONY: tbbmalloc_release tbbmalloc_debug tbbmalloc_test_release tbbmalloc_test_debug
@@ -144,6 +147,12 @@ tbbmalloc_test_release_no_depends:
 tbbmalloc_test_debug: $(call cross_cfg,mkdir_debug) $(call cross_cfg,tbbmalloc_debug) tbbmalloc_test_debug_no_depends
 tbbmalloc_test_debug_no_depends:
 	-$(MAKE) -C "$(call cross_cfg,$(work_dir)_debug)"  -r -f $(tbb_root)/build/Makefile.tbbmalloc cfg=debug malloc_test tbb_root=$(tbb_root)
+
+tbbmalloc_test_release_ni: $(call cross_cfg,mkdir_release) $(call cross_cfg,tbbmalloc_release) tbbmalloc_test_release_no_depends
+	$(MAKE) -C "$(call cross_cfg,$(work_dir)_release)"  -r -f $(tbb_root)/build/Makefile.tbbmalloc cfg=release malloc_test tbb_root=$(tbb_root)
+
+tbbmalloc_test_debug_ni: $(call cross_cfg,mkdir_debug) $(call cross_cfg,tbbmalloc_debug) tbbmalloc_test_debug_no_depends
+	$(MAKE) -C "$(call cross_cfg,$(work_dir)_debug)"  -r -f $(tbb_root)/build/Makefile.tbbmalloc cfg=debug malloc_test tbb_root=$(tbb_root)
 
 .PHONY: examples_release examples_debug
 

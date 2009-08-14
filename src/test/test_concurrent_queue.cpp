@@ -214,7 +214,9 @@ void TestPushPop( size_t prefill, ptrdiff_t capacity, int nthread ) {
 #if !__TBB_FLOATING_POINT_BROKEN
         double timing = (t1-t0).seconds();
         if( Verbose )
-            printf("prefill=%d capacity=%d time = %g = %g nsec/operation\n", int(prefill), int(capacity), timing, timing/(2*M*nthread)*1.E9);
+            REPORT("prefill=%d capacity=%d time = %g = %g nsec/operation\n", int(prefill), int(capacity), timing, timing/(2*M*nthread)*1.E9);
+#else
+        ((void)capacity);   // touch it to suppress the warning
 #endif /* !__TBB_FLOATING_POINT_BROKEN */
         int sum = 0;
         for( int k=0; k<nthread; ++k )
@@ -231,7 +233,7 @@ void TestPushPop( size_t prefill, ptrdiff_t capacity, int nthread ) {
         ASSERT( queue.empty(), NULL );
         ASSERT( queue.SIZE()==0, NULL );
         if( sum!=expected )
-            printf("sum=%d expected=%d\n",sum,expected);
+            REPORT("sum=%d expected=%d\n",sum,expected);
         ASSERT( FooConstructed==FooDestroyed, NULL );
         // TODO: checks by counting allocators
 
@@ -252,12 +254,12 @@ void TestPushPop( size_t prefill, ptrdiff_t capacity, int nthread ) {
                 if( PopKind[k]<min_requirement ) {
                     if( trial>=max_trial ) {
                         if( Verbose )
-                            printf("Warning: %d threads had only %ld pop_if_present operations %s after %d trials (expected at least %d). "
+                            REPORT("Warning: %d threads had only %ld pop_if_present operations %s after %d trials (expected at least %d). "
                                "This problem may merely be unlucky scheduling. "
                                "Investigate only if it happens repeatedly.\n",
                                nthread, long(PopKind[k]), k==0?"failed":"succeeded", max_trial, min_requirement);
                         else
-                            printf("Warning: the number of %s pop_if_present operations is less than expected for %d threads. Investigate if it happens repeatedly.\n",
+                            REPORT("Warning: the number of %s pop_if_present operations is less than expected for %d threads. Investigate if it happens repeatedly.\n",
                                k==0?"failed":"succeeded", nthread ); 
 
                     } else {
@@ -502,7 +504,7 @@ void TestConstructors ()
     ASSERT( iter==src_queue.unsafe_end(), "different size?" );
 
 #if __TBB_EXCEPTION_HANDLING_BROKEN || __TBB_PLACEMENT_NEW_EXCEPTION_SAFETY_BROKEN
-    printf("Warning: Part of the constructor test is skipped due to a known issue.\n");
+    REPORT("Warning: Part of the constructor test is skipped due to a known issue.\n");
 #else
     k = 0;
 #if TBB_DEPRECATED==0
@@ -641,6 +643,7 @@ void TestEmptyQueue() {
 }
 
 #if TBB_DEPRECATED
+#define CALL_TRY_PUSH(q,f,i) (((i)&0x1)?(q).push_if_not_full(f):(q).try_push(f))
 void TestFullQueue() {
     for( int n=0; n<10; ++n ) {
         FooConstructed = 0;
@@ -650,7 +653,7 @@ void TestFullQueue() {
         for( int i=0; i<=n; ++i ) {
             Foo f;
             f.serial = i;
-            bool result = queue.push_if_not_full( f );
+            bool result = CALL_TRY_PUSH(queue, f, i );
             ASSERT( result==(i<n), NULL );
         }
         for( int i=0; i<=n; ++i ) {
@@ -754,7 +757,7 @@ void TestExceptions() {
     };  
 
     if( Verbose )
-        printf("Testing exception safety\n");
+        REPORT("Testing exception safety\n");
     // verify 'clear()' on exception; queue's destructor calls its clear()
     {
         concur_queue_t queue_clear;
@@ -768,7 +771,7 @@ void TestExceptions() {
         }
     }
     if( Verbose )
-        printf("... queue destruction test passed\n");
+        REPORT("... queue destruction test passed\n");
 
     try {
         int n_pushed=0, n_popped=0;
@@ -846,7 +849,7 @@ void TestExceptions() {
                     }
                 }
                 if( Verbose )
-                    printf("... for t=%d and m=%d, exception test passed\n", t, m);
+                    REPORT("... for t=%d and m=%d, exception test passed\n", t, m);
             }
         }
     } catch(...) {
@@ -854,6 +857,7 @@ void TestExceptions() {
     }
 }
 
+__TBB_TEST_EXPORT
 int main( int argc, char* argv[] ) {
     // Set default for minimum number of threads.
     MinThread = 1;
@@ -883,10 +887,10 @@ int main( int argc, char* argv[] ) {
         }
     }
 #if __TBB_EXCEPTION_HANDLING_BROKEN
-    printf("Warning: Exception safety test is skipped due to a known issue.\n");
+    REPORT("Warning: Exception safety test is skipped due to a known issue.\n");
 #else
     TestExceptions();
 #endif
-    printf("done\n");
+    REPORT("done\n");
     return 0;
 }

@@ -40,7 +40,7 @@ static void TestHandlePerror() {
         tbb::internal::handle_perror( EAGAIN, "apple" );
     } catch( std::runtime_error& e ) {
 	if( Verbose )
-	    printf("caught runtime_exception('%s')\n",e.what());
+	    REPORT("caught runtime_exception('%s')\n",e.what());
  	ASSERT( memcmp(e.what(),"apple: ",7)==0, NULL );
         ASSERT( strstr(e.what(),"unavailable")!=NULL, "bad error message?" ); 
 	caught = true;
@@ -48,9 +48,12 @@ static void TestHandlePerror() {
     ASSERT(caught,NULL);
 }
 
+__TBB_TEST_EXPORT
 int main( int argc, char* argv[] ) {
     ParseCommandLine( argc, argv );
+#if !__TBB_EXCEPTION_HANDLING_TOTALLY_BROKEN
     TestHandlePerror();
-    printf("done\n");
+#endif
+    REPORT("done\n");
     return 0;
 }

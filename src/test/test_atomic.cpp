@@ -254,13 +254,13 @@ struct AlignmentChecker {
 template<typename T>
 void TestAtomicInteger( const char* name ) {
     if( Verbose )
-        printf("testing atomic<%s>\n",name);
+        REPORT("testing atomic<%s>\n",name);
 #if ( __linux__ && __TBB_x86_32 && __GNUC__==3 && __GNUC_MINOR__==3 ) || defined(__SUNPRO_CC)
     // gcc 3.3 has known problem for 32-bit Linux, so only warn if there is a problem.
     // SUNPRO_CC does have this problem as well
     if( sizeof(T)==8 ) {
         if( sizeof(AlignmentChecker<T>)!=2*sizeof(tbb::atomic<T>) ) {
-            printf("Warning: alignment for atomic<%s> is wrong (known issue with gcc 3.3 and sunCC 5.9 2008/01/28 for IA32)\n",name);
+            REPORT("Warning: alignment for atomic<%s> is wrong (known issue with gcc 3.3 and sunCC 5.9 2008/01/28 for IA32)\n",name);
         }
     } else
 #endif /* ( __linux__ && __TBB_x86_32 && __GNUC__==3 && __GNUC_MINOR__==3 ) || defined(__SUNPRO_CC) */
@@ -310,7 +310,7 @@ void TestIndirection() {
 template<typename T>
 void TestAtomicPointer() {
     if( Verbose )
-        printf("testing atomic pointer (%d)\n",int(sizeof(T)));
+        REPORT("testing atomic pointer (%d)\n",int(sizeof(T)));
     T array[1000];
     TestOperations<T*>(&array[500],&array[250],&array[750]);
     TestFetchAndAdd<T*>(&array[500]);
@@ -322,7 +322,7 @@ void TestAtomicPointer() {
 template<typename Ptr>
 void TestAtomicPointerToTypeOfUnknownSize( const char* name ) {
     if( Verbose )
-        printf("testing atomic<%s>\n",name);
+        REPORT("testing atomic<%s>\n",name);
     char array[1000];
     TestOperations<Ptr>((Ptr)(void*)&array[500],(Ptr)(void*)&array[250],(Ptr)(void*)&array[750]);
     TestParallel<Ptr>( name );
@@ -330,7 +330,7 @@ void TestAtomicPointerToTypeOfUnknownSize( const char* name ) {
 
 void TestAtomicBool() {
     if( Verbose )
-        printf("testing atomic<bool>\n");
+        REPORT("testing atomic<bool>\n");
     TestOperations<bool>(true,true,false);
     TestOperations<bool>(false,false,true);
     TestParallel<bool>( "bool" );
@@ -340,7 +340,7 @@ enum Color {Red=0,Green=1,Blue=-1};
 
 void TestAtomicEnum() {
     if( Verbose )
-        printf("testing atomic<Color>\n");
+        REPORT("testing atomic<Color>\n");
     TestOperations<Color>(Red,Green,Blue);
     TestParallel<Color>( "Color" );
 }
@@ -349,7 +349,7 @@ void TestAtomicEnum() {
 template<typename T>
 void TestAtomicFloat( const char* name ) {
     if( Verbose )
-        printf("testing atomic<%s>\n", name );
+        REPORT("testing atomic<%s>\n", name );
     TestOperations<T>(0.5,3.25,10.75);
     TestParallel<T>( name );
 }
@@ -444,7 +444,7 @@ intptr_t getCorrectContendedValue() {
 template<typename T>
 void TestMaskedCAS() {
     if( Verbose )
-        printf("testing masked CAS<%d>\n",int(sizeof(T)));
+        REPORT("testing masked CAS<%d>\n",int(sizeof(T)));
 
     const int num_slots = sizeof(T)*testSpaceSize/sizeof(intptr_t);
     intptr_t arr1[num_slots+2]; // two more "canary" slots at boundaries
@@ -469,13 +469,14 @@ class ArrayElement {
     char item[N];
 };
 
+__TBB_TEST_EXPORT
 int main( int argc, char* argv[] ) {
     ParseCommandLine( argc, argv );
 #if defined(__INTEL_COMPILER)||!defined(_MSC_VER)||_MSC_VER>=1400
     TestAtomicInteger<unsigned long long>("unsigned long long");
     TestAtomicInteger<long long>("long long");
 #else
-    printf("Warning: atomic<64-bits> not tested because of known problem in Microsoft compiler\n");
+    REPORT("Warning: atomic<64-bits> not tested because of known problem in Microsoft compiler\n");
 #endif /*defined(__INTEL_COMPILER)||!defined(_MSC_VER)||_MSC_VER>=1400 */
     TestAtomicInteger<unsigned long>("unsigned long");
     TestAtomicInteger<long>("long");
@@ -508,7 +509,7 @@ int main( int argc, char* argv[] ) {
     ASSERT( !ParallelError, NULL );
     TestMaskedCAS<unsigned char>();
     TestMaskedCAS<unsigned short>();
-    printf("done\n");
+    REPORT("done\n");
     return 0;
 }
 
@@ -587,11 +588,11 @@ public:
                 }
                 if( flag ) {
                     if( flag!=(T)-1 ) {
-                        printf("ERROR: flag!=(T)-1 k=%d i=%d trial=%x type=%s (atomicity problem?)\n", k, i, trial, name );
+                        REPORT("ERROR: flag!=(T)-1 k=%d i=%d trial=%x type=%s (atomicity problem?)\n", k, i, trial, name );
                         ParallelError = true;
                     } 
                     if( message!=(T)-1 ) {
-                        printf("ERROR: message!=(T)-1 k=%d i=%d trial=%x type=%s (memory fence problem?)\n", k, i, trial, name );
+                        REPORT("ERROR: message!=(T)-1 k=%d i=%d trial=%x type=%s (memory fence problem?)\n", k, i, trial, name );
                         ParallelError = true;
                     }
                     s->message = T(0); 
@@ -719,7 +720,7 @@ public:
                 if( -epsilon<=error && error<=epsilon ) {
                     return true;
                 } else {
-                    printf("Warning: excessive floating-point error encountered j=%d x=%.15g error=%.15g\n",j,x,error);
+                    REPORT("Warning: excessive floating-point error encountered j=%d x=%.15g error=%.15g\n",j,x,error);
                 }
             }
             return false;
@@ -751,7 +752,7 @@ public:
                 // Read x atomically into z.
                 z = x;
                 if( !set.contains(z) ) {
-                    printf("ERROR: assignment of atomic<%s> is not atomic\n", name);
+                    REPORT("ERROR: assignment of atomic<%s> is not atomic\n", name);
                     ParallelError = true;
                     return;
                 }

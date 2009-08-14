@@ -59,7 +59,7 @@ ASM_FLAGS=
 
 TBB_ASM.OBJ=
 
-ifeq (em64t,$(arch))
+ifeq (intel64,$(arch))
     CPLUS_FLAGS += -m64
     ASM_FLAGS += -m64
     LIB_LINK_FLAGS += -m64

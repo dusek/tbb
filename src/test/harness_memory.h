@@ -64,7 +64,7 @@ size_t GetMemoryUsage() {
     long total_mem;
     int n = fscanf(statsfile,"%lu",&total_mem);
     if( n!=1 ) {
-        printf("Warning: memory usage statistics wasn't obtained\n");
+        REPORT("Warning: memory usage statistics wasn't obtained\n");
         return 0;
     }
     fclose(statsfile);

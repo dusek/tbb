@@ -48,5 +48,12 @@ _Znam;
 _ZnamRKSt9nothrow_t;
 _Znwm;
 _ZnwmRKSt9nothrow_t;
-local:*;
+
+local:
+
+/* TBB symbols */
+*3rml8internal*;
+*3tbb*;
+*__TBB*;
+
 };

@@ -29,6 +29,7 @@
 #include "tbb/tbb_machine.h"
 #include "tbb/spin_mutex.h"
 #include "itt_notify.h"
+#include "itt_annotate.h"
 #include "tbb_misc.h"
 
 namespace tbb {
@@ -39,6 +40,7 @@ void spin_mutex::scoped_lock::internal_acquire( spin_mutex& m ) {
     my_unlock_value = __TBB_LockByte(m.flag);
     my_mutex = &m;
     ITT_NOTIFY(sync_acquired, &m);
+    ITT_ANNOTATE_ACQUIRE_LOCK(my_mutex);
 }
 
 void spin_mutex::scoped_lock::internal_release() {
@@ -47,6 +49,7 @@ void spin_mutex::scoped_lock::internal_release() {
 
     ITT_NOTIFY(sync_releasing, my_mutex);
     __TBB_store_with_release(my_mutex->flag, static_cast<unsigned char>(my_unlock_value));
+    ITT_ANNOTATE_RELEASE_LOCK(my_mutex);
     my_mutex = NULL;
 }
 
@@ -57,6 +60,7 @@ bool spin_mutex::scoped_lock::internal_try_acquire( spin_mutex& m ) {
         my_unlock_value = 0;
         my_mutex = &m;
         ITT_NOTIFY(sync_acquired, &m);
+        ITT_ANNOTATE_ACQUIRE_LOCK(my_mutex);
     }
     return result;
 }

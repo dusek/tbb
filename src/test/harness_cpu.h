@@ -100,9 +100,9 @@ static void TestCPUUserTime( int nthreads, int nactive = 1 ) {
     double avg_worker_usrtime = (usrtime-nactive*waittime)/nworkers;
 
     if( avg_worker_usrtime > waittime/2 )
-        printf( "ERROR: %d worker threads are spinning; waittime: %g; usrtime: %g; avg worker usrtime: %g\n",
+        REPORT( "ERROR: %d worker threads are spinning; waittime: %g; usrtime: %g; avg worker usrtime: %g\n",
                 nworkers, waittime, usrtime, avg_worker_usrtime);
     else if( Verbose )
-        printf("%d worker threads; waittime: %g; usrtime: %g; avg worker usrtime: %g\n",
+        REPORT("%d worker threads; waittime: %g; usrtime: %g; avg worker usrtime: %g\n",
                         nworkers, waittime, usrtime, avg_worker_usrtime);
 }

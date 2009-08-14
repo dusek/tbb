@@ -34,11 +34,12 @@
 #define HARNESS_NO_PARSE_COMMAND_LINE 1
 #include "test_allocator_STL.h"
 
+__TBB_TEST_EXPORT
 int main() {
     TestAllocatorWithSTL<tbb::cache_aligned_allocator<void> >();
     TestAllocatorWithSTL<tbb::tbb_allocator<void> >();
     TestAllocatorWithSTL<tbb::zero_allocator<void> >();
-    printf("done\n");
+    REPORT("done\n");
     return 0;
 }
 

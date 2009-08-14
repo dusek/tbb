@@ -20,7 +20,7 @@
 			<Tool
 				Name="VCCLCompilerTool"
 				Optimization="0"
-				AdditionalIncludeDirectories="$(TBB21_INSTALL_DIR)\include"
+				AdditionalIncludeDirectories="$(TBB22_INSTALL_DIR)\include"
 				PreprocessorDefinitions="WIN32;_DEBUG;_CONSOLE;TBB_USE_DEBUG"
 				RuntimeLibrary="3"
 				UsePrecompiledHeader="0"
@@ -36,7 +36,7 @@
 				Name="VCLinkerTool"
 				AdditionalDependencies="tbb_debug.lib"
 				LinkIncremental="1"
-				AdditionalLibraryDirectories="$(TBB21_INSTALL_DIR)\ia32\vc7.1\lib"
+				AdditionalLibraryDirectories="$(TBB22_INSTALL_DIR)\ia32\vc7.1\lib"
 				GenerateDebugInformation="TRUE"
 				SubSystem="1"
 				TargetMachine="1"
@@ -46,7 +46,7 @@
 			<Tool
 				Name="VCPostBuildEventTool"
 				Description="Copying DLLs and PDBs"
-				CommandLine="copy &quot;$(TBB21_INSTALL_DIR)\ia32\vc7.1\bin\tbb_debug.dll&quot; &quot;$(OutDir)&quot;&#x0D;&#x0A; copy  &quot;$(TBB21_INSTALL_DIR)\ia32\vc7.1\bin\tbb_debug.pdb&quot; &quot;$(OutDir)&quot;"/>
+				CommandLine="copy &quot;$(TBB22_INSTALL_DIR)\ia32\vc7.1\bin\tbb_debug.dll&quot; &quot;$(OutDir)&quot;&#x0D;&#x0A; copy  &quot;$(TBB22_INSTALL_DIR)\ia32\vc7.1\bin\tbb_debug.pdb&quot; &quot;$(OutDir)&quot;"/>
 			<Tool
 				Name="VCPreBuildEventTool"/>
 			<Tool
@@ -72,7 +72,7 @@
 			CharacterSet="2">
 			<Tool
 				Name="VCCLCompilerTool"
-				AdditionalIncludeDirectories="$(TBB21_INSTALL_DIR)\include"
+				AdditionalIncludeDirectories="$(TBB22_INSTALL_DIR)\include"
 				PreprocessorDefinitions="WIN32;NDEBUG;_CONSOLE"
 				RuntimeLibrary="2"
 				UsePrecompiledHeader="0"
@@ -87,7 +87,7 @@
 				Name="VCLinkerTool"
 				AdditionalDependencies="tbb.lib"
 				LinkIncremental="1"
-				AdditionalLibraryDirectories="$(TBB21_INSTALL_DIR)\ia32\vc7.1\lib"
+				AdditionalLibraryDirectories="$(TBB22_INSTALL_DIR)\ia32\vc7.1\lib"
 				GenerateDebugInformation="TRUE"
 				SubSystem="1"
 				OptimizeReferences="2"
@@ -99,7 +99,7 @@
 			<Tool
 				Name="VCPostBuildEventTool"
 				Description="Copying DLLs and PDBs"
-				CommandLine="copy &quot;$(TBB21_INSTALL_DIR)\ia32\vc7.1\bin\tbb.dll&quot; &quot;$(OutDir)&quot;&#x0D;&#x0A; copy  &quot;$(TBB21_INSTALL_DIR)\ia32\vc7.1\bin\tbb.pdb&quot; &quot;$(OutDir)&quot;"/>
+				CommandLine="copy &quot;$(TBB22_INSTALL_DIR)\ia32\vc7.1\bin\tbb.dll&quot; &quot;$(OutDir)&quot;&#x0D;&#x0A; copy  &quot;$(TBB22_INSTALL_DIR)\ia32\vc7.1\bin\tbb.pdb&quot; &quot;$(OutDir)&quot;"/>
 			<Tool
 				Name="VCPreBuildEventTool"/>
 			<Tool

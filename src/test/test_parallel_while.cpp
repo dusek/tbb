@@ -156,16 +156,17 @@ static void Run( int nthread, int n ) {
         for( int j=0; j<n; ++j )    
             ASSERT( C[i][j]==D[i][j], NULL );
     if( Verbose ) 
-        printf("time=%g\tnthread=%d\tn=%d\n",(t1-t0).seconds(),nthread,n);
+        REPORT("time=%g\tnthread=%d\tn=%d\n",(t1-t0).seconds(),nthread,n);
 }
 
 #include "tbb/task_scheduler_init.h"
 #include "harness_cpu.h"
 
+__TBB_TEST_EXPORT
 int main( int argc, char* argv[] ) {
     ParseCommandLine( argc, argv );
     if( MinThread<1 ) {
-        printf("number of threads must be positive\n");
+        REPORT("number of threads must be positive\n");
         exit(1);
     }
     for( int p=MinThread; p<=MaxThread; ++p ) {
@@ -176,7 +177,7 @@ int main( int argc, char* argv[] ) {
         // Test that all workers sleep when no work
         TestCPUUserTime(p);
     }
-    printf("done\n");
+    REPORT("done\n");
     return 0;
 }
 

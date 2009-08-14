@@ -246,7 +246,9 @@ int run_pipeline( int nthreads )
 
     // Run the pipeline
     tbb::tick_count t0 = tbb::tick_count::now();
-    pipeline.run( NThread );
+    // Need more than one token in flight per thread to keep all threads 
+    // busy; 2-4 works
+    pipeline.run( nthreads*4 );
     tbb::tick_count t1 = tbb::tick_count::now();
 
     // Remove filters from pipeline before they are implicitly destroyed.
@@ -283,7 +285,7 @@ int main( int argc, char* argv[] ) {
         }
         { // parallel run (number of threads is selected automatically)
             tbb::task_scheduler_init init_parallel;
-            if(!run_pipeline (0))
+            if(!run_pipeline (init_parallel.default_num_threads()))
                 return 1;
         }
     }

@@ -57,13 +57,13 @@ function doWork() {
 			var clVersion = tmpExec.StdErr.ReadAll();
 			
 			//detect target architecture
-			var em64t=/AMD64|EM64T|x64/mgi;
-			var itanium=/IA-64|Itanium/mgi;
+			var intel64=/AMD64|EM64T|x64/mgi;
+			var ia64=/IA-64|Itanium/mgi;
 			var ia32=/80x86/mgi;
-			if ( clVersion.match(em64t) ) {
-				WScript.Echo( "em64t" );
-			} else if ( clVersion.match(itanium) ) {
-				WScript.Echo( "itanium" );
+			if ( clVersion.match(intel64) ) {
+				WScript.Echo( "intel64" );
+			} else if ( clVersion.match(ia64) ) {
+				WScript.Echo( "ia64" );
 			} else if ( clVersion.match(ia32) ) {
 				WScript.Echo( "ia32" );
 			} else {

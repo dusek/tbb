@@ -30,10 +30,10 @@ ifndef arch
                 export arch:=ia32
         endif
         ifeq ($(uname_m),ia64)
-                export arch:=itanium
+                export arch:=ia64
         endif
         ifeq ($(uname_m),x86_64)
-                export arch:=em64t
+                export arch:=intel64
         endif
         ifeq ($(uname_m),sparc64)
                 export arch:=sparc
@@ -78,7 +78,7 @@ DLL = so
 LIBEXT = so
 SONAME_SUFFIX =$(shell grep TBB_COMPATIBLE_INTERFACE_VERSION $(tbb_root)/include/tbb/tbb_stddef.h | egrep -o [0-9.]+)
 
-def_prefix = $(if $(findstring 32,$(arch)),lin32,$(if $(findstring 64,$(arch)),lin64,lin64ipf))
+def_prefix = $(if $(findstring 32,$(arch)),lin32,$(if $(findstring intel64,$(arch)),lin64,lin64ipf))
 TBB.DEF = $(tbb_root)/src/tbb/$(def_prefix)-tbb-export.def
 
 EXPORT_KEY = -Wl,--version-script,
@@ -98,6 +98,10 @@ MALLOCPROXY.DEF = $(MALLOC_ROOT)/$(def_prefix)-proxy-export.def
 MALLOCPROXY.DLL = $(MALLOCPROXY_NO_VERSION.DLL).$(SONAME_SUFFIX)
 MALLOCPROXY.LIB = $(MALLOCPROXY_NO_VERSION.DLL)
 
+RML_NO_VERSION.DLL = libirml$(DEBUG_SUFFIX).$(DLL)
+RML.DEF = $(RML_SERVER_ROOT)/lin-rml-export.def
+RML.DLL = $(RML_NO_VERSION.DLL).1
+RML.LIB = $(RML_NO_VERSION.DLL)
 
 TBB_NOSTRICT=1
 

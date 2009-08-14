@@ -90,18 +90,26 @@ inline intptr_t AtomicIncrement( volatile intptr_t& counter ) {
     return __TBB_FetchAndAddW( &counter, 1 )+1;
 }
 
+inline uintptr_t AtomicIncrement( volatile uintptr_t& counter ) {
+    return __TBB_FetchAndAddW( &counter, 1 )+1;
+}
+
+inline uintptr_t AtomicAdd( volatile uintptr_t& counter, uintptr_t value ) {
+    return __TBB_FetchAndAddW( &counter, value );
+}
+
 inline intptr_t AtomicCompareExchange( volatile intptr_t& location, intptr_t new_value, intptr_t comparand) {
     return __TBB_CompareAndSwapW( &location, new_value, comparand );
 }
 
 #define USE_DEFAULT_MEMORY_MAPPING 1
 
-namespace tbb {
+namespace rml {
 namespace internal {
     void init_tbbmalloc();
 } } // namespaces
 
-#define MALLOC_EXTRA_INITIALIZATION tbb::internal::init_tbbmalloc()
+#define MALLOC_EXTRA_INITIALIZATION rml::internal::init_tbbmalloc()
 
 // To support malloc replacement with LD_PRELOAD
 #include "proxy.h"

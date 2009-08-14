@@ -142,6 +142,7 @@ void ParallelTest() {
 
 #include "tbb/task_scheduler_init.h"
 
+__TBB_TEST_EXPORT
 int main( int argc, char* argv[] ) {
     ParseCommandLine(argc,argv);
     SerialTest();
@@ -149,6 +150,6 @@ int main( int argc, char* argv[] ) {
         tbb::task_scheduler_init init(p);
         ParallelTest();
     }
-    printf("done\n");
+    REPORT("done\n");
     return 0;
 }

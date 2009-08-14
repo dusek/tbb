@@ -35,7 +35,33 @@ namespace tbb {
 
 namespace internal {
 
-#  if __TBB_USE_FUTEX
+#if __TBB_RML
+//! Fake version of Gate for use with RML.
+/** Really just an atomic intptr_t with a compare-and-swap operation,
+    but wrapped in syntax that makes it look like a normal Gate object,
+    in order to minimize source changes for RML in task.cpp. */
+class Gate {
+public:
+    typedef intptr_t state_t;
+   
+    //! Get current state of gate
+    state_t get_state() const {
+        return state;
+    }
+
+#if defined(_MSC_VER) && defined(_Wp64)
+    // Workaround for overzealous compiler warnings in /Wp64 mode
+    #pragma warning (disable: 4244)
+#endif
+
+    bool try_update( intptr_t value, intptr_t comparand ) {
+        return state.compare_and_swap(value,comparand)==comparand;
+    }
+private:
+    atomic<state_t> state;
+};
+
+#elif __TBB_USE_FUTEX
 
 //! Implementation of Gate based on futex.
 /** Use this futex-based implementation where possible, because it is the simplest and usually fastest. */
@@ -101,7 +127,7 @@ public:
         ITT_SYNC_CREATE(&critical_section, SyncType_Scheduler, SyncObj_GateLock);
     }
     ~Gate() {
-        // Fake prepare/acquired pair for Amplifier to correctly attribute the operations below
+        // Fake prepare/acquired pair for Intel(R) Parallel Amplifier to correctly attribute the operations below
         ITT_NOTIFY( sync_prepare, &event );
         CloseHandle( event );
         DeleteCriticalSection( &critical_section );

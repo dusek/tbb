@@ -34,8 +34,9 @@
 // The actual body of the test is there:
 #include "test_allocator_STL.h"
 
+__TBB_TEST_EXPORT
 int main() {
     TestAllocatorWithSTL<tbb::scalable_allocator<void> >();
-    printf("done\n");
+    REPORT("done\n");
     return 0;
 }

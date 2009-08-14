@@ -62,51 +62,21 @@ export DATASET = balls
 # The default runtime arguments
 export ARGS =
 
-# detecting x64
-ifeq ($(shell uname -m),x86_64)
-x64 ?= 64
-endif
-# detecting UI ("mac", "x" or "con")
-ifeq ($(shell uname),Darwin)
-UI ?= mac
-else
-UI ?= $(shell sh -c "[ -f /usr/X11R6/lib$(x64)/libX11.so -o -f /usr/lib$(x64)/libX11.so ] && echo x || echo con")
-endif
+# define name suffix
+SUFFIX = .$(VERSION)
 
-MYCXXFLAGS = -DX_FULLSYNC
 LIBS ?= -lm
 
-# Platform-specific settings
+include ../../common/gui/Makefile.gmake
+
 ifeq ($(UI),x)
-EXE=$(NAME).$(VERSION)
-MYCXXFLAGS += -I/usr/X11R6/include
-ADD_THREADS=1
-LIBS += -L/usr/X11R6/lib$(x64) -lX11
-# detect if libXext can be found
-ifeq ($(shell sh -c "[ -f /usr/X11R6/lib$(x64)/libXext.so -o -f /usr/lib$(x64)/libXext.so ] && echo 0"),0)
-LIBS += -lXext
-MYCXXFLAGS += -DX_NOSHMPIX
-else
-MYCXXFLAGS += -DX_NOSHMEM
+CXXFLAGS += -DX_FULLSYNC 
+ifneq (,$(findstring -lXext,$(LIBS)))
+CXXFLAGS += -DX_NOSHMPIX
 endif
-else
-
-ifeq ($(UI),mac)
-TBBLIBSPATH = /Library/Frameworks/TBB.framework/Libraries
-CXXFLAGS += -arch i386 -mmacosx-version-min=10.4 -msse3 -ftree-vectorize
-LIBS += -framework OpenGL -framework AGL -framework Carbon -L$(TBBLIBSPATH)
-RES = $(NAME).$(VERSION).app/Contents/Resources
-EXE = $(NAME).$(VERSION).app/Contents/MacOS/$(NAME).$(VERSION)
-# look in /System and /Developer (for Xcode 3)
-PBXCP = $(wildcard /[SD]*/Library/PrivateFrameworks/DevToolsCore.framework/Resources/pbxcp) -resolve-src-symlinks -exclude .DS_Store -exclude CVS -exclude .svn
-else # ! Mac
-
-UI=con
-EXE=$(NAME).$(VERSION)
-endif # Mac
 endif # X
 
-MYCXXFLAGS += $(CXXFLAGS)
+MYCXXFLAGS = $(CXXFLAGS)
 
 all: build run
 release: build
@@ -158,10 +128,6 @@ else
 MYCXXFLAGS += -O2
 endif
 
-ifeq ($(ADD_THREADS),1)
-LIBS += -lpthread
-endif
-
 
 ifeq ($(ADD_TBB),1)
 MYCXXFLAGS +=
@@ -186,15 +152,16 @@ endif
 
 $(EXE): $(SOURCE)
 ifeq ($(UI),mac)
-	mkdir -p $(RES)/English.lproj $(NAME).$(VERSION).app/Contents/MacOS
-	$(PBXCP) xcode/English.lproj/main.nib $(RES)/English.lproj
-	$(PBXCP) xcode/Info.plist $(RES)
+	mkdir -p $(APPRES)/English.lproj $(NAME).$(VERSION).app/Contents/MacOS
+	$(PBXCP) xcode/English.lproj/main.nib $(APPRES)/English.lproj
+	$(PBXCP) xcode/Info.plist $(APPRES)
 endif
 	$(CXX) $(MYCXXFLAGS) -o $@ $(SOURCE) $(LIBS)
 	$(RM) *.o
 
+clean: VERSION = *
 clean:
-	$(RM) $(EXE)* *.o *.d
+	$(RM) $(EXE) *.o *.d
 ifeq ($(UI),mac)
 	rm -rf $(NAME).*
 endif

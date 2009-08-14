@@ -29,7 +29,6 @@
 #include <typeinfo>
 #include "tbb/atomic.h"
 #include "harness.h"
-#include "harness_trace.h"
 #include "harness_concurrency_tracker.h"
 
 namespace Harness {

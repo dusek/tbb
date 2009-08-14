@@ -134,6 +134,7 @@ public:
 
 private:
     template<typename Range, typename Body, typename Partitioner> friend class internal::start_for;
+    template<typename Range, typename Body, typename Partitioner> friend class internal::start_reduce;
     template<typename Range, typename Body> friend class internal::start_reduce_with_affinity;
     template<typename Range, typename Body, typename Partitioner> friend class internal::start_scan;
 

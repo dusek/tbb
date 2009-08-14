@@ -55,8 +55,8 @@ void initialize_strings_vector(std::vector <string_pair>* vector);
 const char stderr_stream[] = "version_test.err";
 const char stdout_stream[] = "version_test.out";
 
-int main(int argc, char*[] )
-{
+__TBB_TEST_EXPORT
+int main(int argc, char*[] ) {
 /* We first introduced runtime version identification in 3014 */
 #if TBB_INTERFACE_VERSION>=3014 
     // For now, just test that run-time TBB version matches the compile-time version,
@@ -73,12 +73,12 @@ int main(int argc, char*[] )
         if(argc>1) {
             stream_err = freopen( stderr_stream, "w", stderr );
             if( stream_err == NULL ){
-                printf( "Internal test error (freopen)\n" );
+                REPORT( "Internal test error (freopen)\n" );
                 exit( 1 );
             }
             stream_out = freopen( stdout_stream, "w", stdout );
             if( stream_out == NULL ){
-                printf( "Internal test error (freopen)\n" );
+                REPORT( "Internal test error (freopen)\n" );
                 exit( 1 );
             }
             {
@@ -90,33 +90,33 @@ int main(int argc, char*[] )
         }
         //1st step check that output is empty if TBB_VERSION is not defined.
         if ( getenv("TBB_VERSION") ){
-            printf( "TBB_VERSION defined, skipping step 1 (empty output check)\n" );
+            REPORT( "TBB_VERSION defined, skipping step 1 (empty output check)\n" );
         }else{
             if( ( system(TEST_SYSTEM_COMMAND) ) != 0 ){
-                printf( "Error (step 1): Internal test error\n" );
+                REPORT( "Error (step 1): Internal test error\n" );
                 exit( 1 );
             }
             //Checking output streams - they should be empty
             stream_err = fopen( stderr_stream, "r" );
             if( stream_err == NULL ){
-                printf( "Error (step 1):Internal test error (stderr open)\n" );
+                REPORT( "Error (step 1):Internal test error (stderr open)\n" );
                 exit( 1 );
             }
             while( !feof( stream_err ) ) {
                 if( fgets( psBuffer, 512, stream_err ) != NULL ){
-                    printf( "Error (step 1): stderr should be empty\n" );
+                    REPORT( "Error (step 1): stderr should be empty\n" );
                     exit( 1 );
                 }
             }
             fclose( stream_err );
             stream_out = fopen( stdout_stream, "r" );
             if( stream_out == NULL ){
-                printf( "Error (step 1):Internal test error (stdout open)\n" );
+                REPORT( "Error (step 1):Internal test error (stdout open)\n" );
                 exit( 1 );
             }
             while( !feof( stream_out ) ) {
                 if( fgets( psBuffer, 512, stream_out ) != NULL ){
-                    printf( "Error (step 1): stdout should be empty\n" );
+                    REPORT( "Error (step 1): stdout should be empty\n" );
                     exit( 1 );
                 }
             }
@@ -129,7 +129,7 @@ int main(int argc, char*[] )
         }
 
         if( ( system(TEST_SYSTEM_COMMAND) ) != 0 ){
-            printf( "Error (step 2):Internal test error\n" );
+            REPORT( "Error (step 2):Internal test error\n" );
             exit( 1 );
         }
         //Checking pipe - it should contain version data
@@ -141,12 +141,12 @@ int main(int argc, char*[] )
 
         stream_out = fopen( stdout_stream, "r" );
         if( stream_out == NULL ){
-            printf( "Error (step 2):Internal test error (stdout open)\n" );
+            REPORT( "Error (step 2):Internal test error (stdout open)\n" );
             exit( 1 );
         }
         while( !feof( stream_out ) ) {
             if( fgets( psBuffer, 512, stream_out ) != NULL ){
-                printf( "Error (step 2): stdout should be empty\n" );
+                REPORT( "Error (step 2): stdout should be empty\n" );
                 exit( 1 );
             }
         }
@@ -154,7 +154,7 @@ int main(int argc, char*[] )
 
         stream_err = fopen( stderr_stream, "r" );
         if( stream_err == NULL ){
-            printf( "Error (step 1):Internal test error (stderr open)\n" );
+            REPORT( "Error (step 1):Internal test error (stderr open)\n" );
             exit( 1 );
         }
         
@@ -164,14 +164,14 @@ int main(int argc, char*[] )
             if( fgets( psBuffer, 512, stream_err ) != NULL ){
                 do{
                     if ( strings_iterator == strings_vector.end() ){
-                        printf( "Error: version string dictionary ended prematurely.\n" );
-                        printf( "No match for: \t%s", psBuffer );
+                        REPORT( "Error: version string dictionary ended prematurely.\n" );
+                        REPORT( "No match for: \t%s", psBuffer );
                         exit( 1 );
                     }
                     if ( strstr( psBuffer, strings_iterator->first.c_str() ) == NULL ){
                         if( strings_iterator->second == required ){
-                            printf( "Error: version strings do not match.\n" );
-                            printf( "Expected \"%s\" not found in:\n\t%s", strings_iterator->first.c_str(), psBuffer );
+                            REPORT( "Error: version strings do not match.\n" );
+                            REPORT( "Expected \"%s\" not found in:\n\t%s", strings_iterator->first.c_str(), psBuffer );
                             exit( 1 );
                         }else{
                             //Do we need to print in case there is no non-required string?
@@ -188,7 +188,7 @@ int main(int argc, char*[] )
     } catch(...) {
         ASSERT( 0,"unexpected exception" );
     }
-    printf("done\n");
+    REPORT("done\n");
     return 0;
 }
 
@@ -196,8 +196,8 @@ int main(int argc, char*[] )
 // Fill dictionary with version strings for platforms 
 void initialize_strings_vector(std::vector <string_pair>* vector)
 {
-    vector->push_back(string_pair("TBB: VERSION\t\t2.1", required));          // check TBB_VERSION
-    vector->push_back(string_pair("TBB: INTERFACE VERSION\t3017", required)); // check TBB_INTERFACE_VERSION
+    vector->push_back(string_pair("TBB: VERSION\t\t2.2", required));          // check TBB_VERSION
+    vector->push_back(string_pair("TBB: INTERFACE VERSION\t4001", required)); // check TBB_INTERFACE_VERSION
     vector->push_back(string_pair("TBB: BUILD_DATE", required));
     vector->push_back(string_pair("TBB: BUILD_HOST", required));
     vector->push_back(string_pair("TBB: BUILD_OS", required));

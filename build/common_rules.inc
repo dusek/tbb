@@ -34,6 +34,10 @@ ifeq ($(tbb_strict),1)
   WARNING_KEY += $(WARNING_AS_ERROR_KEY)
 endif
 
+ifndef TEST_EXT
+    TEST_EXT = exe
+endif
+
 INCLUDES += $(INCLUDE_KEY)$(tbb_root)/src $(INCLUDE_KEY)$(tbb_root)/include
 
 CPLUS_FLAGS += $(WARNING_KEY) $(CXXFLAGS)
@@ -53,7 +57,7 @@ CONLY ?= $(CPLUS)
 
 # The most generic rules
 %.$(OBJ): %.cpp
-	$(CPLUS) $(COMPILE_ONLY) $(CPLUS_FLAGS) $(INCLUDES) $<
+	$(CPLUS) $(COMPILE_ONLY) $(CPLUS_FLAGS) $(CXX_WARN_SUPPRESS) $(INCLUDES) $<
 
 %.$(OBJ): %.c
 	$(CONLY) $(COMPILE_ONLY) $(C_FLAGS) $(INCLUDES) $<

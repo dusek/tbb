@@ -41,27 +41,36 @@ include ../build/common.inc
 ifeq ($(filter /% $(SLASH)%, $(subst :, ,$(tbb_root)) ),)
     # also changes related variables like work_dir
     override tbb_root := $(CWD)$(SLASH)..
-    export TBB21_INSTALL_DIR := $(tbb_root)
+    export TBB22_INSTALL_DIR := $(tbb_root)
 endif
 
 ifeq ($(tbb_os),windows)
-    EXAMPLE_MAKEFILE = Makefile.windows
-    EXAMPLES = $(wildcard */*/$(EXAMPLE_MAKEFILE))
-    EXAMPLE_MAKEFILE := $(if $(EXAMPLES),Makefile.windows,Makefile)
+    ifeq ($(compiler),gcc)
+        EXAMPLE_MAKEFILE = Makefile
+        EXAMPLES = $(wildcard */*/$(EXAMPLE_MAKEFILE))
+        export CPATH := $(CPATH);$(tbb_root)/include
+        export LIBRARY_PATH := $(LIBRARY_PATH);$(work_dir)_release;$(work_dir)_debug
+        export CXXFLAGS += -Wl,--enable-auto-import
+        export RM = cmd /C del /Q /F
+    else
+        EXAMPLE_MAKEFILE = Makefile.windows
+        EXAMPLES = $(wildcard */*/$(EXAMPLE_MAKEFILE))
+        EXAMPLE_MAKEFILE := $(if $(EXAMPLES),Makefile.windows,Makefile)
+        export INCLUDE := $(tbb_root)$(SLASH)include;$(INCLUDE)
+        export LIB := $(work_dir)_release;$(work_dir)_debug;$(LIB)
+    endif
     work_dir := $(subst /,$(SLASH),$(work_dir))
     export PATH := $(work_dir)_release;$(work_dir)_debug;$(PATH)
-    export LIB := $(work_dir)_release;$(work_dir)_debug;$(LIB)
-    export INCLUDE := $(tbb_root)$(SLASH)include;$(INCLUDE)
     export TBB_ARCH_PLATFORM = $(arch)\$(runtime)
 else
     EXAMPLE_MAKEFILE = Makefile
     EXAMPLES := $(wildcard */*/$(EXAMPLE_MAKEFILE))
     # platform-specific settings
-    ifeq ($(arch),itanium)
+    ifeq ($(arch),ia64)
         override CXXFLAGS += $(PIC_KEY)
     endif
     ifeq ($(compiler),gcc)
-        ifeq ($(arch),em64t)
+        ifeq ($(arch),intel64)
             override CXXFLAGS += -m64
         endif
         ifeq ($(arch),ia32)
@@ -79,7 +88,7 @@ else
     endif
     ifeq ($(compiler),suncc)
         override CXXFLAGS += -I$(tbb_root)$(SLASH)include -library=stlport4 -M$(tbb_root)/build/suncc.map.pause
-        ifeq ($(arch),em64t)
+        ifeq ($(arch),intel64)
             override CXXFLAGS += -m64
         endif
         ifeq ($(arch),ia32)
@@ -91,7 +100,7 @@ else
     endif
     ifeq ($(tbb_os),macos)
         # GUI for examples does not support 64-bit platforms
-        ifeq ($(arch),em64t)
+        ifeq ($(arch),intel64)
             export UI=con
         endif
         ifeq ($(arch),ppc64)

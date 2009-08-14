@@ -136,7 +136,7 @@ MyOutputFilter::MyOutputFilter( FILE* output_file ) :
 
 void* MyOutputFilter::operator()( void* item ) {
     MyBuffer& b = *static_cast<MyBuffer*>(item);
-    int n = fwrite( b.begin(), 1, b.size(), my_output_file );
+    int n = (int) fwrite( b.begin(), 1, b.size(), my_output_file );
     if( n<=0 ) {
         fprintf(stderr,"Can't write into %s file\n", OutputFileName);
         exit(1);

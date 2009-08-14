@@ -48,7 +48,6 @@
 #include "tbb/tick_count.h"
 #include "tbb/atomic.h"
 #include "harness.h"
-#include "harness_trace.h"
 #include <cstdlib>
 #include <cstdio>
 #if _OPENMP
@@ -191,7 +190,7 @@ void Test( const char * name ) {
     tbb::tick_count t1 = tbb::tick_count::now();
     REMARK("%g usec\n",(t1-t0).seconds());
     if( counter.value!=n )
-        std::printf("ERROR for %s: counter.value=%ld\n",name,counter.value);
+        REPORT("ERROR for %s: counter.value=%ld\n",name,counter.value);
 }
 
 template<typename M, size_t N>
@@ -217,7 +216,7 @@ struct Invariant {
         long tmp;
         for( size_t k=0; k<N; ++k )
             if( (tmp=value[k])!=expected_value ) {
-                printf("ERROR: %ld!=%ld\n", tmp, expected_value);
+                REPORT("ERROR: %ld!=%ld\n", tmp, expected_value);
                 return false;
             }
         return true;
@@ -288,7 +287,7 @@ struct TwiddleInvariant: NoAssign {
                 }
             }
             if( !okay ) {
-                std::printf( "ERROR for %s at %ld: %s %s %s %s\n",invariant.mutex_name, long(i),
+                REPORT( "ERROR for %s at %ld: %s %s %s %s\n",invariant.mutex_name, long(i),
                              write?"write,":"read,", write?(i%16==7?"downgrade,":""):(i%8==3?"upgrade,":""),
                              lock_kept?"lock kept,":"lock not kept,", (i/8)&1?"imp/exp":"exp/imp" );
             }
@@ -313,7 +312,7 @@ void TestReaderWriterLock( const char * mutex_name ) {
     // There is either a writer or a reader upgraded to a writer for each 4th iteration
     long expected_value = n/4;
     if( !invariant.value_is(expected_value) )
-        std::printf("ERROR for %s: final invariant value is wrong\n",mutex_name);
+        REPORT("ERROR for %s: final invariant value is wrong\n",mutex_name);
     REMARK( "%g usec\n", (t1-t0).seconds() );
 }
 
@@ -332,20 +331,20 @@ void TestTryAcquireReader_OneThread( const char * mutex_name ) {
         if( lock1.try_acquire(tested_mutex, false) )
             lock1.release();
         else
-            std::printf("ERROR for %s: try_acquire failed though it should not\n", mutex_name);
+            REPORT("ERROR for %s: try_acquire failed though it should not\n", mutex_name);
         {
             typename M::scoped_lock lock2(tested_mutex, false);
             if( lock1.try_acquire(tested_mutex) )
-                std::printf("ERROR for %s: try_acquire succeeded though it should not\n", mutex_name);
+                REPORT("ERROR for %s: try_acquire succeeded though it should not\n", mutex_name);
             lock2.release();
             lock2.acquire(tested_mutex, true);
             if( lock1.try_acquire(tested_mutex, false) )
-                std::printf("ERROR for %s: try_acquire succeeded though it should not\n", mutex_name);
+                REPORT("ERROR for %s: try_acquire succeeded though it should not\n", mutex_name);
         }
         if( lock1.try_acquire(tested_mutex, false) )
             lock1.release();
         else
-            std::printf("ERROR for %s: try_acquire failed though it should not\n", mutex_name);
+            REPORT("ERROR for %s: try_acquire failed though it should not\n", mutex_name);
     }
 }
 
@@ -357,25 +356,25 @@ void TestTryAcquire_OneThread( const char * mutex_name ) {
     if( lock1.try_acquire(tested_mutex) )
         lock1.release();
     else
-        std::printf("ERROR for %s: try_acquire failed though it should not\n", mutex_name);
+        REPORT("ERROR for %s: try_acquire failed though it should not\n", mutex_name);
     {
         if( M::is_recursive_mutex ) {
             typename M::scoped_lock lock2(tested_mutex);
             if( lock1.try_acquire(tested_mutex) )
                 lock1.release();
             else
-                std::printf("ERROR for %s: try_acquire on recursive lock failed though it should not\n", mutex_name);
+                REPORT("ERROR for %s: try_acquire on recursive lock failed though it should not\n", mutex_name);
             //windows.. -- both are recursive
         } else {
             typename M::scoped_lock lock2(tested_mutex);
             if( lock1.try_acquire(tested_mutex) )
-                std::printf("ERROR for %s: try_acquire succeeded though it should not\n", mutex_name);
+                REPORT("ERROR for %s: try_acquire succeeded though it should not\n", mutex_name);
         }
     }
     if( lock1.try_acquire(tested_mutex) )
         lock1.release();
     else
-        std::printf("ERROR for %s: try_acquire failed though it should not\n", mutex_name);
+        REPORT("ERROR for %s: try_acquire failed though it should not\n", mutex_name);
 } 
 
 #if _MSC_VER && !defined(__INTEL_COMPILER)
@@ -492,11 +491,11 @@ struct NullUpgradeDowngrade: NoAssign {
             if( i&1 ) {
                 typename M::scoped_lock lock1(my_mutex, true) ;
                 if( lock1.downgrade_to_reader()==false )
-                    std::printf("ERROR for %s: downgrade should always succeed\n", name);
+                    REPORT("ERROR for %s: downgrade should always succeed\n", name);
             } else {
                 lock2.acquire( my_mutex, false );
                 if( lock2.upgrade_to_writer()==false )
-                    std::printf("ERROR for %s: upgrade should always succeed\n", name);
+                    REPORT("ERROR for %s: upgrade should always succeed\n", name);
                 lock2.release();
             }
         }
@@ -512,7 +511,7 @@ void TestNullMutex( const char * name ) {
     Counter<M> counter;
     counter.value = 0;
     const int n = 100;
-    if( Verbose ) printf("%s ",name);
+    if( Verbose ) REPORT("%s ",name);
     {
         tbb::parallel_for(tbb::blocked_range<size_t>(0,n,10),AddOne<Counter<M> >(counter));
     }
@@ -525,7 +524,7 @@ void TestNullMutex( const char * name ) {
 
 template<typename M>
 void TestNullRWMutex( const char * name ) {
-    if( Verbose ) printf("%s ",name);
+    if( Verbose ) REPORT("%s ",name);
     const int n = 100;
     M m;
     tbb::parallel_for(tbb::blocked_range<size_t>(0,n,10),NullUpgradeDowngrade<M>(m, name));
@@ -562,6 +561,7 @@ void TestRecursiveMutexISO( const char * name ) {
 
 #include "tbb/task_scheduler_init.h"
 
+__TBB_TEST_EXPORT
 int main( int argc, char * argv[] ) {
     // Default is to run on two threads
     MinThread = MaxThread = 2;
@@ -625,6 +625,6 @@ int main( int argc, char * argv[] ) {
         }
         REMARK( "calling destructor for task_scheduler_init\n" );
     }
-    std::printf("done\n");
+    REPORT("done\n");
     return 0;
 }

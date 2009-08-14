@@ -29,10 +29,10 @@ ifndef arch
                 export arch:=ia32
         endif
         ifeq ($(shell uname -m),ia64)
-                export arch:=itanium
+                export arch:=ia64
         endif
         ifeq ($(shell uname -m),amd64)
-                export arch:=em64t
+                export arch:=intel64
         endif
 endif
 
