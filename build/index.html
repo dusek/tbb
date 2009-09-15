@@ -122,6 +122,21 @@ To perform different build and/or test operations, use the following steps.
     <DT><TT>make arch=<B>{</B>ia32, intel64, ia64<B>}</B> <B>[</B>(above options or targets)<B>]</B></TT>
     <DD>Build and run as above, but build libraries for the selected ABI.
         Might be useful for cross-compilation; ensure proper environment is set before running this command.
+    <DT><TT>make macos_version=<B>{</B>10.4, 10.5, 10.6<B>}</B> <B>[</B>(above options or targets)<B>]</B></TT>
+    <DD>Build and run as above, but build libraries with the selected version of Mac OS X SDK.
+    If not specified, defaults to version on which building takes place.
+    <DT><TT>make macos_version_min=<B>{</B>10.4, 10.5, 10.6<B>}</B> <B>[</B>(above options or targets)<B>]</B></TT>
+    <DD>Build and run as above, but build libraries to be deployable on the selected version of Mac OS X and later versions, up to (and including) <TT>macos_version</TT>.
+    If specified, must be less or equal to <TT>macos_version</TT> and this must also be specified.
+    If not specified, defaults to value of <TT>macos_version</TT>.
+    <DT><TT>make macos_developer_dir=<B>{</B>(path)<B>}</B> <B>[</B>(above options or targets)<B>]</B></TT>
+    <DD>Build and run as above, but specify where you installed your Xcode package.
+    Defaults to <TT>/Developer</TT>, Xcode installer's default.
+    <DT><TT>make macos_gcc_version=<B>{</B>4.0, 4.2, possibly others with future Apple SDKs<B>}</B> <B>[</B>(above options or targets)<B>]</B></TT>
+    <DD>Build and run as above, but specify the gcc version to use on Mac OS X.
+    Defaults to the system's default if <TT>macos_version</TT> is not set.
+    If <TT>macos_version</TT> is set to <TT>10.4</TT> or <TT>10.5</TT>, defaults to <TT>4.0</TT>.
+    If <TT>macos_version</TT> is set to <TT>10.6</TT>, defaults to <TT>4.2</TT>.
     <DT><TT>make tbb_root=<B>{</B>(TBB directory)<B>}</B> <B>[</B>(above options or targets)<B>]</B></TT>
     <DD>Build and run as above; for use when invoking 'make' from a directory other than
 	the <A HREF=../index.html>top-level directory</A>.

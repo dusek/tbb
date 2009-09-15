@@ -24,8 +24,8 @@
 # invalidate any other reasons why the executable file might be covered by
 # the GNU General Public License.
 
-CPLUS = g++
-CONLY = gcc
+CPLUS = g++$(gcc_version_suffix)
+CONLY = gcc$(gcc_version_suffix)
 COMPILE_ONLY = -c -MMD
 PREPROC_ONLY = -E -x c
 INCLUDE_KEY = -I
@@ -52,6 +52,12 @@ else
 endif
 
 CPLUS_FLAGS += -DUSE_PTHREAD
+
+ifdef macos_version
+    CPLUS_FLAGS += -isysroot $(macos_sdk_dir) -mmacosx-version-min=$(macos_version_min)
+    LINK_FLAGS += -isysroot $(macos_sdk_dir) -mmacosx-version-min=$(macos_version_min)
+    LIB_LINK_FLAGS += -isysroot $(macos_sdk_dir) -mmacosx-version-min=$(macos_version_min)
+endif
 
 ifeq (ia32,$(arch))
     CPLUS_FLAGS += -arch i386

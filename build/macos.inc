@@ -41,11 +41,42 @@ ifndef arch
  endif
 endif
 
+ifdef macos_version
+    ifndef macos_developer_dir
+        macos_developer_dir:=/Developer
+    endif
+    macos_sdk_dir=$(wildcard $(macos_developer_dir)/SDKs/MacOSX$(macos_version)*)
+    ifndef macos_version_min
+        macos_version_min:=$(macos_version)
+    endif
+    ifndef macos_gcc_version
+        ifeq ($(macos_version),10.4)
+            macos_gcc_version = 4.0
+        endif
+        ifeq ($(macos_version),10.5)
+            macos_gcc_version = 4.0
+        endif
+        ifeq ($(macos_version),10.6)
+            macos_gcc_version = 4.2
+        endif
+    endif
+endif
+
+ifdef macos_gcc_version
+    gcc_version_suffix = -$(macos_gcc_version)
+else
+    gcc_version_suffix =
+endif
+
 ifndef runtime
  #gcc_version:=$(shell gcc -v 2>&1 | grep 'gcc version' | sed -e 's/^gcc version //' | sed -e 's/ .*$$//' )
- gcc_version_full=$(shell gcc --version | grep 'gcc'| egrep -o ' [0-9]+\.[0-9]+\.[0-9]+.*' | sed -e 's/^\ //')
+ gcc_version_full=$(shell gcc$(gcc_version_suffix) --version | grep 'gcc'| egrep -o ' [0-9]+\.[0-9]+\.[0-9]+.*' | sed -e 's/^\ //')
  gcc_version=$(shell echo "$(gcc_version_full)" | egrep -o '^[0-9]+\.[0-9]+\.[0-9]+\s*' | head -n 1 | sed -e 's/ *//g')
- os_version:=$(shell /usr/bin/sw_vers -productVersion)
+ ifdef macos_version_min
+  os_version:=$(macos_version_min)
+ else
+  os_version:=$(shell /usr/bin/sw_vers -productVersion)
+ endif
  export runtime:=cc$(gcc_version)_os$(os_version)
 endif
 
