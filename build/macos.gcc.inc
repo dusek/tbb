@@ -53,6 +53,12 @@ endif
 
 CPLUS_FLAGS += -DUSE_PTHREAD
 
+ifeq (ia32,$(arch))
+    CPLUS_FLAGS += -arch i386
+    LINK_FLAGS += -arch i386
+    LIB_LINK_FLAGS += -arch i386
+endif
+
 ifeq (intel64,$(arch))
     CPLUS_FLAGS += -m64
     LINK_FLAGS += -m64
