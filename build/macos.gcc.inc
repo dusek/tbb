@@ -66,9 +66,9 @@ ifeq (ia32,$(arch))
 endif
 
 ifeq (intel64,$(arch))
-    CPLUS_FLAGS += -m64
-    LINK_FLAGS += -m64
-    LIB_LINK_FLAGS += -m64
+    CPLUS_FLAGS += -arch x86_64
+    LINK_FLAGS += -arch x86_64
+    LIB_LINK_FLAGS += -arch x86_64
 endif
 
 ifeq (ppc64,$(arch))
