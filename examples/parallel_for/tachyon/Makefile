@@ -95,25 +95,25 @@ tbb1d: build_tbb1d run_tbb1d
 tbb1d_debug: build_tbb1d_debug run_tbb1d
 
 build_serial:
-	$(MAKE) VERSION=serial build_one
+	"$(MAKE)" VERSION=serial build_one
 build_serial_debug:
-	$(MAKE) VERSION=serial ADD_DEBUG=1 build_one
+	"$(MAKE)" VERSION=serial ADD_DEBUG=1 build_one
 run_serial:
-	$(MAKE) VERSION=serial run_one
+	"$(MAKE)" VERSION=serial run_one
 
 build_tbb:
-	$(MAKE) VERSION=tbb ADD_TBB=1 build_one
+	"$(MAKE)" VERSION=tbb ADD_TBB=1 build_one
 build_tbb_debug:
-	$(MAKE) VERSION=tbb ADD_TBB=1 ADD_DEBUG=1 build_one
+	"$(MAKE)" VERSION=tbb ADD_TBB=1 ADD_DEBUG=1 build_one
 run_tbb:
-	$(MAKE) VERSION=tbb run_one
+	"$(MAKE)" VERSION=tbb run_one
 
 build_tbb1d:
-	$(MAKE) VERSION=tbb1d ADD_TBB=1 build_one
+	"$(MAKE)" VERSION=tbb1d ADD_TBB=1 build_one
 build_tbb1d_debug:
-	$(MAKE) VERSION=tbb1d ADD_TBB=1 ADD_DEBUG=1 build_one
+	"$(MAKE)" VERSION=tbb1d ADD_TBB=1 ADD_DEBUG=1 build_one
 run_tbb1d:
-	$(MAKE) VERSION=tbb1d run_one
+	"$(MAKE)" VERSION=tbb1d run_one
 
 
 #

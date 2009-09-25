@@ -106,23 +106,23 @@ tbb1d: build_tbb1d run_tbb1d
 tbb1d_debug: build_tbb1d_debug run_tbb1d
 
 build_serial:
-	@$(MAKE) -f $(MAKEINC) SOURCE="src/trace.serial.cpp $(SOURCE)" EXE=tachyon.serial.exe RCNAME=gui UI=$(UI) CXX="$(CXX)" CXXFLAGS=$(CXXFLAGS) XARCH=$(XARCH) build_one
+	@"$(MAKE)" -f $(MAKEINC) SOURCE="src/trace.serial.cpp $(SOURCE)" EXE=tachyon.serial.exe RCNAME=gui UI=$(UI) CXX="$(CXX)" CXXFLAGS=$(CXXFLAGS) XARCH=$(XARCH) build_one
 build_serial_debug:
-	@$(MAKE) -f $(MAKEINC) SOURCE="src/trace.serial.cpp $(SOURCE)" EXE=tachyon.serial.exe RCNAME=gui UI=$(UI) DEBUG=_debug CXX="$(CXX)" CXXFLAGS=$(CXXFLAGS) XARCH=$(XARCH) build_one
+	@"$(MAKE)" -f $(MAKEINC) SOURCE="src/trace.serial.cpp $(SOURCE)" EXE=tachyon.serial.exe RCNAME=gui UI=$(UI) DEBUG=_debug CXX="$(CXX)" CXXFLAGS=$(CXXFLAGS) XARCH=$(XARCH) build_one
 run_serial:
 	-.\tachyon.serial.exe $(ARGS) dat\$(DATASET).dat
 
 build_tbb:
-	@$(MAKE) -f $(MAKEINC) SOURCE="src/trace.tbb.cpp $(SOURCE)" EXE=tachyon.tbb.exe RCNAME=gui UI=$(UI) CXX="$(CXX)" CXXFLAGS="$(CXXFLAGS_TBB_NDEBUG)" LFLAGS="$(LIBS_TBB_NDEBUG)" XARCH=$(XARCH) build_one
+	@"$(MAKE)" -f $(MAKEINC) SOURCE="src/trace.tbb.cpp $(SOURCE)" EXE=tachyon.tbb.exe RCNAME=gui UI=$(UI) CXX="$(CXX)" CXXFLAGS="$(CXXFLAGS_TBB_NDEBUG)" LFLAGS="$(LIBS_TBB_NDEBUG)" XARCH=$(XARCH) build_one
 build_tbb_debug:
-	@$(MAKE) -f $(MAKEINC) SOURCE="src/trace.tbb.cpp $(SOURCE)" EXE=tachyon.tbb.exe RCNAME=gui UI=$(UI) DEBUG=_debug CXX="$(CXX)" CXXFLAGS="$(CXXFLAGS_TBB_DEBUG)" LFLAGS="$(LIBS_TBB_DEBUG)" XARCH=$(XARCH) build_one
+	@"$(MAKE)" -f $(MAKEINC) SOURCE="src/trace.tbb.cpp $(SOURCE)" EXE=tachyon.tbb.exe RCNAME=gui UI=$(UI) DEBUG=_debug CXX="$(CXX)" CXXFLAGS="$(CXXFLAGS_TBB_DEBUG)" LFLAGS="$(LIBS_TBB_DEBUG)" XARCH=$(XARCH) build_one
 run_tbb:
 	-.\tachyon.tbb.exe $(ARGS) dat\$(DATASET).dat
 
 build_tbb1d:
-	@$(MAKE) -f $(MAKEINC) SOURCE="src/trace.tbb1d.cpp $(SOURCE)" EXE=tachyon.tbb1d.exe RCNAME=gui UI=$(UI) CXX="$(CXX)" CXXFLAGS="$(CXXFLAGS_TBB_NDEBUG)" LFLAGS="$(LIBS_TBB_NDEBUG)" XARCH=$(XARCH) build_one
+	@"$(MAKE)" -f $(MAKEINC) SOURCE="src/trace.tbb1d.cpp $(SOURCE)" EXE=tachyon.tbb1d.exe RCNAME=gui UI=$(UI) CXX="$(CXX)" CXXFLAGS="$(CXXFLAGS_TBB_NDEBUG)" LFLAGS="$(LIBS_TBB_NDEBUG)" XARCH=$(XARCH) build_one
 build_tbb1d_debug:
-	@$(MAKE) -f $(MAKEINC) SOURCE="src/trace.tbb1d.cpp $(SOURCE)" EXE=tachyon.tbb1d.exe RCNAME=gui UI=$(UI) DEBUG=_debug CXX="$(CXX)" CXXFLAGS="$(CXXFLAGS_TBB_DEBUG)" LFLAGS="$(LIBS_TBB_DEBUG)" XARCH=$(XARCH) build_one
+	@"$(MAKE)" -f $(MAKEINC) SOURCE="src/trace.tbb1d.cpp $(SOURCE)" EXE=tachyon.tbb1d.exe RCNAME=gui UI=$(UI) DEBUG=_debug CXX="$(CXX)" CXXFLAGS="$(CXXFLAGS_TBB_DEBUG)" LFLAGS="$(LIBS_TBB_DEBUG)" XARCH=$(XARCH) build_one
 run_tbb1d:
 	-.\tachyon.tbb1d.exe $(ARGS) dat\$(DATASET).dat
 

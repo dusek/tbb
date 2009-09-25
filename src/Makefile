@@ -58,109 +58,109 @@ clean: clean_release clean_debug clean_examples
 
 .PHONY: full
 full:
-	$(MAKE) -s -i -r --no-print-directory -f Makefile tbb_root=. clean all
+	"$(MAKE)" -s -i -r --no-print-directory -f Makefile tbb_root=. clean all
 ifeq ($(tbb_os),windows)
-	$(MAKE) -s -i -r --no-print-directory -f Makefile tbb_root=. compiler=icl clean all native_examples
+	"$(MAKE)" -s -i -r --no-print-directory -f Makefile tbb_root=. compiler=icl clean all native_examples
 else
-	$(MAKE) -s -i -r --no-print-directory -f Makefile tbb_root=. compiler=icc clean all native_examples
+	"$(MAKE)" -s -i -r --no-print-directory -f Makefile tbb_root=. compiler=icc clean all native_examples
 endif
 ifeq ($(arch),intel64)
-	$(MAKE) -s -i -r --no-print-directory -f Makefile tbb_root=. arch=ia32 clean all
+	"$(MAKE)" -s -i -r --no-print-directory -f Makefile tbb_root=. arch=ia32 clean all
 endif
 # it doesn't test compiler=icc arch=ia32 on intel64 systems due to enviroment settings of icc
 
 native_examples: tbb tbbmalloc
-	$(MAKE) -C $(examples_root) -r -f Makefile tbb_root=.. compiler=$(native_compiler) tbb_build_prefix=$(tbb_build_prefix) debug test
-	$(MAKE) -C $(examples_root) -r -f Makefile tbb_root=.. compiler=$(native_compiler) tbb_build_prefix=$(tbb_build_prefix) clean release test
+	"$(MAKE)" -C $(examples_root) -r -f Makefile tbb_root=.. compiler=$(native_compiler) tbb_build_prefix=$(tbb_build_prefix) debug test
+	"$(MAKE)" -C $(examples_root) -r -f Makefile tbb_root=.. compiler=$(native_compiler) tbb_build_prefix=$(tbb_build_prefix) clean release test
 
 ../examples/% examples/%::
-	$(MAKE) -C $(examples_root) -r -f Makefile tbb_root=.. $(subst examples/,,$(subst ../,,$@))
+	"$(MAKE)" -C $(examples_root) -r -f Makefile tbb_root=.. $(subst examples/,,$(subst ../,,$@))
 
 debug_%:: cfg?=debug
 debug_%:: run_cmd=$(debugger)
 test_% stress_% time_%:: cfg?=release
 debug_% test_% stress_% time_%::
-	$(MAKE) -C "$(work_dir)_$(cfg)"  -r -f $(tbb_root)/build/Makefile.test cfg=$(cfg) run_cmd=$(run_cmd) tbb_root=$(tbb_root) $@
+	"$(MAKE)" -C "$(work_dir)_$(cfg)"  -r -f $(tbb_root)/build/Makefile.test cfg=$(cfg) run_cmd=$(run_cmd) tbb_root=$(tbb_root) $@
 
 clean_%::
 ifeq ($(cfg),)
-	@$(MAKE) -C "$(work_dir)_release"  -r -f $(tbb_root)/build/Makefile.test cfg=release tbb_root=$(tbb_root) $@
-	@$(MAKE) -C "$(work_dir)_debug"  -r -f $(tbb_root)/build/Makefile.test cfg=debug tbb_root=$(tbb_root) $@
+	@"$(MAKE)" -C "$(work_dir)_release"  -r -f $(tbb_root)/build/Makefile.test cfg=release tbb_root=$(tbb_root) $@
+	@"$(MAKE)" -C "$(work_dir)_debug"  -r -f $(tbb_root)/build/Makefile.test cfg=debug tbb_root=$(tbb_root) $@
 else
-	@$(MAKE) -C "$(work_dir)_$(cfg)"  -r -f $(tbb_root)/build/Makefile.test cfg=$(cfg) tbb_root=$(tbb_root) $@
+	@"$(MAKE)" -C "$(work_dir)_$(cfg)"  -r -f $(tbb_root)/build/Makefile.test cfg=$(cfg) tbb_root=$(tbb_root) $@
 endif
 
 .PHONY: tbb_release tbb_debug test_release test_debug test_release_no_depends test_debug_no_depends
 
 # do not delete double-space after -C option
 tbb_release: mkdir_release
-	$(MAKE) -C "$(work_dir)_release"  -r -f $(tbb_root)/build/Makefile.tbb cfg=release tbb_root=$(tbb_root)
+	"$(MAKE)" -C "$(work_dir)_release"  -r -f $(tbb_root)/build/Makefile.tbb cfg=release tbb_root=$(tbb_root)
 
 tbb_debug: mkdir_debug
-	$(MAKE) -C "$(work_dir)_debug"  -r -f $(tbb_root)/build/Makefile.tbb cfg=debug tbb_root=$(tbb_root)
+	"$(MAKE)" -C "$(work_dir)_debug"  -r -f $(tbb_root)/build/Makefile.tbb cfg=debug tbb_root=$(tbb_root)
 
 rml_release: mkdir_release
-	$(MAKE) -C "$(work_dir)_release"  -r -f $(tbb_root)/build/Makefile.rml cfg=release tbb_root=$(tbb_root) rml
+	"$(MAKE)" -C "$(work_dir)_release"  -r -f $(tbb_root)/build/Makefile.rml cfg=release tbb_root=$(tbb_root) rml
 
 rml_debug: mkdir_debug
-	$(MAKE) -C "$(work_dir)_debug"  -r -f $(tbb_root)/build/Makefile.rml cfg=debug tbb_root=$(tbb_root) rml
+	"$(MAKE)" -C "$(work_dir)_debug"  -r -f $(tbb_root)/build/Makefile.rml cfg=debug tbb_root=$(tbb_root) rml
 
 test_release: $(call cross_cfg,mkdir_release) $(call cross_cfg,tbb_release) test_release_no_depends
 test_release_no_depends: 
-	-$(MAKE) -C "$(call cross_cfg,$(work_dir)_release)"  -r -f $(tbb_root)/build/Makefile.test cfg=release tbb_root=$(tbb_root) 
+	-"$(MAKE)" -C "$(call cross_cfg,$(work_dir)_release)"  -r -f $(tbb_root)/build/Makefile.test cfg=release tbb_root=$(tbb_root) 
 
 test_debug: $(call cross_cfg,mkdir_debug) $(call cross_cfg,tbb_debug) test_debug_no_depends
 test_debug_no_depends:
-	-$(MAKE) -C "$(call cross_cfg,$(work_dir)_debug)"  -r -f $(tbb_root)/build/Makefile.test cfg=debug tbb_root=$(tbb_root)
+	-"$(MAKE)" -C "$(call cross_cfg,$(work_dir)_debug)"  -r -f $(tbb_root)/build/Makefile.test cfg=debug tbb_root=$(tbb_root)
 
 test_release_ni: 
-	$(MAKE) -C "$(call cross_cfg,$(work_dir)_release)"  -r -f $(tbb_root)/build/Makefile.test cfg=release tbb_root=$(tbb_root) 
+	"$(MAKE)" -C "$(call cross_cfg,$(work_dir)_release)"  -r -f $(tbb_root)/build/Makefile.test cfg=release tbb_root=$(tbb_root) 
 
 test_debug_ni:
-	$(MAKE) -C "$(call cross_cfg,$(work_dir)_debug)"  -r -f $(tbb_root)/build/Makefile.test cfg=debug tbb_root=$(tbb_root)
+	"$(MAKE)" -C "$(call cross_cfg,$(work_dir)_debug)"  -r -f $(tbb_root)/build/Makefile.test cfg=debug tbb_root=$(tbb_root)
 
 .PHONY: tbbmalloc_release tbbmalloc_debug tbbmalloc_test_release tbbmalloc_test_debug
 .PHONY: tbbmalloc_test_release_no_depends tbbmalloc_test_debug_no_depends
 
 tbbmalloc_release: mkdir_release
-	$(MAKE) -C "$(work_dir)_release"  -r -f $(tbb_root)/build/Makefile.tbbmalloc cfg=release malloc tbb_root=$(tbb_root)
+	"$(MAKE)" -C "$(work_dir)_release"  -r -f $(tbb_root)/build/Makefile.tbbmalloc cfg=release malloc tbb_root=$(tbb_root)
 
 tbbmalloc_debug: mkdir_debug
-	$(MAKE) -C "$(work_dir)_debug"  -r -f $(tbb_root)/build/Makefile.tbbmalloc cfg=debug malloc tbb_root=$(tbb_root)
+	"$(MAKE)" -C "$(work_dir)_debug"  -r -f $(tbb_root)/build/Makefile.tbbmalloc cfg=debug malloc tbb_root=$(tbb_root)
 
 tbbmalloc_dll_release: mkdir_release
-	$(MAKE) -C "$(work_dir)_release"  -r -f $(tbb_root)/build/Makefile.tbbmalloc cfg=release malloc_dll tbb_root=$(tbb_root)
+	"$(MAKE)" -C "$(work_dir)_release"  -r -f $(tbb_root)/build/Makefile.tbbmalloc cfg=release malloc_dll tbb_root=$(tbb_root)
 
 tbbmalloc_proxy_dll_release: mkdir_release
-	$(MAKE) -C "$(work_dir)_release"  -r -f $(tbb_root)/build/Makefile.tbbmalloc cfg=release  malloc_proxy_dll tbb_root=$(tbb_root)
+	"$(MAKE)" -C "$(work_dir)_release"  -r -f $(tbb_root)/build/Makefile.tbbmalloc cfg=release  malloc_proxy_dll tbb_root=$(tbb_root)
 
 tbbmalloc_dll_debug: mkdir_debug
-	$(MAKE) -C "$(work_dir)_debug"  -r -f $(tbb_root)/build/Makefile.tbbmalloc cfg=debug malloc_dll tbb_root=$(tbb_root)
+	"$(MAKE)" -C "$(work_dir)_debug"  -r -f $(tbb_root)/build/Makefile.tbbmalloc cfg=debug malloc_dll tbb_root=$(tbb_root)
 
 tbbmalloc_proxy_dll_debug: mkdir_debug
-	$(MAKE) -C "$(work_dir)_debug"  -r -f $(tbb_root)/build/Makefile.tbbmalloc cfg=debug malloc_proxy_dll tbb_root=$(tbb_root)
+	"$(MAKE)" -C "$(work_dir)_debug"  -r -f $(tbb_root)/build/Makefile.tbbmalloc cfg=debug malloc_proxy_dll tbb_root=$(tbb_root)
 
 tbbmalloc_test_release: $(call cross_cfg,mkdir_release) $(call cross_cfg,tbbmalloc_release) tbbmalloc_test_release_no_depends
 tbbmalloc_test_release_no_depends:
-	-$(MAKE) -C "$(call cross_cfg,$(work_dir)_release)"  -r -f $(tbb_root)/build/Makefile.tbbmalloc cfg=release malloc_test tbb_root=$(tbb_root)
+	-"$(MAKE)" -C "$(call cross_cfg,$(work_dir)_release)"  -r -f $(tbb_root)/build/Makefile.tbbmalloc cfg=release malloc_test tbb_root=$(tbb_root)
 
 tbbmalloc_test_debug: $(call cross_cfg,mkdir_debug) $(call cross_cfg,tbbmalloc_debug) tbbmalloc_test_debug_no_depends
 tbbmalloc_test_debug_no_depends:
-	-$(MAKE) -C "$(call cross_cfg,$(work_dir)_debug)"  -r -f $(tbb_root)/build/Makefile.tbbmalloc cfg=debug malloc_test tbb_root=$(tbb_root)
+	-"$(MAKE)" -C "$(call cross_cfg,$(work_dir)_debug)"  -r -f $(tbb_root)/build/Makefile.tbbmalloc cfg=debug malloc_test tbb_root=$(tbb_root)
 
 tbbmalloc_test_release_ni: $(call cross_cfg,mkdir_release) $(call cross_cfg,tbbmalloc_release) tbbmalloc_test_release_no_depends
-	$(MAKE) -C "$(call cross_cfg,$(work_dir)_release)"  -r -f $(tbb_root)/build/Makefile.tbbmalloc cfg=release malloc_test tbb_root=$(tbb_root)
+	"$(MAKE)" -C "$(call cross_cfg,$(work_dir)_release)"  -r -f $(tbb_root)/build/Makefile.tbbmalloc cfg=release malloc_test tbb_root=$(tbb_root)
 
 tbbmalloc_test_debug_ni: $(call cross_cfg,mkdir_debug) $(call cross_cfg,tbbmalloc_debug) tbbmalloc_test_debug_no_depends
-	$(MAKE) -C "$(call cross_cfg,$(work_dir)_debug)"  -r -f $(tbb_root)/build/Makefile.tbbmalloc cfg=debug malloc_test tbb_root=$(tbb_root)
+	"$(MAKE)" -C "$(call cross_cfg,$(work_dir)_debug)"  -r -f $(tbb_root)/build/Makefile.tbbmalloc cfg=debug malloc_test tbb_root=$(tbb_root)
 
 .PHONY: examples_release examples_debug
 
 examples_release: tbb_release tbbmalloc_release
-	$(MAKE) -C $(examples_root) -r -f Makefile tbb_root=.. release test
+	"$(MAKE)" -C $(examples_root) -r -f Makefile tbb_root=.. release test
 
 examples_debug: tbb_debug tbbmalloc_debug
-	$(MAKE) -C $(examples_root) -r -f Makefile tbb_root=.. debug test
+	"$(MAKE)" -C $(examples_root) -r -f Makefile tbb_root=.. debug test
 
 .PHONY: clean_release clean_debug clean_examples
 
@@ -173,7 +173,7 @@ clean_debug:
 	$(shell $(RD) $(work_dir)_debug >$(NUL) 2>$(NUL))
 
 clean_examples:
-	$(shell $(MAKE) -s -i -r -C $(examples_root) -f Makefile tbb_root=.. clean >$(NUL) 2>$(NUL))
+	$(shell "$(MAKE)" -s -i -r -C $(examples_root) -f Makefile tbb_root=.. clean >$(NUL) 2>$(NUL))
 
 .PHONY: mkdir_release mkdir_debug codecov do_codecov info
 
@@ -186,12 +186,12 @@ mkdir_debug:
 	$(if $(subst undefined,,$(origin_build_dir)),,cd "$(work_dir)_debug" && $(MAKE_TBBVARS) $(tbb_build_prefix)_debug)
 
 codecov:
-	$(MAKE) tbb_root=.. compiler=$(if $(findstring windows,$(tbb_os)),icl,icc) codecov=yes do_codecov
+	"$(MAKE)" tbb_root=.. compiler=$(if $(findstring windows,$(tbb_os)),icl,icc) codecov=yes do_codecov
 
 do_codecov:
-	$(MAKE) tbbmalloc_test_release test_release
-	$(MAKE) clean_test_* cfg=release
-	$(MAKE) crosstest=yes tbbmalloc_test_debug test_debug
+	"$(MAKE)" tbbmalloc_test_release test_release
+	"$(MAKE)" clean_test_* cfg=release
+	"$(MAKE)" crosstest=yes tbbmalloc_test_debug test_debug
 
 info:
 	@echo OS: $(tbb_os)

@@ -52,9 +52,9 @@ MAKEINC = ../../common/gui/Makefile.win
 
 all: release test
 release:
-	@$(MAKE) -f $(MAKEINC) UI=$(UI) CXX="$(CXX)" CXXFLAGS="$(CXXFLAGS)" LFLAGS="$(LDFLAGS) tbb.lib $(LIBS)" XARCH=$(XARCH) RCNAME=SeismicSimulation SOURCE=SeismicSimulation.cpp EXE=$(PROG).exe build_one
+	@"$(MAKE)" -f $(MAKEINC) UI=$(UI) CXX="$(CXX)" CXXFLAGS="$(CXXFLAGS)" LFLAGS="$(LDFLAGS) tbb.lib $(LIBS)" XARCH=$(XARCH) RCNAME=SeismicSimulation SOURCE=SeismicSimulation.cpp EXE=$(PROG).exe build_one
 debug:
-	@$(MAKE) -f $(MAKEINC) UI=$(UI) DEBUG=_debug CXX="$(CXX)" CXXFLAGS="$(CXXFLAGS) /D TBB_USE_DEBUG" LFLAGS="$(LDFLAGS) tbb_debug.lib $(LIBS)" XARCH=$(XARCH) RCNAME=SeismicSimulation SOURCE=SeismicSimulation.cpp EXE=$(PROG).exe build_one
+	@"$(MAKE)" -f $(MAKEINC) UI=$(UI) DEBUG=_debug CXX="$(CXX)" CXXFLAGS="$(CXXFLAGS) /D TBB_USE_DEBUG" LFLAGS="$(LDFLAGS) tbb_debug.lib $(LIBS)" XARCH=$(XARCH) RCNAME=SeismicSimulation SOURCE=SeismicSimulation.cpp EXE=$(PROG).exe build_one
 clean:
 	@cmd.exe /C del $(PROG).exe *.obj *.?db *.manifest vc7.1\SeismicSimulation.res
 test:
