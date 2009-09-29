@@ -30,11 +30,9 @@
 #include "tbb/tbb_stddef.h"
 #include "tbb/tbb_machine.h"
 #include "tbb/_concurrent_queue_internal.h"
+#include "concurrent_monitor.h"
 #include "itt_notify.h"
 #include <new>
-#if _WIN32||_WIN64
-#include <windows.h>
-#endif
 using namespace std;
 
 // enable sleep support
@@ -47,12 +45,6 @@ using namespace std;
 
 #define RECORD_EVENTS 0
 
-
-#if __TBB_NO_BUSY_WAIT_IN_CONCURRENT_QUEUE
-#if !_WIN32&&!_WIN64
-#include <pthread.h>
-#endif
-#endif
 
 namespace tbb {
 
@@ -116,20 +108,17 @@ public:
     }
 };
 
+struct predicate_leq {
+    ticket t;
+    predicate_leq( ticket t_ ) : t(t_) {}
+    bool operator() ( void* p ) const {return (ticket)p<=t;}
+};
+
 //! Internal representation of a ConcurrentQueue.
 /** For efficient, this class has no constructor.  
     The caller is expected to zero-initialize it. */
 class concurrent_queue_rep {
 public:
-#if __TBB_NO_BUSY_WAIT_IN_CONCURRENT_QUEUE
-# if _WIN32||_WIN64
-    typedef HANDLE waitvar_t;
-    typedef CRITICAL_SECTION mutexvar_t;
-# else 
-    typedef pthread_cond_t  waitvar_t;
-    typedef pthread_mutex_t mutexvar_t;
-# endif
-#endif /* __TBB_NO_BUSY_WAIT_IN_CONCURRENT_QUEUE */
 private:
     friend struct micro_queue;
 
@@ -147,29 +136,13 @@ public:
 
 #if __TBB_NO_BUSY_WAIT_IN_CONCURRENT_QUEUE
     atomic<ticket> head_counter;
-    waitvar_t  var_wait_for_items;
-    mutexvar_t mtx_items_avail;
+    concurrent_monitor items_avail;
     atomic<size_t> n_invalid_entries;
-    atomic<uint32_t> n_waiting_consumers;
-#if _WIN32||_WIN64
-    uint32_t consumer_wait_generation;
-    uint32_t n_consumers_to_wakeup;
-    char pad1[NFS_MaxLineSize-((sizeof(atomic<ticket>)+sizeof(waitvar_t)+sizeof(mutexvar_t)+sizeof(size_t)+sizeof(uint32_t)+sizeof(uint32_t)+sizeof(uint32_t))&(NFS_MaxLineSize-1))];
-#else
-    char pad1[NFS_MaxLineSize-((sizeof(atomic<ticket>)+sizeof(waitvar_t)+sizeof(mutexvar_t)+sizeof(size_t)+sizeof(uint32_t))&(NFS_MaxLineSize-1))];
-#endif
+    char pad1[NFS_MaxLineSize-((sizeof(atomic<ticket>)+sizeof(concurrent_monitor)+sizeof(atomic<size_t>))&(NFS_MaxLineSize-1))];
 
     atomic<ticket> tail_counter;
-    waitvar_t  var_wait_for_slots;
-    mutexvar_t mtx_slots_avail;
-    atomic<uint32_t> n_waiting_producers;
-#if _WIN32||_WIN64
-    uint32_t producer_wait_generation;
-    uint32_t n_producers_to_wakeup;
-    char pad2[NFS_MaxLineSize-((sizeof(atomic<ticket>)+sizeof(waitvar_t)+sizeof(mutexvar_t)+sizeof(uint32_t)+sizeof(uint32_t)+sizeof(uint32_t))&(NFS_MaxLineSize-1))];
-#else
-    char pad2[NFS_MaxLineSize-((sizeof(atomic<ticket>)+sizeof(waitvar_t)+sizeof(mutexvar_t)+sizeof(uint32_t))&(NFS_MaxLineSize-1))];
-#endif
+    concurrent_monitor slots_avail;
+    char pad2[NFS_MaxLineSize-((sizeof(atomic<ticket>)+sizeof(concurrent_monitor))&(NFS_MaxLineSize-1))];
 #else /* !__TBB_NO_BUSY_WAIT_IN_CONCURRENT_QUEUE */
     atomic<ticket> head_counter;
     atomic<size_t> n_invalid_entries;
@@ -369,50 +342,15 @@ concurrent_queue_base_v3::concurrent_queue_base_v3( size_t item_size ) {
     __TBB_ASSERT( (size_t)&my_rep->tail_counter % NFS_GetLineSize()==0, "alignment error" );
     __TBB_ASSERT( (size_t)&my_rep->array % NFS_GetLineSize()==0, "alignment error" );
     memset(my_rep,0,sizeof(concurrent_queue_rep));
+    new ( &my_rep->items_avail ) concurrent_monitor();
+    new ( &my_rep->slots_avail ) concurrent_monitor();
     this->item_size = item_size;
-#if __TBB_NO_BUSY_WAIT_IN_CONCURRENT_QUEUE
-#if _WIN32||_WIN64
-    my_rep->var_wait_for_items = CreateEvent( NULL, TRUE/*manual reset*/, FALSE/*not signalled initially*/, NULL);
-    my_rep->var_wait_for_slots = CreateEvent( NULL, TRUE/*manual reset*/, FALSE/*not signalled initially*/, NULL);
-    InitializeCriticalSection( &my_rep->mtx_items_avail );
-    InitializeCriticalSection( &my_rep->mtx_slots_avail );
-#else 
-    // initialize pthread_mutex_t, and pthread_cond_t
-    pthread_mutexattr_t m_attr;
-    pthread_mutexattr_init( &m_attr );
-#if defined(PTHREAD_PRIO_INHERIT) && !__TBB_PRIO_INHERIT_BROKEN
-    pthread_mutexattr_setprotocol( &m_attr, PTHREAD_PRIO_INHERIT );
-#endif
-    pthread_mutex_init( &my_rep->mtx_items_avail, &m_attr );
-    pthread_mutex_init( &my_rep->mtx_slots_avail, &m_attr );
-    pthread_mutexattr_destroy( &m_attr );
-
-    pthread_condattr_t c_attr;
-    pthread_condattr_init( &c_attr );
-    pthread_cond_init( &my_rep->var_wait_for_items, &c_attr );
-    pthread_cond_init( &my_rep->var_wait_for_slots, &c_attr );
-    pthread_condattr_destroy( &c_attr );
-#endif
-#endif /* __TBB_NO_BUSY_WAIT_IN_CONCURRENT_QUEUE */
 }
 
 concurrent_queue_base_v3::~concurrent_queue_base_v3() {
     size_t nq = my_rep->n_queue;
     for( size_t i=0; i<nq; i++ )
         __TBB_ASSERT( my_rep->array[i].tail_page==NULL, "pages were not freed properly" );
-#if __TBB_NO_BUSY_WAIT_IN_CONCURRENT_QUEUE
-# if _WIN32||_WIN64
-    CloseHandle( my_rep->var_wait_for_items );
-    CloseHandle( my_rep->var_wait_for_slots );
-    DeleteCriticalSection( &my_rep->mtx_items_avail );
-    DeleteCriticalSection( &my_rep->mtx_slots_avail );
-# else
-    pthread_mutex_destroy( &my_rep->mtx_items_avail );
-    pthread_mutex_destroy( &my_rep->mtx_slots_avail );
-    pthread_cond_destroy( &my_rep->var_wait_for_items );
-    pthread_cond_destroy( &my_rep->var_wait_for_slots );
-# endif
-#endif /* __TBB_NO_BUSY_WAIT_IN_CONCURRENT_QUEUE */
     cache_aligned_allocator<concurrent_queue_rep>().deallocate(my_rep,1);
 }
 
@@ -430,62 +368,11 @@ void concurrent_queue_base_v3::internal_push( const void* src ) {
         }
     } 
     r.choose(k).push(src,k,*this);
-#elif _WIN32||_WIN64
-    ticket k = r.tail_counter++;
-    ptrdiff_t e = my_capacity;
-    atomic_backoff backoff;
-#if DO_ITT_NOTIFY
-    bool sync_prepare_done = false;
-#endif
-
-    while( (ptrdiff_t)(k-r.head_counter)>=e ) {
-#if DO_ITT_NOTIFY
-        if( !sync_prepare_done ) {
-            ITT_NOTIFY( sync_prepare, &sync_prepare_done );
-            sync_prepare_done = true;
-        }
-#endif
-        if( !backoff.bounded_pause() ) {
-            EnterCriticalSection( &r.mtx_slots_avail );
-            r.n_waiting_producers++;
-            while( (ptrdiff_t)(k-r.head_counter)>=const_cast<volatile ptrdiff_t&>(my_capacity) ) {
-                uint32_t my_generation = r.producer_wait_generation;
-                for( ;; ) {
-                    LeaveCriticalSection( &r.mtx_slots_avail );
-                    WaitForSingleObject( r.var_wait_for_slots, INFINITE );
-                    EnterCriticalSection( &r.mtx_slots_avail );
-                    if( r.n_producers_to_wakeup > 0 && r.producer_wait_generation != my_generation )
-                        break;
-                }
-                if( --r.n_producers_to_wakeup == 0 )
-                    ResetEvent( r.var_wait_for_slots );
-            }
-            --r.n_waiting_producers;
-            LeaveCriticalSection( &r.mtx_slots_avail );
-            break;
-        }
-        e = const_cast<volatile ptrdiff_t&>(my_capacity);
-    }
-#if DO_ITT_NOTIFY
-    if( sync_prepare_done )
-        ITT_NOTIFY( sync_acquired, &sync_prepare_done );
-#endif
-
-    r.choose( k ).push( src, k, *this );
-
-    if( r.n_waiting_consumers>0 ) {
-        EnterCriticalSection( &r.mtx_items_avail );
-        if( r.n_waiting_consumers>0 ) {
-            r.consumer_wait_generation++;
-            r.n_consumers_to_wakeup = r.n_waiting_consumers;
-            SetEvent( r.var_wait_for_items );
-        }
-        LeaveCriticalSection( &r.mtx_items_avail );
-    }
 #else 
     ticket k = r.tail_counter++;
     ptrdiff_t e = my_capacity;
     atomic_backoff backoff;
+    concurrent_monitor::thread_context thr_ctx;
 #if DO_ITT_NOTIFY
     bool sync_prepare_done = false;
 #endif
@@ -497,14 +384,15 @@ void concurrent_queue_base_v3::internal_push( const void* src ) {
         }
 #endif
         if( !backoff.bounded_pause() ) {
-            // queue is full.  go to sleep. let them go to sleep in order.
-            pthread_mutex_lock( &r.mtx_slots_avail );
-            r.n_waiting_producers++;
-            while( (ptrdiff_t)(k-r.head_counter)>=const_cast<volatile ptrdiff_t&>(my_capacity) ) {
-                pthread_cond_wait( &r.var_wait_for_slots, &r.mtx_slots_avail );
+            bool slept = false;
+            r.slots_avail.prepare_wait( thr_ctx, (void*) ((ptrdiff_t)(k-e)) );
+            while( (ptrdiff_t)(k-r.head_counter)>=const_cast<volatile ptrdiff_t&>(e = my_capacity) ) {
+                if( (slept = r.slots_avail.commit_wait( thr_ctx ) )==true )
+                    break;
+                r.slots_avail.prepare_wait( thr_ctx, (void*) ((ptrdiff_t)(k-e)) );
             }
-            --r.n_waiting_producers;
-            pthread_mutex_unlock( &r.mtx_slots_avail );
+            if( !slept )
+                r.slots_avail.cancel_wait( thr_ctx );
             break;
         }
         e = const_cast<volatile ptrdiff_t&>(my_capacity);
@@ -514,14 +402,7 @@ void concurrent_queue_base_v3::internal_push( const void* src ) {
         ITT_NOTIFY( sync_acquired, &sync_prepare_done );
 #endif
     r.choose( k ).push( src, k, *this );
-
-    if( r.n_waiting_consumers>0 ) {
-        pthread_mutex_lock( &r.mtx_items_avail );
-        // pthread_cond_broadcast() wakes up all consumers. 
-        if( r.n_waiting_consumers>0 )
-            pthread_cond_broadcast( &r.var_wait_for_items );
-        pthread_mutex_unlock( &r.mtx_items_avail );
-    }
+    r.items_avail.notify( predicate_leq(k) );
 #endif /* !__TBB_NO_BUSY_WAIT_IN_CONCURRENT_QUEUE */
 }
 
@@ -532,9 +413,10 @@ void concurrent_queue_base_v3::internal_pop( void* dst ) {
     do {
         k = r.head_counter++;
     } while( !r.choose(k).pop(dst,k,*this) );
-#elif _WIN32||_WIN64
+#else
     ticket k;
     atomic_backoff backoff;
+    concurrent_monitor::thread_context thr_ctx;
 #if DO_ITT_NOTIFY
     bool sync_prepare_done = false;
 #endif
@@ -550,76 +432,22 @@ void concurrent_queue_base_v3::internal_pop( void* dst ) {
 #endif
             // Queue is empty; pause and re-try a few times
             if( !backoff.bounded_pause() ) {
-                // it is really empty.. go to sleep
-                EnterCriticalSection( &r.mtx_items_avail );
-                r.n_waiting_consumers++;
+                bool slept = false;
+                r.items_avail.prepare_wait( thr_ctx, (void*)k );
                 while( r.tail_counter<=k ) {
-                    uint32_t my_generation = r.consumer_wait_generation;
-                    for( ;; ) {
-                        LeaveCriticalSection( &r.mtx_items_avail );
-                        WaitForSingleObject( r.var_wait_for_items, INFINITE );
-                        EnterCriticalSection( &r.mtx_items_avail );
-                        if( r.n_consumers_to_wakeup > 0 && r.consumer_wait_generation != my_generation )
-                            break;
-                    }
-                    if( --r.n_consumers_to_wakeup == 0 )
-                        ResetEvent( r.var_wait_for_items );
+                    if( (slept = r.items_avail.commit_wait( thr_ctx ) )==true )
+                        break;
+                    r.items_avail.prepare_wait( thr_ctx, (void*)k );
                 }
-                --r.n_waiting_consumers;
-                LeaveCriticalSection( &r.mtx_items_avail );
-                backoff.reset();
+                if( !slept )
+                    r.items_avail.cancel_wait( thr_ctx );
                 break; // break from inner while
             }
         } // break to here
     } while( !r.choose(k).pop(dst,k,*this) );
 
     // wake up a producer..
-    if( r.n_waiting_producers>0 ) {
-        EnterCriticalSection( &r.mtx_slots_avail );
-        if( r.n_waiting_producers>0 ) {
-            r.producer_wait_generation++;
-            r.n_producers_to_wakeup = r.n_waiting_producers;
-            SetEvent( r.var_wait_for_slots );
-        }
-        LeaveCriticalSection( &r.mtx_slots_avail );
-    }
-#else 
-    ticket k;
-    atomic_backoff backoff;
-#if DO_ITT_NOTIFY
-    bool sync_prepare_done = false;
-#endif
-    do {
-        k = r.head_counter++;
-        while( r.tail_counter<=k ) {
-#if DO_ITT_NOTIFY
-            if( !sync_prepare_done ) {
-                ITT_NOTIFY( sync_prepare, dst );
-                dst = (void*) ((intptr_t)dst | 1);
-                sync_prepare_done = true;
-            }
-#endif
-            // Queue is empty; pause and re-try a few times
-            if( !backoff.bounded_pause() ) {
-                // it is really empty.. go to sleep
-                pthread_mutex_lock( &r.mtx_items_avail );
-                r.n_waiting_consumers++;
-                while( r.tail_counter<=k )
-                    pthread_cond_wait( &r.var_wait_for_items, &r.mtx_items_avail );
-                --r.n_waiting_consumers;
-                pthread_mutex_unlock( &r.mtx_items_avail );
-                backoff.reset();
-                break;
-            }
-        }
-    } while( !r.choose(k).pop(dst,k,*this) );
-
-    if( r.n_waiting_producers>0 ) {
-        pthread_mutex_lock( &r.mtx_slots_avail );
-        if( r.n_waiting_producers>0 )
-            pthread_cond_broadcast( &r.var_wait_for_slots );
-        pthread_mutex_unlock( &r.mtx_slots_avail );
-    }
+    r.slots_avail.notify( predicate_leq(k) );
 #endif /* !__TBB_NO_BUSY_WAIT_IN_CONCURRENT_QUEUE */
 }
 
@@ -643,25 +471,7 @@ bool concurrent_queue_base_v3::internal_pop_if_present( void* dst ) {
     } while( !r.choose( k ).pop( dst, k, *this ) );
 
 #if __TBB_NO_BUSY_WAIT_IN_CONCURRENT_QUEUE
-#if _WIN32||_WIN64
-    // wake up a producer..
-    if( r.n_waiting_producers>0 ) {
-        EnterCriticalSection( &r.mtx_slots_avail );
-        if( r.n_waiting_producers>0 ) {
-            r.producer_wait_generation++;
-            r.n_producers_to_wakeup = r.n_waiting_producers;
-            SetEvent( r.var_wait_for_slots );
-        }
-        LeaveCriticalSection( &r.mtx_slots_avail );
-    }
-#else /* including MacOS */
-    if( r.n_waiting_producers>0 ) {
-        pthread_mutex_lock( &r.mtx_slots_avail );
-        if( r.n_waiting_producers>0 )
-            pthread_cond_broadcast( &r.var_wait_for_slots );
-        pthread_mutex_unlock( &r.mtx_slots_avail );
-    }
-#endif
+    r.slots_avail.notify( predicate_leq(k) );
 #endif /* __TBB_NO_BUSY_WAIT_IN_CONCURRENT_QUEUE */
 
     return true;
@@ -685,24 +495,7 @@ bool concurrent_queue_base_v3::internal_push_if_not_full( const void* src ) {
     r.choose(k).push(src,k,*this);
 
 #if __TBB_NO_BUSY_WAIT_IN_CONCURRENT_QUEUE
-#if _WIN32||_WIN64
-    if( r.n_waiting_consumers>0 ) {
-        EnterCriticalSection( &r.mtx_items_avail );
-        if( r.n_waiting_consumers>0 ) {
-            r.consumer_wait_generation++;
-            r.n_consumers_to_wakeup = r.n_waiting_consumers;
-            SetEvent( r.var_wait_for_items );
-        }
-        LeaveCriticalSection( &r.mtx_items_avail );
-    }
-#else /* including MacOS */
-    if( r.n_waiting_consumers>0 ) {
-        pthread_mutex_lock( &r.mtx_items_avail );
-        if( r.n_waiting_consumers>0 )
-            pthread_cond_broadcast( &r.var_wait_for_items );
-        pthread_mutex_unlock( &r.mtx_items_avail );
-    }
-#endif
+    r.items_avail.notify( predicate_leq(k) );
 #endif /* __TBB_NO_BUSY_WAIT_IN_CONCURRENT_QUEUE */
     return true;
 }

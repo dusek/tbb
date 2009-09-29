@@ -38,7 +38,7 @@ ifndef TEST_EXT
     TEST_EXT = exe
 endif
 
-INCLUDES += $(INCLUDE_KEY)$(tbb_root)/src $(INCLUDE_KEY)$(tbb_root)/include
+INCLUDES += $(INCLUDE_KEY)$(tbb_root)/src $(INCLUDE_KEY)$(tbb_root)/src/rml/include $(INCLUDE_KEY)$(tbb_root)/include
 
 CPLUS_FLAGS += $(WARNING_KEY) $(CXXFLAGS)
 LINK_FLAGS += $(LDFLAGS)
@@ -57,7 +57,7 @@ CONLY ?= $(CPLUS)
 
 # The most generic rules
 %.$(OBJ): %.cpp
-	$(CPLUS) $(COMPILE_ONLY) $(CPLUS_FLAGS) $(CXX_WARN_SUPPRESS) $(INCLUDES) $<
+	$(CPLUS) $(COMPILE_ONLY) $(CPLUS_FLAGS) $(CXX_ONLY_FLAGS) $(CXX_WARN_SUPPRESS) $(INCLUDES) $<
 
 %.$(OBJ): %.c
 	$(CONLY) $(COMPILE_ONLY) $(C_FLAGS) $(INCLUDES) $<
@@ -72,15 +72,15 @@ CONLY ?= $(CPLUS)
 
 # Rule for generating .E file if needed for visual inspection
 %.E: %.cpp
-	$(CPLUS) $(CPLUS_FLAGS) $(INCLUDES) $(PREPROC_ONLY) $< >$@
+	$(CPLUS) $(CPLUS_FLAGS) $(CXX_ONLY_FLAGS) $(INCLUDES) $(PREPROC_ONLY) $< >$@
 
 # TODO Rule for generating .asm file if needed for visual inspection
 %.asm: %.cpp
-	$(CPLUS) /c /Fa $(CPLUS_FLAGS) $(INCLUDES) $<
+	$(CPLUS) /c /Fa $(CPLUS_FLAGS) $(CXX_ONLY_FLAGS) $(INCLUDES) $<
 
 # TODO Rule for generating .s file if needed for visual inspection
 %.s: %.cpp
-	$(CPLUS) -S $(CPLUS_FLAGS) $(INCLUDES) $<
+	$(CPLUS) -S $(CPLUS_FLAGS) $(CXX_ONLY_FLAGS) $(INCLUDES) $<
 
 # Customizations
 
@@ -90,17 +90,17 @@ ifeq (1,$(TBB_NOSTRICT))
 # The files below need the -strict_ansi flag downgraded to -ansi to compile
 
 $(KNOWN_NOSTRICT): %.$(OBJ): %.cpp
-	$(CPLUS) $(COMPILE_ONLY) $(CPLUS_FLAGS_NOSTRICT) $(INCLUDES) $<
+	$(CPLUS) $(COMPILE_ONLY) $(CPLUS_FLAGS_NOSTRICT) $(CXX_ONLY_FLAGS) $(INCLUDES) $<
 endif
 
 $(KNOWN_WARNINGS): %.$(OBJ): %.cpp
-	$(CPLUS) $(COMPILE_ONLY) $(subst $(WARNING_KEY),,$(CPLUS_FLAGS_NOSTRICT)) $(INCLUDES) $<
+	$(CPLUS) $(COMPILE_ONLY) $(subst $(WARNING_KEY),,$(CPLUS_FLAGS_NOSTRICT)) $(CXX_ONLY_FLAGS) $(INCLUDES) $<
 
 tbb_misc.$(OBJ): tbb_misc.cpp version_string.tmp
-	$(CPLUS) $(COMPILE_ONLY) $(CPLUS_FLAGS_NOSTRICT) $(INCLUDE_KEY). $(INCLUDES) $<
+	$(CPLUS) $(COMPILE_ONLY) $(CPLUS_FLAGS_NOSTRICT) $(CXX_ONLY_FLAGS) $(INCLUDE_KEY). $(INCLUDES) $<
 
 tbb_misc.E: tbb_misc.cpp version_string.tmp
-	$(CPLUS) $(CPLUS_FLAGS_NOSTRICT) $(INCLUDE_KEY). $(INCLUDES) $(PREPROC_ONLY) $< >$@
+	$(CPLUS) $(CPLUS_FLAGS_NOSTRICT) $(CXX_ONLY_FLAGS) $(INCLUDE_KEY). $(INCLUDES) $(PREPROC_ONLY) $< >$@
 
 %.res: %.rc version_string.tmp $(TBB.MANIFEST)
 	rc /Fo$@ $(INCLUDES) $(filter /D%,$(CPLUS_FLAGS)) $<

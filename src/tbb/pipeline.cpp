@@ -43,10 +43,17 @@ struct task_info {
     Token my_token;
     //! False until my_token is set.
     bool my_token_ready;
+    //! True if my_object is valid.
     bool is_valid;
+    //! Set to initial state (no object, no token)
+    void reset() {
+        my_object = NULL;
+        my_token = 0;
+        my_token_ready = false;
+        is_valid = false;
+    }
 };
-static task_info empty_info = {NULL, 0, false, false};
-
+const task_info empty_info = {NULL, 0, false, false};
 //! A buffer of input items for a filter.
 /** Each item is a task_info, inserted into a position in the buffer corresponding to a Token. */
 class input_buffer {
@@ -139,7 +146,8 @@ public:
     // Using template to avoid explicit dependency on stage_task
     template<typename StageTask>
     void note_done( Token token, StageTask& spawner ) {
-        task_info wakee = empty_info;
+        task_info wakee;
+        wakee.reset();
         {
             spin_mutex::scoped_lock lock( array_mutex );
             if( !is_ordered || token==low_token ) {
@@ -242,13 +250,19 @@ public:
         my_filter(filter_),
         my_at_start(false)
     {}
+    //! Roughly equivalent to the constructor of input stage task
+    void reset() {
+        task_info::reset();
+        my_filter = my_pipeline.filter_list;
+        my_at_start = true;
+    }
     //! The virtual task execution method
     /*override*/ task* execute();
 #if __TBB_EXCEPTIONS
     ~stage_task()    
     {
         if (my_filter && my_object && (my_filter->my_filter_mode & filter::version_mask) >= __TBB_PIPELINE_VERSION(4)) {
-            __TBB_ASSERT(is_cancelled(), "Tryning to finalize the task that wasn't cancelled");
+            __TBB_ASSERT(is_cancelled(), "Trying to finalize the task that wasn't cancelled");
             my_filter->finalize(my_object);
             my_object = NULL;
         }
@@ -284,9 +298,14 @@ task* stage_task::execute() {
                     if( my_pipeline.has_thread_bound_filters )
                         my_pipeline.token_counter++; // ideally, with relaxed semantics
                 }
-                ITT_NOTIFY( sync_releasing, &my_pipeline.input_tokens );
-                if( --my_pipeline.input_tokens>0 ) 
-                    spawn( *new( allocate_additional_child_of(*parent()) ) stage_task( my_pipeline ) );
+                if( !my_filter->next_filter_in_pipeline ) {
+                    reset();
+                    goto process_another_stage;
+                } else {
+                    ITT_NOTIFY( sync_releasing, &my_pipeline.input_tokens );
+                    if( --my_pipeline.input_tokens>0 )
+                        spawn( *new( allocate_additional_child_of(*parent()) ) stage_task( my_pipeline ) );
+                }
             } else {
                 my_pipeline.end_of_input = true; 
                 return NULL;
@@ -317,7 +336,6 @@ task* stage_task::execute() {
         if( my_filter->is_serial() )
             my_filter->my_input_buffer->note_done(my_token, *this);
     }
-    task* next = NULL;
     my_filter = my_filter->next_filter_in_pipeline; 
     if( my_filter ) {
         // There is another filter to execute.
@@ -340,24 +358,20 @@ task* stage_task::execute() {
                 return NULL;
             }
         }
-process_another_stage:
-        /* A semi-hackish way to reexecute the same task object immediately without spawning.
-           recycle_as_continuation marks the task for future execution,
-           and then 'this' pointer is returned to bypass spawning. */
-        recycle_as_continuation();
-        next = this;
     } else {
-        // Reached end of the pipe.  Inject a new token.
-        // The token must be injected before execute() returns, in order to prevent the
-        // parent's reference count from prematurely reaching 0.
-        set_depth( parent()->depth()+1 ); 
-        if( ++my_pipeline.input_tokens==1 ) {
-            ITT_NOTIFY( sync_acquired, &my_pipeline.input_tokens );
-            if( !my_pipeline.end_of_input && !my_pipeline.filter_list->is_bound() ) 
-                spawn( *new( allocate_additional_child_of(*parent()) ) stage_task( my_pipeline ) );
-        }
+        // Reached end of the pipe.
+        if( ++my_pipeline.input_tokens>1 || my_pipeline.end_of_input || my_pipeline.filter_list->is_bound() )
+            return NULL; // No need to recycle for new input
+        ITT_NOTIFY( sync_acquired, &my_pipeline.input_tokens );
+        // Recycle as an input stage task.
+        reset();
     }
-    return next;
+process_another_stage:
+    /* A semi-hackish way to reexecute the same task object immediately without spawning.
+       recycle_as_continuation marks the task for future execution,
+       and then 'this' pointer is returned to bypass spawning. */
+    recycle_as_continuation();
+    return this;
 }
 
 class pipeline_root_task: public task {
@@ -383,7 +397,8 @@ class pipeline_root_task: public task {
                 if( !my_pipeline.end_of_input
                     || (tokendiff_t)(my_pipeline.token_counter - current_filter->my_input_buffer->low_token) > 0 )
                 {
-                    task_info info = empty_info;
+                    task_info info;
+                    info.reset();
                     if( current_filter->my_input_buffer->return_item(info, !current_filter->is_serial()) ) {
                         set_ref_count(1);
                         recycle_as_continuation();
@@ -583,23 +598,16 @@ void pipeline::run( size_t max_number_of_live_tokens
     __TBB_ASSERT( max_number_of_live_tokens>0, "pipeline::run must have at least one token" );
     __TBB_ASSERT( !end_counter, "pipeline already running?" );
     if( filter_list ) {
-        if( filter_list->next_filter_in_pipeline || !filter_list->is_serial() ) {
-            internal::pipeline_cleaner my_pipeline_cleaner(*this);
-            end_of_input = false;
+        internal::pipeline_cleaner my_pipeline_cleaner(*this);
+        end_of_input = false;
 #if __TBB_EXCEPTIONS            
-            end_counter = new( task::allocate_root(context) ) internal::pipeline_root_task( *this );
+        end_counter = new( task::allocate_root(context) ) internal::pipeline_root_task( *this );
 #else
-            end_counter = new( task::allocate_root() ) internal::pipeline_root_task( *this );
+        end_counter = new( task::allocate_root() ) internal::pipeline_root_task( *this );
 #endif
-            input_tokens = internal::Token(max_number_of_live_tokens);
-            // Start execution of tasks
-            task::spawn_root_and_wait( *end_counter );
-        } else {
-            // There are no filters, and thus no parallelism is possible.
-            // Just drain the input stream.
-            while( (*filter_list)(NULL) ) 
-                continue;
-        }
+        input_tokens = internal::Token(max_number_of_live_tokens);
+        // Start execution of tasks
+        task::spawn_root_and_wait( *end_counter );
     } 
 }
 
@@ -631,7 +639,8 @@ thread_bound_filter::result_type thread_bound_filter::try_process_item() {
 }
 
 thread_bound_filter::result_type thread_bound_filter::internal_process_item(bool is_blocking) {
-    internal::task_info info = internal::empty_info;
+    internal::task_info info;
+    info.reset();
     
     if( !prev_filter_in_pipeline ) {
         if( my_pipeline->end_of_input )

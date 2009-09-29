@@ -336,8 +336,7 @@ bool parallel_sortTest(size_t n, RandomAccessIterator iter, RandomAccessIterator
 
     init_iter(iter, sorted_list, n, local_comp, true);
     do {
-        if ( Verbose) 
-            REPORT("%s %s p=%llu n=%llu :",current_type.c_str(), test_type.c_str(), 
+        REMARK("%s %s p=%llu n=%llu :",current_type.c_str(), test_type.c_str(), 
                    static_cast<unsigned long long>(current_p), static_cast<unsigned long long>(n));
         if (comp != NULL) {
             tbb::parallel_sort(iter, iter + n, local_comp );
@@ -346,7 +345,7 @@ bool parallel_sortTest(size_t n, RandomAccessIterator iter, RandomAccessIterator
          }
         if (!Validate(iter, sorted_list, n)) 
             passed = false;
-        if ( Verbose ) REPORT("passed\n");
+        REMARK("passed\n");
     } while (init_iter(iter, sorted_list, n, local_comp, false));
     return passed;
 }
@@ -360,15 +359,14 @@ bool parallel_sortTest(size_t n, Minimal * iter, Minimal * sorted_list, const Mi
 
     init_iter(iter, sorted_list, n, *compare, true);
     do {
-        if ( Verbose) 
-            REPORT("%s %s p=%llu n=%llu :",current_type.c_str(), test_type.c_str(),
+        REMARK("%s %s p=%llu n=%llu :",current_type.c_str(), test_type.c_str(),
                     static_cast<unsigned long long>(current_p), static_cast<unsigned long long>(n));
 
         tbb::parallel_sort(iter, iter + n, *compare );
 
         if (!Validate(iter, sorted_list, n))
             passed = false;
-        if ( Verbose ) REPORT("passed\n");
+        REMARK("passed\n");
     } while (init_iter(iter, sorted_list, n, *compare, false));
     return passed;
 }
@@ -383,15 +381,14 @@ bool parallel_sortTest(size_t n, tbb::concurrent_vector<Minimal>::iterator iter,
     
     init_iter(iter, sorted_list, n, *compare, true);
     do {
-        if ( Verbose) 
-            REPORT("%s %s p=%llu n=%llu :",current_type.c_str(), test_type.c_str(),
+        REMARK("%s %s p=%llu n=%llu :",current_type.c_str(), test_type.c_str(),
                     static_cast<unsigned long long>(current_p), static_cast<unsigned long long>(n));
     
         tbb::parallel_sort(iter, iter + n, *compare );
 
         if (!Validate(iter, sorted_list, n))
             passed = false;
-        if ( Verbose ) REPORT("passed\n");
+        REMARK("passed\n");
     } while (init_iter(iter, sorted_list, n, *compare, false));
     return passed;
 }

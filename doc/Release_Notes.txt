@@ -132,11 +132,6 @@ Library Issues
 	the Tutorial in the product "doc" sub-directory for more details
 	on debug vs. release libraries.
     
-    - In some circumstances an exception thrown during concurrent_vector
-	growth operation may deadlock other threads that also attempt to
-	grow the vector. To prevent the issue, avoid going out of memory 
-	and throwing exceptions in constructors of stored objects.
-
     - Installer doesn't accept non-commercial serial numbers on Red Hat* 
 	Fedora* 11. To install the product on the system use license 
 	file provided after registration of the serial number.  

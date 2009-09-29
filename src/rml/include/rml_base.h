@@ -92,7 +92,7 @@ public:
     virtual size_type max_job_count() const RML_PURE(size_type)
 
     //! Minimum stack size for each job.  0 means to use default stack size. [idempotent]
-    virtual size_t min_stack_size() const RML_PURE(size_t)
+    virtual std::size_t min_stack_size() const RML_PURE(std::size_t)
 
     //! Server calls this routine when it needs client to create a job object.
     /** Value of index is guaranteed to be unique for each job and in the half-open 

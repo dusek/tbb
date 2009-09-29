@@ -53,6 +53,10 @@ ifeq ($(cfg), debug)
         CPLUS_FLAGS = -DTBB_USE_DEBUG -DDO_ITT_NOTIFY -g -O0 -DUSE_PTHREAD
 endif
 
+ifneq (0,$(cpp0x))
+    CXX_ONLY_FLAGS = -std=c++0x
+endif
+
 ASM=
 ASM_FLAGS=
 

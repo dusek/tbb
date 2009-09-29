@@ -41,11 +41,14 @@ class Minimal {
     ~Minimal();
     void operator=( const Minimal& );
     T pad;
-public:
-    friend void AssignToCheckAlignment( Minimal& dst, const Minimal& src ) {
-        dst.pad = src.pad;
-    }  
+    template<typename U>
+    friend void AssignToCheckAlignment( Minimal<U>& dst, const Minimal<U>& src ) ;
 };
+
+template<typename T>
+void AssignToCheckAlignment( Minimal<T>& dst, const Minimal<T>& src ) {
+    dst.pad = src.pad;
+}
 
 #include "tbb/aligned_space.h"
 #include "harness_assert.h"
@@ -95,7 +98,6 @@ void TestAlignedSpace() {
 #include "harness.h"
 
 #include "harness_m128.h"
-//#include <cstdio>         // Inclusion of <cstdio> deferred, to improve odds of detecting accidental dependences on it.
 
 __TBB_TEST_EXPORT
 int main() {

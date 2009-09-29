@@ -109,7 +109,7 @@ int main(int argc, char* argv[]) {
         REPORT("ERROR: %s\n", error.what() );
     }
     for( int p=MinThread; p<=MaxThread; ++p ) {
-        if( Verbose ) REPORT("testing with %d threads\n", p );
+        REMARK("testing with %d threads\n", p );
         NativeParallelFor( p, ThreadedInit() );
     }
     REPORT("done\n");

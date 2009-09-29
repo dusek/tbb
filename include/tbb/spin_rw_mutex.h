@@ -92,7 +92,7 @@ public:
     public:
         //! Construct lock that has not acquired a mutex.
         /** Equivalent to zero-initialization of *this. */
-        scoped_lock() : mutex(NULL) {}
+        scoped_lock() : mutex(NULL), is_writer(false) {}
 
         //! Acquire lock on given mutex.
         /** Upon entry, *this should not be in the "have acquired a mutex" state. */

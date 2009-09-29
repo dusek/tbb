@@ -235,8 +235,7 @@ void TestAccumulator( int mode, int nthread ) {
             ASSERT( acc.my_total==sum[n-1], NULL );
         else
             ASSERT( acc.my_total==0, NULL );
-        if( Verbose ) 
-            REPORT("time [n=%ld] = %g\tused_once%% = %g\tnthread=%d\n",n,(t1-t0).seconds(), n==0 ? 0 : 100.0*used_once_count/n,nthread);
+        REMARK("time [n=%ld] = %g\tused_once%% = %g\tnthread=%d\n",n,(t1-t0).seconds(), n==0 ? 0 : 100.0*used_once_count/n,nthread);
     }
     delete[] addend;
     delete[] sum;

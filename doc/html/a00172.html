@@ -25,7 +25,7 @@
 <h1>tbb::tbb_exception Class Reference</h1><!-- doxytag: class="tbb::tbb_exception" -->Interface to be implemented by all exceptions TBB recognizes and propagates across the threads.  
 <a href="#_details">More...</a>
 <p>
-<code>#include &lt;<a class="el" href="a00381.html">tbb_exception.h</a>&gt;</code>
+<code>#include &lt;<a class="el" href="a00382.html">tbb_exception.h</a>&gt;</code>
 <p>
 Inherited by <a class="el" href="a00127.html">tbb::captured_exception</a>, and <a class="el" href="a00141.html">tbb::movable_exception&lt; ExceptionData &gt;</a>.
 <p>
@@ -49,6 +49,8 @@ virtual const char *&nbsp;</td><td class="memItemRight" valign="bottom"><a class
 virtual const char *&nbsp;</td><td class="memItemRight" valign="bottom"><a class="el" href="a00172.html#e8157689ecb66bc6c72d3618bf3cc371">what</a> () const =0  throw ()</td></tr>
 
 <tr><td class="mdescLeft">&nbsp;</td><td class="mdescRight">Returns the result of originally intercepted exception's <a class="el" href="a00172.html#e8157689ecb66bc6c72d3618bf3cc371">what()</a> method. <br></td></tr>
+<tr><td class="memItemLeft" nowrap align="right" valign="top">void&nbsp;</td><td class="memItemRight" valign="bottom"><a class="el" href="a00172.html#3f2da7f3d8a6e4c1df522af1213afb5a">operator delete</a> (void *p)</td></tr>
+
 </table>
 <hr><a name="_details"></a><h2>Detailed Description</h2>
 Interface to be implemented by all exceptions TBB recognizes and propagates across the threads. 
@@ -79,7 +81,7 @@ Destroys objects created by the <a class="el" href="a00172.html#3e3482bf264d4ca4
 <p>
 Frees memory and calls destructor for this exception object. Can and must be used only on objects created by the move method. 
 <p>
-Implemented in <a class="el" href="a00127.html#667812a82f1525e968c52593dea0ef4c">tbb::captured_exception</a>, and <a class="el" href="a00141.html#7a46873119d9f85a7b0009c13e41a258">tbb::movable_exception&lt; ExceptionData &gt;</a>.
+Implemented in <a class="el" href="a00127.html#93d875d3555502ff6f18513525de204c">tbb::captured_exception</a>, and <a class="el" href="a00141.html#7a46873119d9f85a7b0009c13e41a258">tbb::movable_exception&lt; ExceptionData &gt;</a>.
 </div>
 </div><p>
 <a class="anchor" name="3e3482bf264d4ca4dde046cd9c02c766"></a><!-- doxytag: member="tbb::tbb_exception::move" ref="3e3482bf264d4ca4dde046cd9c02c766" args="()=0" -->
@@ -102,7 +104,28 @@ Creates and returns pointer to the deep copy of this exception object.
 <p>
 Move semantics is allowed. 
 <p>
-Implemented in <a class="el" href="a00127.html#df6bbb78a362fe862a341e81e2999810">tbb::captured_exception</a>, and <a class="el" href="a00141.html#1aea0ad179d6f0481fe7f3495f66adf9">tbb::movable_exception&lt; ExceptionData &gt;</a>.
+Implemented in <a class="el" href="a00127.html#837a50b8f6a800bda225c39d1699643f">tbb::captured_exception</a>, and <a class="el" href="a00141.html#1aea0ad179d6f0481fe7f3495f66adf9">tbb::movable_exception&lt; ExceptionData &gt;</a>.
+</div>
+</div><p>
+<a class="anchor" name="3f2da7f3d8a6e4c1df522af1213afb5a"></a><!-- doxytag: member="tbb::tbb_exception::operator delete" ref="3f2da7f3d8a6e4c1df522af1213afb5a" args="(void *p)" -->
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">void tbb::tbb_exception::operator delete           </td>
+          <td>(</td>
+          <td class="paramtype">void *&nbsp;</td>
+          <td class="paramname"> <em>p</em>          </td>
+          <td>&nbsp;)&nbsp;</td>
+          <td width="100%"><code> [inline]</code></td>
+        </tr>
+      </table>
+</div>
+<div class="memdoc">
+
+<p>
+Operator delete is provided only to allow using existing smart pointers with TBB exception objects obtained as the result of applying <a class="el" href="a00172.html#3e3482bf264d4ca4dde046cd9c02c766">move()</a> operation on an exception thrown out of TBB scheduler.<p>
+When overriding method <a class="el" href="a00172.html#3e3482bf264d4ca4dde046cd9c02c766">move()</a> make sure to override operator delete as well if memory is allocated not by TBB's scalable allocator. 
 </div>
 </div><p>
 <a class="anchor" name="8588e07fa49692f4d734e4f2e4f048f4"></a><!-- doxytag: member="tbb::tbb_exception::throw_self" ref="8588e07fa49692f4d734e4f2e4f048f4" args="()=0" -->
@@ -129,7 +152,7 @@ Implemented in <a class="el" href="a00127.html#2dd1be66ab32fa27e0ddef5707fa67ef"
 </div>
 </div><p>
 <hr>The documentation for this class was generated from the following file:<ul>
-<li><a class="el" href="a00381.html">tbb_exception.h</a></ul>
+<li><a class="el" href="a00382.html">tbb_exception.h</a></ul>
 <hr>
 <p></p>
 Copyright &copy; 2005-2009 Intel Corporation.  All Rights Reserved.

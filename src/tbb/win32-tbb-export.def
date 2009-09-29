@@ -89,6 +89,10 @@ __TBB_machine_trylockbyte
 ?name@captured_exception@tbb@@UBEPBDXZ
 ?what@captured_exception@tbb@@UBEPBDXZ
 ??1captured_exception@tbb@@UAE@XZ
+?move@captured_exception@tbb@@UAEPAV12@XZ
+?destroy@captured_exception@tbb@@UAEXXZ
+?set@captured_exception@tbb@@QAEXPBD0@Z
+?clear@captured_exception@tbb@@QAEXXZ
 #endif /* __TBB_EXCEPTIONS */
 
 ; tbb_misc.cpp

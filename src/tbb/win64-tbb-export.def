@@ -85,6 +85,10 @@ __TBB_machine_pause
 ?name@captured_exception@tbb@@UEBAPEBDXZ
 ?what@captured_exception@tbb@@UEBAPEBDXZ
 ??1captured_exception@tbb@@UEAA@XZ
+?move@captured_exception@tbb@@UEAAPEAV12@XZ
+?destroy@captured_exception@tbb@@UEAAXXZ
+?set@captured_exception@tbb@@QEAAXPEBD0@Z
+?clear@captured_exception@tbb@@QEAAXXZ
 #endif /* __TBB_EXCEPTIONS */
 
 ; tbb_misc.cpp

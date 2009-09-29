@@ -37,7 +37,9 @@
 
 #define __TBB_release_consistency_helper() __asm__ __volatile__("": : :"memory")
 
+#ifndef __TBB_rel_acq_fence
 inline void __TBB_rel_acq_fence() { __asm__ __volatile__("mfence": : :"memory"); }
+#endif
 
 #define __MACHINE_DECL_ATOMICS(S,T,X) \
 static inline T __TBB_machine_cmpswp##S (volatile void *ptr, T value, T comparand )  \

@@ -25,7 +25,7 @@
 <h1>tbb::internal::tbb_exception_ptr Class Reference</h1><!-- doxytag: class="tbb::internal::tbb_exception_ptr" -->Exception container that preserves the exact copy of the original exception.  
 <a href="#_details">More...</a>
 <p>
-<code>#include &lt;<a class="el" href="a00381.html">tbb_exception.h</a>&gt;</code>
+<code>#include &lt;<a class="el" href="a00382.html">tbb_exception.h</a>&gt;</code>
 <p>
 <a href="a00087.html">List of all members.</a><table border="0" cellpadding="0" cellspacing="0">
 <tr><td></td></tr>
@@ -41,12 +41,13 @@ void&nbsp;</td><td class="memItemRight" valign="bottom"><a class="el" href="a001
 <tr><td class="memItemLeft" nowrap align="right" valign="top"><a class="anchor" name="65083750bebe799d3fe8143c794523bb"></a><!-- doxytag: member="tbb::internal::tbb_exception_ptr::allocate" ref="65083750bebe799d3fe8143c794523bb" args="()" -->
 static <a class="el" href="a00173.html">tbb_exception_ptr</a> *&nbsp;</td><td class="memItemRight" valign="bottom"><b>allocate</b> ()</td></tr>
 
-<tr><td class="memItemLeft" nowrap align="right" valign="top"><a class="anchor" name="90930262be794c7284ccae8f2fa0ae80"></a><!-- doxytag: member="tbb::internal::tbb_exception_ptr::allocate" ref="90930262be794c7284ccae8f2fa0ae80" args="(const tbb_exception &amp;)" -->
-static <a class="el" href="a00173.html">tbb_exception_ptr</a> *&nbsp;</td><td class="memItemRight" valign="bottom"><b>allocate</b> (const <a class="el" href="a00172.html">tbb_exception</a> &amp;)</td></tr>
+<tr><td class="memItemLeft" nowrap align="right" valign="top"><a class="anchor" name="d1111b00ba54b7fe35e6d3a0f21de287"></a><!-- doxytag: member="tbb::internal::tbb_exception_ptr::allocate" ref="d1111b00ba54b7fe35e6d3a0f21de287" args="(const tbb_exception &amp;tag)" -->
+static <a class="el" href="a00173.html">tbb_exception_ptr</a> *&nbsp;</td><td class="memItemRight" valign="bottom"><b>allocate</b> (const <a class="el" href="a00172.html">tbb_exception</a> &amp;tag)</td></tr>
 
-<tr><td class="memItemLeft" nowrap align="right" valign="top"><a class="anchor" name="8855dd659f1d5c6cf3c3d11787e278f6"></a><!-- doxytag: member="tbb::internal::tbb_exception_ptr::allocate" ref="8855dd659f1d5c6cf3c3d11787e278f6" args="(const captured_exception &amp;)" -->
-static <a class="el" href="a00173.html">tbb_exception_ptr</a> *&nbsp;</td><td class="memItemRight" valign="bottom"><b>allocate</b> (const <a class="el" href="a00127.html">captured_exception</a> &amp;)</td></tr>
+<tr><td class="memItemLeft" nowrap align="right" valign="top"><a class="anchor" name="c35e5db8e9cdff5d1387db5b0bad2e4a"></a><!-- doxytag: member="tbb::internal::tbb_exception_ptr::allocate" ref="c35e5db8e9cdff5d1387db5b0bad2e4a" args="(captured_exception &amp;src)" -->
+static <a class="el" href="a00173.html">tbb_exception_ptr</a> *&nbsp;</td><td class="memItemRight" valign="bottom"><a class="el" href="a00173.html#c35e5db8e9cdff5d1387db5b0bad2e4a">allocate</a> (<a class="el" href="a00127.html">captured_exception</a> &amp;src)</td></tr>
 
+<tr><td class="mdescLeft">&nbsp;</td><td class="mdescRight">This overload uses move semantics (i.e. it empties src). <br></td></tr>
 </table>
 <hr><a name="_details"></a><h2>Detailed Description</h2>
 Exception container that preserves the exact copy of the original exception. 
@@ -76,7 +77,7 @@ Note that objects of this type can be created only by the allocate() method.
 </div>
 </div><p>
 <hr>The documentation for this class was generated from the following file:<ul>
-<li><a class="el" href="a00381.html">tbb_exception.h</a></ul>
+<li><a class="el" href="a00382.html">tbb_exception.h</a></ul>
 <hr>
 <p></p>
 Copyright &copy; 2005-2009 Intel Corporation.  All Rights Reserved.

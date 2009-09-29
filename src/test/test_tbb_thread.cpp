@@ -29,7 +29,6 @@
 #include "tbb/tbb_thread.h"
 #include "tbb/atomic.h"
 
-#define HARNESS_NO_PARSE_COMMAND_LINE 1
 #include "harness_report.h"
 #include "harness_assert.h"
 

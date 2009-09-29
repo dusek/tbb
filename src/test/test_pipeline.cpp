@@ -302,8 +302,7 @@ int main( int argc, char* argv[] ) {
         exit(1);
     }
     if( tbb::TBB_runtime_interface_version()>TBB_INTERFACE_VERSION) {
-        if( Verbose )
-            REPORT("Warning: implementation dependent tests disabled\n");
+        REMARK("Warning: implementation dependent tests disabled\n");
         do_hacking_tests = false;
     }
 

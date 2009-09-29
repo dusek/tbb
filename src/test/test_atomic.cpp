@@ -253,8 +253,7 @@ struct AlignmentChecker {
 /** T is an integral type. */
 template<typename T>
 void TestAtomicInteger( const char* name ) {
-    if( Verbose )
-        REPORT("testing atomic<%s>\n",name);
+    REMARK("testing atomic<%s>\n",name);
 #if ( __linux__ && __TBB_x86_32 && __GNUC__==3 && __GNUC_MINOR__==3 ) || defined(__SUNPRO_CC)
     // gcc 3.3 has known problem for 32-bit Linux, so only warn if there is a problem.
     // SUNPRO_CC does have this problem as well
@@ -309,8 +308,7 @@ void TestIndirection() {
 //! Test atomic<T*>
 template<typename T>
 void TestAtomicPointer() {
-    if( Verbose )
-        REPORT("testing atomic pointer (%d)\n",int(sizeof(T)));
+    REMARK("testing atomic pointer (%d)\n",int(sizeof(T)));
     T array[1000];
     TestOperations<T*>(&array[500],&array[250],&array[750]);
     TestFetchAndAdd<T*>(&array[500]);
@@ -321,16 +319,14 @@ void TestAtomicPointer() {
 //! Test atomic<Ptr> where Ptr is a pointer to a type of unknown size
 template<typename Ptr>
 void TestAtomicPointerToTypeOfUnknownSize( const char* name ) {
-    if( Verbose )
-        REPORT("testing atomic<%s>\n",name);
+    REMARK("testing atomic<%s>\n",name);
     char array[1000];
     TestOperations<Ptr>((Ptr)(void*)&array[500],(Ptr)(void*)&array[250],(Ptr)(void*)&array[750]);
     TestParallel<Ptr>( name );
 }
 
 void TestAtomicBool() {
-    if( Verbose )
-        REPORT("testing atomic<bool>\n");
+    REMARK("testing atomic<bool>\n");
     TestOperations<bool>(true,true,false);
     TestOperations<bool>(false,false,true);
     TestParallel<bool>( "bool" );
@@ -339,8 +335,7 @@ void TestAtomicBool() {
 enum Color {Red=0,Green=1,Blue=-1};
 
 void TestAtomicEnum() {
-    if( Verbose )
-        REPORT("testing atomic<Color>\n");
+    REMARK("testing atomic<Color>\n");
     TestOperations<Color>(Red,Green,Blue);
     TestParallel<Color>( "Color" );
 }
@@ -348,8 +343,7 @@ void TestAtomicEnum() {
 #if !__TBB_FLOATING_POINT_BROKEN 
 template<typename T>
 void TestAtomicFloat( const char* name ) {
-    if( Verbose )
-        REPORT("testing atomic<%s>\n", name );
+    REMARK("testing atomic<%s>\n", name );
     TestOperations<T>(0.5,3.25,10.75);
     TestParallel<T>( name );
 }
@@ -443,8 +437,7 @@ intptr_t getCorrectContendedValue() {
 
 template<typename T>
 void TestMaskedCAS() {
-    if( Verbose )
-        REPORT("testing masked CAS<%d>\n",int(sizeof(T)));
+    REMARK("testing masked CAS<%d>\n",int(sizeof(T)));
 
     const int num_slots = sizeof(T)*testSpaceSize/sizeof(intptr_t);
     intptr_t arr1[num_slots+2]; // two more "canary" slots at boundaries

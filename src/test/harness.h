@@ -34,8 +34,7 @@
 #ifndef tbb_tests_harness_H
 #define tbb_tests_harness_H
 
-#define __TBB_LAMBDAS_PRESENT  ( _MSC_VER >= 1600 && !__INTEL_COMPILER || __INTEL_COMPILER >= 1100 && _TBB_CPP0X )
-#define __TBB_LAMBDA_AS_TEMPL_PARAM_BROKEN (__INTEL_COMPILER == 1100 || __INTEL_COMPILER == 1110)
+#define __TBB_LAMBDAS_PRESENT  ( _MSC_VER >= 1600 && !__INTEL_COMPILER || __INTEL_COMPILER > 1100 && _TBB_CPP0X )
 
 #if __SUNPRO_CC
 #include <stdlib.h>
@@ -78,7 +77,11 @@ void SetHarnessErrorProcessing( test_error_extra_t extra_call ) {
 }
 //! Reports errors issued by failed assertions
 void ReportError( const char* filename, int line, const char* expression, const char * message ) {
+#if __TBB_ICL_11_1_CODE_GEN_BROKEN
+    printf("%s:%d, assertion %s: %s\n", filename, line, expression, message ? message : "failed" );
+#else
     REPORT_FATAL_ERROR("%s:%d, assertion %s: %s\n", filename, line, expression, message ? message : "failed" );
+#endif
     if( ErrorExtraCall )
         (*ErrorExtraCall)();
 #if TBB_TERMINATE_ON_ASSERT

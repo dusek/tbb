@@ -59,7 +59,7 @@ ifneq (,$(codecov))
     CPLUS_FLAGS += -prof-genx
 endif
 
-ifneq (0,$(lambdas))
+ifneq (00,$(lambdas)$(cpp0x))
 	CPLUS_FLAGS += -std=c++0x -D_TBB_CPP0X
 endif
 

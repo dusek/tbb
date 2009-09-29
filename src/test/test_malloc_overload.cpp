@@ -36,9 +36,14 @@
 
 #if MALLOC_REPLACEMENT_AVAILABLE
 
+#if _WIN32 || _WIN64
+// to use strdup and putenv w/o warnings
+#define _CRT_NONSTDC_NO_DEPRECATE 1
+#endif
 #include "harness_report.h"
 #include "harness_assert.h"
 #include <stdlib.h>
+#include <string.h>
 #include <malloc.h>
 #include <stdio.h>
 #include <new>
@@ -88,6 +93,7 @@ struct LargeObjectHeader {
     size_t       unalignedSize;     /* The size that was requested from getMemory */
     uint64_t     mallocUniqueID;    /* The field to check whether the memory was allocated by scalable_malloc */
     size_t       objectSize;        /* The size originally requested by a client */
+    bool         getMemoryBlock;    /* Is memory allocated by getMemory or by getRawMemory? */
 };
 
 /*
@@ -123,6 +129,30 @@ int main(int , char *[]) {
         return 1;
     }
 #endif
+
+#if __TBB_REALLOC_REPLACEMENT_FIX_IS_READY
+/* On Windows, memory block size returned by _msize() is sometimes used 
+   to calculate the size for an extended block. Substituting _msize, 
+   scalable_msize initially returned 0 for regions not allocated by the scalable 
+   allocator, which led to incorrect memory reallocation and subsequent crashes.
+   It was found that adding a new environment variable triggers the error.
+*/
+    ASSERT(getenv("PATH"), "We assume that PATH is set everywhere.");
+    char *pathCopy = strdup(getenv("PATH"));
+    const char *newEnvName = "__TBBMALLOC_OVERLOAD_REGRESSION_TEST_FOR_REALLOC_AND_MSIZE";
+    char *newEnv = (char*)malloc(2 + strlen(newEnvName));
+    
+    ASSERT(!getenv(newEnvName), "Environment variable should not be used before.");
+    strcpy(newEnv, newEnvName);
+    strcat(newEnv, "=1");
+    int r = putenv(newEnv);
+    ASSERT(!r, NULL);
+    char *path = getenv("PATH");
+    ASSERT(path && 0==strcmp(path, pathCopy), 
+           "Environment was changed erroneously.");
+    free(pathCopy);
+    free(newEnv);
+#endif /* __TBB_REALLOC_REPLACEMENT_FIX_IS_READY */
 
     ptr = malloc(minLargeObjectSize);
     ASSERT(ptr!=NULL && scalableMallocLargeBlock(ptr, minLargeObjectSize), NULL);

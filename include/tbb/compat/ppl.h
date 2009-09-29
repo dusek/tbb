@@ -41,6 +41,7 @@ namespace Concurrency {
     using tbb::task_group;
     using tbb::structured_task_group;
     using tbb::missing_wait;
+    using tbb::make_task;
 
     using tbb::not_complete;
     using tbb::complete;

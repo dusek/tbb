@@ -30,10 +30,13 @@
 #include "harness.h"
 #include "harness_barrier.h"
 
-// current minimal size of object that treated as large object
-const size_t minLargeObjectSize = 8065;
-// current difference between size of consequent cache bins
-const int largeObjectCacheStep = 8*1024;
+// To not depends on ITT support stuff
+#ifdef DO_ITT_NOTIFY
+ #undef DO_ITT_NOTIFY
+#endif
+
+#include "../tbbmalloc/MemoryAllocator.cpp"
+#include "../tbbmalloc/tbbmalloc.cpp"
 
 const int LARGE_MEM_SIZES_NUM = 10;
 const size_t MByte = 1024*1024;
@@ -59,19 +62,16 @@ public:
     }
 };
 
-class Run: NoAssign {
-    const int allThreads;
-    Harness::SpinBarrier *barrier;
+class TestLargeObjCache: NoAssign {
+    static Harness::SpinBarrier barrier;
 public:
     static int largeMemSizes[LARGE_MEM_SIZES_NUM];
 
-    Run( int allThreads, Harness::SpinBarrier *barrier ) : 
-        allThreads(allThreads), barrier(barrier) {}
+    static void initBarrier(unsigned thrds) { barrier.initialize(thrds); }
+
+    TestLargeObjCache( ) {}
+
     void operator()( int /*mynum*/ ) const {
-        testObjectCaching();
-    }
-private:
-    void testObjectCaching() const {
         AllocInfo allocs[LARGE_MEM_SIZES_NUM];
 
         // push to maximal cache limit
@@ -90,7 +90,7 @@ private:
             }
         }
         
-        barrier->wait();
+        barrier.wait();
 
         // check caching correctness
         for (int i=0; i<1000; i++) {
@@ -111,49 +111,79 @@ private:
     }
 };
 
-int Run::largeMemSizes[LARGE_MEM_SIZES_NUM];
+Harness::SpinBarrier TestLargeObjCache::barrier;
+int TestLargeObjCache::largeMemSizes[LARGE_MEM_SIZES_NUM];
+
+#if MALLOC_CHECK_RECURSION
+
+class TestStartupAlloc: NoAssign {
+    static Harness::SpinBarrier init_barrier;
+    struct TestBlock {
+        void *ptr;
+        size_t sz;
+    };
+    static const int ITERS = 100;
+public:
+    TestStartupAlloc() {}
+    static void initBarrier(unsigned thrds) { init_barrier.initialize(thrds); }
+    void operator()(int) const {
+        TestBlock blocks1[ITERS], blocks2[ITERS];
+
+        init_barrier.wait();
+
+        for (int i=0; i<ITERS; i++) {
+            blocks1[i].sz = rand() % minLargeObjectSize;
+            blocks1[i].ptr = startupAlloc(blocks1[i].sz);
+            ASSERT(blocks1[i].ptr && startupMsize(blocks1[i].ptr)>=blocks1[i].sz 
+                   && 0==(uintptr_t)blocks1[i].ptr % sizeof(void*), NULL);
+            memset(blocks1[i].ptr, i, blocks1[i].sz);
+        }
+        for (int i=0; i<ITERS; i++) {
+            blocks2[i].sz = rand() % minLargeObjectSize;
+            blocks2[i].ptr = startupAlloc(blocks2[i].sz);
+            ASSERT(blocks2[i].ptr && startupMsize(blocks2[i].ptr)>=blocks2[i].sz 
+                   && 0==(uintptr_t)blocks2[i].ptr % sizeof(void*), NULL);
+            memset(blocks2[i].ptr, i, blocks2[i].sz);
+
+            for (size_t j=0; j<blocks1[i].sz; j++)
+                ASSERT(*((char*)blocks1[i].ptr+j) == i, NULL);
+            Block *block = (Block *)alignDown(blocks1[i].ptr, blockSize);
+            startupFree((StartupBlock *)block, blocks1[i].ptr);
+        }
+        for (int i=ITERS-1; i>=0; i--) {
+            for (size_t j=0; j<blocks2[i].sz; j++)
+                ASSERT(*((char*)blocks2[i].ptr+j) == i, NULL);
+            Block *block = (Block *)alignDown(blocks2[i].ptr, blockSize);
+            startupFree((StartupBlock *)block, blocks2[i].ptr);
+        }
+    }
+};
+
+Harness::SpinBarrier TestStartupAlloc::init_barrier;
+
+#endif /* MALLOC_CHECK_RECURSION */
 
 __TBB_TEST_EXPORT
 int main(int argc, char* argv[]) {
     ParseCommandLine( argc, argv );
 
+#if MALLOC_CHECK_RECURSION
+    for( int p=MaxThread; p>=MinThread; --p ) {
+        TestStartupAlloc::initBarrier( p );
+        NativeParallelFor( p, TestStartupAlloc() );
+        ASSERT(!firstStartupBlock, "Startup heap memory leak detected");
+    }
+#endif
+
     for (int i=0; i<LARGE_MEM_SIZES_NUM; i++)
-        Run::largeMemSizes[i] = (int)(minLargeObjectSize + 
-                                      2*minLargeObjectSize*(1.*rand()/RAND_MAX));
+        TestLargeObjCache::largeMemSizes[i] = 
+            (int)(minLargeObjectSize + 2*minLargeObjectSize*(1.*rand()/RAND_MAX));
 
     for( int p=MaxThread; p>=MinThread; --p ) {
-        Harness::SpinBarrier *barrier = new Harness::SpinBarrier(p);
-        NativeParallelFor( p, Run(p, barrier) );
-        delete barrier;
+        TestLargeObjCache::initBarrier( p );
+        NativeParallelFor( p, TestLargeObjCache() );
     }
 
     REPORT("done\n");
     return 0;
 }
-
-/* On this platforms __TBB_machine_pause is defined in TBB library,
- * so have to provide it manually. 
- */
-#if (_WIN32||_WIN64) && defined(_M_AMD64)
-
-extern "C" void __TBB_machine_pause(__int32) { __TBB_Yield(); }
-
-#elif __linux__ && __ia64__
-extern "C" void __TBB_machine_pause(int32_t) { __TBB_Yield(); }
-
-pthread_mutex_t counter_mutex = PTHREAD_MUTEX_INITIALIZER;
-
-/* As atomics are used only as atomic addition in Harness::SpinBarrier 
- * implementation, it's OK to have this mutex.
- */
-int32_t __TBB_machine_fetchadd4__TBB_full_fence (volatile void *ptr, 
-                                                 int32_t value)
-{
-    pthread_mutex_lock(&counter_mutex);
-    int32_t result = *(int32_t*)ptr;
-    *(int32_t*)ptr = result + value;
-    pthread_mutex_unlock(&counter_mutex);
-    return result;
-}
-
-#endif

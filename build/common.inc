@@ -67,8 +67,9 @@ cross_cfg = $(if $(crosstest),$(call flip_cfg,$(1)),$(1))
 ifdef BUILDING_PHASE
  # Setting default configuration to release
  cfg?=release
- # And no lambas support by default for compilers that require special options to enable it
+ # No lambas or other C++0x extensions by default for compilers that implement them as experimental features
  lambdas ?= 0
+ cpp0x ?= 0
   # include compiler-specific build configurations
  -include $(tbb_root)/build/$(tbb_os).$(compiler).inc
  ifdef extra_inc

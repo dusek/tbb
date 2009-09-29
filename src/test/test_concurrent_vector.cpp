@@ -272,15 +272,13 @@ void TestParallelFor( int nthread ) {
     vector_t v;
     v.resize(N);
     tbb::tick_count t0 = tbb::tick_count::now();
-    if( Verbose )
-        REPORT("Calling parallel_for with %ld threads\n",long(nthread));
+    REMARK("Calling parallel_for with %ld threads\n",long(nthread));
     tbb::parallel_for( v.range(10000), AssignElement(v.begin()) );
     tbb::tick_count t1 = tbb::tick_count::now();
     const vector_t& u = v;
     tbb::parallel_for( u.range(10000), CheckElement(u.begin()) );
     tbb::tick_count t2 = tbb::tick_count::now();
-    if( Verbose )
-        REPORT("Time for parallel_for: assign time = %8.5f, check time = %8.5f\n",
+    REMARK("Time for parallel_for: assign time = %8.5f, check time = %8.5f\n",
                (t1-t0).seconds(),(t2-t1).seconds());
     for( long i=0; size_t(i)<v.size(); ++i )
         if( v[i]!=i )
@@ -389,8 +387,7 @@ void TestSequentialFor() {
         ASSERT( &cpr == &cp, "preincrement not returning a reference?");
     }
     tbb::tick_count t2 = tbb::tick_count::now();
-    if( Verbose )
-        REPORT("Time for serial for:  assign time = %8.5f, check time = %8.5f\n",
+    REMARK("Time for serial for:  assign time = %8.5f, check time = %8.5f\n",
                (t1-t0).seconds(),(t2-t1).seconds());
 
     // Now go backwards
@@ -613,7 +610,7 @@ void TestConcurrentGrowBy( int nthread ) {
             if( v[i].state == Foo::DefaultInitialized ) ++def_inits;
             else if( v[i].state == Foo::CopyInitialized ) ++copy_inits;
             else {
-                if(Verbose) std::printf("i: %d ", i);
+                REMARK("i: %d ", i);
                 ASSERT( false, "v[i] seems not initialized");
             }
             int index = v[i].bar();
@@ -627,7 +624,7 @@ void TestConcurrentGrowBy( int nthread ) {
             ASSERT( nthread>1 || v[i].bar()==i, "sequential execution is wrong" );
         }
         delete[] found;
-        if(Verbose) REPORT("Initialization by default constructor: %d, by copy: %d\n", def_inits, copy_inits);
+        REMARK("Initialization by default constructor: %d, by copy: %d\n", def_inits, copy_inits);
         ASSERT( def_inits >= m/2, NULL );
         ASSERT( copy_inits >= m/4, NULL );
         if( nthread>1 && inversions<m/20 )
@@ -757,8 +754,7 @@ void TestFindPrimes() {
     // Time parallel run that is very likely oversubscribed.  
     double t128 = TimeFindPrimes(128);
 
-    if( Verbose ) 
-        REPORT("TestFindPrimes: t2==%g t128=%g k=%g\n", t2, t128, t128/t2);
+    REMARK("TestFindPrimes: t2==%g t128=%g k=%g\n", t2, t128, t128/t2);
 
     // We allow the 128-thread run a little extra time to allow for thread overhead.
     // Theoretically, following test will fail on machine with >128 processors.
@@ -938,7 +934,7 @@ void TestExceptions() {
 
                 default:; // nothing to check here
                 }
-                if( Verbose ) REPORT("Exception %d: %s\t- ok\n", m, e.what());
+                REMARK("Exception %d: %s\t- ok\n", m, e.what());
             }
         }
     } catch(...) {
@@ -987,8 +983,7 @@ int main( int argc, char* argv[] ) {
 #endif//__TBB_EXCEPTIONS
 #endif//!TBB_DEPRECATED
     ASSERT( !FooCount, NULL );
-    if( Verbose ) 
-        REPORT("sizeof(concurrent_vector<int>) == %d\n", (int)sizeof(tbb::concurrent_vector<int>));
+    REMARK("sizeof(concurrent_vector<int>) == %d\n", (int)sizeof(tbb::concurrent_vector<int>));
     REPORT("done\n");
     return 0;
 }

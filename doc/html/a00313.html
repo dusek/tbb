@@ -171,11 +171,11 @@
 <a name="l00174"></a>00174 <span class="keyword">namespace </span>internal {
 <a name="l00176"></a>00176 <span class="keyword">template</span>&lt;<span class="keyword">typename</span> Function, <span class="keyword">typename</span> Index&gt;
 <a name="l00177"></a>00177 <span class="keyword">class </span>parallel_for_body : internal::no_assign {
-<a name="l00178"></a>00178     Function &amp;my_func;
+<a name="l00178"></a>00178     <span class="keyword">const</span> Function &amp;my_func;
 <a name="l00179"></a>00179     <span class="keyword">const</span> Index my_begin;
 <a name="l00180"></a>00180     <span class="keyword">const</span> Index my_step; 
 <a name="l00181"></a>00181 <span class="keyword">public</span>:
-<a name="l00182"></a>00182     parallel_for_body( Function&amp; _func, Index&amp; _begin, Index&amp; _step) 
+<a name="l00182"></a>00182     parallel_for_body( <span class="keyword">const</span> Function&amp; _func, Index&amp; _begin, Index&amp; _step) 
 <a name="l00183"></a>00183         : my_func(_func), my_begin(_begin), my_step(_step) {}
 <a name="l00184"></a>00184     
 <a name="l00185"></a>00185     <span class="keywordtype">void</span> operator()( <a class="code" href="a00122.html">tbb::blocked_range&lt;Index&gt;</a>&amp; r )<span class="keyword"> const </span>{
@@ -189,12 +189,12 @@
 <a name="l00194"></a>00194 
 <a name="l00196"></a>00196 
 <a name="l00197"></a>00197 <span class="keyword">template</span> &lt;<span class="keyword">typename</span> Index, <span class="keyword">typename</span> Function&gt;
-<a name="l00198"></a><a class="code" href="a00232.html#c2173259899af1fe7751a32139ec3ebf">00198</a> Function <a class="code" href="a00233.html#g68cc046ef72c42ce205fccbc435a0d81">parallel_for</a>(Index first, Index last, Index step, Function f) {
+<a name="l00198"></a><a class="code" href="a00232.html#15c764c70c8a32e7a4b8c291d0cc8dde">00198</a> <span class="keywordtype">void</span> <a class="code" href="a00233.html#g68cc046ef72c42ce205fccbc435a0d81">parallel_for</a>(Index first, Index last, Index step, <span class="keyword">const</span> Function&amp; f) {
 <a name="l00199"></a>00199     <a class="code" href="a00167.html">tbb::task_group_context</a> context;
-<a name="l00200"></a>00200     <span class="keywordflow">return</span> <a class="code" href="a00233.html#g68cc046ef72c42ce205fccbc435a0d81">parallel_for</a>(first, last, step, f, context);
+<a name="l00200"></a>00200     <a class="code" href="a00233.html#g68cc046ef72c42ce205fccbc435a0d81">parallel_for</a>(first, last, step, f, context);
 <a name="l00201"></a>00201 }
 <a name="l00202"></a>00202 <span class="keyword">template</span> &lt;<span class="keyword">typename</span> Index, <span class="keyword">typename</span> Function&gt;
-<a name="l00203"></a>00203 Function <a class="code" href="a00233.html#g68cc046ef72c42ce205fccbc435a0d81">parallel_for</a>(Index first, Index last, Index step, Function f, <a class="code" href="a00167.html">tbb::task_group_context</a> &amp;context) {
+<a name="l00203"></a>00203 <span class="keywordtype">void</span> <a class="code" href="a00233.html#g68cc046ef72c42ce205fccbc435a0d81">parallel_for</a>(Index first, Index last, Index step, <span class="keyword">const</span> Function&amp; f, <a class="code" href="a00167.html">tbb::task_group_context</a> &amp;context) {
 <a name="l00204"></a>00204     <span class="keywordflow">if</span> (step &lt;= 0 ) <span class="keywordflow">throw</span> std::invalid_argument(<span class="stringliteral">"step should be positive"</span>);
 <a name="l00205"></a>00205 
 <a name="l00206"></a>00206     <span class="keywordflow">if</span> (last &gt; first) {
@@ -204,17 +204,26 @@
 <a name="l00210"></a>00210         internal::parallel_for_body&lt;Function, Index&gt; body(f, first, step);
 <a name="l00211"></a>00211         <a class="code" href="a00233.html#g68cc046ef72c42ce205fccbc435a0d81">tbb::parallel_for</a>(range, body, <a class="code" href="a00120.html">tbb::auto_partitioner</a>(), context);
 <a name="l00212"></a>00212     }
-<a name="l00213"></a>00213     <span class="keywordflow">return</span> f;
-<a name="l00214"></a>00214 }
-<a name="l00216"></a>00216 
-<a name="l00217"></a>00217 } <span class="comment">// namespace strict_ppl</span>
-<a name="l00218"></a>00218 
-<a name="l00219"></a>00219 <span class="keyword">using</span> <a class="code" href="a00233.html#g68cc046ef72c42ce205fccbc435a0d81">strict_ppl::parallel_for</a>;
-<a name="l00220"></a>00220 
-<a name="l00221"></a>00221 } <span class="comment">// namespace tbb</span>
-<a name="l00222"></a>00222 
-<a name="l00223"></a>00223 <span class="preprocessor">#endif </span><span class="comment">/* __TBB_parallel_for_H */</span>
+<a name="l00213"></a>00213 }
+<a name="l00215"></a>00215 <span class="keyword">template</span> &lt;<span class="keyword">typename</span> Index, <span class="keyword">typename</span> Function&gt;
+<a name="l00216"></a><a class="code" href="a00232.html#490399525b1e690ec31d6db964c6b272">00216</a> <span class="keywordtype">void</span> <a class="code" href="a00233.html#g68cc046ef72c42ce205fccbc435a0d81">parallel_for</a>(Index first, Index last, <span class="keyword">const</span> Function&amp; f) {
+<a name="l00217"></a>00217     <a class="code" href="a00167.html">tbb::task_group_context</a> context;
+<a name="l00218"></a>00218     <a class="code" href="a00233.html#g68cc046ef72c42ce205fccbc435a0d81">parallel_for</a>(first, last, static_cast&lt;Index&gt;(1), f, context);
+<a name="l00219"></a>00219 }
+<a name="l00220"></a>00220 <span class="keyword">template</span> &lt;<span class="keyword">typename</span> Index, <span class="keyword">typename</span> Function&gt;
+<a name="l00221"></a>00221 <span class="keywordtype">void</span> <a class="code" href="a00233.html#g68cc046ef72c42ce205fccbc435a0d81">parallel_for</a>(Index first, Index last, <span class="keyword">const</span> Function&amp; f, <a class="code" href="a00167.html">tbb::task_group_context</a> &amp;context) {
+<a name="l00222"></a>00222     <a class="code" href="a00233.html#g68cc046ef72c42ce205fccbc435a0d81">parallel_for</a>(first, last, static_cast&lt;Index&gt;(1), f, context);
+<a name="l00223"></a>00223 }
 <a name="l00224"></a>00224 
+<a name="l00226"></a>00226 
+<a name="l00227"></a>00227 } <span class="comment">// namespace strict_ppl</span>
+<a name="l00228"></a>00228 
+<a name="l00229"></a>00229 <span class="keyword">using</span> <a class="code" href="a00233.html#g68cc046ef72c42ce205fccbc435a0d81">strict_ppl::parallel_for</a>;
+<a name="l00230"></a>00230 
+<a name="l00231"></a>00231 } <span class="comment">// namespace tbb</span>
+<a name="l00232"></a>00232 
+<a name="l00233"></a>00233 <span class="preprocessor">#endif </span><span class="comment">/* __TBB_parallel_for_H */</span>
+<a name="l00234"></a>00234 
 </pre></div><hr>
 <p></p>
 Copyright &copy; 2005-2009 Intel Corporation.  All Rights Reserved.

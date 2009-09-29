@@ -39,8 +39,7 @@ static void TestHandlePerror() {
     try {
         tbb::internal::handle_perror( EAGAIN, "apple" );
     } catch( std::runtime_error& e ) {
-	if( Verbose )
-	    REPORT("caught runtime_exception('%s')\n",e.what());
+	REMARK("caught runtime_exception('%s')\n",e.what());
  	ASSERT( memcmp(e.what(),"apple: ",7)==0, NULL );
         ASSERT( strstr(e.what(),"unavailable")!=NULL, "bad error message?" ); 
 	caught = true;

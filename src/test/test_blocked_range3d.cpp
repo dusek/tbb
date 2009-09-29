@@ -40,7 +40,8 @@ public:
     template<typename OtherTag>
     friend AbstractValueType<OtherTag> MakeAbstractValueType( int i );
 
-    friend int GetValueOf( const AbstractValueType& v ) {return v.value;}
+    template<typename OtherTag>
+    friend int GetValueOf( const AbstractValueType<OtherTag>& v ) ;
 };
 
 template<typename Tag>
@@ -49,6 +50,9 @@ AbstractValueType<Tag> MakeAbstractValueType( int i ) {
     x.value = i;
     return x;
 }
+
+template<typename Tag>
+int GetValueOf( const AbstractValueType<Tag>& v ) {return v.value;}
 
 template<typename Tag>
 bool operator<( const AbstractValueType<Tag>& u, const AbstractValueType<Tag>& v ) {

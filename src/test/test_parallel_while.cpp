@@ -155,8 +155,7 @@ static void Run( int nthread, int n ) {
     for( int i=0; i<n; ++i )   
         for( int j=0; j<n; ++j )    
             ASSERT( C[i][j]==D[i][j], NULL );
-    if( Verbose ) 
-        REPORT("time=%g\tnthread=%d\tn=%d\n",(t1-t0).seconds(),nthread,n);
+    REMARK("time=%g\tnthread=%d\tn=%d\n",(t1-t0).seconds(),nthread,n);
 }
 
 #include "tbb/task_scheduler_init.h"

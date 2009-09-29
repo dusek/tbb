@@ -511,7 +511,7 @@ void TestNullMutex( const char * name ) {
     Counter<M> counter;
     counter.value = 0;
     const int n = 100;
-    if( Verbose ) REPORT("%s ",name);
+    REMARK("%s ",name);
     {
         tbb::parallel_for(tbb::blocked_range<size_t>(0,n,10),AddOne<Counter<M> >(counter));
     }
@@ -524,7 +524,7 @@ void TestNullMutex( const char * name ) {
 
 template<typename M>
 void TestNullRWMutex( const char * name ) {
-    if( Verbose ) REPORT("%s ",name);
+    REMARK("%s ",name);
     const int n = 100;
     M m;
     tbb::parallel_for(tbb::blocked_range<size_t>(0,n,10),NullUpgradeDowngrade<M>(m, name));

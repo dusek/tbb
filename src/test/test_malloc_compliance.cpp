@@ -329,8 +329,7 @@ int main(int argc, char* argv[]) {
     limitMem(0);
 #endif
     for( int p=MaxThread; p>=MinThread; --p ) {
-        if( Verbose )
-            REPORT("testing with %d threads\n", p );
+        REMARK("testing with %d threads\n", p );
         Harness::SpinBarrier *barrier = new Harness::SpinBarrier(p);
         NativeParallelFor( p, RoundRobin(p, barrier, Verbose) );
         delete barrier;

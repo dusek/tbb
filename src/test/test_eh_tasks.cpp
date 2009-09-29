@@ -26,7 +26,7 @@
     the GNU General Public License.
 */
 
-// to avoid usage of #pragma comment
+// Suppress usage of #pragma comment
 #define __TBB_NO_IMPLICIT_LINKAGE 1
 
 #define  COUNT_TASK_NODES 1
@@ -108,9 +108,6 @@ public:
     tbb::task* execute () { throw 0; }
 
     ~SimpleThrowingTask() {
-#if !__TBB_RELAXED_OWNERSHIP
-        ASSERT( tbb::task::self().is_owned_by_current_thread(), NULL );
-#endif /* !__TBB_RELAXED_OWNERSHIP */
     }
 };
 
@@ -472,16 +469,13 @@ void ThrowMovableException ( intptr_t threshold, const T& data ) {
     if ( IsThrowingThread() )
         return; 
     if ( !g_SolitaryException ) {
-        g_ExceptionThrown = 1;
-        REMARK ("About to throw one of multiple movable_exceptions... :");
+        ++g_ExceptionsThrown;
         throw tbb::movable_exception<T>(data);
     }
     while ( g_CurStat.Existed() < threshold )
         __TBB_Yield();
-    if ( __TBB_CompareAndSwapW(&g_ExceptionThrown, 1, 0) == 0 ) {
-        REMARK ("About to throw solitary movable_exception... :");
+    if ( g_ExceptionsThrown.compare_and_swap(1, 0) == 0 )
         throw tbb::movable_exception<T>(data);
-    }
 }
 
 const int g_IntExceptionData = -375;
@@ -652,8 +646,7 @@ void TestCtxDestruction () {
     }
 } // void TestCtxDestruction()
 
-void RunTests ()
-{
+void RunTests () {
     REMARK ("Number of threads %d", g_NumThreads);
     tbb::task_scheduler_init init (g_NumThreads);
     g_Master = Harness::CurrentTid();
@@ -674,6 +667,7 @@ void RunTests ()
 __TBB_TEST_EXPORT
 int main(int argc, char* argv[]) {
     ParseCommandLine( argc, argv );
+    REMARK ("Using %s", TBB_USE_CAPTURED_EXCEPTION ? "tbb:captured_exception" : "exact exception propagation");
     MinThread = min(NUM_ROOTS_IN_GROUP, max(2, MinThread));
     MaxThread = min(NUM_ROOTS_IN_GROUP, max(MinThread, MaxThread));
     ASSERT (NUM_ROOTS_IN_GROUP < NUM_ROOT_TASKS, "Fix defines");
@@ -681,14 +675,12 @@ int main(int argc, char* argv[]) {
     // Test0 always runs on one thread
     Test0();
     for ( g_NumThreads = MinThread; g_NumThreads <= MaxThread; ++g_NumThreads ) {
-        for ( size_t j = 0; j < 2; ++j ) {
-            g_SolitaryException = (j & 2) == 1;
-            RunTests();
-        }
+        g_SolitaryException = 0;
+        RunTests();
     }
     REPORT("done\n");
 #else
-    REPORT("skipped\n");
+    REPORT("skip\n");
 #endif /* __TBB_EXCEPTIONS */
     return 0;
 }

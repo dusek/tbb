@@ -28,6 +28,18 @@
 
 // Test for function template parallel_for.h
 
+#if _MSC_VER
+#pragma warning (push)
+#if !defined(__INTEL_COMPILER)
+    // Suppress pointless "unreachable code" warning.
+    #pragma warning (disable: 4702)
+#endif
+#if defined(_Wp64)
+    // Workaround for overzealous compiler warnings in /Wp64 mode
+    #pragma warning (disable: 4267)
+#endif
+#endif //#if _MSC_VER 
+
 #include "tbb/parallel_for.h"
 #include "tbb/atomic.h"
 #include "harness_assert.h"
@@ -134,8 +146,7 @@ void Flog( int nthread ) {
         }
     }
     tbb::tick_count T1 = tbb::tick_count::now();
-    if( Verbose )
-        REPORT("time=%g\tnthread=%d\tpad=%d\n",(T1-T0).seconds(),nthread,int(Pad));
+    REMARK("time=%g\tnthread=%d\tpad=%d\n",(T1-T0).seconds(),nthread,int(Pad));
 }
 
 // Testing parallel_for with step support
@@ -145,9 +156,12 @@ const size_t PFOR_BUFFER_ACTUAL_SIZE = PFOR_BUFFER_TEST_SIZE + 1024;
 size_t pfor_buffer[PFOR_BUFFER_ACTUAL_SIZE];
 
 template<typename T>
-void TestFunction(T index){
-    pfor_buffer[index]++;
-}
+class TestFunctor{
+public:
+    void operator ()(T index) const {
+        pfor_buffer[index]++;
+    }
+};
 
 #include <stdexcept> // std::invalid_argument
 template <typename T>
@@ -160,7 +174,11 @@ void TestParallelForWithStepSupport()
         T step;
         for (step = 1; step < pfor_buffer_test_size; step++) {
             memset(pfor_buffer, 0, pfor_buffer_actual_size * sizeof(size_t));
-            tbb::parallel_for(begin, pfor_buffer_test_size, step, TestFunction<T>);
+            if (step == 1){
+                tbb::parallel_for(begin, pfor_buffer_test_size, TestFunctor<T>());
+            } else {
+                tbb::parallel_for(begin, pfor_buffer_test_size, step, TestFunctor<T>());
+            }
             // Verifying that parallel_for processed all items it should
             for (T i = begin; i < pfor_buffer_test_size; i = i + step) {
                 ASSERT(pfor_buffer[i] == 1, "parallel_for didn't process all required elements");
@@ -174,10 +192,10 @@ void TestParallelForWithStepSupport()
     }
 
     // Testing some corner cases
-    tbb::parallel_for(static_cast<T>(2), static_cast<T>(1), static_cast<T>(1), TestFunction<T>);
+    tbb::parallel_for(static_cast<T>(2), static_cast<T>(1), static_cast<T>(1), TestFunctor<T>());
 #if !__TBB_EXCEPTION_HANDLING_TOTALLY_BROKEN
     try{
-        tbb::parallel_for(static_cast<T>(1), static_cast<T>(100), static_cast<T>(0), TestFunction<T>);  // should cause std::invalid_argument
+        tbb::parallel_for(static_cast<T>(1), static_cast<T>(100), static_cast<T>(0), TestFunctor<T>());  // should cause std::invalid_argument
     }catch(std::invalid_argument){
         return;
     }
@@ -190,33 +208,52 @@ void TestParallelForWithStepSupport()
 #include "tbb/tbb_exception.h"
 #include "harness_eh.h"
 
-void test_function_with_exception(size_t)
+class test_functor_with_exception
 {
-    ThrowTestException();
-}
+public:
+    void operator ()(size_t) const{
+        ThrowTestException();
+    }
+};
 
 void TestExceptionsSupport()
 {
     REMARK (__FUNCTION__);
-    ResetEhGlobals();
-    TRY();
-        tbb::parallel_for((size_t)0, (size_t)PFOR_BUFFER_TEST_SIZE, (size_t)1, test_function_with_exception);
-    CATCH_AND_ASSERT();
+    { // Tests version with a step provided
+        ResetEhGlobals();
+        TRY();
+            tbb::parallel_for((size_t)0, (size_t)PFOR_BUFFER_TEST_SIZE, (size_t)1, test_functor_with_exception());
+        CATCH_AND_ASSERT();
+    }
+    { // Tests version without a step
+        ResetEhGlobals();
+        TRY();
+            tbb::parallel_for((size_t)0, (size_t)PFOR_BUFFER_TEST_SIZE, test_functor_with_exception());
+        CATCH_AND_ASSERT();
+    }
 }
 
 // Cancellation support test
-void function_to_cancel(size_t ) {
-    ++g_CurExecuted;
-    CancellatorTask::WaitUntilReady();
-}
+class functor_to_cancel {
+public:
+    void operator()(size_t) const {
+        ++g_CurExecuted;
+        CancellatorTask::WaitUntilReady();
+    }
+};
+
+size_t g_worker_task_step = 0;
 
 class my_worker_pfor_step_task : public tbb::task
 {
     tbb::task_group_context &my_ctx;
 
     tbb::task* execute () {
-        tbb::parallel_for((size_t)0, (size_t)PFOR_BUFFER_TEST_SIZE, (size_t)1, function_to_cancel, my_ctx);
-        
+        if (g_worker_task_step == 0){
+            tbb::parallel_for((size_t)0, (size_t)PFOR_BUFFER_TEST_SIZE, functor_to_cancel(), my_ctx);
+        }else{
+            tbb::parallel_for((size_t)0, (size_t)PFOR_BUFFER_TEST_SIZE, g_worker_task_step, functor_to_cancel(), my_ctx);
+        }
         return NULL;
     }
 public:
@@ -225,6 +262,13 @@ public:
 
 void TestCancellation()
 {
+    // tests version without a step
+    g_worker_task_step = 0;
+    ResetEhGlobals();
+    RunCancellationTest<my_worker_pfor_step_task, CancellatorTask>();
+
+    // tests version with step
+    g_worker_task_step = 1;
     ResetEhGlobals();
     RunCancellationTest<my_worker_pfor_step_task, CancellatorTask>();
 }
@@ -274,3 +318,7 @@ int main( int argc, char* argv[] ) {
     REPORT("done\n");
     return 0;
 }
+
+#if _MSC_VER
+#pragma warning (pop)
+#endif

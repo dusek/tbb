@@ -316,7 +316,7 @@ void Test6 () {
     ResetGlobals();
     RunCancellationTest<ParForLauncherTask<ParForBodyToCancel2>, CancellatorTask2>();
     ASSERT (g_ExecutedAtCatch < g_NumThreads, "Somehow worker tasks started their execution before the cancellator task");
-    ASSERT (g_CurExecuted <= g_ExecutedAtCatch, "Some tasks were executed after cancellation");
+    ASSERT (g_CurExecuted <= g_ExecutedAtCatch + g_NumThreads, "Some tasks were executed after cancellation");
 } // void Test6 ()
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -588,7 +588,7 @@ void Test4_parallel_do () {
         minExecuted = g_Exceptions;
         ASSERT (g_Exceptions > 1 && g_Exceptions <= nestingCalls, "Unexpected actual number of exceptions");
         ASSERT (g_CurExecuted >= minExecuted, "Too many executed tasks reported");
-        ASSERT (g_CurExecuted <= g_ExecutedAtCatch + g_NumThreads, "Too many tasks survived multiple exceptions");
+        ASSERT (g_CurExecuted < g_ExecutedAtCatch + g_NumThreads + nestingCalls, "Too many tasks survived multiple exceptions");
         ASSERT (g_CurExecuted <= nestingCalls * (1 + g_NumThreads), "Too many tasks survived exception");
     }
 } // void Test4_parallel_do ()
@@ -666,7 +666,7 @@ template <class Iterator, class body_to_cancel>
 void Test6_parallel_do () {
     ResetGlobals();
     RunCancellationTest<ParDoWorkerTask<body_to_cancel, Iterator>, CancellatorTask2>();
-    ASSERT (g_CurExecuted <= g_ExecutedAtCatch, "Some tasks were executed after cancellation");
+    ASSERT (g_CurExecuted <= g_ExecutedAtCatch + g_NumThreads, "Some tasks were executed after cancellation");
 } // void Test6_parallel_do ()
 
 // This body throws an exception only if the task was added by feeder
@@ -998,7 +998,7 @@ void Test4_pipeline ( FilterSet mode ) {
     intptr_t  minExecuted = 0;
     if ( g_SolitaryException ) {
         minExecuted = maxExecuted - nestedCalls;
-        ASSERT (g_Exceptions == 1, "No exception registered");
+        ASSERT (g_Exceptions != 0, "No exception registered");
         ASSERT (g_CurExecuted <= minExecuted + g_NumThreads, "Too many tasks survived exception");
     }
     else {
@@ -1312,7 +1312,7 @@ void Test2_parallel_scan () {
         tbb::parallel_scan( tbb::blocked_range<int>(0, 100, 1), nesting_body );
     CATCH_AND_ASSERT();
 
-    ASSERT (g_ExceptionThrown, "No exception thrown from the nesting parallel_scan");
+    ASSERT (g_ExceptionsThrown, "No exception thrown from the nesting parallel_scan");
     ASSERT (g_CurExecuted <= g_ExecutedAtCatch + g_NumThreads, "Too many tasks survived exception");
     ASSERT (g_Exceptions == 1, "No try_blocks in any body expected in this test");
     if ( !g_SolitaryException )
@@ -1390,17 +1390,64 @@ void RunPScanTests()
     }
 }
 
+class MyCapturedException : public tbb::captured_exception {
+public:
+    static int m_refCount;
+
+    MyCapturedException () : tbb::captured_exception("MyCapturedException", "test") { ++m_refCount; }
+    ~MyCapturedException () throw() { --m_refCount; }
+
+    MyCapturedException* move () throw() {
+        MyCapturedException* movee = (MyCapturedException*)malloc(sizeof(MyCapturedException));
+        return ::new (movee) MyCapturedException;
+    }
+    void destroy () throw() {
+        this->~MyCapturedException();
+        free(this);
+    }
+    void operator delete ( void* p ) { free(p); }
+};
+
+int MyCapturedException::m_refCount = 0;
+
+void DeleteTbbException ( volatile tbb::tbb_exception* pe ) {
+    delete pe;
+}
+
+void TestTbbExceptionAPI () {
+    const char *name = "Test captured exception",
+               *reason = "Unit testing";
+    tbb::captured_exception e(name, reason);
+    ASSERT (strcmp(e.name(), name) == 0, "Setting captured exception name failed");
+    ASSERT (strcmp(e.what(), reason) == 0, "Setting captured exception reason failed");
+    tbb::captured_exception c(e);
+    ASSERT (strcmp(c.name(), e.name()) == 0, "Copying captured exception name failed");
+    ASSERT (strcmp(c.what(), e.what()) == 0, "Copying captured exception reason failed");
+    tbb::captured_exception *m = e.move();
+    ASSERT (strcmp(m->name(), name) == 0, "Moving captured exception name failed");
+    ASSERT (strcmp(m->what(), reason) == 0, "Moving captured exception reason failed");
+    ASSERT (!e.name() && !e.what(), "Moving semantics broken");
+    m->destroy();
+
+    MyCapturedException mce;
+    MyCapturedException *mmce = mce.move();
+    ASSERT( MyCapturedException::m_refCount == 2, NULL );
+    DeleteTbbException(mmce);
+    ASSERT( MyCapturedException::m_refCount == 1, NULL );
+}
+
 /** If min and max thread numbers specified on the command line are different,
     the test is run only for 2 sizes of the thread pool (MinThread and MaxThread)
     to be able to test the high and low contention modes while keeping the test reasonably fast **/
 __TBB_TEST_EXPORT
 int main(int argc, char* argv[]) {
     ParseCommandLine( argc, argv );
+    REMARK ("Using %s", TBB_USE_CAPTURED_EXCEPTION ? "tbb:captured_exception" : "exact exception propagation");
     MinThread = max(2, MinThread);
     MaxThread = max(MinThread, MaxThread);
     ASSERT (FLAT_RANGE >= FLAT_GRAIN * MaxThread, "Fix defines");
 #if __TBB_EXCEPTIONS
-    int step = max(MaxThread - MinThread, 1);
+    int step = max((MaxThread - MinThread + 1)/2, 1);
     for ( g_NumThreads = MinThread; g_NumThreads <= MaxThread; g_NumThreads += step ) {
         REMARK ("Number of threads %d", g_NumThreads);
         // Execute in all the possible modes
@@ -1410,15 +1457,15 @@ int main(int argc, char* argv[]) {
             RunParForAndReduceTests();
             RunParDoTests();
             RunPipelineTests();
-            RunPScanTests();
         }
     }
+    TestTbbExceptionAPI();
 #if __TBB_EXCEPTION_HANDLING_BROKEN
     REPORT("Warning: Exception handling tests are skipped due to a known issue.\n");
 #endif
     REPORT("done\n");
 #else  /* !__TBB_EXCEPTION_HANDLING_BROKEN */
-    REPORT("skipped\n");
+    REPORT("skip\n");
 #endif /* !__TBB_EXCEPTIONS */
     return 0;
 }

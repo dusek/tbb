@@ -144,8 +144,7 @@ public:
 
 //! Test OpenMMP loop around TBB loop
 void OpenMP_TBB_Convolve( T c[], const T a[], int m, const T b[], int n ) {
-    if( Verbose )
-        REPORT("testing OpenMP loop around TBB loop\n");
+    REMARK("testing OpenMP loop around TBB loop\n");
 #pragma omp parallel 
     {
         task_scheduler_init init;
@@ -186,8 +185,7 @@ public:
 
 //! Test TBB loop around OpenMP loop
 void TBB_OpenMP_Convolve( T c[], const T a[], int m, const T b[], int n ) {
-    if( Verbose )
-        REPORT("testing TBB loop around OpenMP loop\n");
+    REMARK("testing TBB loop around OpenMP loop\n");
     parallel_for( blocked_range<int>(0,m+n-1,10), OuterBody( c, a, m, b, n ) );
 }
 

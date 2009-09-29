@@ -137,8 +137,7 @@ void RunTaskGenerators( int i ) {
 /** The test takes a while to run, so we run it only with the default
     number of threads. */
 void TestTaskReclamation() {
-    if( Verbose )
-        REPORT("testing task reclamation\n");
+    REMARK("testing task reclamation\n");
 
     size_t initial_amount_of_memory = 0;
     double task_count_sum = 0;
@@ -146,8 +145,7 @@ void TestTaskReclamation() {
     double average, sigma;
 
     tbb::task_scheduler_init init (MinThread);
-    if( Verbose )
-        REPORT("Starting with %d threads\n", MinThread);
+    REMARK("Starting with %d threads\n", MinThread);
     // For now, the master will produce "additional" tasks; later a worker will replace it;
     Producer  = internal::Governor::local_scheduler();
     int N = 20;
@@ -164,14 +162,12 @@ void TestTaskReclamation() {
         task_count_sum += n;
         task_count_sum_square += n*n;
 
-        if( Verbose )
-            REPORT( "Consumed %ld bytes and %ld objects (iteration=%d)\n", long(m), long(n), i );
+        REMARK( "Consumed %ld bytes and %ld objects (iteration=%d)\n", long(m), long(n), i );
     }
     // Calculate statistical values
     average = task_count_sum / N;
     sigma   = sqrt( (task_count_sum_square - task_count_sum*task_count_sum/N)/N );
-    if( Verbose )
-        REPORT("Average task count: %g, sigma: %g, sum: %g, square sum:%g \n", average, sigma, task_count_sum, task_count_sum_square);
+    REMARK("Average task count: %g, sigma: %g, sum: %g, square sum:%g \n", average, sigma, task_count_sum, task_count_sum_square);
 
     int error_count = 0;
     for( int i=0; i<500; ++i ) {
@@ -190,8 +186,7 @@ void TestTaskReclamation() {
             initial_amount_of_memory = m;
             if( error_count>5 ) break;
         } else {
-            if( Verbose )
-                REPORT( "Consumed %ld bytes and %ld objects (iteration=%d)\n", long(m), long(n), i );
+            REMARK( "Consumed %ld bytes and %ld objects (iteration=%d)\n", long(m), long(n), i );
         }
     }
 }
@@ -201,8 +196,7 @@ int main(int argc, char* argv[]) {
     MinThread = -1;
     ParseCommandLine( argc, argv );
     if( !GetMemoryUsage() ) {
-        if( Verbose )
-            REPORT("GetMemoryUsage is not implemented for this platform\n");
+        REMARK("GetMemoryUsage is not implemented for this platform\n");
         REPORT("skip\n");
     } else {
         TestTaskReclamation();

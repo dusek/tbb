@@ -33,6 +33,11 @@
 #define MALLOC_LD_PRELOAD 1
 #endif
 
+// MALLOC_LD_PRELOAD depends on MALLOC_CHECK_RECURSION stuff
+#if __linux__ || __APPLE__ || __sun || __FreeBSD__ || MALLOC_LD_PRELOAD
+#define MALLOC_CHECK_RECURSION 1
+#endif
+
 #include <stddef.h>
 
 extern "C" {

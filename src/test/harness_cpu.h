@@ -102,7 +102,7 @@ static void TestCPUUserTime( int nthreads, int nactive = 1 ) {
     if( avg_worker_usrtime > waittime/2 )
         REPORT( "ERROR: %d worker threads are spinning; waittime: %g; usrtime: %g; avg worker usrtime: %g\n",
                 nworkers, waittime, usrtime, avg_worker_usrtime);
-    else if( Verbose )
-        REPORT("%d worker threads; waittime: %g; usrtime: %g; avg worker usrtime: %g\n",
+    else
+        REMARK("%d worker threads; waittime: %g; usrtime: %g; avg worker usrtime: %g\n",
                         nworkers, waittime, usrtime, avg_worker_usrtime);
 }

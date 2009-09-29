@@ -183,11 +183,11 @@ namespace internal {
     //! Calls the function with values from range [begin, end) with a step provided
 template<typename Function, typename Index>
 class parallel_for_body : internal::no_assign {
-    Function &my_func;
+    const Function &my_func;
     const Index my_begin;
     const Index my_step; 
 public:
-    parallel_for_body( Function& _func, Index& _begin, Index& _step) 
+    parallel_for_body( const Function& _func, Index& _begin, Index& _step) 
         : my_func(_func), my_begin(_begin), my_step(_step) {}
     
     void operator()( tbb::blocked_range<Index>& r ) const {
@@ -203,12 +203,12 @@ namespace strict_ppl {
 //@{
 //! Parallel iteration over a range of integers with a step provided
 template <typename Index, typename Function>
-Function parallel_for(Index first, Index last, Index step, Function f) {
+void parallel_for(Index first, Index last, Index step, const Function& f) {
     tbb::task_group_context context;
-    return parallel_for(first, last, step, f, context);
+    parallel_for(first, last, step, f, context);
 }
 template <typename Index, typename Function>
-Function parallel_for(Index first, Index last, Index step, Function f, tbb::task_group_context &context) {
+void parallel_for(Index first, Index last, Index step, const Function& f, tbb::task_group_context &context) {
     if (step <= 0 ) throw std::invalid_argument("step should be positive");
 
     if (last > first) {
@@ -218,8 +218,18 @@ Function parallel_for(Index first, Index last, Index step, Function f, tbb::task
         internal::parallel_for_body<Function, Index> body(f, first, step);
         tbb::parallel_for(range, body, tbb::auto_partitioner(), context);
     }
-    return f;
 }
+//! Parallel iteration over a range of integers with a default step value
+template <typename Index, typename Function>
+void parallel_for(Index first, Index last, const Function& f) {
+    tbb::task_group_context context;
+    parallel_for(first, last, static_cast<Index>(1), f, context);
+}
+template <typename Index, typename Function>
+void parallel_for(Index first, Index last, const Function& f, tbb::task_group_context &context) {
+    parallel_for(first, last, static_cast<Index>(1), f, context);
+}
+
 //@}
 
 } // namespace strict_ppl

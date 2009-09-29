@@ -56,7 +56,7 @@ public:
         segment_t *s = v.my_segment;
         segment_index_t u = s==v.my_storage? pointers_per_short_table : pointers_per_long_table;
         segment_index_t k = 0;
-        while( k < u && s[k].array > __TBB_BAD_ALLOC )
+        while( k < u && s[k].array > internal::vector_allocation_error_flag )
             ++k;
         return k;
     }
@@ -93,13 +93,13 @@ public:
 
     static size_type enable_segment(concurrent_vector_base_v3 &v, size_type k, size_type element_size) {
         segment_t* s = v.my_segment; // TODO: optimize out as argument? Optimize accesses to my_first_block
-        __TBB_ASSERT( s[k].array <= __TBB_BAD_ALLOC, "concurrent operation during growth?" );
+        __TBB_ASSERT( s[k].array <= internal::vector_allocation_error_flag, "concurrent operation during growth?" );
         if( !k ) {
             assign_first_segment_if_neccessary(v, default_initial_segments-1);
             try {
                 publish_segment(s[0], allocate_segment(v, segment_size(v.my_first_block) ) );
-            } catch(...) { // intercept exception here, assign __TBB_BAD_ALLOC value, re-throw exception
-                publish_segment(s[0], __TBB_BAD_ALLOC); throw;
+            } catch(...) { // intercept exception here, assign internal::vector_allocation_error_flag value, re-throw exception
+                publish_segment(s[0], internal::vector_allocation_error_flag); throw;
             }
             return 2;
         }
@@ -116,8 +116,8 @@ public:
                 array0 = __TBB_load_with_acquire(s[0].array);
             }
             ITT_NOTIFY(sync_acquired, &s[0].array);
-            if( array0 <= __TBB_BAD_ALLOC ) { // check for __TBB_BAD_ALLOC of initial segment
-                publish_segment(s[k], __TBB_BAD_ALLOC); // and assign __TBB_BAD_ALLOC here
+            if( array0 <= internal::vector_allocation_error_flag ) { // check for internal::vector_allocation_error_flag of initial segment
+                publish_segment(s[k], internal::vector_allocation_error_flag); // and assign internal::vector_allocation_error_flag here
                 throw bad_last_alloc(); // throw custom exception
             }
             publish_segment( s[k],
@@ -126,8 +126,8 @@ public:
         } else {
             try {
                 publish_segment(s[k], allocate_segment(v, m));
-            } catch(...) { // intercept exception here, assign __TBB_BAD_ALLOC value, re-throw exception
-                publish_segment(s[k], __TBB_BAD_ALLOC); throw;
+            } catch(...) { // intercept exception here, assign internal::vector_allocation_error_flag value, re-throw exception
+                publish_segment(s[k], internal::vector_allocation_error_flag); throw;
             }
         }
         return m;
@@ -164,7 +164,7 @@ public:
 
     inline static segment_t &acquire_segment(concurrent_vector_base_v3 &v, size_type index, size_type element_size, bool owner) {
         segment_t &s = v.my_segment[index]; // TODO: pass v.my_segment as arument
-        if( !__TBB_load_with_acquire(s.array) ) { // do not check for __TBB_BAD_ALLOC 
+        if( !__TBB_load_with_acquire(s.array) ) { // do not check for internal::vector_allocation_error_flag 
             if( owner ) {
                 enable_segment( v, index, element_size );
             } else {
@@ -175,8 +175,8 @@ public:
         } else {
             ITT_NOTIFY(sync_acquired, &s.array);
         }
-        if( s.array <= __TBB_BAD_ALLOC ) // check for __TBB_BAD_ALLOC
-            throw bad_last_alloc(); // throw custom exception, because it's hard to recover after __TBB_BAD_ALLOC correctly
+        if( s.array <= internal::vector_allocation_error_flag ) // check for internal::vector_allocation_error_flag
+            throw bad_last_alloc(); // throw custom exception, because it's hard to recover after internal::vector_allocation_error_flag correctly
         return s;
     }
 
@@ -227,16 +227,16 @@ public:
             if( k_start < first_block ) {
                 void *array0 = get_segment_ptr(0, start>0); // wait if necessary
                 if( array0 && !k_start ) ++k_start;
-                if( array0 <= __TBB_BAD_ALLOC )
+                if( array0 <= internal::vector_allocation_error_flag )
                     for(; k_start < first_block && k_start <= k_end; ++k_start )
-                        publish_segment(table[k_start], __TBB_BAD_ALLOC);
+                        publish_segment(table[k_start], internal::vector_allocation_error_flag);
                 else for(; k_start < first_block && k_start <= k_end; ++k_start )
                         publish_segment(table[k_start], static_cast<void*>(
                             static_cast<char*>(array0) + segment_base(k_start)*element_size) );
             }
             for(; k_start <= k_end; ++k_start ) // not in first block
                 if( !__TBB_load_with_acquire(table[k_start].array) )
-                    publish_segment(table[k_start], __TBB_BAD_ALLOC);
+                    publish_segment(table[k_start], internal::vector_allocation_error_flag);
             // fill alocated items
             first_segment();
             goto recover;
@@ -245,9 +245,9 @@ public:
             next_segment();
 recover:
             void *array = table[k].array;
-            if( array > __TBB_BAD_ALLOC )
+            if( array > internal::vector_allocation_error_flag )
                 std::memset( static_cast<char*>(array)+element_size*start, 0, ((sz<finish?sz:finish) - start)*element_size );
-            else __TBB_ASSERT( array == __TBB_BAD_ALLOC, NULL );
+            else __TBB_ASSERT( array == internal::vector_allocation_error_flag, NULL );
         }
     }
     /// TODO: turn into lambda functions when available
@@ -264,7 +264,7 @@ recover:
         const void *arg;
         safe_init_body(internal_array_op2 init, const void *src) : func(init), arg(src) {}
         void operator()(segment_t &s, void *begin, size_type n) const {
-            if( s.array <= __TBB_BAD_ALLOC )
+            if( s.array <= internal::vector_allocation_error_flag )
                 throw bad_last_alloc(); // throw custom exception
             func( begin, arg, n );
         }
@@ -273,7 +273,7 @@ recover:
         internal_array_op1 func;
         destroy_body(internal_array_op1 destroy) : func(destroy) {}
         void operator()(segment_t &s, void *begin, size_type n) const {
-            if( s.array > __TBB_BAD_ALLOC )
+            if( s.array > internal::vector_allocation_error_flag )
                 func( begin, n );
         }
     };
@@ -287,7 +287,7 @@ concurrent_vector_base_v3::~concurrent_vector_base_v3() {
             my_storage[i].array = NULL;
 #if TBB_USE_DEBUG
         for( segment_index_t i = 0; i < pointers_per_long_table; i++)
-            __TBB_ASSERT( my_segment[i].array <= __TBB_BAD_ALLOC, "should have been freed by clear");
+            __TBB_ASSERT( my_segment[i].array <= internal::vector_allocation_error_flag, "Segment should have been freed. Please recompile with new TBB before using exceptions.");
 #endif
         my_segment = my_storage;
         NFS_Free( s );
@@ -316,7 +316,7 @@ void concurrent_vector_base_v3::internal_reserve( size_type n, size_type element
     try {
         for( ; segment_base(k)<n; ++k ) {
             helper::extend_table_if_necessary(*this, k, 0);
-            if(my_segment[k].array <= __TBB_BAD_ALLOC)
+            if(my_segment[k].array <= internal::vector_allocation_error_flag)
                 helper::enable_segment(*this, k, element_size);
         }
     } catch(...) {
@@ -332,7 +332,7 @@ void concurrent_vector_base_v3::internal_copy( const concurrent_vector_base_v3& 
         size_type b;
         for( segment_index_t k=0; (b=segment_base(k))<n; ++k ) {
             if( (src.my_segment == (segment_t*)src.my_storage && k >= pointers_per_short_table)
-                || src.my_segment[k].array <= __TBB_BAD_ALLOC ) {
+                || src.my_segment[k].array <= internal::vector_allocation_error_flag ) {
                 my_early_size = b; break;
             }
             helper::extend_table_if_necessary(*this, k, 0);
@@ -351,7 +351,7 @@ void concurrent_vector_base_v3::internal_assign( const concurrent_vector_base_v3
         size_type b=segment_base(k);
         size_type new_end = b>=n ? b : n;
         __TBB_ASSERT( my_early_size>new_end, NULL );
-        if( my_segment[k].array <= __TBB_BAD_ALLOC) // check vector was broken before
+        if( my_segment[k].array <= internal::vector_allocation_error_flag) // check vector was broken before
             throw bad_last_alloc(); // throw custom exception
         // destructors are supposed to not throw any exceptions
         destroy( (char*)my_segment[k].array+element_size*(new_end-b), my_early_size-new_end );
@@ -363,13 +363,13 @@ void concurrent_vector_base_v3::internal_assign( const concurrent_vector_base_v3
     size_type b;
     for( segment_index_t k=0; (b=segment_base(k))<n; ++k ) {
         if( (src.my_segment == (segment_t*)src.my_storage && k >= pointers_per_short_table)
-            || src.my_segment[k].array <= __TBB_BAD_ALLOC ) { // if source is damaged
+            || src.my_segment[k].array <= internal::vector_allocation_error_flag ) { // if source is damaged
                 my_early_size = b; break; // TODO: it may cause undestructed items
         }
         helper::extend_table_if_necessary(*this, k, 0);
         if( !my_segment[k].array )
             helper::enable_segment(*this, k, element_size);
-        else if( my_segment[k].array <= __TBB_BAD_ALLOC )
+        else if( my_segment[k].array <= internal::vector_allocation_error_flag )
             throw bad_last_alloc(); // throw custom exception
         size_type m = k? segment_size(k) : 2;
         if( m > n-b ) m = n-b;
@@ -427,7 +427,7 @@ concurrent_vector_base_v3::size_type concurrent_vector_base_v3::internal_grow_to
             while( !__TBB_load_with_acquire(my_segment[i].array) ); // my_segment may change concurrently
             ITT_NOTIFY(sync_acquired, &s.array);
         }
-        if( my_segment[i].array <= __TBB_BAD_ALLOC )
+        if( my_segment[i].array <= internal::vector_allocation_error_flag )
             throw bad_last_alloc();
     }
 #if TBB_USE_DEBUG
@@ -508,7 +508,7 @@ void *concurrent_vector_base_v3::internal_compact( size_type element_size, void 
         // copy items to the new segment
         size_type my_segment_size = segment_size( first_block );
         for (segment_index_t i = 0, j = 0; i < k && j < my_size; j = my_segment_size) {
-            __TBB_ASSERT( segment_table[i].array > __TBB_BAD_ALLOC, NULL);
+            __TBB_ASSERT( segment_table[i].array > internal::vector_allocation_error_flag, NULL);
             void *s = static_cast<void*>(
                 static_cast<char*>(seg) + segment_base(i)*element_size );
             if(j + my_segment_size >= my_size) my_segment_size = my_size - j;

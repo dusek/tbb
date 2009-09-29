@@ -86,8 +86,7 @@ void TestSimpleDelay( int ntrial, double duration, double tolerance ) {
     // Compute average worktime and average delta
     double worktime = total_worktime/ntrial;
     double delta = worktime-duration;
-    if (Verbose)
-        REPORT("worktime=%g delta=%g tolerance=%g\n", worktime, delta, tolerance);
+    REMARK("worktime=%g delta=%g tolerance=%g\n", worktime, delta, tolerance);
 
     // Check that delta is acceptable
     if( delta<0 ) 

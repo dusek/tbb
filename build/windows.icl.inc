@@ -55,7 +55,7 @@ ifeq (ia32,$(arch))
 endif
 endif
 ifeq ($(cfg), debug)
-    CPLUS_FLAGS = $(MS_CRT_KEY) /Od /Ob0 /Zi $(EH_FLAGS) /Zc:forScope /Zc:wchar_t /DTBB_USE_DEBUG /DDO_ITT_ANNOTATE
+    CPLUS_FLAGS = $(MS_CRT_KEY) /Od /Ob0 /Zi $(EH_FLAGS) /Zc:forScope /Zc:wchar_t /DTBB_USE_DEBUG
     LINK_FLAGS += libmmds.lib /NODEFAULTLIB:libmmdd.lib
     ASM_FLAGS = /DUSE_FRAME_POINTER
 endif
@@ -92,7 +92,7 @@ endif
 
 C_FLAGS = $(CPLUS_FLAGS)
 
-ifneq (0,$(lambdas))
+ifneq (00,$(lambdas)$(cpp0x))
 	CPLUS_FLAGS += /Qstd=c++0x /D_TBB_CPP0X
 endif
 

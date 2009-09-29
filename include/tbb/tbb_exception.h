@@ -80,7 +80,13 @@ namespace tbb {
     
     TBB provides two implementations of this interface: tbb::captured_exception and 
     template class tbb::movable_exception. See their declarations for more info. **/
-class tbb_exception : public std::exception {
+class tbb_exception : public std::exception
+{
+    /** No operator new is provided because the TBB usage model assumes dynamic 
+        creation of the TBB exception objects only by means of applying move()
+        operation on an exception thrown out of TBB scheduler. **/
+    void* operator new ( size_t );
+
 public:
     //! Creates and returns pointer to the deep copy of this exception object. 
     /** Move semantics is allowed. **/
@@ -103,6 +109,16 @@ public:
 
     //! Returns the result of originally intercepted exception's what() method.
     virtual const char* what() const throw() = 0;
+
+    /** Operator delete is provided only to allow using existing smart pointers
+        with TBB exception objects obtained as the result of applying move()
+        operation on an exception thrown out of TBB scheduler. 
+        
+        When overriding method move() make sure to override operator delete as well
+        if memory is allocated not by TBB's scalable allocator. **/
+    void operator delete ( void* p ) {
+        internal::deallocate_via_handler_v3(p);
+    }
 };
 
 //! This class is used by TBB to propagate information about unhandled exceptions into the root thread.
@@ -138,10 +154,10 @@ public:
     }
 
     /*override*/ 
-    captured_exception* move () throw();
+    captured_exception* __TBB_EXPORTED_METHOD move () throw();
 
     /*override*/ 
-    void destroy () throw();
+    void __TBB_EXPORTED_METHOD destroy () throw();
 
     /*override*/ 
     void throw_self () { throw *this; }
@@ -152,15 +168,15 @@ public:
     /*override*/ 
     const char* __TBB_EXPORTED_METHOD what() const throw();
 
+    void __TBB_EXPORTED_METHOD set ( const char* name, const char* info ) throw();
+    void __TBB_EXPORTED_METHOD clear () throw();
+
 private:
     //! Used only by method clone().  
     captured_exception() {}
 
-    //! Functionally equivalent to {captured_exception e(name,info); return c.clone();}
+    //! Functionally equivalent to {captured_exception e(name,info); return e.clone();}
     static captured_exception* allocate ( const char* name, const char* info );
-
-    void set ( const char* name, const char* info ) throw();
-    void clear () throw();
 
     bool my_dynamic;
     const char* my_exception_name;
@@ -213,7 +229,7 @@ public:
     movable_exception* move () throw() {
         void* e = internal::allocate_via_handler_v3(sizeof(movable_exception));
         if ( e ) {
-            new (e) movable_exception(*this);
+            ::new (e) movable_exception(*this);
             ((movable_exception*)e)->my_dynamic = true;
         }
         return (movable_exception*)e;
@@ -255,8 +271,9 @@ class tbb_exception_ptr {
 
 public:
     static tbb_exception_ptr* allocate ();
-    static tbb_exception_ptr* allocate ( const tbb_exception& );
-    static tbb_exception_ptr* allocate ( const captured_exception& );
+    static tbb_exception_ptr* allocate ( const tbb_exception& tag );
+    //! This overload uses move semantics (i.e. it empties src)
+    static tbb_exception_ptr* allocate ( captured_exception& src );
     
     //! Destroys this objects
     /** Note that objects of this type can be created only by the allocate() method. **/

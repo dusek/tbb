@@ -51,48 +51,17 @@ struct AbuseOneTask {
         tbb::task_scheduler_init init;
         // Thread 1 attempts to incorrectly use the task created by thread 0.
         tbb::task_list list;
-#if !__TBB_RELAXED_OWNERSHIP
-        TRY_BAD_EXPR(AbusedTask->spawn(*AbusedTask),"owne");
-        TRY_BAD_EXPR(AbusedTask->spawn_and_wait_for_all(*AbusedTask),"owne");
-        TRY_BAD_EXPR(tbb::task::spawn_root_and_wait(*AbusedTask),"owne");
-
-        // Try variant that operate on a tbb::task_list
-        TRY_BAD_EXPR(AbusedTask->spawn(list),"owne");
-        TRY_BAD_EXPR(AbusedTask->spawn_and_wait_for_all(list),"owne");
-#endif /* !__TBB_RELAXED_OWNERSHIP */
         // spawn_root_and_wait over empty list should vacuously succeed.
         tbb::task::spawn_root_and_wait(list);
 
         // Check that spawn_root_and_wait fails on non-empty list. 
         list.push_back(*AbusedTask);
-#if !__TBB_RELAXED_OWNERSHIP
-        TRY_BAD_EXPR(tbb::task::spawn_root_and_wait(list),"owne");
-
-        TRY_BAD_EXPR(AbusedTask->destroy(*AbusedTask),"owne");
-        TRY_BAD_EXPR(AbusedTask->wait_for_all(),"owne");
-#endif /* !__TBB_RELAXED_OWNERSHIP */
 
         // Try abusing recycle_as_continuation
         TRY_BAD_EXPR(AbusedTask->recycle_as_continuation(), "execute" );
         TRY_BAD_EXPR(AbusedTask->recycle_as_safe_continuation(), "execute" );
         TRY_BAD_EXPR(AbusedTask->recycle_to_reexecute(), "execute" );
 
-#if !__TBB_TASK_DEQUE
-        // Check correct use of depth parameter
-        tbb::task::depth_type depth = AbusedTask->depth();
-        ASSERT( depth==0, NULL );
-        for( int k=1; k<=81; k*=3 ) {
-            AbusedTask->set_depth(depth+k);
-            ASSERT( AbusedTask->depth()==depth+k, NULL );
-            AbusedTask->add_to_depth(k+1);
-            ASSERT( AbusedTask->depth()==depth+2*k+1, NULL );
-        }
-        AbusedTask->set_depth(0);
-
-        // Try abusing the depth parameter
-        TRY_BAD_EXPR(AbusedTask->set_depth(-1),"negative");
-        TRY_BAD_EXPR(AbusedTask->add_to_depth(-1),"negative");
-#endif /* !__TBB_TASK_DEQUE */
 
         ++AbuseOneTaskRan;
     }

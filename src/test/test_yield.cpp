@@ -67,7 +67,7 @@ int main( int argc, char* argv[] ) {
     MaxThread = MinThread = 3;
     ParseCommandLine( argc, argv );
     for( int p=MinThread; p<=MaxThread; ++p ) {
-        if( Verbose ) REPORT("testing with %d threads\n", p );
+        REMARK("testing with %d threads\n", p );
         CyclicCounter = 0;
         Quit = false;
         NativeParallelFor( long(p), RoundRobin(p) );

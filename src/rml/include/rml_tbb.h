@@ -81,7 +81,7 @@ public:
 
     //! Factory method to be called by client to create a server object.
     /** Factory must be open. 
-        Returns st_success or st_incompatible . */
+        Returns st_success, st_connection_exists, or st_incompatible . */
     status_type make_server( server_type*&, client_type& );
 
     //! Close factory

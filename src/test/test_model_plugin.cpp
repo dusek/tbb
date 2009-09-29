@@ -140,7 +140,7 @@ int use_lot_of_tls() {
            && count < 4096 ) // Sun Solaris doesn't have any built-in limit, so we set something big enough
     {
         last_handles[++count%10] = result;
-        if(Verbose) REPORT("%d\n", count);
+        REMARK("%d\n", count);
         pthread_setspecific(result,&setspecific_dummy);
     }
     for( int i=0; i<10; ++i )
@@ -158,8 +158,7 @@ int main(int argc, char* argv[]) {
     PLUGIN_CALL my_plugin_call;
 
     int tls_key_count = use_lot_of_tls();
-    if( Verbose )
-        REPORT("%d thread local objects allocated in advance\n", tls_key_count);
+    REMARK("%d thread local objects allocated in advance\n", tls_key_count);
 
     for( int i=1; i<100; ++i ) {  
 #if _WIN32 || _WIN64
@@ -201,11 +200,9 @@ int main(int argc, char* argv[]) {
         }
 #endif
 
-        if( Verbose )
-            REPORT("Iteration %d, calling plugin... ", i);
+        REMARK("Iteration %d, calling plugin... ", i);
         my_plugin_call(MaxThread);
-        if( Verbose )
-            REPORT("succeeded\n");
+        REMARK("succeeded\n");
 
 #if _WIN32 || _WIN64
         FreeLibrary(hLib);

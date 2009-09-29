@@ -453,7 +453,9 @@ namespace tbb {
             typedef tbb::concurrent_hash_map<Key, T, HC, A> base_type;
             typedef typename base_type::const_pointer const_pointer;
             typedef typename base_type::key_type key_type;
-            const_pointer find( const key_type &k ) { return base_type::find( k ); } // make public
+            const_pointer find( const key_type &k ) {
+                return internal_fast_find( k );
+            } // make public
         };
     
     } // namespace internal

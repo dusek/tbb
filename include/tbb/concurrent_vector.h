@@ -61,11 +61,11 @@ namespace tbb {
 template<typename T, class A = cache_aligned_allocator<T> >
 class concurrent_vector;
 
-//! Bad allocation marker
-#define __TBB_BAD_ALLOC reinterpret_cast<void*>(size_t(63))
-
 //! @cond INTERNAL
 namespace internal {
+
+    //! Bad allocation marker
+    static void *const vector_allocation_error_flag = reinterpret_cast<void*>(size_t(63));
 
     //! Routine that loads pointer from location pointed to by src without any fence, without causing ITT to report a race.
     void* __TBB_EXPORTED_FUNC itt_load_pointer_v3( const void* src );
@@ -93,7 +93,7 @@ namespace internal {
             void* array;
 #if TBB_USE_ASSERT
             ~segment_t() {
-                __TBB_ASSERT( array <= __TBB_BAD_ALLOC, "should have been freed by clear" );
+                __TBB_ASSERT( array <= internal::vector_allocation_error_flag, "should have been freed by clear" );
             }
 #endif /* TBB_USE_ASSERT */
         };
@@ -907,11 +907,11 @@ void concurrent_vector<T, A>::internal_free_segments(void *table[], segment_inde
         --k;
         T* array = static_cast<T*>(table[k]);
         table[k] = NULL;
-        if( array > __TBB_BAD_ALLOC ) // check for correct segment pointer
+        if( array > internal::vector_allocation_error_flag ) // check for correct segment pointer
             this->my_allocator.deallocate( array, segment_size(k) );
     }
     T* array = static_cast<T*>(table[0]);
-    if( array > __TBB_BAD_ALLOC ) {
+    if( array > internal::vector_allocation_error_flag ) {
         __TBB_ASSERT( first_block > 0, NULL );
         while(k > 0) table[--k] = NULL;
         this->my_allocator.deallocate( array, segment_size(first_block) );
@@ -930,7 +930,7 @@ T& concurrent_vector<T, A>::internal_subscript( size_type index ) const {
 #else
     T* array = static_cast<T*>(my_segment[k].array);
 #endif /* TBB_USE_THREADING_TOOLS */
-    __TBB_ASSERT( array != __TBB_BAD_ALLOC, "the instance is broken by bad allocation. Use at() instead" );
+    __TBB_ASSERT( array != internal::vector_allocation_error_flag, "the instance is broken by bad allocation. Use at() instead" );
     __TBB_ASSERT( array, "index is being allocated" );
     return array[j];
 }
@@ -944,7 +944,7 @@ T& concurrent_vector<T, A>::internal_subscript_with_exceptions( size_type index 
     if( my_segment == (segment_t*)my_storage && k >= pointers_per_short_table )
         internal_throw_exception(1); // throw std::range_error
     void *array = my_segment[k].array; // no need in __TBB_load_with_acquire
-    if( array <= __TBB_BAD_ALLOC ) // check for correct segment pointer
+    if( array <= internal::vector_allocation_error_flag ) // check for correct segment pointer
         internal_throw_exception(2); // throw std::range_error
     return static_cast<T*>(array)[j];
 }

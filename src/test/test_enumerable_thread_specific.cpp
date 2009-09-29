@@ -190,7 +190,7 @@ void run_serial_scalar_tests(const char *test_name) {
     T sum;
     test_helper<T>::init(sum);
 
-    if (Verbose) REPORT("Testing serial %s... ", test_name);  
+    REMARK("Testing serial %s... ", test_name);  
     for (int t = -1; t < REPETITIONS; ++t) {
         if (Verbose && t == 0) t0 = tbb::tick_count::now(); 
         for (int i = 0; i < N; ++i) {
@@ -200,8 +200,7 @@ void run_serial_scalar_tests(const char *test_name) {
  
     double result_value = test_helper<T>::get(sum);
     ASSERT( EXPECTED_SUM == result_value, NULL);
-    if (Verbose)
-        REPORT("done\nserial %s, 0, %g, %g\n", test_name, result_value, ( tbb::tick_count::now() - t0).seconds());
+    REMARK("done\nserial %s, 0, %g, %g\n", test_name, result_value, ( tbb::tick_count::now() - t0).seconds());
 }
 
 
@@ -237,7 +236,7 @@ void run_parallel_scalar_tests(const char *test_name) {
 
         if (p == 0) continue;
 
-        if (Verbose) REPORT("Testing parallel %s on %d thread(s)... ", test_name, p); 
+        REMARK("Testing parallel %s on %d thread(s)... ", test_name, p); 
         init.initialize(p);
 
         tbb::tick_count t0;
@@ -388,8 +387,7 @@ void run_parallel_scalar_tests(const char *test_name) {
         ASSERT( EXPECTED_SUM == test_helper<T>::get(finit_ets_sum), NULL);
         ASSERT( EXPECTED_SUM == test_helper<T>::get(static_sum), NULL);
 
-        if (Verbose)
-            REPORT("done\nparallel %s, %d, %g, %g\n", test_name, p, test_helper<T>::get(iterator_sum), 
+        REMARK("done\nparallel %s, %d, %g, %g\n", test_name, p, test_helper<T>::get(iterator_sum), 
                                                       ( tbb::tick_count::now() - t0).seconds());
         init.terminate();
     }
@@ -451,7 +449,7 @@ void run_parallel_vector_tests(const char *test_name) {
     for (int p = MinThread; p <= MaxThread; ++p) { 
 
         if (p == 0) continue;
-        if (Verbose) REPORT("Testing parallel %s on %d thread(s)... ", test_name, p);
+        REMARK("Testing parallel %s on %d thread(s)... ", test_name, p);
         init.initialize(p);
 
         T sum;
@@ -497,8 +495,7 @@ void run_parallel_vector_tests(const char *test_name) {
 
         double result_value = test_helper<T>::get(sum);
         ASSERT( EXPECTED_SUM == result_value, NULL);
-        if (Verbose)
-            REPORT("done\nparallel %s, %d, %g, %g\n", test_name, p, result_value, ( tbb::tick_count::now() - t0).seconds());
+        REMARK("done\nparallel %s, %d, %g, %g\n", test_name, p, result_value, ( tbb::tick_count::now() - t0).seconds());
         init.terminate();
     }
 }
@@ -512,7 +509,7 @@ void run_cross_type_vector_tests(const char *test_name) {
     for (int p = MinThread; p <= MaxThread; ++p) { 
 
         if (p == 0) continue;
-        if (Verbose) REPORT("Testing parallel %s on %d thread(s)... ", test_name, p);
+        REMARK("Testing parallel %s on %d thread(s)... ", test_name, p);
         init.initialize(p);
 
         T sum;
@@ -559,8 +556,7 @@ void run_cross_type_vector_tests(const char *test_name) {
 
         double result_value = test_helper<T>::get(sum);
         ASSERT( EXPECTED_SUM == result_value, NULL);
-        if (Verbose)
-            REPORT("done\nparallel %s, %d, %g, %g\n", test_name, p, result_value, ( tbb::tick_count::now() - t0).seconds());
+        REMARK("done\nparallel %s, %d, %g, %g\n", test_name, p, result_value, ( tbb::tick_count::now() - t0).seconds());
         init.terminate();
     }
 }
@@ -573,7 +569,7 @@ void run_serial_vector_tests(const char *test_name) {
     T one;
     test_helper<T>::set(one, 1);
 
-    if (Verbose) REPORT("Testing serial %s... ", test_name);
+    REMARK("Testing serial %s... ", test_name);
     for (int t = -1; t < REPETITIONS; ++t) {
         if (Verbose && t == 0) t0 = tbb::tick_count::now(); 
         std::vector<T, tbb::tbb_allocator<T> > v; 
@@ -586,8 +582,7 @@ void run_serial_vector_tests(const char *test_name) {
 
     double result_value = test_helper<T>::get(sum);
     ASSERT( EXPECTED_SUM == result_value, NULL);
-    if (Verbose)
-        REPORT("done\nserial %s, 0, %g, %g\n", test_name, result_value, ( tbb::tick_count::now() - t0).seconds());
+    REMARK("done\nserial %s, 0, %g, %g\n", test_name, result_value, ( tbb::tick_count::now() - t0).seconds());
 }
 
 void 
@@ -657,7 +652,7 @@ flog_key_creation_and_deletion() {
 
         if (p == 0) continue;
 
-        if (Verbose) REPORT("Testing repeated deletes on %d threads... ", p);
+        REMARK("Testing repeated deletes on %d threads... ", p);
 
         for (int j = 0; j < FLOG_REPETITIONS; ++j) {
             construction_counter = 0;
@@ -684,7 +679,7 @@ flog_key_creation_and_deletion() {
         ASSERT( int(construction_counter) == (p+1)*VALID_NUMBER_OF_KEYS, NULL );
         ASSERT( int(destruction_counter) == (p+1)*VALID_NUMBER_OF_KEYS, NULL );
 
-        if (Verbose) REPORT("done\nTesting repeated clears on %d threads... ", p);
+        REMARK("done\nTesting repeated clears on %d threads... ", p);
 
         construction_counter = 0;
         destruction_counter = 0;
@@ -718,7 +713,7 @@ flog_key_creation_and_deletion() {
         ASSERT( int(construction_counter) == (FLOG_REPETITIONS*p+1)*VALID_NUMBER_OF_KEYS, NULL );
         ASSERT( int(destruction_counter) == (FLOG_REPETITIONS*p+1)*VALID_NUMBER_OF_KEYS, NULL );
 
-        if (Verbose) REPORT("done\n");
+        REMARK("done\n");
     }
 
 }
@@ -749,7 +744,7 @@ flog_segmented_interator() {
     for(my_si=my_vec.begin(), ii=0; my_si != my_vec.end(); ++my_si, ++ii) {
         if((*my_si) != ii) {
             found_error = true;
-            if(Verbose) REPORT( "*my_si=%d\n", int(*my_si));
+            REMARK( "*my_si=%d\n", int(*my_si));
         }
     }
 
@@ -781,7 +776,7 @@ flog_segmented_interator() {
     for(my_si = my_vec.begin(), ii=0; my_si != my_vec.end(); ++my_si, ++ii) {
         if((*my_si) != ii) {
             found_error = true;
-            if(Verbose) REPORT("*my_si=%d, ii=%d\n", (int)(*my_si), (int)ii);
+            REMARK("*my_si=%d, ii=%d\n", (int)(*my_si), (int)ii);
         }
     }
 
@@ -789,7 +784,7 @@ flog_segmented_interator() {
     for(my_csi=my_vec.begin(), ii=0; my_csi != my_vec.end(); ++my_csi, ++ii) {
         if((*my_csi) != ii) {
             found_error = true;
-            if(Verbose) REPORT( "*my_csi=%d\n", int(*my_csi));
+            REMARK( "*my_csi=%d\n", int(*my_csi));
         }
     }
 
@@ -821,7 +816,7 @@ flog_segmented_interator() {
     for(my_csi = my_vec.begin(), ii=0; my_csi != my_vec.end(); ++my_csi, ++ii) {
         if((*my_csi) != ii) {
             found_error = true;
-            if(Verbose) REPORT("*my_csi=%d, ii=%d\n", (int)(*my_csi), (int)ii);
+            REMARK("*my_csi=%d, ii=%d\n", (int)(*my_csi), (int)ii);
         }
     }
 
@@ -854,7 +849,7 @@ flog_segmented_iterator_map() {
    for(my_si=my_vec.begin(), ii=0; my_si != my_vec.end(); ++my_si, ++ii) {
        if(((*my_si).first != ii) || ((*my_si).second != 2*ii)) {
            found_error = true;
-           if(Verbose) REPORT( "ii=%d, (*my_si).first=%d, second=%d\n",ii, int((*my_si).first), int((*my_si).second));
+           REMARK( "ii=%d, (*my_si).first=%d, second=%d\n",ii, int((*my_si).first), int((*my_si).second));
        }
    }
 
@@ -862,7 +857,7 @@ flog_segmented_iterator_map() {
    for(my_csi=my_vec.begin(), ii=0; my_csi != my_vec.end(); ++my_csi, ++ii) {
        if(((*my_csi).first != ii) || ((*my_csi).second != 2*ii)) {
            found_error = true;
-           if(Verbose) REPORT( "ii=%d, (*my_csi).first=%d, second=%d\n",ii, int((*my_csi).first), int((*my_csi).second));
+           REMARK( "ii=%d, (*my_csi).first=%d, second=%d\n",ii, int((*my_csi).first), int((*my_csi).second));
        }
    }
 }
@@ -870,7 +865,7 @@ flog_segmented_iterator_map() {
 void
 run_segmented_iterator_tests() {
    // only the following containers can be used with the segmented iterator.
-    if(Verbose) REPORT("Running Segmented Iterator Tests\n");
+   REMARK("Running Segmented Iterator Tests\n");
    flog_segmented_interator<std::vector< int > >();
    flog_segmented_interator<std::vector< double > >();
    flog_segmented_interator<std::deque< int > >();
@@ -885,7 +880,7 @@ run_segmented_iterator_tests() {
 template <typename T>
 void
 run_assign_and_copy_constructor_test(const char *test_name) {
-    if (Verbose) REPORT("Testing assignment and copy construction for %s\n", test_name);
+    REMARK("Testing assignment and copy construction for %s\n", test_name);
 
     // test initializer with exemplar (combine returns the exemplar value if no threads have created locals.)
     T initializer0;
@@ -922,7 +917,7 @@ run_assign_and_copy_constructor_test(const char *test_name) {
 
 void
 run_assignment_and_copy_constructor_tests() {
-    if(Verbose) REPORT("Running assignment and copy constructor tests\n");
+    REMARK("Running assignment and copy constructor tests\n");
     run_assign_and_copy_constructor_test<int>("int");
     run_assign_and_copy_constructor_test<double>("double");
     run_assign_and_copy_constructor_test<minimal>("minimal");

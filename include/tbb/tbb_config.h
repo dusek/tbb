@@ -87,37 +87,14 @@
 #define __TBB_TASK_SCHEDULER_AUTO_INIT 1
 #endif /* __TBB_TASK_SCHEDULER_AUTO_INIT */
 
-#ifndef __TBB_TASK_DEQUE
-#define __TBB_TASK_DEQUE 1
-#endif /* !__TBB_TASK_DEQUE */
-
-#if __TBB_TASK_DEQUE
-#ifndef __TBB_RELAXED_OWNERSHIP
-#define __TBB_RELAXED_OWNERSHIP 1
-#endif /* !__TBB_RELAXED_OWNERSHIP */
-#else
-#ifdef __TBB_RELAXED_OWNERSHIP
-#undef __TBB_RELAXED_OWNERSHIP
-#endif /* __TBB_RELAXED_OWNERSHIP */
-#endif /* !__TBB_TASK_DEQUE */
-
 #ifndef __TBB_NEW_ITT_NOTIFY
 #define __TBB_NEW_ITT_NOTIFY 1
 #endif /* !__TBB_NEW_ITT_NOTIFY */
 
-#ifndef __TBB_PROVIDE_VIRTUAL_SCHEDULER
-#define __TBB_PROVIDE_VIRTUAL_SCHEDULER 0
-#endif /* !__TBB_PROVIDE_VIRTUAL_SCHEDULER */
-
-#if !__TBB_PROVIDE_VIRTUAL_SCHEDULER
-#ifdef DO_ITT_ANNOTATE
-#undef DO_ITT_ANNOTATE
-#endif
-#endif /* !__TBB_PROVIDE_VIRTUAL_SCHEDULER */
 
 /* TODO: The following condition should be extended as soon as new compilers/runtimes 
          with std::exception_ptr support appear. */
-#define __TBB_EXCEPTION_PTR_PRESENT  ( _MSC_VER >= 1600 )
+#define __TBB_EXCEPTION_PTR_PRESENT  (_MSC_VER >= 1600 || __GXX_EXPERIMENTAL_CXX0X__ && (__GNUC__==4 && __GNUC_MINOR__>=4))
 
 
 #ifndef TBB_USE_CAPTURED_EXCEPTION
@@ -145,7 +122,7 @@
 
 /** Workarounds presence **/
 
-#if __GNUC__==4 && __GNUC_MINOR__==4
+#if __GNUC__==4 && __GNUC_MINOR__==4 && !defined(__INTEL_COMPILER)
     #define __TBB_GCC_WARNING_SUPPRESSION_ENABLED 1
 #endif
 
@@ -164,6 +141,11 @@
 #if __GLIBC__==2 && __GLIBC_MINOR__==3 || __MINGW32__
     /** Some older versions of glibc crash when exception handling happens concurrently. **/
     #define __TBB_EXCEPTION_HANDLING_BROKEN 1
+#endif
+
+#if (_WIN32||_WIN64) && _MSC_VER && __INTEL_COMPILER && __INTEL_COMPILER == 1110
+    /** That's a bug in Intel compiler 11.1.044/IA-32/Windows, that leads to a worker thread crash on the thread's startup. **/
+    #define __TBB_ICL_11_1_CODE_GEN_BROKEN 1
 #endif
 
 #if __FreeBSD__

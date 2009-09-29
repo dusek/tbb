@@ -29,6 +29,10 @@
 //! task_handle<T> cannot be instantiated with a function ptr withour explicit cast
 #define __TBB_FUNC_PTR_AS_TEMPL_PARAM_BROKEN ((__linux__ || __APPLE__) && __INTEL_COMPILER && __INTEL_COMPILER < 1100) || __SUNPRO_CC
 
+#ifndef TBBTEST_USE_TBB
+    #define TBBTEST_USE_TBB 1
+#endif
+
 #if !TBBTEST_USE_TBB
     #if _MSC_VER < 1600
         #ifdef TBBTEST_USE_TBB
@@ -97,7 +101,7 @@ class  SharedGroupBodyImpl : NoCopy, Harness::NoAfterlife {
 
     struct TaskFunctor {
         SharedGroupBodyImpl *m_pOwner;
-        void operator () () {
+        void operator () () const {
             if ( m_pOwner->m_sharingMode & ParallelWait ) {
                 while ( Harness::ConcurrencyTracker::PeakParallelism() < m_pOwner->m_numThreads )
                     __TBB_Yield();
@@ -256,7 +260,7 @@ struct FibTask : NoAssign, Harness::NoAfterlife {
     uint_t* m_pRes;
     const uint_t m_Num;
     FibTask( uint_t* y, uint_t n ) : m_pRes(y), m_Num(n) {}
-    void operator() () {
+    void operator() () const {
         *m_pRes = Func(m_Num);
     } 
 };
@@ -330,11 +334,11 @@ void TestFib2 () {
 
 class FibTask_SpawnRightChildOnly : NoAssign, Harness::NoAfterlife {
     uint_t* m_pRes;
-    uint_t m_Num;
+    mutable uint_t m_Num;
 
 public:
     FibTask_SpawnRightChildOnly( uint_t* y, uint_t n ) : m_pRes(y), m_Num(n) {}
-    void operator() () {
+    void operator() () const {
         Harness::ConcurrencyTracker ct;
         AssertLive();
         if( m_Num < 2 ) {
@@ -345,12 +349,7 @@ public:
             Concurrency::task_handle<FibTask_SpawnRightChildOnly> h = FibTask_SpawnRightChildOnly(&y, m_Num-1);
             tg.run( h );
             m_Num -= 2;
-#if TBBTEST_USE_TBB
             tg.run_and_wait( *this );
-#else    
-            (*this)();
-            tg.wait();
-#endif
             *m_pRes += y;
         }
     }
@@ -382,7 +381,7 @@ class FibTask_SpawnBothChildren : NoAssign, Harness::NoAfterlife {
     uint_t m_Num;
 public:
     FibTask_SpawnBothChildren( uint_t* y, uint_t n ) : m_pRes(y), m_Num(n) {}
-    void operator() () {
+    void operator() () const {
         Harness::ConcurrencyTracker ct;
         AssertLive();
         if( m_Num < 2 ) {
@@ -428,23 +427,18 @@ void TestFib4 () {
             break;
         rg.run( *h );
     }
-#if TBBTEST_USE_TBB
     rg.run_and_wait( *h );
-#else    
-    (*h)();
-    rg.wait();
-#endif
     for( unsigned i = 0; i < numRepeats; ++i )
 #if __GNUC__==3 && __GNUC_MINOR__<=2
         ((handle_type*)(handles + i * hSize))->Concurrency::task_handle<void(*)()>::~task_handle();
 #else
         ((handle_type*)(handles + i * hSize))->~handle_type();
 #endif
-    delete handles;
+    delete []handles;
     FIB_TEST_EPILOGUE(g_Sum);
 }
 
-#if __TBB_LAMBDAS_PRESENT && !__TBB_LAMBDA_AS_TEMPL_PARAM_BROKEN
+#if __TBB_LAMBDAS_PRESENT 
 //------------------------------------------------------------------------
 // Test for a mixed tree of task groups.
 // The chores are specified as lambdas
@@ -458,6 +452,24 @@ void TestFibWithLambdas () {
     Concurrency::task_group rg;
     for( unsigned i = 0; i < numRepeats; ++i )
         rg.run( [&](){sum += Fib_SpawnBothChildren(N);} );
+    rg.wait();
+    FIB_TEST_EPILOGUE(sum);
+}
+
+//------------------------------------------------------------------------
+// Test for make_task.
+// The chores are specified as lambdas converted to task_handles.
+//------------------------------------------------------------------------
+
+void TestFibWithMakeTask () {
+    REMARK ("Make_task test");
+    FIB_TEST_PROLOGUE();
+    atomic_t sum;
+    sum = 0;
+    Concurrency::task_group rg;
+    for( unsigned i = 0; i < numRepeats; ++i ) {
+      rg.run( Concurrency::make_task( [&](){sum += Fib_SpawnBothChildren(N);} ) );
+    }
     rg.wait();
     FIB_TEST_EPILOGUE(sum);
 }
@@ -535,7 +547,7 @@ class ThrowingTask : NoAssign, Harness::NoAfterlife {
     atomic_t &m_TaskCount;
 public:
     ThrowingTask( atomic_t& counter ) : m_TaskCount(counter) {}
-    void operator() () {
+    void operator() () const {
         Harness::ConcurrencyTracker ct;
         AssertLive();
         if ( g_Throw ) {
@@ -705,7 +717,7 @@ public:
             ((handle_type*)(m_handles + i * hSize))->~handle_type();
         ASSERT( g_TaskCount <= NUM_GROUPS * NUM_CHORES, "Too many tasks reported. The test is broken" );
         ASSERT( g_TaskCount < NUM_GROUPS * NUM_CHORES, "No tasks were cancelled. Cancellation model changed?" );
-        ASSERT( g_TaskCount <= g_ExecutedAtCancellation + Harness::ConcurrencyTracker::PeakParallelism(), "Too many tasks survived cancellation" );
+        ASSERT( g_TaskCount <= g_ExecutedAtCancellation + g_MaxConcurrency, "Too many tasks survived cancellation" );
     }
 }; // StructuredCancellationTestDriver
 
@@ -771,6 +783,7 @@ __TBB_TEST_EXPORT
 int main(int argc, char* argv[]) {
     MinThread = 1;
     ParseCommandLine( argc, argv );
+    REMARK ("Testing %s task_group functionality\n", TBBTEST_USE_TBB ? "TBB" : "PPL");
     for( int p=MinThread; p<=MaxThread; ++p ) {
         g_MaxConcurrency = p;
 #if TBBTEST_USE_TBB
@@ -795,8 +808,9 @@ int main(int argc, char* argv[]) {
         TestFib3();
         TestFib4<Concurrency::task_group>();
         TestFib4<Concurrency::structured_task_group>();
-#if __TBB_LAMBDAS_PRESENT && !__TBB_LAMBDA_AS_TEMPL_PARAM_BROKEN
+#if __TBB_LAMBDAS_PRESENT
         TestFibWithLambdas();
+        TestFibWithMakeTask();
 #endif
         TestCancellation1();
         TestStructuredCancellation1();

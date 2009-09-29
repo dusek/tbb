@@ -84,8 +84,7 @@ void Measure(const char *name, MeasureFunc func, int n)
 {
     tick_count t0;
     tick_count::interval_t T;
-    if( Verbose )
-        REPORT("%s",name);
+    REMARK("%s",name);
     t0 = tick_count::now();
     for(int number = 2; number <= n; number++)
         func(number);
@@ -98,8 +97,7 @@ void Measure(const char *name, MeasureFunc func, int n)
     } else {
         Tsum += T.seconds(); Tnum++;
     }
-    if( Verbose )
-        REPORT("\t- in %f msec\n", T.seconds()*1000);
+    REMARK("\t- in %f msec\n", T.seconds()*1000);
 }
 
 __TBB_TEST_EXPORT
@@ -113,14 +111,12 @@ int main( int argc, char* argv[] ) {
         for(int threads = 2; threads <= MaxThread; threads++)
         {
             task_scheduler_init scheduler_init(threads);
-            if( Verbose )
-                REPORT("Threads number is %d\t", threads);
+            REMARK("Threads number is %d\t", threads);
             Measure("Shared serial (wrapper mutex)\t", SharedSerialFib<mutex>, NumbersCount);
             //sum = Measure("Shared serial (spin_mutex)", SharedSerialFib<tbb::spin_mutex>, NumbersCount);
             //sum = Measure("Shared serial (queuing_mutex)", SharedSerialFib<tbb::queuing_mutex>, NumbersCount);
         }
     } while(--recycle);
-    if(!Verbose)
-        REPORT("done\n");
+    REPORT("done\n");
     return 0;
 }

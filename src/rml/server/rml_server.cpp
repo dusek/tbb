@@ -33,14 +33,12 @@
 
 #include "tbb/tbb_allocator.h"
 #include "tbb/cache_aligned_allocator.h"
-#include "ring.h"
+#include "job_automaton.h"
 #include "wait_counter.h"
 #include "thread_monitor.h"
 #include "tbb/aligned_space.h"
 #include "tbb/atomic.h"
-#include "tbb/mutex.h"
 #include "tbb/tbb_misc.h"           // Get DetectNumberOfWorkers() from here.
-#include "tbb/concurrent_queue.h"
 #if _MSC_VER==1500 && !defined(__INTEL_COMPILER)
 // VS2008/VC9 seems to have an issue; 
 #pragma warning( push )
@@ -75,71 +73,38 @@ const version_type SERVER_VERSION = 1;
 
 static const size_t cache_line_size = tbb::internal::NFS_MaxLineSize;
 
+template<typename Server, typename Client> class generic_connection;
 class tbb_connection_v1;
 class omp_connection_v1;
 
-enum message_kind {
-    mk_initialize_tbb_job,
-    mk_terminate_tbb_job,
-    mk_initialize_omp_job,
-    mk_terminate_omp_job
-};
-
-//! Message to a thread
-class message {
-public:
-    message_kind kind;
-    rml::server* connection;
-    job_automaton* automaton;
-    message() {} 
-    message( message_kind k, rml::server* s, job_automaton* ja ) : kind(k), connection(s), automaton(ja) {
-        __TBB_ASSERT( k==mk_initialize_tbb_job||k==mk_initialize_omp_job, NULL );
-    }
-    message( message_kind k, rml::server* s ) : kind(k), connection(s) {
-        __TBB_ASSERT( k==mk_terminate_tbb_job||k==mk_terminate_omp_job, NULL );
-    }
-};
-
-//! Mailbox to which any thread can mail a message, but only the owner of the mailbox can read messages.
-/** Class mailbox is defined because of the fear that queue.empty() would be too slow. */
-class mailbox {
-    tbb::atomic<int> size;
-    tbb::concurrent_queue<message> queue;
-public:
-    bool empty() const {return size==0;}
-    void pop( message& m ) {
-        __TBB_ASSERT( size>0, "attempt to pop empty mailbox" );
-        __TBB_ASSERT( !queue.empty(), "corrupted mailbox" );
-        --size; 
-        bool popped = queue.try_pop(m);
-        __TBB_ASSERT_EX( popped, "corrupted mailbox" );
-    }
-    void push( const message& m ) {
-        queue.push(m);
-        ++size;
-    }
-    mailbox() {
-        size=0;
-        __TBB_ASSERT( queue.empty(), NULL );
-    }
-    ~mailbox() {
-        __TBB_ASSERT( size==0, "destroying non-empty mailbox" );        
-        __TBB_ASSERT( queue.empty(), NULL );        
-    }
+enum request_kind {
+    rk_none,
+    rk_initialize_tbb_job,
+    rk_terminate_tbb_job,
+    rk_initialize_omp_job,
+    rk_terminate_omp_job
 };
 
 //! State of a server_thread
 /** Below is a diagram of legal state transitions.
 
-              ts_tbb_busy               
+    OMP
+              ts_omp_busy               
               ^          ^       
              /            \       
             /              V       
     ts_asleep <-----------> ts_idle 
-            \              ^       
-             \            /       
-              V          V       
-              ts_omp_busy               
+
+    TBB 
+              ts_tbb_busy               
+              ^          ^       
+             /            \       
+            /              V       
+    ts_asleep <-----------> ts_idle --> ts_done
+
+    For TBB only. Extra state transition.
+
+    ts_created -> ts_started -> ts_visited
  */
 enum thread_state_t {
     //! Thread not doing anything useful, but running and looking for work. 
@@ -197,18 +162,13 @@ class ref_count: no_copy {
     tbb::atomic<int> my_ref_count;
 public:
     ref_count(int k ) {my_ref_count=k;}
-
-    ~ref_count() {
-        __TBB_ASSERT( !my_ref_count, "premature destruction of refcounted object" );
-    }
-
+    ~ref_count() {__TBB_ASSERT( !my_ref_count, "premature destruction of refcounted object" );}
     //! Add one and return new value.
     int add_ref() {
         int k = ++my_ref_count;
         __TBB_ASSERT(k>=1,"reference count underflowed before add_ref");
         return k;
     }
-
     //! Subtract one and return new value.
     int remove_ref() {
         int k = --my_ref_count; 
@@ -259,7 +219,6 @@ struct thread_map_base {
         job_automaton my_automaton;
 // FIXME - pad out to cache line, because my_automaton is hit hard by thread()
         friend class thread_map;
-
     };
     typedef tbb::concurrent_vector<value_type,tbb::zero_allocator<value_type,tbb::cache_aligned_allocator> > array_type;
 };
@@ -279,6 +238,7 @@ static tbb::atomic<int> the_balance_inited;
     plus 1 if a host thread owns this instance. */
 class server_thread: public ref_count {
     friend class thread_map;
+    template<typename Server, typename Client> friend class generic_connection;
     //! Integral type that can hold a thread_state_t
     typedef int thread_state_rep_t;
     tbb::atomic<thread_state_rep_t> state;
@@ -290,10 +250,9 @@ public:
     server_thread* link; // FIXME: this is a temporary fix. Remove when all is done.
     thread_map_base::array_type::iterator my_map_pos;
 private:
-    typedef ring<tbb_connection_v1> tbb_ring_type;
-    typedef ring<omp_connection_v1> omp_ring_type;
-    tbb_ring_type tbb_ring;
-    omp_ring_type omp_ring;
+    rml::server *my_conn;
+    rml::job* my_job;
+    job_automaton* my_ja;
 
 #if TBB_USE_ASSERT
     //! Flag used to check if thread is still using *this.
@@ -305,8 +264,8 @@ private:
 
     //! Destroy job corresponding to given client
     /** Return true if thread must quit. */
-    template<typename Ring>
-    bool destroy_job( Ring& ring, typename Ring::connection_type& c );
+    template<typename Connection>
+    bool destroy_job( Connection& c );
 
     //! Process requests
     /** Return true if thread must quit. */
@@ -321,9 +280,7 @@ public:
         return thread_state_t(s);
     }
 
-    //! Current stack size of the thread.  
-    size_t stack_size;
-    mailbox requests;
+    tbb::atomic<request_kind> request;
 
     omp_dispatch_type omp_dispatch;
 
@@ -336,7 +293,7 @@ public:
     //! Attempt to wakeup a thread 
     /** The value "to" is the new state for the thread, if it was woken up.
         Returns true if thread was woken up, false otherwise. */
-    bool wakeup(  bool only_if_undersubscribed, thread_state_t to, thread_state_t from );
+    bool wakeup( thread_state_t to, thread_state_t from );
 
     //! Attempt to enslave a thread for OpenMP/TBB.
     bool try_grab_for( thread_state_t s );
@@ -389,23 +346,18 @@ void wakeup_some_tbb_threads();
 class thread_map : public thread_map_base {
 public:
     typedef rml::client::size_type size_type;
-
+    //! ctor
     thread_map( wait_counter& fc, ::rml::client& client ) : 
-        all_visited_at_least_once(false),
-        my_min_stack_size(0), 
-        my_server_ref_count(1),
-        my_client_ref_count(1),
-        my_client(client),
-        my_factory_counter(fc)
-    {
-        my_unrealized_threads = 0;
-    }
+        all_visited_at_least_once(false), my_min_stack_size(0), my_server_ref_count(1),
+        my_client_ref_count(1), my_client(client), my_factory_counter(fc)
+    { my_unrealized_threads = 0; }
+    //! dtor
     ~thread_map() {}
     typedef array_type::iterator iterator;
     iterator begin() {return my_array.begin();}
     iterator end() {return my_array.end();}
     void bind( /* rml::server& server, message_kind initialize */ );
-    void unbind( rml::server& server, message_kind terminate );
+    void unbind( request_kind terminate );
     void assist_cleanup( bool assist_null_only );
 
     /** Returns number of unrealized threads to create. */
@@ -418,7 +370,7 @@ public:
     /** Return NULL if out of unrealized threads. */
     value_type* add_one_thread( bool is_omp_thread_ );
 
-    void bind_one_thread( rml::server& server, message_kind initialize, value_type& x );
+    void bind_one_thread( rml::server& server, request_kind initialize, value_type& x );
 
     void remove_client_ref();
     int add_server_ref() {return my_server_ref_count.add_ref();}
@@ -447,8 +399,7 @@ private:
     wait_counter& my_factory_counter;
 };
 
-void thread_map::bind_one_thread( rml::server& server, message_kind initialize, value_type& x ) {
-
+void thread_map::bind_one_thread( rml::server& server, request_kind initialize, value_type& x ) {
     // Add one to account for the thread referencing this map hereforth.
     server_thread& t = x.thread();
     my_server_ref_count.add_ref();
@@ -459,12 +410,14 @@ void thread_map::bind_one_thread( rml::server& server, message_kind initialize, 
     t.add_ref();
 #endif
     // Have responsibility to start the thread.
-    t.requests.push( message( initialize, &server, &x.my_automaton ) );
+    t.my_conn = &server;
+    t.my_ja = &x.my_automaton;
+    t.request = initialize;
     t.launch( my_min_stack_size );
     // Must wakeup thread so it can fill in its "my_job" field in *this.
     // Otherwise deadlock can occur where wait_for_job spins on thread that is sleeping.
     __TBB_ASSERT( t.state!=ts_tbb_busy, NULL );
-    t.wakeup( /*only_if_undersubscribed=*/false, ts_idle, ts_asleep );
+    t.wakeup( ts_idle, ts_asleep );
 }
 
 thread_map::value_type* thread_map::add_one_thread( bool is_omp_thread_ ) {
@@ -484,20 +437,20 @@ thread_map::value_type* thread_map::add_one_thread( bool is_omp_thread_ ) {
     return &v;
 }
 
-void thread_map::bind( /* rml::server& server, message_kind initialize */ ) {
+void thread_map::bind( /* rml::server& server, request_kind initialize */ ) {
     ++my_factory_counter;
     my_min_stack_size = my_client.min_stack_size();
     __TBB_ASSERT( my_unrealized_threads==0, "already called bind?" );
     my_unrealized_threads = my_client.max_job_count();
 }
 
-void thread_map::unbind( rml::server& server, message_kind terminate ) {
+void thread_map::unbind( request_kind terminate ) {
     // Ask each server_thread to cleanup its job for this server.
-    for( iterator i = begin(); i!=end(); ++i ) {
+    for( iterator i=begin(); i!=end(); ++i ) {
         server_thread& t = i->thread();
         // The last parameter of the message is not used by the recipient. 
-        t.requests.push( message( terminate, &server ) );
-        t.wakeup( /*only_if_undersubscribed=*/false, ts_idle, ts_asleep );
+        t.request = terminate;
+        t.wakeup( ts_idle, ts_asleep );
     }
     // Remove extra ref to client.
     remove_client_ref();
@@ -568,55 +521,27 @@ struct connection_traits {};
 
 static tbb::atomic<tbb_connection_v1*> this_tbb_connection;
 
-template<typename Connection, typename Ring>
-void make_job( Connection& c, Ring& ring, server_thread& t, job_automaton& ja );
-
 template<typename Server, typename Client>
 class generic_connection: public Server, no_copy {
     /*override*/ version_type version() const {return SERVER_VERSION;}
-
     /*override*/ void yield() {thread_monitor::yield();}
-
-    /*override*/ void independent_thread_number_changed( int delta ) {
-        my_thread_map.adjust_balance( -delta );
-    }
-
-    /*override*/ unsigned default_concurrency() const {
-        return hardware_concurrency()-1;
-    }
+    /*override*/ void independent_thread_number_changed( int delta ) {my_thread_map.adjust_balance( -delta );}
+    /*override*/ unsigned default_concurrency() const {return hardware_concurrency()-1;}
 
 protected:
     thread_map my_thread_map;
-
-    void do_open() {
-        my_thread_map.bind( /* *this, connection_traits<Server,Client>::initialize */ );
-    }
-    
+    void do_open() {my_thread_map.bind();}
     void request_close_connection();
-
     //! Make destructor virtual
     virtual ~generic_connection() {}
-
     generic_connection( wait_counter& fc, Client& c ) : my_thread_map(fc,c) {}
 
 public:
-
     Client& client() const {return static_cast<Client&>(my_thread_map.client());}
-
-    template<typename Connection, typename Ring>
-    friend void make_job( Connection& c, Ring& ring, server_thread& t, job_automaton& ja );
-
-    int add_server_ref () {
-        return my_thread_map.add_server_ref();
-    }
-
-    void remove_server_ref() {
-        if( my_thread_map.remove_server_ref()==0 ) 
-            delete this;
-    }
-    void remove_client_ref() {
-        my_thread_map.remove_client_ref();
-    }
+    int add_server_ref () {return my_thread_map.add_server_ref();}
+    void remove_server_ref() {if( my_thread_map.remove_server_ref()==0 ) delete this;}
+    void remove_client_ref() {my_thread_map.remove_client_ref();}
+    void make_job( server_thread& t, job_automaton& ja );
 };
 
 //------------------------------------------------------------------------
@@ -625,8 +550,8 @@ public:
 
 template<>
 struct connection_traits<tbb_server,tbb_client> {
-    static const message_kind initialize = mk_initialize_tbb_job;
-    static const message_kind terminate = mk_terminate_tbb_job;
+    static const request_kind initialize = rk_initialize_tbb_job;
+    static const request_kind terminate = rk_terminate_tbb_job;
     static const bool assist_null_only = true;
     static const bool is_tbb = true;
 };
@@ -635,12 +560,9 @@ struct connection_traits<tbb_server,tbb_client> {
 /** The internal representation uses inheritance for the server part and a pointer for the client part. */
 class tbb_connection_v1: public generic_connection<tbb_server,tbb_client> {
     friend void wakeup_some_tbb_threads();
-
     /*override*/ void adjust_job_count_estimate( int delta );
-
     //! Estimate on number of jobs without threads working on them.
     tbb::atomic<int> my_slack;
-
     friend class dummy_class_to_shut_up_gratuitous_warning_from_gcc_3_2_3;
 #if TBB_USE_ASSERT
     tbb::atomic<int> my_job_count_estimate;
@@ -648,7 +570,6 @@ class tbb_connection_v1: public generic_connection<tbb_server,tbb_client> {
 
     // pad these? or use a single variable w/ atomic add/subtract?
     tbb::atomic<int> n_adjust_job_count_requests;
-
     ~tbb_connection_v1();
 
 public:
@@ -659,9 +580,7 @@ public:
     };
 
     //! True if there is slack that try_process can use.
-    bool has_slack() const {
-        return my_slack>0;
-    }
+    bool has_slack() const {return my_slack>0;}
 
     bool try_process( job& job ) {
         bool visited = false;
@@ -687,20 +606,9 @@ public:
         this_tbb_connection = this;
     }
 
-    void wakeup_tbb_threads( unsigned n )
-    {
-        my_thread_map.wakeup_tbb_threads( n );
-    }
-
-    bool wakeup_next_thread( thread_map::iterator i )
-    {
-       return my_thread_map.wakeup_next_thread( i, *this );
-    }
-
-    thread_map::size_type get_unrealized_threads ()
-    {
-        return my_thread_map.get_unrealized_threads();
-    }
+    void wakeup_tbb_threads( unsigned n ) {my_thread_map.wakeup_tbb_threads( n );}
+    bool wakeup_next_thread( thread_map::iterator i ) {return my_thread_map.wakeup_next_thread( i, *this );}
+    thread_map::size_type get_unrealized_threads () {return my_thread_map.get_unrealized_threads();}
 };
 
 /* to deal with cases where the machine is oversubscribed; we want each thread to trip to try_process() at least once */
@@ -710,7 +618,6 @@ bool thread_map::wakeup_next_thread( thread_map::iterator this_thr, tbb_connecti
         return false;
 
     iterator e = end();
-
 retry:
     bool exist = false;
     iterator k=this_thr; 
@@ -737,7 +644,6 @@ retry:
             goto retry;
     else 
         all_visited_at_least_once = true;
-
     return false;
 }
 
@@ -761,8 +667,8 @@ void thread_map::adjust_balance( int delta ) {
 
 template<>
 struct connection_traits<omp_server,omp_client> {
-    static const message_kind initialize = mk_initialize_omp_job;
-    static const message_kind terminate = mk_terminate_omp_job;
+    static const request_kind initialize = rk_initialize_omp_job;
+    static const request_kind terminate = rk_terminate_omp_job;
     static const bool assist_null_only = false;
     static const bool is_tbb = false;
 };
@@ -785,23 +691,8 @@ public:
 #endif /* TBB_USE_ASSERT */
         do_open();
     }
-    ~omp_connection_v1() {
-        __TBB_ASSERT( net_delta==0, "net increase/decrease of load is nonzero" );
-    }
+    ~omp_connection_v1() {__TBB_ASSERT( net_delta==0, "net increase/decrease of load is nonzero" );}
 };
-
-/** Not a member of generic_connection because we need Connection to be the derived class. */
-template<typename Connection, typename Ring>
-void make_job( Connection& c, Ring& ring, server_thread& t, job_automaton& ja ) {
-    if( ja.try_acquire() ) {
-        typename Ring::job_type& j = *c.client().create_one_job();
-        __TBB_ASSERT( &j!=NULL, "client:::create_one_job returned NULL" );
-        __TBB_ASSERT( (intptr_t(&j)&1)==0, "client::create_one_job returned misaligned job" );
-        ja.set_and_release( j );
-        Connection::scratch_ptr(j) = &t;
-        ring.insert( c, j, ja );
-    }
-}
 
 template<typename Server, typename Client>    
 void generic_connection<Server,Client>::request_close_connection() {
@@ -821,10 +712,22 @@ void generic_connection<Server,Client>::request_close_connection() {
 #if _MSC_VER && !defined(__INTEL_COMPILER)
 #pragma warning( pop )
 #endif
-    my_thread_map.unbind( *this, connection_traits<Server,Client>::terminate );
+    my_thread_map.unbind( connection_traits<Server,Client>::terminate );
     my_thread_map.assist_cleanup( connection_traits<Server,Client>::assist_null_only );
     // Remove extra reference
     remove_server_ref();
+}
+
+template<typename Server, typename Client>
+void generic_connection<Server,Client>::make_job( server_thread& t, job_automaton& ja ) {
+    if( ja.try_acquire() ) {
+        rml::job& j = *client().create_one_job();
+        __TBB_ASSERT( &j!=NULL, "client:::create_one_job returned NULL" );
+        __TBB_ASSERT( (intptr_t(&j)&1)==0, "client::create_one_job returned misaligned job" );
+        ja.set_and_release( j );
+        __TBB_ASSERT( t.my_conn && t.my_ja && t.my_job==NULL, NULL );
+        t.my_job  = &j;
+    }
 }
 
 tbb_connection_v1::~tbb_connection_v1() {
@@ -860,7 +763,7 @@ void tbb_connection_v1::adjust_job_count_estimate( int delta ) {
                 // No unrealized threads left.
                 break;
             // eagerly start the thread off.
-            my_thread_map.bind_one_thread( *this, mk_initialize_tbb_job, *k );
+            my_thread_map.bind_one_thread( *this, rk_initialize_tbb_job, *k );
             server_thread& t = k->thread();
             __TBB_ASSERT( !t.link, NULL );
             t.link = new_threads_anchor;
@@ -983,7 +886,6 @@ void omp_connection_v1::get_threads( size_type request_size, void* cookie, job* 
         return;
 
     unsigned index = 0;
-
     for(;;) { // don't return until all request_size threads are grabbed.
         // Need to grab some threads
         thread_map::iterator k_end=my_thread_map.end();
@@ -1010,7 +912,7 @@ void omp_connection_v1::get_threads( size_type request_size, void* cookie, job* 
                 fprintf(stderr,"server::get_threads: exceeded job_count\n");
                 __TBB_ASSERT(false, NULL);
             }
-            my_thread_map.bind_one_thread( *this, mk_initialize_omp_job, *k );
+            my_thread_map.bind_one_thread( *this, rk_initialize_omp_job, *k );
             server_thread& t = k->thread();
             if( t.try_grab_for( ts_omp_busy ) ) {
                 job& j = k->wait_for_job();
@@ -1053,7 +955,7 @@ server_thread::server_thread() :
     ref_count(0),
     link(NULL), // FIXME: remove when all fixes are done.
     my_map_pos(),
-    stack_size(0) 
+    my_conn(NULL), my_job(NULL), my_ja(NULL)
 {
     state = ts_idle;
 #if TBB_USE_ASSERT
@@ -1076,7 +978,6 @@ __RML_DECL_THREAD_ROUTINE server_thread::thread_routine( void* arg ) {
 }
 
 void server_thread::launch( size_t stack_size ) {
-    this->stack_size = stack_size;
     thread_monitor::launch( thread_routine, this, stack_size );
 }
 
@@ -1085,7 +986,7 @@ void server_thread::sleep_perhaps( thread_state_t asleep ) {
     thread_monitor::cookie c; 
     monitor.prepare_wait(c);
     if( state.compare_and_swap( asleep, ts_idle )==ts_idle ) {
-        if( requests.empty() ) {
+        if( request==rk_none ) {
             monitor.commit_wait(c);
             // Someone else woke me up.  The compare_and_swap further below deals with spurious wakeups.
         } else {
@@ -1112,20 +1013,16 @@ void server_thread::sleep_perhaps( thread_state_t asleep ) {
     __TBB_ASSERT( read_state()!=asleep, "a thread can only put itself to sleep" );
 }
 
-bool server_thread::wakeup( bool only_if_undersubscribed, thread_state_t to, thread_state_t from ) {
+bool server_thread::wakeup( thread_state_t to, thread_state_t from ) {
     bool success = false;
-    __TBB_ASSERT( from==ts_asleep && (to==ts_idle||to==ts_omp_busy||to==ts_tbb_busy), 
-                  NULL );
-    if( !only_if_undersubscribed ) {
-        if( state.compare_and_swap( to, from )==from ) {
-            if( !is_omp_thread )
-                __TBB_ASSERT( to==ts_idle||to==ts_tbb_busy, NULL );
-            // There is a small timing window that permits balance to become negative,
-            // but such occurrences are probably rare enough to not worry about, since
-            // at worst the result is slight temporary oversubscription.
-            monitor.notify();
-            success = true;
-        }
+    __TBB_ASSERT( from==ts_asleep && (to==ts_idle||to==ts_omp_busy||to==ts_tbb_busy), NULL );
+    if( state.compare_and_swap( to, from )==from ) {
+        if( !is_omp_thread ) __TBB_ASSERT( to==ts_idle||to==ts_tbb_busy, NULL );
+        // There is a small timing window that permits balance to become negative,
+        // but such occurrences are probably rare enough to not worry about, since
+        // at worst the result is slight temporary oversubscription.
+        monitor.notify();
+        success = true;
     } 
     return success;
 }
@@ -1135,7 +1032,7 @@ bool server_thread::try_grab_for( thread_state_t target_state ) {
     bool success = false;
     switch( read_state() ) {
         case ts_asleep: 
-            success = wakeup( /*only_if_undersubscribed=*/false, target_state, ts_asleep );
+            success = wakeup( target_state, ts_asleep );
             break;
         case ts_idle:
             success = state.compare_and_swap( target_state, ts_idle )==ts_idle;
@@ -1147,8 +1044,8 @@ bool server_thread::try_grab_for( thread_state_t target_state ) {
     return success;
 }
 
-template<typename Ring>
-inline bool server_thread::destroy_job( Ring& ring, typename Ring::connection_type& c ) {
+template<typename Connection>
+bool server_thread::destroy_job( Connection& c ) {
     __TBB_ASSERT( !is_omp_thread||state==ts_idle, NULL );
     __TBB_ASSERT( is_omp_thread||(state==ts_idle||state==ts_tbb_busy), NULL );
     if( !is_omp_thread ) {
@@ -1160,9 +1057,10 @@ inline bool server_thread::destroy_job( Ring& ring, typename Ring::connection_ty
         if( state==ts_tbb_busy ) { // return the coin to the deposit
             // need to deposit first to let the next connection see the change
             ++the_balance;
+            state = ts_done; // no other thread changes the state when it is ts_*_busy
         }
     }
-    if( job_automaton* ja = ring.erase( c ) ) {
+    if( job_automaton* ja = my_ja ) {
         rml::job* j;
         if( ja->try_plug(j) ) {
             __TBB_ASSERT( j, NULL );
@@ -1173,41 +1071,42 @@ inline bool server_thread::destroy_job( Ring& ring, typename Ring::connection_ty
         }
     }
     //! Must do remove client reference first, because execution of c.remove_ref() can cause *this to be destroyed.
+    int k = remove_ref();
+    __TBB_ASSERT_EX( k==0, "more than one references?" );
 #if TBB_USE_ASSERT
-    __TBB_ASSERT( remove_ref()==0, "more than one references?" );
     has_active_thread = false;
-#else
-    remove_ref();
 #endif /* TBB_USE_ASSERT */
     c.remove_server_ref();
     return true;
 }
 
 bool server_thread::process_requests() {
-    __TBB_ASSERT( !requests.empty(), "should only be called for non-empty queue" );
+    __TBB_ASSERT( request!=rk_none, "should only be called when at least one request is present" );
     do {
-        message m;
-        requests.pop( m );
-        switch( m.kind ) {
-            case mk_initialize_tbb_job: 
-                make_job( *static_cast<tbb_connection_v1*>(m.connection), tbb_ring, *this, *m.automaton );
+        request_kind my_req = request;
+        request.compare_and_swap( rk_none, my_req );
+        switch( my_req ) {
+            case rk_initialize_tbb_job: 
+                static_cast<tbb_connection_v1*>(my_conn)->make_job( *this, *my_ja );
                 break;
             
-            case mk_initialize_omp_job: 
-                make_job( *static_cast<omp_connection_v1*>(m.connection), omp_ring, *this, *m.automaton );
+            case rk_initialize_omp_job: 
+                static_cast<omp_connection_v1*>(my_conn)->make_job( *this, *my_ja );
                 break;
 
-            case mk_terminate_tbb_job:
-                if( destroy_job( tbb_ring, *static_cast<tbb_connection_v1*>(m.connection) ) )
+            case rk_terminate_tbb_job:
+                if( destroy_job( *static_cast<tbb_connection_v1*>(my_conn) ) )
                     return true;
                 break; 
 
-            case mk_terminate_omp_job:
-                if( destroy_job( omp_ring, *static_cast<omp_connection_v1*>(m.connection) ) )
+            case rk_terminate_omp_job:
+                if( destroy_job( *static_cast<omp_connection_v1*>(my_conn) ) )
                     return true;
                 break; 
+            default:
+                break;
          }
-    } while( !requests.empty() );
+    } while( request!=rk_none );
     return false;
 }
 
@@ -1219,7 +1118,7 @@ void server_thread::loop() {
             sleep_perhaps( ts_asleep );   
 
         // Drain mailbox before reading the state.
-        if( !requests.empty() ) 
+        if( request!=rk_none ) 
             if( process_requests() )
                 return;     
              
@@ -1237,13 +1136,12 @@ void server_thread::loop() {
             state = ts_idle;
         } else if( s==ts_tbb_busy ) {
             // do some TBB work.
-            const tbb_ring_type::value_type* item = tbb_ring.cursor(); 
-            __TBB_ASSERT( item, NULL );
-            tbb_connection_v1& conn = item->connection();
+            __TBB_ASSERT( my_conn && my_job, NULL );
+            tbb_connection_v1& conn = *static_cast<tbb_connection_v1*>(my_conn);
             // give openmp higher priority
             bool has_coin = true;
             while( has_coin && conn.has_slack() && the_balance>=0 ) {
-                if( conn.try_process(item->job()) ) {
+                if( conn.try_process(*my_job) ) {
                     tbb_state = ts_visited;
                     if( conn.has_slack() && the_balance>=0 )
                         has_coin = !conn.wakeup_next_thread( my_map_pos );

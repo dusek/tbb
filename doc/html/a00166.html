@@ -28,16 +28,13 @@
 </h1><!-- doxytag: class="tbb::task" -->Base class for user-defined tasks.  
 <a href="#_details">More...</a>
 <p>
-<code>#include &lt;<a class="el" href="a00354.html">task.h</a>&gt;</code>
+<code>#include &lt;<a class="el" href="a00355.html">task.h</a>&gt;</code>
 <p>
 Inherited by <a class="el" href="a00137.html">tbb::empty_task</a>, tbb::internal::function_task&lt; F &gt;, and tbb::internal::task_handle_task&lt; F &gt;.
 <p>
 Inheritance diagram for tbb::task:<center><font size="2">[<a href="graph_legend.html">legend</a>]</font></center><a href="a00063.html">List of all members.</a><table border="0" cellpadding="0" cellspacing="0">
 <tr><td></td></tr>
 <tr><td colspan="2"><br><h2>Public Types</h2></td></tr>
-<tr><td class="memItemLeft" nowrap align="right" valign="top">typedef internal::intptr&nbsp;</td><td class="memItemRight" valign="bottom"><a class="el" href="a00166.html#d8815c39bb61bd7e2d2691c476ed03b9">depth_type</a></td></tr>
-
-<tr><td class="mdescLeft">&nbsp;</td><td class="mdescRight">A scheduling depth.  <a href="#d8815c39bb61bd7e2d2691c476ed03b9"></a><br></td></tr>
 <tr><td class="memItemLeft" nowrap align="right" valign="top">typedef internal::affinity_id&nbsp;</td><td class="memItemRight" valign="bottom"><a class="el" href="a00166.html#d61bb32389d3857bf7511d69beaafb76">affinity_id</a></td></tr>
 
 <tr><td class="mdescLeft">&nbsp;</td><td class="mdescRight">An id as used for specifying affinity.  <a href="#d61bb32389d3857bf7511d69beaafb76"></a><br></td></tr>
@@ -115,16 +112,6 @@ void&nbsp;</td><td class="memItemRight" valign="bottom"><b>set_depth</b> (intptr
 <tr><td class="memItemLeft" nowrap align="right" valign="top"><a class="anchor" name="c83fcc26f6513f0e06de70cbab9dee46"></a><!-- doxytag: member="tbb::task::add_to_depth" ref="c83fcc26f6513f0e06de70cbab9dee46" args="(int)" -->
 void&nbsp;</td><td class="memItemRight" valign="bottom"><b>add_to_depth</b> (int)</td></tr>
 
-<tr><td class="memItemLeft" nowrap align="right" valign="top"><a class="anchor" name="5be823a972b3c3b9901c5963eeb050fd"></a><!-- doxytag: member="tbb::task::depth" ref="5be823a972b3c3b9901c5963eeb050fd" args="() const " -->
-<a class="el" href="a00166.html#d8815c39bb61bd7e2d2691c476ed03b9">depth_type</a>&nbsp;</td><td class="memItemRight" valign="bottom"><a class="el" href="a00166.html#5be823a972b3c3b9901c5963eeb050fd">depth</a> () const </td></tr>
-
-<tr><td class="mdescLeft">&nbsp;</td><td class="mdescRight">Scheduling depth. <br></td></tr>
-<tr><td class="memItemLeft" nowrap align="right" valign="top">void&nbsp;</td><td class="memItemRight" valign="bottom"><a class="el" href="a00166.html#fc4d4e61a56823aa1efdbb5d59e42973">set_depth</a> (<a class="el" href="a00166.html#d8815c39bb61bd7e2d2691c476ed03b9">depth_type</a> new_depth)</td></tr>
-
-<tr><td class="mdescLeft">&nbsp;</td><td class="mdescRight">Set scheduling depth to given value.  <a href="#fc4d4e61a56823aa1efdbb5d59e42973"></a><br></td></tr>
-<tr><td class="memItemLeft" nowrap align="right" valign="top">void&nbsp;</td><td class="memItemRight" valign="bottom"><a class="el" href="a00166.html#b0f98c633647fc73b978fe4cd2277ac4">add_to_depth</a> (int delta)</td></tr>
-
-<tr><td class="mdescLeft">&nbsp;</td><td class="mdescRight">Change scheduling depth by given amount.  <a href="#b0f98c633647fc73b978fe4cd2277ac4"></a><br></td></tr>
 <tr><td class="memItemLeft" nowrap align="right" valign="top"><a class="anchor" name="06a4206a57e8e12a439b14d6d41cfd92"></a><!-- doxytag: member="tbb::task::set_ref_count" ref="06a4206a57e8e12a439b14d6d41cfd92" args="(int count)" -->
 void&nbsp;</td><td class="memItemRight" valign="bottom"><a class="el" href="a00166.html#06a4206a57e8e12a439b14d6d41cfd92">set_ref_count</a> (int count)</td></tr>
 
@@ -138,9 +125,10 @@ void&nbsp;</td><td class="memItemRight" valign="bottom"><a class="el" href="a001
 <tr><td class="memItemLeft" nowrap align="right" valign="top">void&nbsp;</td><td class="memItemRight" valign="bottom"><a class="el" href="a00166.html#f7737143d458f1ed1c0d7da3971d9e6b">spawn</a> (<a class="el" href="a00166.html">task</a> &amp;child)</td></tr>
 
 <tr><td class="mdescLeft">&nbsp;</td><td class="mdescRight">Schedule task for execution when a worker becomes available.  <a href="#f7737143d458f1ed1c0d7da3971d9e6b"></a><br></td></tr>
-<tr><td class="memItemLeft" nowrap align="right" valign="top">void&nbsp;</td><td class="memItemRight" valign="bottom"><a class="el" href="a00166.html#db841c647eb6d754440c2f4e4a73c80b">spawn</a> (<a class="el" href="a00168.html">task_list</a> &amp;list)</td></tr>
+<tr><td class="memItemLeft" nowrap align="right" valign="top"><a class="anchor" name="db841c647eb6d754440c2f4e4a73c80b"></a><!-- doxytag: member="tbb::task::spawn" ref="db841c647eb6d754440c2f4e4a73c80b" args="(task_list &amp;list)" -->
+void&nbsp;</td><td class="memItemRight" valign="bottom"><a class="el" href="a00166.html#db841c647eb6d754440c2f4e4a73c80b">spawn</a> (<a class="el" href="a00168.html">task_list</a> &amp;list)</td></tr>
 
-<tr><td class="mdescLeft">&nbsp;</td><td class="mdescRight">Spawn multiple tasks and clear list.  <a href="#db841c647eb6d754440c2f4e4a73c80b"></a><br></td></tr>
+<tr><td class="mdescLeft">&nbsp;</td><td class="mdescRight">Spawn multiple tasks and clear list. <br></td></tr>
 <tr><td class="memItemLeft" nowrap align="right" valign="top"><a class="anchor" name="3ce28ca9baa771cfc37ecd72e69c4f3c"></a><!-- doxytag: member="tbb::task::spawn_and_wait_for_all" ref="3ce28ca9baa771cfc37ecd72e69c4f3c" args="(task &amp;child)" -->
 void&nbsp;</td><td class="memItemRight" valign="bottom"><a class="el" href="a00166.html#3ce28ca9baa771cfc37ecd72e69c4f3c">spawn_and_wait_for_all</a> (<a class="el" href="a00166.html">task</a> &amp;child)</td></tr>
 
@@ -265,23 +253,6 @@ An id as used for specifying affinity.
 Guaranteed to be integral type. Value of 0 means no affinity. 
 </div>
 </div><p>
-<a class="anchor" name="d8815c39bb61bd7e2d2691c476ed03b9"></a><!-- doxytag: member="tbb::task::depth_type" ref="d8815c39bb61bd7e2d2691c476ed03b9" args="" -->
-<div class="memitem">
-<div class="memproto">
-      <table class="memname">
-        <tr>
-          <td class="memname">typedef internal::intptr <a class="el" href="a00166.html#d8815c39bb61bd7e2d2691c476ed03b9">tbb::task::depth_type</a>          </td>
-        </tr>
-      </table>
-</div>
-<div class="memdoc">
-
-<p>
-A scheduling depth. 
-<p>
-Guaranteed to be a signed integral type. 
-</div>
-</div><p>
 <hr><h2>Member Enumeration Documentation</h2>
 <a class="anchor" name="4a3c415562d17905390ea5b49d12293e"></a><!-- doxytag: member="tbb::task::state_type" ref="4a3c415562d17905390ea5b49d12293e" args="" -->
 <div class="memitem">
@@ -317,28 +288,6 @@ task to be recycled as continuation </td></tr>
 </div>
 </div><p>
 <hr><h2>Member Function Documentation</h2>
-<a class="anchor" name="b0f98c633647fc73b978fe4cd2277ac4"></a><!-- doxytag: member="tbb::task::add_to_depth" ref="b0f98c633647fc73b978fe4cd2277ac4" args="(int delta)" -->
-<div class="memitem">
-<div class="memproto">
-      <table class="memname">
-        <tr>
-          <td class="memname">void tbb::task::add_to_depth           </td>
-          <td>(</td>
-          <td class="paramtype">int&nbsp;</td>
-          <td class="paramname"> <em>delta</em>          </td>
-          <td>&nbsp;)&nbsp;</td>
-          <td width="100%"><code> [inline]</code></td>
-        </tr>
-      </table>
-</div>
-<div class="memdoc">
-
-<p>
-Change scheduling depth by given amount. 
-<p>
-The resulting depth must be non-negative. 
-</div>
-</div><p>
 <a class="anchor" name="43bfe64c0e9333c0ca895cc0c375512b"></a><!-- doxytag: member="tbb::task::allocate_additional_child_of" ref="43bfe64c0e9333c0ca895cc0c375512b" args="(task &amp;t)" -->
 <div class="memitem">
 <div class="memproto">
@@ -555,50 +504,6 @@ Schedule this for reexecution after current <a class="el" href="a00166.html#22c2
 Requires that this.execute() be running. 
 </div>
 </div><p>
-<a class="anchor" name="fc4d4e61a56823aa1efdbb5d59e42973"></a><!-- doxytag: member="tbb::task::set_depth" ref="fc4d4e61a56823aa1efdbb5d59e42973" args="(depth_type new_depth)" -->
-<div class="memitem">
-<div class="memproto">
-      <table class="memname">
-        <tr>
-          <td class="memname">void tbb::task::set_depth           </td>
-          <td>(</td>
-          <td class="paramtype"><a class="el" href="a00166.html#d8815c39bb61bd7e2d2691c476ed03b9">depth_type</a>&nbsp;</td>
-          <td class="paramname"> <em>new_depth</em>          </td>
-          <td>&nbsp;)&nbsp;</td>
-          <td width="100%"><code> [inline]</code></td>
-        </tr>
-      </table>
-</div>
-<div class="memdoc">
-
-<p>
-Set scheduling depth to given value. 
-<p>
-The depth must be non-negative 
-</div>
-</div><p>
-<a class="anchor" name="db841c647eb6d754440c2f4e4a73c80b"></a><!-- doxytag: member="tbb::task::spawn" ref="db841c647eb6d754440c2f4e4a73c80b" args="(task_list &amp;list)" -->
-<div class="memitem">
-<div class="memproto">
-      <table class="memname">
-        <tr>
-          <td class="memname">void tbb::task::spawn           </td>
-          <td>(</td>
-          <td class="paramtype"><a class="el" href="a00168.html">task_list</a> &amp;&nbsp;</td>
-          <td class="paramname"> <em>list</em>          </td>
-          <td>&nbsp;)&nbsp;</td>
-          <td width="100%"><code> [inline]</code></td>
-        </tr>
-      </table>
-</div>
-<div class="memdoc">
-
-<p>
-Spawn multiple tasks and clear list. 
-<p>
-All of the tasks must be at the same depth. 
-</div>
-</div><p>
 <a class="anchor" name="f7737143d458f1ed1c0d7da3971d9e6b"></a><!-- doxytag: member="tbb::task::spawn" ref="f7737143d458f1ed1c0d7da3971d9e6b" args="(task &amp;child)" -->
 <div class="memitem">
 <div class="memproto">
@@ -687,7 +592,7 @@ Works on tasks while waiting.
 </div>
 </div><p>
 <hr>The documentation for this class was generated from the following file:<ul>
-<li><a class="el" href="a00354.html">task.h</a></ul>
+<li><a class="el" href="a00355.html">task.h</a></ul>
 <hr>
 <p></p>
 Copyright &copy; 2005-2009 Intel Corporation.  All Rights Reserved.

@@ -146,8 +146,7 @@ void Flog( int nthread, bool interference=false ) {
             ASSERT( f.end==(i==0 ? ~size_t(0) : i), NULL );
         }
         tbb::tick_count T1 = tbb::tick_count::now();
-        if( Verbose )
-            REPORT("time=%g join_count=%ld ForkCount=%ld nthread=%d%s\n",
+        REMARK("time=%g join_count=%ld ForkCount=%ld nthread=%d%s\n",
                    (T1-T0).seconds(),join_count,long(ForkCount), nthread, interference ? " with interference)":"");
     }
 }
@@ -237,7 +236,7 @@ void ParallelSum () {
     tbb::blocked_range<ValueType*> range(array, array + N);
     ValueType r1 = tbb::parallel_reduce( range, I, Accumulator(), Sum() );
     ASSERT( r1 == R, NULL );
-#if __TBB_LAMBDAS_PRESENT && !__TBB_LAMBDA_AS_TEMPL_PARAM_BROKEN
+#if __TBB_LAMBDAS_PRESENT
     ValueType r2 = tbb::parallel_reduce( range, I, 
         [](const tbb::blocked_range<ValueType*>& r, ValueType value) -> ValueType { 
             for ( ValueType* pv = r.begin(); pv != r.end(); ++pv )

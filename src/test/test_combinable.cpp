@@ -162,7 +162,7 @@ void run_serial_scalar_tests(const char *test_name) {
     tbb::tick_count t0;
     T sum = 0;
 
-    if (Verbose) REPORT("Testing serial %s... ", test_name);  
+    REMARK("Testing serial %s... ", test_name);
     for (int t = -1; t < REPETITIONS; ++t) {
         if (Verbose && t == 0) t0 = tbb::tick_count::now(); 
         for (int i = 0; i < N; ++i) {
@@ -172,8 +172,7 @@ void run_serial_scalar_tests(const char *test_name) {
  
     double ResultValue = sum;
     ASSERT( EXPECTED_SUM == ResultValue, NULL);
-    if (Verbose)
-        REPORT("done\nserial %s, 0, %g, %g\n", test_name, ResultValue, ( tbb::tick_count::now() - t0).seconds());
+    REMARK("done\nserial %s, 0, %g, %g\n", test_name, ResultValue, ( tbb::tick_count::now() - t0).seconds());
 }
 
 
@@ -225,7 +224,7 @@ void RunParallelScalarTests(const char *test_name) {
 
         if (p == 0) continue;
 
-        if (Verbose) REPORT("Testing parallel %s on %d thread(s)... ", test_name, p); 
+        REMARK("Testing parallel %s on %d thread(s)... ", test_name, p); 
         init.initialize(p);
 
         tbb::tick_count t0;
@@ -272,8 +271,7 @@ void RunParallelScalarTests(const char *test_name) {
         ASSERT( EXPECTED_SUM == assign_sum, NULL);
         ASSERT( EXPECTED_SUM == combine_finit_sum, NULL);
 
-        if (Verbose)
-            REPORT("done\nparallel %s, %d, %g, %g\n", test_name, p, static_cast<double>(combine_sum), 
+        REMARK("done\nparallel %s, %d, %g, %g\n", test_name, p, static_cast<double>(combine_sum), 
                                                       ( tbb::tick_count::now() - t0).seconds());
         init.terminate();
     }
@@ -308,7 +306,7 @@ void RunParallelVectorTests(const char *test_name) {
     for (int p = MinThread; p <= MaxThread; ++p) { 
 
         if (p == 0) continue;
-        if (Verbose) REPORT("Testing parallel %s on %d thread(s)... ", test_name, p);
+        REMARK("Testing parallel %s on %d thread(s)... ", test_name, p);
         init.initialize(p);
 
         T sum = 0;
@@ -346,8 +344,7 @@ void RunParallelVectorTests(const char *test_name) {
         ASSERT( EXPECTED_SUM == ResultValue, NULL);
         ResultValue = sum3;
         ASSERT( EXPECTED_SUM == ResultValue, NULL);
-        if (Verbose)
-            REPORT("done\nparallel %s, %d, %g, %g\n", test_name, p, ResultValue, ( tbb::tick_count::now() - t0).seconds());
+        REMARK("done\nparallel %s, %d, %g, %g\n", test_name, p, ResultValue, ( tbb::tick_count::now() - t0).seconds());
         init.terminate();
     }
 }
@@ -410,7 +407,7 @@ RunParallelTests() {
 template <typename T>
 void
 RunAssignmentAndCopyConstructorTest(const char *test_name) {
-    if (Verbose) REPORT("Testing assignment and copy construction for %s\n", test_name);
+    REMARK("Testing assignment and copy construction for %s\n", test_name);
 
     // test creation with finit function (combine returns finit return value if no threads have created locals)
     FunctorAddFinit7<T> my_finit7_decl;
@@ -430,7 +427,7 @@ RunAssignmentAndCopyConstructorTest(const char *test_name) {
 
 void
 RunAssignmentAndCopyConstructorTests() {
-    if(Verbose) REPORT("Running assignment and copy constructor tests\n");
+    REMARK("Running assignment and copy constructor tests\n");
     RunAssignmentAndCopyConstructorTest<int>("int");
     RunAssignmentAndCopyConstructorTest<double>("double");
     RunAssignmentAndCopyConstructorTest<minimal>("minimal");
@@ -446,7 +443,7 @@ int main(int argc, char *argv[]) {
 
     RunAssignmentAndCopyConstructorTests();
     for(int i = 1 <= MinThread ? MinThread : 1; i <= MaxThread; ++i) {
-        if(Verbose) REPORT("Testing local() allocation with nthreads=%d\n", i);
+        REMARK("Testing local() allocation with nthreads=%d\n", i);
         for(int j = 0; j < 100; ++j) {
             TestLocalAllocations(i);
         }

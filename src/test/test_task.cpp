@@ -36,7 +36,6 @@
 // Test for task::spawn_children and task_list
 //------------------------------------------------------------------------
 
-#if __TBB_TASK_DEQUE
 
 class UnboundedlyRecursiveOnUnboundedStealingTask : public tbb::task {
     typedef UnboundedlyRecursiveOnUnboundedStealingTask this_type;
@@ -82,7 +81,6 @@ public:
     }
 }; // UnboundedlyRecursiveOnUnboundedStealingTask
 
-#endif /* __TBB_TASK_DEQUE */
 
 
 tbb::atomic<int> Count;
@@ -131,14 +129,12 @@ static int Expected( int child_count, int depth ) {
 #include "tbb/task_scheduler_init.h"
 #include "harness.h"
 
-#if __TBB_TASK_DEQUE
 void TestStealLimit( int nthread ) {
     REMARK( "testing steal limiting heuristics for %d threads\n", nthread );
     tbb::task_scheduler_init init(nthread);
     tbb::task &t = *new( tbb::task::allocate_root() ) UnboundedlyRecursiveOnUnboundedStealingTask();
     tbb::task::spawn_root_and_wait(t);
 }
-#endif /* __TBB_TASK_DEQUE */
 
 //! Test task::spawn( task_list& )
 void TestSpawnChildren( int nthread ) {
@@ -569,10 +565,10 @@ Harness::SpinBarrier RelaxedOwnershipTask::m_barrier;
 void TestRelaxedOwnership( int p ) {
     if ( p < 2 )
         return;
-#if __TEST_TBB_RML
+
     if( unsigned(p)>tbb::tbb_thread::hardware_concurrency() )
         return;
-#endif
+
     REMARK("testing tasks exercising relaxed ownership freedom for %d threads\n", p);
     tbb::task_scheduler_init init(p);
     RelaxedOwnershipTask::SetBarrier(p);
@@ -678,12 +674,8 @@ int main(int argc, char* argv[]) {
         TestDag( p );
         TestAffinity( p );
         TestUserThread( p );
-#if __TBB_TASK_DEQUE
         TestStealLimit( p );
-#endif /* __TBB_TASK_DEQUE */
-#if __TBB_RELAXED_OWNERSHIP
         TestRelaxedOwnership( p );
-#endif /* __TBB_RELAXED_OWNERSHIP */
     }
     REPORT("done\n");
     return 0;

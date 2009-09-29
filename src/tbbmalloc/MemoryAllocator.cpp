@@ -55,13 +55,14 @@
 #include <string.h>
 #include <errno.h>
 #include <stdlib.h>
-#if MALLOC_LD_PRELOAD 
+#if MALLOC_CHECK_RECURSION
 #include <new>        /* for placement new */
-#endif
+#endif /* MALLOC_CHECK_RECURSION */
 
 extern "C" {
     void * scalable_malloc(size_t size);
     void   scalable_free(void *object);
+    void mallocThreadShutdownNotification(void*);
 }
 
 /********* Various compile-time options        **************/
@@ -100,39 +101,112 @@ namespace rml {
 namespace internal {
 
 /******* A helper class to support overriding malloc with scalable_malloc *******/
-#if MALLOC_LD_PRELOAD 
-class recursive_malloc_call_protector {
+#if MALLOC_CHECK_RECURSION
+
+inline bool isMallocInitialized();
+
+class RecursiveMallocCallProtector {
+    // pointer to an automatic data of holding thread
+    static void       *autoObjPtr;
     static MallocMutex rmc_mutex;
+    static pthread_t   owner_thread;
+/* Under FreeBSD 8.0 1st call to any pthread function including pthread_self
+   leads to pthread initialization, that causes malloc calls. As 1st usage of
+   RecursiveMallocCallProtector can be before pthread initialized, pthread calls
+   can't be used in 1st instance of RecursiveMallocCallProtector.
+   RecursiveMallocCallProtector is used 1st time in checkInitialization(),
+   so there is a guarantee that on 2nd usage pthread is initialized. 
+   No such situation observed with other supported OSes.
+ */
+#if __FreeBSD__
+    static bool        canUsePthread;
+#else
+    static const bool  canUsePthread = true;
+#endif
+/*
+  The variable modified in checkInitialization,
+  so can be read without memory barriers.
+ */
+    static bool mallocRecursionDetected;
 
     MallocMutex::scoped_lock* lock_acquired;
     char scoped_lock_space[sizeof(MallocMutex::scoped_lock)+1];
-public:
-    recursive_malloc_call_protector(bool condition) : lock_acquired(NULL) {
-        if (condition) {
-            lock_acquired = new (scoped_lock_space) MallocMutex::scoped_lock( rmc_mutex );
-            rml::internal::lockRecursiveMallocFlag();
-        }
+
+    static uintptr_t absDiffPtr(void *x, void *y) {
+        uintptr_t xi = (uintptr_t)x, yi = (uintptr_t)y;
+        return xi > yi ? xi - yi : yi - xi;
     }
-    ~recursive_malloc_call_protector() {
+public:
+
+    RecursiveMallocCallProtector() : lock_acquired(NULL) {
+        lock_acquired = new (scoped_lock_space) MallocMutex::scoped_lock( rmc_mutex );
+        if (canUsePthread)
+            owner_thread = pthread_self();
+        autoObjPtr = &scoped_lock_space;
+    }
+    ~RecursiveMallocCallProtector() {
         if (lock_acquired) {
-            rml::internal::unlockRecursiveMallocFlag();
+            autoObjPtr = NULL;
             lock_acquired->~scoped_lock();
         }
     }
+    static bool sameThreadActive() {
+        if (!autoObjPtr) // fast path
+            return false;
+        // Some thread has an active recursive call protector; check if the current one.
+        // Exact pthread_self based test
+        if (canUsePthread)
+            if (pthread_equal( owner_thread, pthread_self() )) {
+                mallocRecursionDetected = true;
+                return true;
+            } else
+                return false;
+        // inexact stack size based test
+        const uintptr_t threadStackSz = 2*1024*1024;
+        int dummy;
+        return absDiffPtr(autoObjPtr, &dummy)<threadStackSz;
+    }
+    static bool noRecursion() {
+        MALLOC_ASSERT(isMallocInitialized(), 
+                      "Recursion status can be checked only when initialization was done.");
+        return !mallocRecursionDetected;
+    }
+/* The function is called on 1st scalable_malloc call to check if malloc calls
+   scalable_malloc (nested call must set mallocRecursionDetected). */
+    static void detectNaiveOverload() {
+        if (!malloc_proxy) {
+#if __FreeBSD__
+/* If !canUsePthread, we can't call pthread_self() before, but now pthread 
+   is already on, so can do it. False positives here lead to silent switching 
+   from malloc to mmap for all large allocations with bad performance impact. */
+            if (!canUsePthread) {
+                canUsePthread = true;
+                owner_thread = pthread_self();
+            }
+#endif
+            free(malloc(1));
+        }
+    }
 };
 
-MallocMutex recursive_malloc_call_protector::rmc_mutex;
 
-#define malloc_proxy __TBB_malloc_proxy
+MallocMutex RecursiveMallocCallProtector::rmc_mutex;
+pthread_t   RecursiveMallocCallProtector::owner_thread;
+void       *RecursiveMallocCallProtector::autoObjPtr;
+bool        RecursiveMallocCallProtector::mallocRecursionDetected;
+#if __FreeBSD__
+bool        RecursiveMallocCallProtector::canUsePthread;
+#endif
 
-#else /* MALLOC_LD_PRELOAD */
-class recursive_malloc_call_protector {
+#else
+
+class RecursiveMallocCallProtector {
 public:
-    recursive_malloc_call_protector(bool) {}
-    ~recursive_malloc_call_protector() {}
+    RecursiveMallocCallProtector() {}
+    ~RecursiveMallocCallProtector() {}
 };
-const bool malloc_proxy = false;
-#endif /* MALLOC_LD_PRELOAD */
+
+#endif  /* MALLOC_CHECK_RECURSION */
 
 /*********** Code to provide thread ID and a thread-local void pointer **********/
 
@@ -148,7 +222,7 @@ static inline ThreadId  getThreadId(void)
     ThreadId result;
     result = reinterpret_cast<ThreadId>(TlsGetValue_func(Tid_key));
     if( !result ) {
-        recursive_malloc_call_protector scoped(/*condition=*/malloc_proxy);
+        RecursiveMallocCallProtector scoped;
         // Thread-local value is zero -> first call from this thread,
         // need to initialize with next ID value (IDs start from 1)
         result = AtomicIncrement(ThreadIdCount); // returned new value!
@@ -166,7 +240,7 @@ static inline void* getThreadMallocTLS() {
 }
 
 static inline void  setThreadMallocTLS( void * newvalue ) {
-    recursive_malloc_call_protector scoped(/*condition=*/malloc_proxy);
+    RecursiveMallocCallProtector scoped;
     TlsSetValue_func( TLS_pointer_key, newvalue );
 }
 
@@ -262,13 +336,14 @@ static struct LargeObjectCacheStat {
     size_t cacheSize;
 } loCacheStat;
 
-class CachedObjectsList {
-    struct CachedObject {
-        CachedObject *next,
-                     *prev;
-        uintptr_t     age;
-    };
+struct CachedObject {
+    CachedObject *next,
+                 *prev;
+    uintptr_t     age;
+    bool          fromMapMemory;
+};
 
+class CachedObjectsList {
     CachedObject *first,
                  *last;
     /* age of an oldest object in the list; equal to last->age, if last defined,
@@ -286,7 +361,7 @@ class CachedObjectsList {
        ctor not needed. */
     CachedObjectsList();
 public:
-    inline void push(void *buf, uintptr_t currAge);
+    inline void push(void *buf, bool fromMapMemory, uintptr_t currAge);
     inline CachedObject* pop(uintptr_t currAge);
     void releaseLastIfOld(uintptr_t currAge, size_t size);
 };
@@ -356,6 +431,11 @@ const uint32_t numBlockBins = minFittingIndex+numFittingBins;
 const uint32_t minLargeObjectSize = fittingSize5 + 1;
 
 /*
+ * Block::objectSize value used to mark blocks allocated by startupAlloc
+ */
+const unsigned int startupAllocObjSizeMark = ~(unsigned int)0;
+
+/*
  * Difference between object sizes in large object bins
  */
 const uint32_t largeObjectCacheStep = 8*1024;
@@ -373,19 +453,28 @@ static size_t mmapRequestSize = 0x0100000;
 
 /********** End of numeric parameters controlling allocations *********/
 
+#if !MALLOC_DEBUG
 #if __INTEL_COMPILER || _MSC_VER
 #define NOINLINE(decl) __declspec(noinline) decl
+#define ALWAYSINLINE(decl) __forceinline decl
 #elif __GNUC__
 #define NOINLINE(decl) decl __attribute__ ((noinline))
+#define ALWAYSINLINE(decl) decl __attribute__ ((always_inline))
 #else
 #define NOINLINE(decl) decl
+#define ALWAYSINLINE(decl) decl
 #endif
 
 static NOINLINE( Block* getPublicFreeListBlock(Bin* bin) );
 static NOINLINE( void moveBlockToBinFront(Block *block) );
 static NOINLINE( void processLessUsedBlock(Block *block) );
 
+static ALWAYSINLINE( Bin* getAllocationBin(size_t size) );
+static ALWAYSINLINE( void checkInitialization() );
+
+#undef ALWAYSINLINE
 #undef NOINLINE
+#endif /* !MALLOC_DEBUG */
 
 /*********** Code to acquire memory from the OS or other executive ****************/
 
@@ -395,80 +484,52 @@ static NOINLINE( void processLessUsedBlock(Block *block) );
 /* assume MapMemory and UnmapMemory are customized */
 #endif
 
-/*
- * Returns 0 if failure for any reason
- * otherwise returns a pointer to the newly available memory.
- */
-static void* getMemory (size_t bytes)
-{
-    void *result = 0;
-    // TODO: either make sure the assertion below is always valid, or remove it.
-    /*MALLOC_ASSERT( bytes>=minLargeObjectSize, "request too small" );*/
-#if MEMORY_MAPPING_USES_MALLOC
-    recursive_malloc_call_protector scoped(/*condition=*/malloc_proxy);
-#endif
-    result = MapMemory(bytes);
-#if MALLOC_TRACE
-    if (!result) {
-        TRACEF(( "[ScalableMalloc trace] getMemory unsuccess, can't get %d bytes from OS\n", bytes ));
-    } else {
-        TRACEF(( "[ScalableMalloc trace] - getMemory success returning %p\n", result ));
-    }
-#endif
-    return result;
-}
-
 #if USE_MALLOC_FOR_LARGE_OBJECT
 
 // (get|free)RawMemory only necessary for the USE_MALLOC_FOR_LARGE_OBJECT case
-static inline void* getRawMemory (size_t size)
+static inline void* getRawMemory (size_t size, bool alwaysUseMap = false)
 {
     void *object;
-#if MALLOC_LD_PRELOAD
-    if (malloc_proxy) {
-        if ( rml::internal::original_malloc_found ){
-            object = (*rml::internal::original_malloc_ptr)(size);
-        }else{
-            MALLOC_ASSERT( 0, "Original allocators not found, can't allocate large object." );
-            return NULL;
-        }
-    } else
-#endif /* MALLOC_LD_PRELOAD */
+
+    if (alwaysUseMap) 
+        object = MapMemory(size);
+    else
+#if MALLOC_CHECK_RECURSION
+    if (RecursiveMallocCallProtector::noRecursion())
         object = malloc(size);
+    else if ( rml::internal::original_malloc_found )
+        object = (*rml::internal::original_malloc_ptr)(size);
+    else
+        object = MapMemory(size);
+#else
+    object = malloc(size);
+#endif /* MALLOC_CHECK_RECURSION */
     return object;
 }
 
-static inline void freeRawMemory (void *object, size_t /*size*/)
+static inline void freeRawMemory (void *object, size_t size, bool alwaysUseMap)
 {
-#if MALLOC_LD_PRELOAD
-    if (malloc_proxy) {
-        if ( rml::internal::original_malloc_found ){
-            (*rml::internal::original_free_ptr)(object);
-        }else{
-            MALLOC_ASSERT( 0, ASSERT_TEXT );
-        }
-    } else
-#endif /* MALLOC_LD_PRELOAD */
+    if (alwaysUseMap)
+        UnmapMemory(object, size);
+    else
+#if MALLOC_CHECK_RECURSION
+    if (RecursiveMallocCallProtector::noRecursion())
         free(object);
+    else if ( rml::internal::original_malloc_found )
+        (*rml::internal::original_free_ptr)(object);
+    else
+        UnmapMemory(object, size);
+#else
+    free(object);
+#endif /* MALLOC_CHECK_RECURSION */
 }
 
 #else /* USE_MALLOC_FOR_LARGE_OBJECT */
 
-static void returnMemory(void *area, size_t bytes)
-{
-    int retcode = UnmapMemory(area, bytes);
-#if MALLOC_TRACE
-    if (retcode) {
-        TRACEF(( "[ScalableMalloc trace] returnMemory unsuccess for %p; perhaps it has already been freed or was never allocated.\n", area ));
-    }
-#endif
-    return;
-}
+static inline void* getRawMemory (size_t size, bool = false) { return MapMemory(size); }
 
-static inline void* getRawMemory (size_t size) { return getMemory(size); }
-
-static inline void freeRawMemory (void *object, size_t size) {
-    returnMemory(object, size);
+static inline void freeRawMemory (void *object, size_t size, bool) {
+    UnmapMemory(object, size);
 }
 
 #endif /* USE_MALLOC_FOR_LARGE_OBJECT */
@@ -604,7 +665,7 @@ static int mallocBigBlock()
     void *splitEdge;
     size_t bigBlockSplitSize;
 
-    unalignedBigBlock = getMemory(mmapRequestSize);
+    unalignedBigBlock = getRawMemory(mmapRequestSize, /*alwaysUseMap=*/true);
 
     if (!unalignedBigBlock) {
         TRACEF(( "[ScalableMalloc trace] in mallocBigBlock, getMemory returns 0\n" ));
@@ -1062,6 +1123,20 @@ static void returnPartialBlock(Bin* bin, Block *block)
     globalSizeBins[index].push((void **)block);
 }
 
+static void cleanBlockHeader(Block *block)
+{
+#if MALLOC_DEBUG
+    memset (block, 0x0e5, blockSize);
+#endif
+    block->next = NULL;
+    block->previous = NULL;
+    block->freeList = NULL;
+    block->allocatedCount = 0;
+    block->isFull = 0;
+
+    block->publicFreeList = NULL;
+}
+
 static void initEmptyBlock(Block *block, size_t size)
 {
     // Having getIndex and getObjectSize called next to each other
@@ -1069,21 +1144,14 @@ static void initEmptyBlock(Block *block, size_t size)
     unsigned int index      = getIndex(size);
     unsigned int objectSize = getObjectSize(size); 
     Bin* tls = (Bin*)getThreadMallocTLS();
-#if MALLOC_DEBUG
-    memset (block, 0x0e5, blockSize);
-#endif
+
+    cleanBlockHeader(block);
     block->mallocUniqueID = theMallocUniqueID;
-    block->next = NULL;
-    block->previous = NULL;
     block->objectSize = objectSize;
     block->owner = getThreadId();
     // bump pointer should be prepared for first allocation - thus mode it down to objectSize
     block->bumpPtr = (FreeObject *)((uintptr_t)block + blockSize - objectSize);
-    block->freeList = NULL;
-    block->allocatedCount = 0;
-    block->isFull = 0;
 
-    block->publicFreeList = NULL;
     // each block should have the address where the head of the list of "privatizable" blocks is kept
     // the only exception is a block for boot strap which is initialized when TLS is yet NULL
     block->nextPrivatizable = tls? (Block*)(tls + index) : NULL;
@@ -1092,7 +1160,7 @@ static void initEmptyBlock(Block *block, size_t size)
   }
 
 /* Return an empty uninitialized block in a non-blocking fashion. */
-static Block *getEmptyBlock(size_t size)
+static Block *getRawBlock()
 {
     Block *result;
     Block *bigBlock;
@@ -1120,6 +1188,15 @@ static Block *getEmptyBlock(size_t size)
         TRACEF(( "[ScalableMalloc trace] Pushing partial rest of block back on.\n" ));
         freeBlockList.push((void **)bigBlock);
     }
+
+    return result;
+}
+
+/* Return an empty uninitialized block in a non-blocking fashion. */
+static Block *getEmptyBlock(size_t size)
+{
+    Block *result = getRawBlock();
+
     initEmptyBlock(result, size);
     STAT_increment(result->owner, getIndex(result->objectSize), allocBlockNew);
 
@@ -1139,19 +1216,15 @@ static void returnEmptyBlock (Block *block, bool keepTheBin = true)
     }
     STAT_increment(block->owner, getIndex(block->objectSize), freeBlockBack);
 
-    block->publicFreeList = NULL;
+    cleanBlockHeader(block);
+
     block->nextPrivatizable = NULL;
 
     block->mallocUniqueID=0;
-    block->next = NULL;
-    block->previous = NULL;
     block->objectSize = 0;
     block->owner = (unsigned)-1;
     // for an empty block, bump pointer should point right after the end of the block
     block->bumpPtr = (FreeObject *)((uintptr_t)block + blockSize);
-    block->freeList = NULL;
-    block->allocatedCount = 0;
-    block->isFull = 0;
     freeBlockList.push((void **)block);
 }
 
@@ -1180,6 +1253,123 @@ inline static Block* setPreviousBlockActive( Bin* bin )
     return temp;
 }
 
+#if MALLOC_CHECK_RECURSION
+
+/*
+ * It's a special kind of allocation that can be used when malloc is 
+ * not available (either during startup or when malloc was already called and
+ * we are, say, inside pthread_setspecific's call). 
+ * Block can contain objects of different sizes, 
+ * allocations are performed by moving bump pointer and increasing of object counter, 
+ * releasing is done via counter of objects allocated in the block 
+ * or moving bump pointer if releasing object is on a bound.
+ */
+
+struct StartupBlock : public Block {
+    size_t availableSize() {
+        return blockSize - ((uintptr_t)bumpPtr - (uintptr_t)this);
+    }
+};
+
+static MallocMutex startupMallocLock;
+static StartupBlock *firstStartupBlock;
+
+static StartupBlock *getNewStartupBlock()
+{
+    StartupBlock *block = (StartupBlock *)getRawBlock();
+
+    if (!block) return NULL;
+
+    cleanBlockHeader(block);
+    block->mallocUniqueID = theMallocUniqueID;
+    // use startupAllocObjSizeMark to mark objects from startup block marker
+    block->objectSize = startupAllocObjSizeMark;
+    block->bumpPtr = (FreeObject *)((uintptr_t)block + sizeof(StartupBlock));
+    return block;
+}
+
+/* TODO: Function is called when malloc nested call is detected, so simultaneous
+   usage from different threads are unprobable, so block pre-allocation 
+   can be not useful, and the code might be simplified. */
+static FreeObject *startupAlloc(size_t size)
+{
+    FreeObject *result;
+    StartupBlock *newBlock = NULL;
+    bool newBlockUnused = false;
+
+    /* Objects must be aligned on their natural bounds, 
+       and objects bigger than word on word's bound. */
+    size = alignUp(size, sizeof(size_t));
+    // We need size of an object to implement msize.
+    size_t reqSize = size + sizeof(size_t);
+    // speculatively allocates newBlock to later use or return it as unused
+    if (!firstStartupBlock || firstStartupBlock->availableSize() < reqSize)
+        if (!(newBlock = getNewStartupBlock()))
+            return NULL;
+
+    {
+        MallocMutex::scoped_lock scoped_cs(startupMallocLock);
+    
+        if (!firstStartupBlock || firstStartupBlock->availableSize() < reqSize) {
+            if (!newBlock && !(newBlock = getNewStartupBlock()))
+                return NULL;
+            newBlock->next = (Block*)firstStartupBlock;
+            if (firstStartupBlock)
+                firstStartupBlock->previous = (Block*)newBlock;
+            firstStartupBlock = newBlock;
+        } else
+            newBlockUnused = true;
+        result = firstStartupBlock->bumpPtr;
+        firstStartupBlock->allocatedCount++;
+        firstStartupBlock->bumpPtr = 
+            (FreeObject *)((uintptr_t)firstStartupBlock->bumpPtr + reqSize);
+    }
+    if (newBlock && newBlockUnused)
+        returnEmptyBlock(newBlock);
+
+    // keep object size at the negative offset
+    *((size_t*)result) = size;
+    return (FreeObject*)((size_t*)result+1);
+}
+
+static size_t startupMsize(void *ptr) { return *((size_t*)ptr - 1); }
+
+static void startupFree(StartupBlock *block, void *ptr)
+{
+    Block* blockToRelease = NULL;
+    {
+        MallocMutex::scoped_lock scoped_cs(startupMallocLock);
+    
+        MALLOC_ASSERT(firstStartupBlock, ASSERT_TEXT);
+        MALLOC_ASSERT(startupAllocObjSizeMark==block->objectSize 
+                      && block->allocatedCount>0, ASSERT_TEXT);
+        MALLOC_ASSERT((uintptr_t)ptr>=(uintptr_t)block+sizeof(StartupBlock)
+                      && (uintptr_t)ptr+startupMsize(ptr)<=(uintptr_t)block+blockSize, 
+                      ASSERT_TEXT);
+        if (0 == --block->allocatedCount) {
+            if (block == firstStartupBlock)
+                firstStartupBlock = (StartupBlock*)firstStartupBlock->next;
+            if (block->previous)
+                block->previous->next = block->next;
+            if (block->next)
+                block->next->previous = block->previous;
+            blockToRelease = block;
+        } else if ((uintptr_t)ptr + startupMsize(ptr) == (uintptr_t)block->bumpPtr) {
+            // last object in the block released
+            FreeObject *newBump = (FreeObject*)((size_t*)ptr - 1);
+            MALLOC_ASSERT((uintptr_t)newBump>(uintptr_t)block+sizeof(StartupBlock), 
+                          ASSERT_TEXT);
+            block->bumpPtr = newBump;
+        }
+    }
+    if (blockToRelease) {
+        blockToRelease->previous = blockToRelease->next = NULL;
+        returnEmptyBlock(blockToRelease);
+    }
+}
+
+#endif /* MALLOC_CHECK_RECURSION */
+
 /********* End thread related code  *************/
 
 /********* Library initialization *************/
@@ -1194,7 +1384,7 @@ inline static Block* setPreviousBlockActive( Bin* bin )
 static int mallocInitialized;   // implicitly initialized to 0
 static MallocMutex initAndShutMutex;
 
-extern "C" void mallocThreadShutdownNotification(void*);
+inline bool isMallocInitialized() { return 2 == mallocInitialized; }
 
 /*
  * Allocator initialization routine;
@@ -1233,17 +1423,20 @@ static void initMemoryManager()
 //! Ensures that initMemoryManager() is called once and only once.
 /** Does not return until initMemoryManager() has been completed by a thread.
     There is no need to call this routine if mallocInitialized==2 . */
-static inline void checkInitialization()
+static void checkInitialization()
 {
     if (mallocInitialized==2) return;
     MallocMutex::scoped_lock lock( initAndShutMutex );
     if (mallocInitialized!=2) {
         MALLOC_ASSERT( mallocInitialized==0, ASSERT_TEXT );
         mallocInitialized = 1;
+        RecursiveMallocCallProtector scoped;
         initMemoryManager();
 #ifdef  MALLOC_EXTRA_INITIALIZATION
-        recursive_malloc_call_protector scoped(/*condition=*/malloc_proxy);
         MALLOC_EXTRA_INITIALIZATION;
+#endif
+#if MALLOC_CHECK_RECURSION
+        RecursiveMallocCallProtector::detectNaiveOverload();
 #endif
         MALLOC_ASSERT( mallocInitialized==1, ASSERT_TEXT );
         mallocInitialized = 2;
@@ -1271,13 +1464,15 @@ struct LargeObjectHeader {
     size_t       unalignedSize;     /* The size that was requested from getMemory */
     uint64_t     mallocUniqueID;    /* The field to check whether the memory was allocated by scalable_malloc */
     size_t       objectSize;        /* The size originally requested by a client */
+    bool         fromMapMemory;     /* Memory allocated when MapMemory usage is forced */
 };
 
-void CachedObjectsList::push(void *buf, uintptr_t currAge)
+void CachedObjectsList::push(void *buf, bool fromMapMemory, uintptr_t currAge)
 {   
     CachedObject *ptr = (CachedObject*)buf;
     ptr->prev = NULL;
     ptr->age  = currAge;
+    ptr->fromMapMemory = fromMapMemory;
 
     MallocMutex::scoped_lock scoped_cs(lock);
     ptr->next = first;
@@ -1290,7 +1485,7 @@ void CachedObjectsList::push(void *buf, uintptr_t currAge)
     }
 }
 
-CachedObjectsList::CachedObject *CachedObjectsList::pop(uintptr_t currAge)
+CachedObject *CachedObjectsList::pop(uintptr_t currAge)
 {   
     CachedObject *result=NULL;
     {
@@ -1343,7 +1538,7 @@ void CachedObjectsList::releaseLastIfOld(uintptr_t currAge, size_t size)
     }
     while ( toRelease ) {
         CachedObject *helper = toRelease->next;
-        freeRawMemory(toRelease, size);
+        freeRawMemory(toRelease, size, toRelease->fromMapMemory);
         toRelease = helper;
     }
 }
@@ -1363,7 +1558,7 @@ static uintptr_t cleanupCacheIfNeed ()
      * a different case mulitiple cache object would have same age,
      * and accuracy of predictors suffers.
      */
-    uintptr_t currAge = AtomicIncrement(loCacheStat.age);
+    uintptr_t currAge = (uintptr_t)AtomicIncrement((intptr_t&)loCacheStat.age);
 
     if ( 0 == currAge % cacheCleanupFreq ) {
         size_t objSize;
@@ -1384,10 +1579,10 @@ static uintptr_t cleanupCacheIfNeed ()
     return currAge;
 }
 
-static void* allocateCachedLargeObject (size_t size)
+static CachedObject* allocateCachedLargeObject (size_t size)
 {
     MALLOC_ASSERT( size%largeObjectCacheStep==0, ASSERT_TEXT );
-    void *block = NULL;
+    CachedObject *block = NULL;
     // blockSize is the minimal alignment and thus the minimal size of a large object.
     size_t idx = (size-blockSize)/largeObjectCacheStep;
     if (idx<numLargeObjectBins) {
@@ -1400,17 +1595,28 @@ static void* allocateCachedLargeObject (size_t size)
     return block;
 }
 
-static inline void* mallocLargeObject (size_t size, size_t alignment)
+static inline void* mallocLargeObject (size_t size, size_t alignment, 
+                                       bool startupAlloc = false)
 {
+    void * unalignedArea;
     size_t allocationSize = alignUp(size+sizeof(LargeObjectHeader)+alignment, 
                                     largeObjectCacheStep);
+    bool   blockFromMapMemory = false;
 
-    void * unalignedArea  = allocateCachedLargeObject(allocationSize);
-    if (!unalignedArea) {
-        unalignedArea = getRawMemory(allocationSize);
-        if (!unalignedArea)
-            return NULL; /* We can't get any more memory from the OS or executive */
-        STAT_increment(getThreadId(), ThreadCommonCounters, allocNewLargeObj);
+    if (startupAlloc) {
+        if (! (unalignedArea = getRawMemory(allocationSize, /*alwaysUseMap=*/true)))
+            return NULL;
+    } else {
+        CachedObject* cachedObj = allocateCachedLargeObject(allocationSize);
+        if (cachedObj) {
+            blockFromMapMemory = cachedObj->fromMapMemory;
+            unalignedArea = cachedObj;
+        } else {
+            unalignedArea = getRawMemory(allocationSize);
+            if (!unalignedArea)
+                return NULL;
+            STAT_increment(getThreadId(), ThreadCommonCounters, allocNewLargeObj);
+        }
     }
     void *alignedArea = (void*)alignUp((uintptr_t)unalignedArea+sizeof(LargeObjectHeader), alignment);
     LargeObjectHeader *header = (LargeObjectHeader*)((uintptr_t)alignedArea-sizeof(LargeObjectHeader));
@@ -1418,6 +1624,7 @@ static inline void* mallocLargeObject (size_t size, size_t alignment)
     header->mallocUniqueID=theMallocUniqueID;
     header->unalignedSize = allocationSize;
     header->objectSize = size;
+    header->fromMapMemory = startupAlloc || blockFromMapMemory;
     MALLOC_ASSERT( isLargeObject(alignedArea), ASSERT_TEXT );
     return alignedArea;
 }
@@ -1429,7 +1636,8 @@ static bool freeLargeObjectToCache (LargeObjectHeader* header)
     if (idx<numLargeObjectBins) {
         MALLOC_ASSERT( size%largeObjectCacheStep==0, ASSERT_TEXT );
         uintptr_t currAge = cleanupCacheIfNeed ();
-        globalCachedObjectBins[idx].push(header->unalignedResult, currAge);
+        globalCachedObjectBins[idx].push(header->unalignedResult, 
+                                         header->fromMapMemory, currAge);
 
         STAT_increment(getThreadId(), ThreadCommonCounters, cacheLargeObj);
         return true;
@@ -1443,7 +1651,8 @@ static inline void freeLargeObject (void *object)
     header = (LargeObjectHeader *)((uintptr_t)object - sizeof(LargeObjectHeader));
     header->mallocUniqueID = 0;
     if (!freeLargeObjectToCache(header)) {
-        freeRawMemory(header->unalignedResult, header->unalignedSize);
+        freeRawMemory(header->unalignedResult, header->unalignedSize, 
+                      /*alwaysUseMap=*/ header->fromMapMemory);
         STAT_increment(getThreadId(), ThreadCommonCounters, freeLargeObj);
     }
 }
@@ -1713,6 +1922,15 @@ extern "C" void * scalable_malloc(size_t size)
 
     if (!size) size = sizeof(size_t);
 
+#if MALLOC_CHECK_RECURSION
+    if (RecursiveMallocCallProtector::sameThreadActive()) {
+        result = size<minLargeObjectSize? startupAlloc(size) : 
+              (FreeObject*)mallocLargeObject(size, blockSize, /*startupAlloc=*/ true);
+        if (!result) errno = ENOMEM;
+        return result;
+    }
+#endif
+
     /* This returns only after malloc is initialized */
     checkInitialization();
 
@@ -1816,13 +2034,20 @@ extern "C" void scalable_free (void *object) {
     if (isLargeObject(object)) {
         freeLargeObject(object);
         return;
-    }
-
-    myTid = getThreadId();
+    } 
 
     block = (Block *)alignDown(object, blockSize);/* mask low bits to get the block */
     MALLOC_ASSERT( block->mallocUniqueID == theMallocUniqueID, ASSERT_TEXT );
     MALLOC_ASSERT( block->allocatedCount, ASSERT_TEXT );
+
+#if MALLOC_CHECK_RECURSION
+    if (block->objectSize == startupAllocObjSizeMark) {
+        startupFree((StartupBlock *)block, object);
+        return;
+    }
+#endif
+
+    myTid = getThreadId();
 
     // Due to aligned allocations, a pointer passed to scalable_free
     // might differ from the address of internally allocated object.
@@ -2076,8 +2301,15 @@ extern "C" size_t scalable_msize(void* ptr)
                 return loh->unalignedSize-((uintptr_t)ptr-(uintptr_t)loh->unalignedResult);
         } else {
             Block* block = (Block *)alignDown(ptr, blockSize);
-            if (block->mallocUniqueID==theMallocUniqueID)
-                return block->objectSize;
+            if (block->mallocUniqueID==theMallocUniqueID) {
+#if MALLOC_CHECK_RECURSION
+                size_t size = block->objectSize? block->objectSize : startupMsize(ptr);
+#else
+                size_t size = block->objectSize;
+#endif
+                MALLOC_ASSERT(size>0 && size<minLargeObjectSize, ASSERT_TEXT);
+                return size;
+            }
         }
     }
     errno = EINVAL;

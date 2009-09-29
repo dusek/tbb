@@ -213,8 +213,7 @@ void TestPushPop( size_t prefill, ptrdiff_t capacity, int nthread ) {
         tbb::tick_count t1 = tbb::tick_count::now();
 #if !__TBB_FLOATING_POINT_BROKEN
         double timing = (t1-t0).seconds();
-        if( Verbose )
-            REPORT("prefill=%d capacity=%d time = %g = %g nsec/operation\n", int(prefill), int(capacity), timing, timing/(2*M*nthread)*1.E9);
+        REMARK("prefill=%d capacity=%d time = %g = %g nsec/operation\n", int(prefill), int(capacity), timing, timing/(2*M*nthread)*1.E9);
 #else
         ((void)capacity);   // touch it to suppress the warning
 #endif /* !__TBB_FLOATING_POINT_BROKEN */
@@ -756,8 +755,7 @@ void TestExceptions() {
         m_pop
     };  
 
-    if( Verbose )
-        REPORT("Testing exception safety\n");
+    REMARK("Testing exception safety\n");
     // verify 'clear()' on exception; queue's destructor calls its clear()
     {
         concur_queue_t queue_clear;
@@ -770,8 +768,7 @@ void TestExceptions() {
             // TODO: some assert here?
         }
     }
-    if( Verbose )
-        REPORT("... queue destruction test passed\n");
+    REMARK("... queue destruction test passed\n");
 
     try {
         int n_pushed=0, n_popped=0;
@@ -848,8 +845,7 @@ void TestExceptions() {
                             break;
                     }
                 }
-                if( Verbose )
-                    REPORT("... for t=%d and m=%d, exception test passed\n", t, m);
+                REMARK("... for t=%d and m=%d, exception test passed\n", t, m);
             }
         }
     } catch(...) {

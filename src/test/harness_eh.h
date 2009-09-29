@@ -68,8 +68,8 @@ public:
 #define EXCEPTION_DESCR "Test exception"
 
 tbb::atomic<intptr_t> g_CurExecuted,
-                      g_ExecutedAtCatch;
-volatile intptr_t g_ExceptionThrown = 0;
+                      g_ExecutedAtCatch,
+                      g_ExceptionsThrown;
 volatile bool g_ExceptionCaught = false,
               g_UnknownException = false;
 
@@ -79,7 +79,8 @@ volatile bool g_ThrowException = true,
 bool    g_ExceptionInMaster = false;
 bool    g_SolitaryException = false;
 
-tbb::atomic<intptr_t> g_Exceptions; // number of exceptions propagated into the user users (i.e. intercepted by the tests)
+//! Number of exceptions propagated into the user code (i.e. intercepted by the tests)
+tbb::atomic<intptr_t> g_Exceptions;
 
 inline void ResetEhGlobals ( bool throwException = true, bool flog = false ) {
     Harness::ConcurrencyTracker::Reset();
@@ -88,14 +89,13 @@ inline void ResetEhGlobals ( bool throwException = true, bool flog = false ) {
     g_UnknownException = false;
     g_ThrowException = throwException;
     g_Flog = flog;
-    g_ExceptionThrown = 0;
-    g_Exceptions = 0;
+    g_ExceptionsThrown = g_Exceptions = 0;
 }
 
 #if HARNESS_EH_SIMPLE_MODE
 
 static void ThrowTestException () { 
-    g_ExceptionThrown = 1;
+    ++g_ExceptionsThrown;
     throw test_exception(EXCEPTION_DESCR);
 }
 
@@ -107,14 +107,11 @@ static void ThrowTestException ( intptr_t threshold ) {
     while ( Existed() < threshold )
         __TBB_Yield();
     if ( !g_SolitaryException ) {
-        g_ExceptionThrown = 1;
-        REMARK ("About to throw one of multiple test_exceptions (thread %08x):", Harness::CurrentTid());
+        ++g_ExceptionsThrown;
         throw test_exception(EXCEPTION_DESCR);
     }
-    if ( __TBB_CompareAndSwapW(&g_ExceptionThrown, 1, 0) == 0 ) {
-        REMARK ("About to throw solitary test_exception... :");
+    if ( g_ExceptionsThrown.compare_and_swap(1, 0) == 0 )
         throw solitary_test_exception(EXCEPTION_DESCR);
-    }
 }
 #endif /* !HARNESS_EH_SIMPLE_MODE */
 
@@ -129,13 +126,21 @@ static void ThrowTestException ( intptr_t threshold ) {
         ASSERT (strcmp(e.what(), EXCEPTION_DESCR) == 0, "Unexpected original exception info"); \
         g_ExceptionCaught = exceptionCaught = true; \
         ++g_Exceptions; \
+    } catch ( tbb::tbb_exception& e ) { \
+        REPORT("Unexpected %s\n", e.name()); \
+        ASSERT (g_UnknownException && !g_UnknownException, "Unexpected tbb::tbb_exception" ); \
+    } catch ( std::exception& e ) { \
+        REPORT("Unexpected %s\n", typeid(e).name()); \
+        ASSERT (g_UnknownException && !g_UnknownException, "Unexpected std::exception" ); \
     } catch ( ... ) { \
         g_ExceptionCaught = exceptionCaught = true; \
         g_UnknownException = unknownException = true; \
-    }
+    } \
+    if ( !g_SolitaryException ) \
+        REMARK_ONCE ("Multiple exceptions mode: %d throws", (intptr_t)g_ExceptionsThrown);
 
 #define ASSERT_EXCEPTION() \
-    ASSERT (g_ExceptionThrown ? g_ExceptionCaught : !g_ExceptionCaught, "throw without catch or catch without throw"); \
+    ASSERT (g_ExceptionsThrown ? g_ExceptionCaught : !g_ExceptionCaught, "throw without catch or catch without throw"); \
     ASSERT (g_ExceptionCaught, "no exception occurred"); \
     ASSERT (!g_UnknownException, "unknown exception was caught")
 

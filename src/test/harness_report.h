@@ -82,7 +82,6 @@ namespace Harness {
 #endif /* !TbbHarnessReporter */
 
     class Tracer {
-    public:
         int         m_flags;
         const char  *m_file;
         const char  *m_func;
@@ -90,18 +89,19 @@ namespace Harness {
 
         TbbHarnessReporter m_reporter;
 
+    public:
         enum  { 
             prefix = 1,
             need_lf = 2
         };
 
-	    Tracer*  set_trace_info ( int flags, const char *file, size_t line, const char *func ) {
-		    m_flags = flags;
-		    m_line = line;
+        Tracer*  set_trace_info ( int flags, const char *file, size_t line, const char *func ) {
+            m_flags = flags;
+            m_line = line;
             m_file = file;
             m_func = func;
-		    return  this;
-	    }
+            return  this;
+        }
 
         void  trace ( const char* fmt, ... ) {
             char    msg[MAX_TRACE_SIZE];
@@ -139,9 +139,9 @@ namespace Harness {
 } // namespace Harness
 
 #if defined(_MSC_VER)  &&  _MSC_VER >= 1300  ||  defined(__GNUC__)  ||  defined(__GNUG__)
-	#define HARNESS_TRACE_ORIG_INFO __FILE__, __LINE__, __FUNCTION__
+    #define HARNESS_TRACE_ORIG_INFO __FILE__, __LINE__, __FUNCTION__
 #else
-	#define HARNESS_TRACE_ORIG_INFO __FILE__, __LINE__, ""
+    #define HARNESS_TRACE_ORIG_INFO __FILE__, __LINE__, ""
     #define __FUNCTION__ ""
 #endif
 
