@@ -261,9 +261,9 @@ int main( int argc, char * argv[] ) {
             
             TestTryAcquire_OneThread<tbb::spin_rw_mutex>("Spin RW Mutex"); // only tests try_acquire for writers
 	    TestReaderWriterLock<tbb::spin_rw_mutex>( "Spin RW Mutex" );
+	}
 	if( Verbose )
 	    printf( "calling destructor for task_scheduler_init\n" );
-	}
     }
     STD::printf("done\n");
     return 0;

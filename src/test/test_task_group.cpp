@@ -26,8 +26,9 @@
     the GNU General Public License.
 */
 
-//! task_handle<T> cannot be instantiated with a function ptr withour explicit cast
+//! task_handle<T> cannot be instantiated with a function ptr without explicit cast
 #define __TBB_FUNC_PTR_AS_TEMPL_PARAM_BROKEN ((__linux__ || __APPLE__) && __INTEL_COMPILER && __INTEL_COMPILER < 1100) || __SUNPRO_CC
+#define __TBB_UNQUALIFIED_CALL_OF_DTOR_BROKEN (__GNUC__==3 && __GNUC_MINOR__<=3)
 
 #ifndef TBBTEST_USE_TBB
     #define TBBTEST_USE_TBB 1
@@ -429,7 +430,7 @@ void TestFib4 () {
     }
     rg.run_and_wait( *h );
     for( unsigned i = 0; i < numRepeats; ++i )
-#if __GNUC__==3 && __GNUC_MINOR__<=2
+#if __TBB_UNQUALIFIED_CALL_OF_DTOR_BROKEN
         ((handle_type*)(handles + i * hSize))->Concurrency::task_handle<void(*)()>::~task_handle();
 #else
         ((handle_type*)(handles + i * hSize))->~handle_type();

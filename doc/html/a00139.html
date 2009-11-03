@@ -1,6 +1,6 @@
 <!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
 <html><head><meta http-equiv="Content-Type" content="text/html;charset=iso-8859-1">
-<title>tbb::filter Class Reference</title>
+<title>tbb::enumerable_thread_specific&lt; T, Allocator, ETS_key_type &gt; Class Template Reference</title>
 <link href="doxygen.css" rel="stylesheet" type="text/css">
 <link href="tabs.css" rel="stylesheet" type="text/css">
 </head><body>
@@ -21,181 +21,162 @@
     <li><a href="functions.html"><span>Class&nbsp;Members</span></a></li>
   </ul></div>
 <div class="nav">
-<a class="el" href="a00229.html">tbb</a>::<a class="el" href="a00139.html">filter</a></div>
-<h1>tbb::filter Class Reference<br>
-<small>
-[<a class="el" href="a00233.html">Algorithms</a>]</small>
-</h1><!-- doxytag: class="tbb::filter" -->A stage in a pipeline.  
+<a class="el" href="a00230.html">tbb</a>::<a class="el" href="a00139.html">enumerable_thread_specific</a></div>
+<h1>tbb::enumerable_thread_specific&lt; T, Allocator, ETS_key_type &gt; Class Template Reference</h1><!-- doxytag: class="tbb::enumerable_thread_specific" -->The thread local class template.  
 <a href="#_details">More...</a>
 <p>
-<code>#include &lt;<a class="el" href="a00348.html">pipeline.h</a>&gt;</code>
+<code>#include &lt;<a class="el" href="a00293.html">enumerable_thread_specific.h</a>&gt;</code>
 <p>
-Inherited by <a class="el" href="a00175.html">tbb::thread_bound_filter</a>.
-<p>
-Inheritance diagram for tbb::filter:<center><font size="2">[<a href="graph_legend.html">legend</a>]</font></center><a href="a00044.html">List of all members.</a><table border="0" cellpadding="0" cellspacing="0">
+<a href="a00025.html">List of all members.</a><table border="0" cellpadding="0" cellspacing="0">
 <tr><td></td></tr>
 <tr><td colspan="2"><br><h2>Public Types</h2></td></tr>
-<tr><td class="memItemLeft" nowrap align="right" valign="top">&nbsp;</td><td class="memItemRight" valign="bottom"><a class="el" href="a00139.html#d3b6ed2c517144199d0c39c62ddfd8cf75740556347260927e94ce3b23a34abe">parallel</a> = current_version | filter_is_out_of_order</td></tr>
+<tr><td class="memItemLeft" nowrap align="right" valign="top"><a class="anchor" name="60047d25605a1ef993c49234e9ac5c2d"></a><!-- doxytag: member="tbb::enumerable_thread_specific::allocator_type" ref="60047d25605a1ef993c49234e9ac5c2d" args="" -->
+typedef Allocator&nbsp;</td><td class="memItemRight" valign="bottom"><a class="el" href="a00139.html#60047d25605a1ef993c49234e9ac5c2d">allocator_type</a></td></tr>
 
-<tr><td class="mdescLeft">&nbsp;</td><td class="mdescRight">processes multiple items in parallel and in no particular order  <a href="#d3b6ed2c517144199d0c39c62ddfd8cf75740556347260927e94ce3b23a34abe"></a><br></td></tr>
-<tr><td class="memItemLeft" nowrap align="right" valign="top">&nbsp;</td><td class="memItemRight" valign="bottom"><a class="el" href="a00139.html#d3b6ed2c517144199d0c39c62ddfd8cf5645f2f2a541e53009d3e719c06c5f93">serial_in_order</a> = current_version | filter_is_serial</td></tr>
+<tr><td class="mdescLeft">&nbsp;</td><td class="mdescRight">Basic types. <br></td></tr>
+<tr><td class="memItemLeft" nowrap align="right" valign="top"><a class="anchor" name="14b5967a627853440608619a07c9281a"></a><!-- doxytag: member="tbb::enumerable_thread_specific::value_type" ref="14b5967a627853440608619a07c9281a" args="" -->
+typedef T&nbsp;</td><td class="memItemRight" valign="bottom"><b>value_type</b></td></tr>
 
-<tr><td class="mdescLeft">&nbsp;</td><td class="mdescRight">processes items one at a time; all such filters process items in the same order  <a href="#d3b6ed2c517144199d0c39c62ddfd8cf5645f2f2a541e53009d3e719c06c5f93"></a><br></td></tr>
-<tr><td class="memItemLeft" nowrap align="right" valign="top">&nbsp;</td><td class="memItemRight" valign="bottom"><a class="el" href="a00139.html#d3b6ed2c517144199d0c39c62ddfd8cf7fb70bcb663107adfc2938de89bab7d9">serial_out_of_order</a> = current_version | filter_is_serial | filter_is_out_of_order</td></tr>
+<tr><td class="memItemLeft" nowrap align="right" valign="top"><a class="anchor" name="06ff8c90338e3f76201e56ac2e8bd566"></a><!-- doxytag: member="tbb::enumerable_thread_specific::reference" ref="06ff8c90338e3f76201e56ac2e8bd566" args="" -->
+typedef T &amp;&nbsp;</td><td class="memItemRight" valign="bottom"><b>reference</b></td></tr>
 
-<tr><td class="mdescLeft">&nbsp;</td><td class="mdescRight">processes items one at a time and in no particular order  <a href="#d3b6ed2c517144199d0c39c62ddfd8cf7fb70bcb663107adfc2938de89bab7d9"></a><br></td></tr>
-<tr><td class="memItemLeft" nowrap align="right" valign="top">&nbsp;</td><td class="memItemRight" valign="bottom"><a class="el" href="a00139.html#d3b6ed2c517144199d0c39c62ddfd8cff8662693d85bd1cd3df052b761edd237">serial</a> = serial_in_order</td></tr>
+<tr><td class="memItemLeft" nowrap align="right" valign="top"><a class="anchor" name="cc538a9b0919cba06e9807984a840710"></a><!-- doxytag: member="tbb::enumerable_thread_specific::const_reference" ref="cc538a9b0919cba06e9807984a840710" args="" -->
+typedef const T &amp;&nbsp;</td><td class="memItemRight" valign="bottom"><b>const_reference</b></td></tr>
 
-<tr><td class="memItemLeft" nowrap align="right" valign="top">enum &nbsp;</td><td class="memItemRight" valign="bottom"><a class="el" href="a00139.html#d3b6ed2c517144199d0c39c62ddfd8cf">mode</a> { <a class="el" href="a00139.html#d3b6ed2c517144199d0c39c62ddfd8cf75740556347260927e94ce3b23a34abe">parallel</a> =  current_version | filter_is_out_of_order, 
-<a class="el" href="a00139.html#d3b6ed2c517144199d0c39c62ddfd8cf5645f2f2a541e53009d3e719c06c5f93">serial_in_order</a> =  current_version | filter_is_serial, 
-<a class="el" href="a00139.html#d3b6ed2c517144199d0c39c62ddfd8cf7fb70bcb663107adfc2938de89bab7d9">serial_out_of_order</a> =  current_version | filter_is_serial | filter_is_out_of_order, 
-<a class="el" href="a00139.html#d3b6ed2c517144199d0c39c62ddfd8cff8662693d85bd1cd3df052b761edd237">serial</a> =  serial_in_order
- }</td></tr>
+<tr><td class="memItemLeft" nowrap align="right" valign="top"><a class="anchor" name="de58e04a639ecadf5e021b27c430cd32"></a><!-- doxytag: member="tbb::enumerable_thread_specific::pointer" ref="de58e04a639ecadf5e021b27c430cd32" args="" -->
+typedef T *&nbsp;</td><td class="memItemRight" valign="bottom"><b>pointer</b></td></tr>
+
+<tr><td class="memItemLeft" nowrap align="right" valign="top"><a class="anchor" name="3ee05b7e9b137913fc2f946d7edb6325"></a><!-- doxytag: member="tbb::enumerable_thread_specific::const_pointer" ref="3ee05b7e9b137913fc2f946d7edb6325" args="" -->
+typedef const T *&nbsp;</td><td class="memItemRight" valign="bottom"><b>const_pointer</b></td></tr>
+
+<tr><td class="memItemLeft" nowrap align="right" valign="top"><a class="anchor" name="f7104b09f6dc1f8035ea978f56f9a090"></a><!-- doxytag: member="tbb::enumerable_thread_specific::size_type" ref="f7104b09f6dc1f8035ea978f56f9a090" args="" -->
+typedef internal_collection_type::size_type&nbsp;</td><td class="memItemRight" valign="bottom"><b>size_type</b></td></tr>
+
+<tr><td class="memItemLeft" nowrap align="right" valign="top"><a class="anchor" name="631ed3389c35ba4b90b7d1be0e291d86"></a><!-- doxytag: member="tbb::enumerable_thread_specific::difference_type" ref="631ed3389c35ba4b90b7d1be0e291d86" args="" -->
+typedef internal_collection_type::difference_type&nbsp;</td><td class="memItemRight" valign="bottom"><b>difference_type</b></td></tr>
+
+<tr><td class="memItemLeft" nowrap align="right" valign="top"><a class="anchor" name="006bd5182f81d6d01cbb558c0b500a29"></a><!-- doxytag: member="tbb::enumerable_thread_specific::iterator" ref="006bd5182f81d6d01cbb558c0b500a29" args="" -->
+typedef internal::enumerable_thread_specific_iterator&lt;<br>
+ <a class="el" href="a00137.html">internal_collection_type</a>,<br>
+ value_type &gt;&nbsp;</td><td class="memItemRight" valign="bottom"><b>iterator</b></td></tr>
+
+<tr><td class="memItemLeft" nowrap align="right" valign="top"><a class="anchor" name="a59d5bae106a5e631fe164be9a261b72"></a><!-- doxytag: member="tbb::enumerable_thread_specific::const_iterator" ref="a59d5bae106a5e631fe164be9a261b72" args="" -->
+typedef internal::enumerable_thread_specific_iterator&lt;<br>
+ <a class="el" href="a00137.html">internal_collection_type</a>,<br>
+ const value_type &gt;&nbsp;</td><td class="memItemRight" valign="bottom"><b>const_iterator</b></td></tr>
+
+<tr><td class="memItemLeft" nowrap align="right" valign="top"><a class="anchor" name="8d695d7c22817587116f27089cd190d8"></a><!-- doxytag: member="tbb::enumerable_thread_specific::range_type" ref="8d695d7c22817587116f27089cd190d8" args="" -->
+typedef generic_range_type&lt;<br>
+ iterator &gt;&nbsp;</td><td class="memItemRight" valign="bottom"><b>range_type</b></td></tr>
+
+<tr><td class="memItemLeft" nowrap align="right" valign="top"><a class="anchor" name="73dc6b3dd06c14942c641a5ae924e355"></a><!-- doxytag: member="tbb::enumerable_thread_specific::const_range_type" ref="73dc6b3dd06c14942c641a5ae924e355" args="" -->
+typedef generic_range_type&lt;<br>
+ const_iterator &gt;&nbsp;</td><td class="memItemRight" valign="bottom"><b>const_range_type</b></td></tr>
 
 <tr><td colspan="2"><br><h2>Public Member Functions</h2></td></tr>
-<tr><td class="memItemLeft" nowrap align="right" valign="top"><a class="anchor" name="fcfec27656a69ff2072802ac001e936f"></a><!-- doxytag: member="tbb::filter::is_serial" ref="fcfec27656a69ff2072802ac001e936f" args="() const " -->
-bool&nbsp;</td><td class="memItemRight" valign="bottom"><a class="el" href="a00139.html#fcfec27656a69ff2072802ac001e936f">is_serial</a> () const </td></tr>
+<tr><td class="memItemLeft" nowrap align="right" valign="top"><a class="anchor" name="632e351d5269ac609b08dba19282f3a3"></a><!-- doxytag: member="tbb::enumerable_thread_specific::enumerable_thread_specific" ref="632e351d5269ac609b08dba19282f3a3" args="()" -->
+&nbsp;</td><td class="memItemRight" valign="bottom"><a class="el" href="a00139.html#632e351d5269ac609b08dba19282f3a3">enumerable_thread_specific</a> ()</td></tr>
 
-<tr><td class="mdescLeft">&nbsp;</td><td class="mdescRight">True if filter is serial. <br></td></tr>
-<tr><td class="memItemLeft" nowrap align="right" valign="top"><a class="anchor" name="cd53206c4795ef2df5df26b795caf692"></a><!-- doxytag: member="tbb::filter::is_ordered" ref="cd53206c4795ef2df5df26b795caf692" args="() const " -->
-bool&nbsp;</td><td class="memItemRight" valign="bottom"><a class="el" href="a00139.html#cd53206c4795ef2df5df26b795caf692">is_ordered</a> () const </td></tr>
+<tr><td class="mdescLeft">&nbsp;</td><td class="mdescRight">Default constructor, which leads to default construction of local copies. <br></td></tr>
+<tr><td class="memTemplParams" nowrap colspan="2"><a class="anchor" name="e5698930b84c098bb6d87175b8b50306"></a><!-- doxytag: member="tbb::enumerable_thread_specific::enumerable_thread_specific" ref="e5698930b84c098bb6d87175b8b50306" args="(Finit _finit)" -->
+template&lt;typename Finit&gt; </td></tr>
+<tr><td class="memTemplItemLeft" nowrap align="right" valign="top">&nbsp;</td><td class="memTemplItemRight" valign="bottom"><a class="el" href="a00139.html#e5698930b84c098bb6d87175b8b50306">enumerable_thread_specific</a> (Finit _finit)</td></tr>
 
-<tr><td class="mdescLeft">&nbsp;</td><td class="mdescRight">True if filter must receive stream in order. <br></td></tr>
-<tr><td class="memItemLeft" nowrap align="right" valign="top"><a class="anchor" name="15c29cae5d237e6d63dbfe5c94af89d5"></a><!-- doxytag: member="tbb::filter::is_bound" ref="15c29cae5d237e6d63dbfe5c94af89d5" args="() const " -->
-bool&nbsp;</td><td class="memItemRight" valign="bottom"><a class="el" href="a00139.html#15c29cae5d237e6d63dbfe5c94af89d5">is_bound</a> () const </td></tr>
+<tr><td class="mdescLeft">&nbsp;</td><td class="mdescRight">construction with initializer method <br></td></tr>
+<tr><td class="memItemLeft" nowrap align="right" valign="top"><a class="anchor" name="0466c43272d8458185e980fc2dc4abe2"></a><!-- doxytag: member="tbb::enumerable_thread_specific::enumerable_thread_specific" ref="0466c43272d8458185e980fc2dc4abe2" args="(const T &amp;_exemplar)" -->
+&nbsp;</td><td class="memItemRight" valign="bottom"><a class="el" href="a00139.html#0466c43272d8458185e980fc2dc4abe2">enumerable_thread_specific</a> (const T &amp;_exemplar)</td></tr>
 
-<tr><td class="mdescLeft">&nbsp;</td><td class="mdescRight">True if filter is thread-bound. <br></td></tr>
-<tr><td class="memItemLeft" nowrap align="right" valign="top">virtual void *&nbsp;</td><td class="memItemRight" valign="bottom"><a class="el" href="a00139.html#fa1b3dc1f4f47563ccab7f4d92f5b543">operator()</a> (void *item)=0</td></tr>
+<tr><td class="mdescLeft">&nbsp;</td><td class="mdescRight">Constuction with exemplar, which leads to copy construction of local copies. <br></td></tr>
+<tr><td class="memItemLeft" nowrap align="right" valign="top"><a class="anchor" name="41176526161d6fef1bdd19c2db7ded4d"></a><!-- doxytag: member="tbb::enumerable_thread_specific::~enumerable_thread_specific" ref="41176526161d6fef1bdd19c2db7ded4d" args="()" -->
+&nbsp;</td><td class="memItemRight" valign="bottom"><a class="el" href="a00139.html#41176526161d6fef1bdd19c2db7ded4d">~enumerable_thread_specific</a> ()</td></tr>
 
-<tr><td class="mdescLeft">&nbsp;</td><td class="mdescRight">Operate on an item from the input stream, and return item for output stream.  <a href="#fa1b3dc1f4f47563ccab7f4d92f5b543"></a><br></td></tr>
-<tr><td class="memItemLeft" nowrap align="right" valign="top">virtual __TBB_EXPORTED_METHOD&nbsp;</td><td class="memItemRight" valign="bottom"><a class="el" href="a00139.html#66d159f362293e3964ba3da8bc1d2604">~filter</a> ()</td></tr>
+<tr><td class="mdescLeft">&nbsp;</td><td class="mdescRight">Destructor. <br></td></tr>
+<tr><td class="memItemLeft" nowrap align="right" valign="top"><a class="anchor" name="ceb691814a0001241c43595d309cf615"></a><!-- doxytag: member="tbb::enumerable_thread_specific::local" ref="ceb691814a0001241c43595d309cf615" args="()" -->
+reference&nbsp;</td><td class="memItemRight" valign="bottom"><a class="el" href="a00139.html#ceb691814a0001241c43595d309cf615">local</a> ()</td></tr>
 
-<tr><td class="mdescLeft">&nbsp;</td><td class="mdescRight">Destroy filter.  <a href="#66d159f362293e3964ba3da8bc1d2604"></a><br></td></tr>
-<tr><td class="memItemLeft" nowrap align="right" valign="top">virtual void&nbsp;</td><td class="memItemRight" valign="bottom"><a class="el" href="a00139.html#56275eb889c77c4807967133e21401bd">finalize</a> (void *)</td></tr>
+<tr><td class="mdescLeft">&nbsp;</td><td class="mdescRight">returns reference to local, discarding exists <br></td></tr>
+<tr><td class="memItemLeft" nowrap align="right" valign="top"><a class="anchor" name="9505351eace34ed7130257adcae91706"></a><!-- doxytag: member="tbb::enumerable_thread_specific::local" ref="9505351eace34ed7130257adcae91706" args="(bool &amp;exists)" -->
+reference&nbsp;</td><td class="memItemRight" valign="bottom"><a class="el" href="a00139.html#9505351eace34ed7130257adcae91706">local</a> (bool &amp;exists)</td></tr>
 
-<tr><td class="mdescLeft">&nbsp;</td><td class="mdescRight">Destroys item if pipeline was cancelled.  <a href="#56275eb889c77c4807967133e21401bd"></a><br></td></tr>
-<tr><td colspan="2"><br><h2>Protected Member Functions</h2></td></tr>
-<tr><td class="memItemLeft" nowrap align="right" valign="top"><a class="anchor" name="f1111979b4afbde1a6c1873577a005ae"></a><!-- doxytag: member="tbb::filter::filter" ref="f1111979b4afbde1a6c1873577a005ae" args="(bool is_serial_)" -->
-&nbsp;</td><td class="memItemRight" valign="bottom"><b>filter</b> (bool is_serial_)</td></tr>
+<tr><td class="mdescLeft">&nbsp;</td><td class="mdescRight">Returns reference to calling thread's local copy, creating one if necessary. <br></td></tr>
+<tr><td class="memItemLeft" nowrap align="right" valign="top"><a class="anchor" name="302a4d6f55f852d5b7a6679e0e00316e"></a><!-- doxytag: member="tbb::enumerable_thread_specific::size" ref="302a4d6f55f852d5b7a6679e0e00316e" args="() const " -->
+size_type&nbsp;</td><td class="memItemRight" valign="bottom"><a class="el" href="a00139.html#302a4d6f55f852d5b7a6679e0e00316e">size</a> () const </td></tr>
 
-<tr><td class="memItemLeft" nowrap align="right" valign="top"><a class="anchor" name="a3f49df3c34a3e5a8884001c30230a94"></a><!-- doxytag: member="tbb::filter::filter" ref="a3f49df3c34a3e5a8884001c30230a94" args="(mode filter_mode)" -->
-&nbsp;</td><td class="memItemRight" valign="bottom"><b>filter</b> (<a class="el" href="a00139.html#d3b6ed2c517144199d0c39c62ddfd8cf">mode</a> filter_mode)</td></tr>
+<tr><td class="mdescLeft">&nbsp;</td><td class="mdescRight">Get the number of local copies. <br></td></tr>
+<tr><td class="memItemLeft" nowrap align="right" valign="top"><a class="anchor" name="ad23345a722622199deaa4dfd243d9f8"></a><!-- doxytag: member="tbb::enumerable_thread_specific::empty" ref="ad23345a722622199deaa4dfd243d9f8" args="() const " -->
+bool&nbsp;</td><td class="memItemRight" valign="bottom"><a class="el" href="a00139.html#ad23345a722622199deaa4dfd243d9f8">empty</a> () const </td></tr>
+
+<tr><td class="mdescLeft">&nbsp;</td><td class="mdescRight">true if there have been no local copies created <br></td></tr>
+<tr><td class="memItemLeft" nowrap align="right" valign="top"><a class="anchor" name="225f945c810397c6a54d5b8317dc5843"></a><!-- doxytag: member="tbb::enumerable_thread_specific::begin" ref="225f945c810397c6a54d5b8317dc5843" args="()" -->
+iterator&nbsp;</td><td class="memItemRight" valign="bottom"><a class="el" href="a00139.html#225f945c810397c6a54d5b8317dc5843">begin</a> ()</td></tr>
+
+<tr><td class="mdescLeft">&nbsp;</td><td class="mdescRight">begin iterator <br></td></tr>
+<tr><td class="memItemLeft" nowrap align="right" valign="top"><a class="anchor" name="44c0b67ebb56b2ae1fa260d9e2bd1e99"></a><!-- doxytag: member="tbb::enumerable_thread_specific::end" ref="44c0b67ebb56b2ae1fa260d9e2bd1e99" args="()" -->
+iterator&nbsp;</td><td class="memItemRight" valign="bottom"><a class="el" href="a00139.html#44c0b67ebb56b2ae1fa260d9e2bd1e99">end</a> ()</td></tr>
+
+<tr><td class="mdescLeft">&nbsp;</td><td class="mdescRight">end iterator <br></td></tr>
+<tr><td class="memItemLeft" nowrap align="right" valign="top"><a class="anchor" name="ba6674c6102a6faf8f96d131497654b3"></a><!-- doxytag: member="tbb::enumerable_thread_specific::begin" ref="ba6674c6102a6faf8f96d131497654b3" args="() const " -->
+const_iterator&nbsp;</td><td class="memItemRight" valign="bottom"><a class="el" href="a00139.html#ba6674c6102a6faf8f96d131497654b3">begin</a> () const </td></tr>
+
+<tr><td class="mdescLeft">&nbsp;</td><td class="mdescRight">begin const iterator <br></td></tr>
+<tr><td class="memItemLeft" nowrap align="right" valign="top"><a class="anchor" name="89811890e6a77f1e0cfc6c24ed35d09b"></a><!-- doxytag: member="tbb::enumerable_thread_specific::end" ref="89811890e6a77f1e0cfc6c24ed35d09b" args="() const " -->
+const_iterator&nbsp;</td><td class="memItemRight" valign="bottom"><a class="el" href="a00139.html#89811890e6a77f1e0cfc6c24ed35d09b">end</a> () const </td></tr>
+
+<tr><td class="mdescLeft">&nbsp;</td><td class="mdescRight">end const iterator <br></td></tr>
+<tr><td class="memItemLeft" nowrap align="right" valign="top"><a class="anchor" name="56f6124f5870e26433a5bb2b71e4b7e9"></a><!-- doxytag: member="tbb::enumerable_thread_specific::range" ref="56f6124f5870e26433a5bb2b71e4b7e9" args="(size_t grainsize=1)" -->
+range_type&nbsp;</td><td class="memItemRight" valign="bottom"><a class="el" href="a00139.html#56f6124f5870e26433a5bb2b71e4b7e9">range</a> (size_t grainsize=1)</td></tr>
+
+<tr><td class="mdescLeft">&nbsp;</td><td class="mdescRight">Get range for parallel algorithms. <br></td></tr>
+<tr><td class="memItemLeft" nowrap align="right" valign="top"><a class="anchor" name="a32dd1d88e42dc1faccceca244b12b6c"></a><!-- doxytag: member="tbb::enumerable_thread_specific::range" ref="a32dd1d88e42dc1faccceca244b12b6c" args="(size_t grainsize=1) const " -->
+const_range_type&nbsp;</td><td class="memItemRight" valign="bottom"><a class="el" href="a00139.html#a32dd1d88e42dc1faccceca244b12b6c">range</a> (size_t grainsize=1) const </td></tr>
+
+<tr><td class="mdescLeft">&nbsp;</td><td class="mdescRight">Get const range for parallel algorithms. <br></td></tr>
+<tr><td class="memItemLeft" nowrap align="right" valign="top"><a class="anchor" name="c890601a45273ef759e64ac2fe75cb6a"></a><!-- doxytag: member="tbb::enumerable_thread_specific::clear" ref="c890601a45273ef759e64ac2fe75cb6a" args="()" -->
+void&nbsp;</td><td class="memItemRight" valign="bottom"><a class="el" href="a00139.html#c890601a45273ef759e64ac2fe75cb6a">clear</a> ()</td></tr>
+
+<tr><td class="mdescLeft">&nbsp;</td><td class="mdescRight">Destroys local copies. <br></td></tr>
+<tr><td class="memTemplParams" nowrap colspan="2"><a class="anchor" name="f109a2bbe9ce390f78363a2d17a88ed5"></a><!-- doxytag: member="tbb::enumerable_thread_specific::enumerable_thread_specific" ref="f109a2bbe9ce390f78363a2d17a88ed5" args="(const enumerable_thread_specific&lt; U, Alloc, Cachetype &gt; &amp;other)" -->
+template&lt;typename U, typename Alloc, ets_key_usage_type Cachetype&gt; </td></tr>
+<tr><td class="memTemplItemLeft" nowrap align="right" valign="top">&nbsp;</td><td class="memTemplItemRight" valign="bottom"><b>enumerable_thread_specific</b> (const <a class="el" href="a00139.html">enumerable_thread_specific</a>&lt; U, Alloc, Cachetype &gt; &amp;other)</td></tr>
+
+<tr><td class="memItemLeft" nowrap align="right" valign="top"><a class="anchor" name="c3be03082943460305b8022693c04b4a"></a><!-- doxytag: member="tbb::enumerable_thread_specific::enumerable_thread_specific" ref="c3be03082943460305b8022693c04b4a" args="(const enumerable_thread_specific &amp;other)" -->
+&nbsp;</td><td class="memItemRight" valign="bottom"><b>enumerable_thread_specific</b> (const <a class="el" href="a00139.html">enumerable_thread_specific</a> &amp;other)</td></tr>
+
+<tr><td class="memItemLeft" nowrap align="right" valign="top"><a class="anchor" name="8226b10dbb71cfe467eb85ac37b91ff0"></a><!-- doxytag: member="tbb::enumerable_thread_specific::operator=" ref="8226b10dbb71cfe467eb85ac37b91ff0" args="(const enumerable_thread_specific &amp;other)" -->
+<a class="el" href="a00139.html">enumerable_thread_specific</a> &amp;&nbsp;</td><td class="memItemRight" valign="bottom"><b>operator=</b> (const <a class="el" href="a00139.html">enumerable_thread_specific</a> &amp;other)</td></tr>
+
+<tr><td class="memTemplParams" nowrap colspan="2"><a class="anchor" name="b124465416967c23b12841170a7f0263"></a><!-- doxytag: member="tbb::enumerable_thread_specific::operator=" ref="b124465416967c23b12841170a7f0263" args="(const enumerable_thread_specific&lt; U, Alloc, Cachetype &gt; &amp;other)" -->
+template&lt;typename U, typename Alloc, ets_key_usage_type Cachetype&gt; </td></tr>
+<tr><td class="memTemplItemLeft" nowrap align="right" valign="top"><a class="el" href="a00139.html">enumerable_thread_specific</a> &amp;&nbsp;</td><td class="memTemplItemRight" valign="bottom"><b>operator=</b> (const <a class="el" href="a00139.html">enumerable_thread_specific</a>&lt; U, Alloc, Cachetype &gt; &amp;other)</td></tr>
+
+<tr><td class="memTemplParams" nowrap colspan="2"><a class="anchor" name="dd6b27d9c98297220b08732d9087a5a8"></a><!-- doxytag: member="tbb::enumerable_thread_specific::combine" ref="dd6b27d9c98297220b08732d9087a5a8" args="(combine_func_t f_combine)" -->
+template&lt;typename combine_func_t&gt; </td></tr>
+<tr><td class="memTemplItemLeft" nowrap align="right" valign="top">T&nbsp;</td><td class="memTemplItemRight" valign="bottom"><b>combine</b> (combine_func_t f_combine)</td></tr>
+
+<tr><td class="memTemplParams" nowrap colspan="2"><a class="anchor" name="4abce9638ef2693d813d820af59bb6e2"></a><!-- doxytag: member="tbb::enumerable_thread_specific::combine_each" ref="4abce9638ef2693d813d820af59bb6e2" args="(combine_func_t f_combine)" -->
+template&lt;typename combine_func_t&gt; </td></tr>
+<tr><td class="memTemplItemLeft" nowrap align="right" valign="top">void&nbsp;</td><td class="memTemplItemRight" valign="bottom"><b>combine_each</b> (combine_func_t f_combine)</td></tr>
 
 <tr><td colspan="2"><br><h2>Friends</h2></td></tr>
-<tr><td class="memItemLeft" nowrap align="right" valign="top"><a class="anchor" name="8228ce0751009045e8158d2e642715a6"></a><!-- doxytag: member="tbb::filter::internal::stage_task" ref="8228ce0751009045e8158d2e642715a6" args="" -->
-class&nbsp;</td><td class="memItemRight" valign="bottom"><b>internal::stage_task</b></td></tr>
+<tr><td class="memItemLeft" nowrap align="right" valign="top"><a class="anchor" name="45364b2f249ceb935cff05c29fcfcf5c"></a><!-- doxytag: member="tbb::enumerable_thread_specific::enumerable_thread_specific" ref="45364b2f249ceb935cff05c29fcfcf5c" args="" -->
+class&nbsp;</td><td class="memItemRight" valign="bottom"><b>enumerable_thread_specific</b></td></tr>
 
-<tr><td class="memItemLeft" nowrap align="right" valign="top"><a class="anchor" name="05d67150ca324698ba852553e223d3eb"></a><!-- doxytag: member="tbb::filter::internal::pipeline_root_task" ref="05d67150ca324698ba852553e223d3eb" args="" -->
-class&nbsp;</td><td class="memItemRight" valign="bottom"><b>internal::pipeline_root_task</b></td></tr>
+<tr><td colspan="2"><br><h2>Classes</h2></td></tr>
+<tr><td class="memItemLeft" nowrap align="right" valign="top">class &nbsp;</td><td class="memItemRight" valign="bottom"><b>generic_range_type</b></td></tr>
 
-<tr><td class="memItemLeft" nowrap align="right" valign="top"><a class="anchor" name="b211ee58bada099e24280d478017cbff"></a><!-- doxytag: member="tbb::filter::pipeline" ref="b211ee58bada099e24280d478017cbff" args="" -->
-class&nbsp;</td><td class="memItemRight" valign="bottom"><b>pipeline</b></td></tr>
+<tr><td class="mdescLeft">&nbsp;</td><td class="mdescRight">A generic range, used to create range objects from the iterators. <br></td></tr>
+<tr><td class="memItemLeft" nowrap align="right" valign="top">struct &nbsp;</td><td class="memItemRight" valign="bottom"><b>padded_element</b></td></tr>
 
-<tr><td class="memItemLeft" nowrap align="right" valign="top"><a class="anchor" name="e43b69a482df8e053cb199af69eb5139"></a><!-- doxytag: member="tbb::filter::thread_bound_filter" ref="e43b69a482df8e053cb199af69eb5139" args="" -->
-class&nbsp;</td><td class="memItemRight" valign="bottom"><b>thread_bound_filter</b></td></tr>
-
+<tr><td class="mdescLeft">&nbsp;</td><td class="mdescRight">The padded elements; padded to avoid false sharing. <br></td></tr>
 </table>
 <hr><a name="_details"></a><h2>Detailed Description</h2>
-A stage in a pipeline. 
-<p>
-<hr><h2>Member Enumeration Documentation</h2>
-<a class="anchor" name="d3b6ed2c517144199d0c39c62ddfd8cf"></a><!-- doxytag: member="tbb::filter::mode" ref="d3b6ed2c517144199d0c39c62ddfd8cf" args="" -->
-<div class="memitem">
-<div class="memproto">
-      <table class="memname">
-        <tr>
-          <td class="memname">enum <a class="el" href="a00139.html#d3b6ed2c517144199d0c39c62ddfd8cf">tbb::filter::mode</a>          </td>
-        </tr>
-      </table>
-</div>
-<div class="memdoc">
+<h3>template&lt;typename T, typename Allocator = cache_aligned_allocator&lt;T&gt;, ets_key_usage_type ETS_key_type = ets_no_key&gt;<br>
+ class tbb::enumerable_thread_specific&lt; T, Allocator, ETS_key_type &gt;</h3>
 
+The thread local class template. 
 <p>
-<dl compact><dt><b>Enumerator: </b></dt><dd>
-<table border="0" cellspacing="2" cellpadding="0">
-<tr><td valign="top"><em><a class="anchor" name="d3b6ed2c517144199d0c39c62ddfd8cf75740556347260927e94ce3b23a34abe"></a><!-- doxytag: member="parallel" ref="d3b6ed2c517144199d0c39c62ddfd8cf75740556347260927e94ce3b23a34abe" args="" -->parallel</em>&nbsp;</td><td>
-processes multiple items in parallel and in no particular order </td></tr>
-<tr><td valign="top"><em><a class="anchor" name="d3b6ed2c517144199d0c39c62ddfd8cf5645f2f2a541e53009d3e719c06c5f93"></a><!-- doxytag: member="serial_in_order" ref="d3b6ed2c517144199d0c39c62ddfd8cf5645f2f2a541e53009d3e719c06c5f93" args="" -->serial_in_order</em>&nbsp;</td><td>
-processes items one at a time; all such filters process items in the same order </td></tr>
-<tr><td valign="top"><em><a class="anchor" name="d3b6ed2c517144199d0c39c62ddfd8cf7fb70bcb663107adfc2938de89bab7d9"></a><!-- doxytag: member="serial_out_of_order" ref="d3b6ed2c517144199d0c39c62ddfd8cf7fb70bcb663107adfc2938de89bab7d9" args="" -->serial_out_of_order</em>&nbsp;</td><td>
-processes items one at a time and in no particular order </td></tr>
-<tr><td valign="top"><em><a class="anchor" name="d3b6ed2c517144199d0c39c62ddfd8cff8662693d85bd1cd3df052b761edd237"></a><!-- doxytag: member="serial" ref="d3b6ed2c517144199d0c39c62ddfd8cff8662693d85bd1cd3df052b761edd237" args="" -->serial</em>&nbsp;</td><td>
-<dl compact><dt><b><a class="el" href="deprecated.html#_deprecated000002">Deprecated:</a></b></dt><dd>use serial_in_order instead </dd></dl>
-</td></tr>
-</table>
-</dl>
-
-</div>
-</div><p>
-<hr><h2>Constructor &amp; Destructor Documentation</h2>
-<a class="anchor" name="66d159f362293e3964ba3da8bc1d2604"></a><!-- doxytag: member="tbb::filter::~filter" ref="66d159f362293e3964ba3da8bc1d2604" args="()" -->
-<div class="memitem">
-<div class="memproto">
-      <table class="memname">
-        <tr>
-          <td class="memname">virtual __TBB_EXPORTED_METHOD tbb::filter::~filter           </td>
-          <td>(</td>
-          <td class="paramname">          </td>
-          <td>&nbsp;)&nbsp;</td>
-          <td width="100%"><code> [virtual]</code></td>
-        </tr>
-      </table>
-</div>
-<div class="memdoc">
-
-<p>
-Destroy filter. 
-<p>
-If the filter was added to a pipeline, the pipeline must be destroyed first. 
-</div>
-</div><p>
-<hr><h2>Member Function Documentation</h2>
-<a class="anchor" name="56275eb889c77c4807967133e21401bd"></a><!-- doxytag: member="tbb::filter::finalize" ref="56275eb889c77c4807967133e21401bd" args="(void *)" -->
-<div class="memitem">
-<div class="memproto">
-      <table class="memname">
-        <tr>
-          <td class="memname">virtual void tbb::filter::finalize           </td>
-          <td>(</td>
-          <td class="paramtype">void *&nbsp;</td>
-          <td class="paramname">          </td>
-          <td>&nbsp;)&nbsp;</td>
-          <td width="100%"><code> [inline, virtual]</code></td>
-        </tr>
-      </table>
-</div>
-<div class="memdoc">
-
-<p>
-Destroys item if pipeline was cancelled. 
-<p>
-Required to prevent memory leaks. Note it can be called concurrently even for serial filters. 
-</div>
-</div><p>
-<a class="anchor" name="fa1b3dc1f4f47563ccab7f4d92f5b543"></a><!-- doxytag: member="tbb::filter::operator()" ref="fa1b3dc1f4f47563ccab7f4d92f5b543" args="(void *item)=0" -->
-<div class="memitem">
-<div class="memproto">
-      <table class="memname">
-        <tr>
-          <td class="memname">virtual void* tbb::filter::operator()           </td>
-          <td>(</td>
-          <td class="paramtype">void *&nbsp;</td>
-          <td class="paramname"> <em>item</em>          </td>
-          <td>&nbsp;)&nbsp;</td>
-          <td width="100%"><code> [pure virtual]</code></td>
-        </tr>
-      </table>
-</div>
-<div class="memdoc">
-
-<p>
-Operate on an item from the input stream, and return item for output stream. 
-<p>
-Returns NULL if filter is a sink. 
-</div>
-</div><p>
 <hr>The documentation for this class was generated from the following file:<ul>
-<li><a class="el" href="a00348.html">pipeline.h</a></ul>
+<li><a class="el" href="a00293.html">enumerable_thread_specific.h</a></ul>
 <hr>
 <p></p>
 Copyright &copy; 2005-2009 Intel Corporation.  All Rights Reserved.

@@ -33,6 +33,7 @@
 #include "../parallel_invoke.h"
 #include "../parallel_for_each.h"
 #include "../parallel_for.h"
+#include "../tbb_exception.h"
 
 namespace Concurrency {
 
@@ -52,6 +53,8 @@ namespace Concurrency {
     using tbb::parallel_invoke;
     using tbb::strict_ppl::parallel_for;
     using tbb::parallel_for_each;
+
+    using tbb::improper_lock;
 
 } // namespace Concurrency
 

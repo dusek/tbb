@@ -30,6 +30,14 @@
 
 #include "tbb/itt_notify.cpp"
 
+#undef UNICODE
+
+#if USE_PTHREAD
+#include <dlfcn.h>
+#elif USE_WINTHREAD
+#include <windows.h>
+#endif
+
 #if MALLOC_CHECK_RECURSION
 
 #include <pthread.h>
@@ -45,7 +53,7 @@
 extern "C" {
 
 void   safer_scalable_free( void*, void (*)(void*) );
-void * safer_scalable_realloc( void*, size_t, void* (*)(void*,size_t) );
+void * safer_scalable_realloc( void*, size_t, void* );
 
 bool __TBB_internal_find_original_malloc(int num, const char *names[], void *table[])  __attribute__ ((weak));
 
@@ -91,6 +99,25 @@ void MallocInitializeITT() {
 }
 #endif /* DO_ITT_NOTIFY */
 
+#if TBB_USE_DEBUG
+#define DEBUG_SUFFIX "_debug"
+#else
+#define DEBUG_SUFFIX
+#endif /* TBB_USE_DEBUG */
+
+// MALLOCLIB_NAME is the name of the TBB memory allocator library.
+#if _WIN32||_WIN64
+#define MALLOCLIB_NAME "tbbmalloc" DEBUG_SUFFIX ".dll"
+#elif __APPLE__
+#define MALLOCLIB_NAME "libtbbmalloc" DEBUG_SUFFIX ".dylib"
+#elif __linux__
+#define MALLOCLIB_NAME "libtbbmalloc" DEBUG_SUFFIX  __TBB_STRING(.so.TBB_COMPATIBLE_INTERFACE_VERSION)
+#elif __FreeBSD__ || __sun
+#define MALLOCLIB_NAME "libtbbmalloc" DEBUG_SUFFIX ".so"
+#else
+#error Unknown OS
+#endif
+
 void init_tbbmalloc() {
 #if MALLOC_LD_PRELOAD
     if (malloc_proxy && __TBB_internal_find_original_malloc) {
@@ -116,6 +143,18 @@ void init_tbbmalloc() {
 #if DO_ITT_NOTIFY
     MallocInitializeITT();
 #endif
+
+/* Preventing TBB allocator library from unloading to prevent
+   resource leak, as memory is not released on the library unload.
+*/
+#if USE_PTHREAD
+    dlopen(MALLOCLIB_NAME, RTLD_NOW);
+#elif USE_WINTHREAD
+    // Prevent Windows from displaying message boxes if it fails to load library
+    UINT prev_mode = SetErrorMode (SEM_FAILCRITICALERRORS);
+    LoadLibrary(MALLOCLIB_NAME);
+    SetErrorMode (prev_mode);
+#endif /* USE_PTHREAD */
 }
 
 #if !(_WIN32||_WIN64)
@@ -153,7 +192,7 @@ int __TBB_internal_posix_memalign(void **memptr, size_t alignment, size_t size)
 
 void* __TBB_internal_realloc(void* ptr, size_t sz)
 {
-    return safer_scalable_realloc(ptr, sz, original_realloc_ptr);
+    return safer_scalable_realloc(ptr, sz, (void*&)original_realloc_ptr);
 }
 
 void __TBB_internal_free(void *object)

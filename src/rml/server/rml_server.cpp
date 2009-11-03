@@ -33,9 +33,6 @@
 
 #include "tbb/tbb_allocator.h"
 #include "tbb/cache_aligned_allocator.h"
-#include "job_automaton.h"
-#include "wait_counter.h"
-#include "thread_monitor.h"
 #include "tbb/aligned_space.h"
 #include "tbb/atomic.h"
 #include "tbb/tbb_misc.h"           // Get DetectNumberOfWorkers() from here.
@@ -48,6 +45,10 @@
 #if _MSC_VER==1500 && !defined(__INTEL_COMPILER)
 #pragma warning( pop )
 #endif
+
+#include "job_automaton.h"
+#include "wait_counter.h"
+#include "thread_monitor.h"
 
 namespace rml {
 
@@ -253,6 +254,7 @@ private:
     rml::server *my_conn;
     rml::job* my_job;
     job_automaton* my_ja;
+    size_t my_index;
 
 #if TBB_USE_ASSERT
     //! Flag used to check if thread is still using *this.
@@ -428,6 +430,8 @@ thread_map::value_type* thread_map::add_one_thread( bool is_omp_thread_ ) {
     } while( my_unrealized_threads.compare_and_swap(u-1,u)!=u );
     server_thread& t = my_private_threads.add_one_thread();
     t.is_omp_thread = is_omp_thread_;
+    __TBB_ASSERT( u>=1, NULL );
+    t.my_index = u - 1;
     __TBB_ASSERT( t.state!=ts_tbb_busy, NULL );
     if( !t.is_omp_thread )
         t.tbb_state = ts_created;
@@ -967,8 +971,14 @@ server_thread::~server_thread() {
     __TBB_ASSERT( !has_active_thread, NULL );
 }
 
+#if _MSC_VER && !defined(__INTEL_COMPILER)
+    // Suppress overzealous compiler warnings about an initialized variable 'sink_for_alloca' not referenced
+    #pragma warning(push)
+    #pragma warning(disable:4189)
+#endif
 __RML_DECL_THREAD_ROUTINE server_thread::thread_routine( void* arg ) {
     server_thread* self = static_cast<server_thread*>(arg);
+    AVOID_64K_ALIASING( self->my_index );
 #if TBB_USE_ASSERT
     __TBB_ASSERT( !self->has_active_thread, NULL );
     self->has_active_thread = true;
@@ -976,6 +986,9 @@ __RML_DECL_THREAD_ROUTINE server_thread::thread_routine( void* arg ) {
     self->loop();
     return NULL;
 }
+#if _MSC_VER && !defined(__INTEL_COMPILER)
+    #pragma warning(pop)
+#endif
 
 void server_thread::launch( size_t stack_size ) {
     thread_monitor::launch( thread_routine, this, stack_size );

@@ -42,7 +42,7 @@
 #if __TBB_EXCEPTIONS && !__TBB_EXCEPTION_HANDLING_TOTALLY_BROKEN
 
 #define FLAT_RANGE  100000
-#define FLAT_GRAIN  1000
+#define FLAT_GRAIN  100
 #define NESTING_RANGE  100
 #define NESTING_GRAIN  10
 #define NESTED_RANGE  (FLAT_RANGE / NESTING_RANGE)
@@ -389,6 +389,7 @@ void RunParForAndReduceTests () {
     Test0();
 #if !__TBB_EXCEPTION_HANDLING_BROKEN
     Test1();
+    Test2();
     Test3();
     Test4();
 #endif
@@ -646,6 +647,7 @@ class ParDoBodyToCancel2 {
 public:
     void operator()( size_t& /*value*/ ) const {
         ++g_CurExecuted;
+        Harness::ConcurrencyTracker ct;
         // The test will hang (and be timed out by the test system) if is_cancelled() is broken
         while( !tbb::task::self().is_cancelled() )
             __TBB_Yield();
@@ -730,7 +732,7 @@ void RunParDoTests() {
 
 const size_t c_DataEndTag = size_t(~0);
 
-size_t g_NumTokens = 0;
+int g_NumTokens = 0;
 
 // Simple input filter class, it assigns 1 to all array members
 // It stops when it receives item equal to -1
@@ -811,45 +813,36 @@ void Test0_pipeline () {
 
 // Simple filter with exception throwing
 class SimpleFilter : public tbb::filter {
+    bool m_canThrow;
 public:
-    SimpleFilter (tbb::filter::mode _mode ) : filter (_mode) {}
+    SimpleFilter (tbb::filter::mode _mode, bool canThrow ) : filter (_mode), m_canThrow(canThrow) {}
 
     void* operator()(void* item) {
-        Harness::ConcurrencyTracker ct;
         ++g_CurExecuted;
-        WaitUntilConcurrencyPeaks();
-        ThrowTestException(1);
+        if ( m_canThrow ) {
+            if ( !is_serial() ) {
+                Harness::ConcurrencyTracker ct;
+                WaitUntilConcurrencyPeaks( min(g_NumTokens, g_NumThreads) );
+            }
+            ThrowTestException(1);
+        }
         return item;
     }
 }; // class SimpleFilter
 
 // This enumeration represents filters order in pipeline
-enum FilterSet {
-    parallel__parallel=0,
-    parallel__serial=1,
-    parallel__serial_out_of_order=2,
-    serial__parallel=4,
-    serial__serial=5,
-    serial__serial_out_of_order=6,
-    serial_out_of_order__parallel=8,
-    serial_out_of_order__serial=9,
-    serial_out_of_order__serial_out_of_order=10
-};
+struct FilterSet {
+    tbb::filter::mode   mode1,
+                        mode2;
+    bool                throw1,
+                        throw2;
 
-// The function returns filter type using filter number in set
-tbb::filter::mode filter_mode (FilterSet set, int number) {
-    size_t tmp = set << (2 * (2 - number));
-    switch (tmp&12){
-        case 0:
-            return tbb::filter::parallel;
-        case 4:
-            return tbb::filter::serial_in_order;
-        case 8:
-            return tbb::filter::serial_out_of_order;
-    }
-    ASSERT(0, "Wrong filter set passed to get_filter_type");
-    return tbb::filter::parallel; // We should never get here, just to prevent compiler warnings
-}
+    FilterSet( tbb::filter::mode m1, tbb::filter::mode m2, bool t1, bool t2 )
+        : mode1(m1), mode2(m2), throw1(t1), throw2(t2)
+    {}
+}; // struct FilterSet
+
+FilterSet serial_parallel( tbb::filter::serial, tbb::filter::parallel, false, true );
 
 template<typename InFilter, typename Filter>
 class CustomPipeline : protected tbb::pipeline {
@@ -857,9 +850,8 @@ class CustomPipeline : protected tbb::pipeline {
     Filter filter1;
     Filter filter2;
 public:
-    CustomPipeline( FilterSet FilterSet )
-        : filter1(filter_mode(FilterSet, 1))
-        , filter2(filter_mode(FilterSet, 2))
+    CustomPipeline( const FilterSet& filters )
+        : filter1(filters.mode1, filters.throw1), filter2(filters.mode2, filters.throw2)
     {
        add_filter(inputFilter);
        add_filter(filter1);
@@ -874,9 +866,9 @@ public:
 typedef CustomPipeline<InputFilter, SimpleFilter> SimplePipeline;
 
 // Tests exceptions without nesting
-void Test1_pipeline ( FilterSet mode ) {
+void Test1_pipeline ( const FilterSet& filters ) {
     ResetGlobals();
-    SimplePipeline testPipeline(mode);
+    SimplePipeline testPipeline(filters);
     TRY();
         testPipeline.run();
         if ( g_CurExecuted == 2 * NUM_ITEMS ) {
@@ -895,11 +887,11 @@ void Test1_pipeline ( FilterSet mode ) {
 // Filter with nesting
 class NestingFilter : public tbb::filter {
 public:
-    NestingFilter( tbb::filter::mode _mode ) : tbb::filter( _mode) {}
+    NestingFilter (tbb::filter::mode _mode, bool ) : filter (_mode) {}
 
     void* operator()(void* item) {
         ++g_CurExecuted;
-        SimplePipeline testPipeline(serial__parallel);
+        SimplePipeline testPipeline(serial_parallel);
         testPipeline.run();
         return item;
     }
@@ -910,9 +902,9 @@ public:
     exceptions thrown from the nested pipeline are not handled by the caller
     (nesting pipeline body) in this test, they will cancel all the sibling nested
     algorithms. **/
-void Test2_pipeline ( FilterSet mode ) {
+void Test2_pipeline ( const FilterSet& filters ) {
     ResetGlobals();
-    CustomPipeline<InputFilter, NestingFilter> testPipeline(mode);
+    CustomPipeline<InputFilter, NestingFilter> testPipeline(filters);
     TRY();
         testPipeline.run();
     CATCH_AND_ASSERT();
@@ -925,12 +917,12 @@ void Test2_pipeline ( FilterSet mode ) {
 
 class NestingFilterWithIsolatedCtx : public tbb::filter {
 public:
-    NestingFilterWithIsolatedCtx(tbb::filter::mode m ) : filter (m) {}
+    NestingFilterWithIsolatedCtx(tbb::filter::mode m, bool ) : filter(m) {}
 
     void* operator()(void* item) {
         ++g_CurExecuted;
         tbb::task_group_context ctx(tbb::task_group_context::isolated);
-        SimplePipeline testPipeline(serial__parallel);
+        SimplePipeline testPipeline(serial_parallel);
         testPipeline.run(ctx);
         return item;
     }
@@ -942,11 +934,11 @@ public:
     already running because of the isolated contexts. However because the first
     exception cancels the root parallel_do only the first g_NumThreads subranges
     will be processed (which launch nested pipelines) **/
-void Test3_pipeline ( FilterSet mode ) {
+void Test3_pipeline ( const FilterSet& filters ) {
     ResetGlobals();
     intptr_t nestedCalls = 100,
              minExecuted = (g_NumThreads - 1) * nestedCalls;
-    CustomPipeline<InputFilter, NestingFilterWithIsolatedCtx> testPipeline(mode);
+    CustomPipeline<InputFilter, NestingFilterWithIsolatedCtx> testPipeline(filters);
     TRY();
         testPipeline.run();
     CATCH_AND_ASSERT();
@@ -962,11 +954,11 @@ void Test3_pipeline ( FilterSet mode ) {
 
 class NestingFilterWithEhBody : public tbb::filter {
 public:
-    NestingFilterWithEhBody(tbb::filter::mode m ) : filter(m) {}
+    NestingFilterWithEhBody(tbb::filter::mode m, bool ) : filter(m) {}
 
     void* operator()(void* item) {
         tbb::task_group_context ctx(tbb::task_group_context::isolated);
-        SimplePipeline testPipeline(serial__parallel);
+        SimplePipeline testPipeline(serial_parallel);
         TRY();
             testPipeline.run(ctx);
         CATCH();
@@ -979,7 +971,7 @@ public:
     in this test, they do not affect neither other tasks of the the root pipeline
     nor sibling nested algorithms. **/
 
-void Test4_pipeline ( FilterSet mode ) {
+void Test4_pipeline ( const FilterSet& filters ) {
 #if __GNUC__ && !__INTEL_COMPILER
     if ( strncmp(__VERSION__, "4.1.0", 5) == 0 ) {
         REMARK_ONCE("Warning: One of exception handling tests is skipped due to a known issue.\n");
@@ -990,7 +982,7 @@ void Test4_pipeline ( FilterSet mode ) {
     intptr_t nestedCalls = NUM_ITEMS + 1,
              nestingCalls = 2 * (NUM_ITEMS + 1),
              maxExecuted = nestingCalls * nestedCalls;
-    CustomPipeline<InputFilter, NestingFilterWithEhBody> testPipeline(mode);
+    CustomPipeline<InputFilter, NestingFilterWithEhBody> testPipeline(filters);
     TRY();
         testPipeline.run();
     CATCH_AND_ASSERT();
@@ -1006,7 +998,6 @@ void Test4_pipeline ( FilterSet mode ) {
         ASSERT (g_Exceptions > 1 && g_Exceptions <= nestingCalls, "Unexpected actual number of exceptions");
         ASSERT (g_CurExecuted >= minExecuted, "Too many executed tasks reported");
         ASSERT (g_CurExecuted <= g_ExecutedAtCatch + g_NumThreads, "Too many tasks survived multiple exceptions");
-        ASSERT (g_CurExecuted <= nestingCalls * (1 + g_NumThreads), "Too many tasks survived exception");
     }
 } // void Test4_pipeline ()
 
@@ -1068,6 +1059,7 @@ public:
 
     void* operator()(void* item) {
         ++g_CurExecuted;
+        Harness::ConcurrencyTracker ct;
         // The test will hang (and be timed out by the tesst system) if is_cancelled() is broken
         while( !tbb::task::self().is_cancelled() )
             __TBB_Yield();
@@ -1124,7 +1116,7 @@ public:
 // The filter multiplies each buffer item by 10.
 class ProcessingFilterWithFinalization : public FinalizationBaseFilter {
 public:
-    ProcessingFilterWithFinalization (tbb::filter::mode _mode) : FinalizationBaseFilter (_mode) {}
+    ProcessingFilterWithFinalization (tbb::filter::mode _mode, bool) : FinalizationBaseFilter (_mode) {}
 
     void* operator()( void* item) {
         if (g_TotalCount > NUM_BUFFERS / 2)
@@ -1150,10 +1142,10 @@ public:
 };
 
 //! Tests filter::finalize method
-void Test8_pipeline (FilterSet mode) {
+void Test8_pipeline ( const FilterSet& filters ) {
     ResetGlobals();
     g_AllocatedCount = 0;
-    CustomPipeline<InputFilterWithFinalization, ProcessingFilterWithFinalization> testPipeline(mode);
+    CustomPipeline<InputFilterWithFinalization, ProcessingFilterWithFinalization> testPipeline(filters);
     OutputFilterWithFinalization my_output_filter(tbb::filter::parallel);
 
     testPipeline.add_filter(my_output_filter);
@@ -1164,17 +1156,20 @@ void Test8_pipeline (FilterSet mode) {
 } // void Test8_pipeline ()
 
 // Tests pipeline function passed with different combination of filters
-template<void testFunc(FilterSet)>
+template<void testFunc(const FilterSet&)>
 void TestWithDifferentFilters() {
-    testFunc(parallel__parallel);
-    testFunc(parallel__serial);
-    testFunc(parallel__serial_out_of_order);
-    testFunc(serial__parallel);
-    testFunc(serial__serial);
-    testFunc(serial__serial_out_of_order);
-    testFunc(serial_out_of_order__parallel);
-    testFunc(serial_out_of_order__serial);
-    testFunc(serial_out_of_order__serial_out_of_order);
+    const int NumFilterTypes = 3;
+    const tbb::filter::mode modes[NumFilterTypes] = {
+            tbb::filter::parallel,
+            tbb::filter::serial,
+            tbb::filter::serial_out_of_order
+        };
+    for ( int i = 0; i < NumFilterTypes; ++i ) {
+        for ( int j = 0; j < NumFilterTypes; ++j ) {
+            for ( int k = 0; k < 2; ++k )
+                testFunc( FilterSet(modes[i], modes[j], k == 0, k != 0) );
+        }
+    }
 }
 
 void RunPipelineTests() {
@@ -1443,8 +1438,8 @@ __TBB_TEST_EXPORT
 int main(int argc, char* argv[]) {
     ParseCommandLine( argc, argv );
     REMARK ("Using %s", TBB_USE_CAPTURED_EXCEPTION ? "tbb:captured_exception" : "exact exception propagation");
-    MinThread = max(2, MinThread);
-    MaxThread = max(MinThread, MaxThread);
+    MinThread = min(tbb::task_scheduler_init::default_num_threads(), max(2, MinThread));
+    MaxThread = max(MinThread, min(tbb::task_scheduler_init::default_num_threads(), MaxThread));
     ASSERT (FLAT_RANGE >= FLAT_GRAIN * MaxThread, "Fix defines");
 #if __TBB_EXCEPTIONS
     int step = max((MaxThread - MinThread + 1)/2, 1);

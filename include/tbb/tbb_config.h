@@ -83,13 +83,13 @@
 #define __TBB_SCHEDULER_OBSERVER 1
 #endif /* __TBB_SCHEDULER_OBSERVER */
 
-#ifndef __TBB_TASK_SCHEDULER_AUTO_INIT
-#define __TBB_TASK_SCHEDULER_AUTO_INIT 1
-#endif /* __TBB_TASK_SCHEDULER_AUTO_INIT */
-
 #ifndef __TBB_NEW_ITT_NOTIFY
 #define __TBB_NEW_ITT_NOTIFY 1
 #endif /* !__TBB_NEW_ITT_NOTIFY */
+
+#ifndef __TBB_TRY_STEAL_TASK
+#define __TBB_TRY_STEAL_TASK 1
+#endif
 
 
 /* TODO: The following condition should be extended as soon as new compilers/runtimes 
@@ -143,7 +143,7 @@
     #define __TBB_EXCEPTION_HANDLING_BROKEN 1
 #endif
 
-#if (_WIN32||_WIN64) && _MSC_VER && __INTEL_COMPILER && __INTEL_COMPILER == 1110
+#if (_WIN32||_WIN64) && __INTEL_COMPILER == 1110
     /** That's a bug in Intel compiler 11.1.044/IA-32/Windows, that leads to a worker thread crash on the thread's startup. **/
     #define __TBB_ICL_11_1_CODE_GEN_BROKEN 1
 #endif

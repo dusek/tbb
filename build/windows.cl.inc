@@ -35,7 +35,11 @@
 CPLUS = cl /nologo
 LINK_FLAGS = /link /nologo
 LIB_LINK_FLAGS=/link /nologo /DLL /MAP /DEBUG /fixed:no /INCREMENTAL:NO
-MS_CRT_KEY = /MD$(if $(findstring debug,$(cfg)),d)
+ifeq ($(runtime), static)
+	MS_CRT_KEY = /MT$(if $(findstring debug,$(cfg)),d)
+else
+	MS_CRT_KEY = /MD$(if $(findstring debug,$(cfg)),d)
+endif
 EH_FLAGS = /EHsc /GR
               
 ifeq ($(cfg), release)
@@ -69,6 +73,11 @@ DYLIB_KEY = /DLL
 EXPORT_KEY = /DEF:
 
 ifeq ($(runtime),vc8)
+        OPENMP_FLAG = /openmp
+        WARNING_KEY += /Wp64
+        CPLUS_FLAGS += /D_USE_RTM_VERSION
+endif
+ifeq ($(runtime),static)
         OPENMP_FLAG = /openmp
         WARNING_KEY += /Wp64
         CPLUS_FLAGS += /D_USE_RTM_VERSION

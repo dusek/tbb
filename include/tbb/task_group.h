@@ -30,6 +30,7 @@
 #define __TBB_task_group_H
 
 #include "task.h"
+#include <exception>
 
 namespace tbb {
 

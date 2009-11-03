@@ -130,7 +130,6 @@ int main(int , char *[]) {
     }
 #endif
 
-#if __TBB_REALLOC_REPLACEMENT_FIX_IS_READY
 /* On Windows, memory block size returned by _msize() is sometimes used 
    to calculate the size for an extended block. Substituting _msize, 
    scalable_msize initially returned 0 for regions not allocated by the scalable 
@@ -140,7 +139,7 @@ int main(int , char *[]) {
     ASSERT(getenv("PATH"), "We assume that PATH is set everywhere.");
     char *pathCopy = strdup(getenv("PATH"));
     const char *newEnvName = "__TBBMALLOC_OVERLOAD_REGRESSION_TEST_FOR_REALLOC_AND_MSIZE";
-    char *newEnv = (char*)malloc(2 + strlen(newEnvName));
+    char *newEnv = (char*)malloc(3 + strlen(newEnvName));
     
     ASSERT(!getenv(newEnvName), "Environment variable should not be used before.");
     strcpy(newEnv, newEnvName);
@@ -148,11 +147,9 @@ int main(int , char *[]) {
     int r = putenv(newEnv);
     ASSERT(!r, NULL);
     char *path = getenv("PATH");
-    ASSERT(path && 0==strcmp(path, pathCopy), 
-           "Environment was changed erroneously.");
+    ASSERT(path && 0==strcmp(path, pathCopy), "Environment was changed erroneously.");
     free(pathCopy);
     free(newEnv);
-#endif /* __TBB_REALLOC_REPLACEMENT_FIX_IS_READY */
 
     ptr = malloc(minLargeObjectSize);
     ASSERT(ptr!=NULL && scalableMallocLargeBlock(ptr, minLargeObjectSize), NULL);

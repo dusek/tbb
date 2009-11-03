@@ -36,6 +36,7 @@ PIC_KEY = -fPIC
 WARNING_AS_ERROR_KEY = -Werror
 WARNING_KEY = -Wall
 WARNING_SUPPRESS =
+RML_WARNING_SUPPRESS = -Wno-non-virtual-dtor
 DYLIB_KEY = -dynamiclib
 EXPORT_KEY = -Wl,-exported_symbols_list,
 LIBDL = -ldl
@@ -57,6 +58,12 @@ ifeq (intel64,$(arch))
     CPLUS_FLAGS += -m64
     LINK_FLAGS += -m64
     LIB_LINK_FLAGS += -m64
+endif
+
+ifeq (ia32,$(arch))
+    CPLUS_FLAGS += -m32
+    LINK_FLAGS += -m32
+    LIB_LINK_FLAGS += -m32
 endif
 
 ifeq (ppc64,$(arch))

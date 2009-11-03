@@ -57,7 +57,7 @@ public:
 
     //! Construct range with default-constructed values for begin and end.
     /** Requires that Value have a default constructor. */
-    blocked_range() : my_begin(), my_end() {}
+    blocked_range() : my_end(), my_begin() {}
 
     //! Construct range over half-open interval [begin,end), with the given grainsize.
     blocked_range( Value begin_, Value end_, size_type grainsize_=1 ) : 

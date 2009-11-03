@@ -35,7 +35,7 @@
  #undef DO_ITT_NOTIFY
 #endif
 
-#include "../tbbmalloc/MemoryAllocator.cpp"
+#include "MemoryAllocator.cpp" // can be in ../tbbmalloc or another directory
 #include "../tbbmalloc/tbbmalloc.cpp"
 
 const int LARGE_MEM_SIZES_NUM = 10;

@@ -198,7 +198,7 @@ const size_t BigSize = 4096;
 void* NFS_Allocate( size_t n, size_t element_size, void* /*hint*/ ) {
     size_t m = NFS_LineSize;
     __TBB_ASSERT( m<=NFS_MaxLineSize, "illegal value for NFS_LineSize" );
-    __TBB_ASSERT( (m & m-1)==0, "must be power of two" );
+    __TBB_ASSERT( (m & (m-1))==0, "must be power of two" );
     size_t bytes = n*element_size;
 #if __TBB_IS_SCALABLE_MALLOC_FIX_READY 
 
@@ -299,8 +299,8 @@ bool __TBB_EXPORTED_FUNC is_malloc_used_v3() {
         (*FreeHandler)(void_ptr);
     }
     __TBB_ASSERT( MallocHandler!=&DummyMalloc && FreeHandler!=&DummyFree, NULL );
-    __TBB_ASSERT(MallocHandler==&malloc && FreeHandler==&free ||
-                  MallocHandler!=&malloc && FreeHandler!=&free, NULL );
+    __TBB_ASSERT((MallocHandler==&malloc && FreeHandler==&free) ||
+                 (MallocHandler!=&malloc && FreeHandler!=&free), NULL );
     return MallocHandler == &malloc;
 }
 

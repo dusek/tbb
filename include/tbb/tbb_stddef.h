@@ -34,7 +34,7 @@
 #define TBB_VERSION_MINOR 2
 
 // Engineering-focused interface version
-#define TBB_INTERFACE_VERSION 4001
+#define TBB_INTERFACE_VERSION 4002
 #define TBB_INTERFACE_VERSION_MAJOR TBB_INTERFACE_VERSION/1000
 
 // The oldest major interface version still supported
@@ -228,6 +228,12 @@ typedef size_t uintptr;
 /** There's no guarantee by the C++ standard that a ptrdiff_t is really big enough,
     but it happens to be for all platforms of interest. */
 typedef std::ptrdiff_t intptr;
+
+//! Compile-time constant that is upper bound on cache line/sector size.
+/** It should be used only in situations where having a compile-time upper 
+    bound is more useful than a run-time exact answer.
+    @ingroup memory_allocation */
+const size_t NFS_MaxLineSize = 128;
 
 //! Report a runtime warning.
 void __TBB_EXPORTED_FUNC runtime_warning( const char* format, ... );

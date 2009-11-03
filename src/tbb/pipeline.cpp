@@ -53,7 +53,6 @@ struct task_info {
         is_valid = false;
     }
 };
-const task_info empty_info = {NULL, 0, false, false};
 //! A buffer of input items for a filter.
 /** Each item is a task_info, inserted into a position in the buffer corresponding to a Token. */
 class input_buffer {
@@ -134,7 +133,7 @@ public:
                 if( token-low_token>=array_size ) 
                     grow( token-low_token+1 );
                 ITT_NOTIFY( sync_releasing, this );
-                putter.put_task_info(array[token&array_size-1]);
+                putter.put_task_info(array[token&(array_size-1)]);
                 return true;
             }
         }
@@ -152,7 +151,7 @@ public:
             spin_mutex::scoped_lock lock( array_mutex );
             if( !is_ordered || token==low_token ) {
                 // Wake the next task
-                task_info& item = array[++low_token & array_size-1];
+                task_info& item = array[++low_token & (array_size-1)];
                 ITT_NOTIFY( sync_acquired, this );
                 wakee = item;
                 item.is_valid = false;
@@ -167,7 +166,7 @@ public:
     void clear( filter* my_filter ) {
         long t=low_token;
         for( size_type i=0; i<array_size; ++i, ++t ){
-            task_info& temp = array[t&array_size-1];
+            task_info& temp = array[t&(array_size-1)];
             if (temp.is_valid ) {
                 my_filter->finalize(temp.my_object);
                 temp.is_valid = false;
@@ -178,7 +177,7 @@ public:
 
     bool return_item(task_info& info, bool advance) {
         spin_mutex::scoped_lock lock( array_mutex );
-        task_info& item = array[low_token&array_size-1];
+        task_info& item = array[low_token&(array_size-1)];
         ITT_NOTIFY( sync_acquired, this );
         if( item.is_valid ) {
             info = item;
@@ -205,7 +204,7 @@ public:
         if( token-low_token>=array_size ) 
             grow( token-low_token+1 );
         ITT_NOTIFY( sync_releasing, this );
-        array[token&array_size-1] = info;
+        array[token&(array_size-1)] = info;
     }
 };
 
@@ -220,7 +219,7 @@ void input_buffer::grow( size_type minimum_size ) {
         new_array[i].is_valid = false;
     long t=low_token;
     for( size_type i=0; i<old_size; ++i, ++t )
-        new_array[t&new_size-1] = old_array[t&old_size-1];
+        new_array[t&(new_size-1)] = old_array[t&(old_size-1)];
     array = new_array;
     array_size = new_size;
     if( old_array )
@@ -238,11 +237,12 @@ public:
     //! Construct stage_task for first stage in a pipeline.
     /** Such a stage has not read any input yet. */
     stage_task( pipeline& pipeline ) :
-        task_info(empty_info),
         my_pipeline(pipeline), 
         my_filter(pipeline.filter_list),
         my_at_start(true)
-    {}
+    {
+        task_info::reset();
+    }
     //! Construct stage_task for a subsequent stage in a pipeline.
     stage_task( pipeline& pipeline, filter* filter_, const task_info& info ) :
         task_info(info),

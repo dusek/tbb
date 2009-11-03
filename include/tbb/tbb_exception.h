@@ -45,6 +45,14 @@ public:
     virtual ~bad_last_alloc() throw() {}
 };
 
+// Exception for PPL locks
+class improper_lock : public std::exception {
+public:
+    /*override*/
+    const char* what() const throw() { return "attempted recursive lock on critical section or non-recursive mutex"; }
+};
+
+
 namespace internal {
 void __TBB_EXPORTED_FUNC throw_bad_last_alloc_exception_v4() ;
 } // namespace internal

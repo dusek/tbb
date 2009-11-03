@@ -727,6 +727,7 @@ static void *bootStrapMalloc(size_t size)
         } else {
             if (!bootStrapBlock) {
                 bootStrapBlock = getEmptyBlock(size);
+                if (!bootStrapBlock) return NULL;
             }
             result = bootStrapBlock->bumpPtr;
             bootStrapBlock->bumpPtr = (FreeObject *)((uintptr_t)bootStrapBlock->bumpPtr - bootStrapBlock->objectSize);
@@ -872,6 +873,7 @@ static Bin* getAllocationBin(size_t size)
     if( !tls ) {
         MALLOC_ASSERT( tlsSize >= sizeof(Bin) * numBlockBins, ASSERT_TEXT );
         tls = (Bin*) bootStrapMalloc(tlsSize);
+        if ( !tls ) return NULL;
         /* the block contains zeroes after bootStrapMalloc, so bins are initialized */
 #if MALLOC_DEBUG
         for (int i = 0; i < numBlockBinLimit; i++) {
@@ -1157,7 +1159,7 @@ static void initEmptyBlock(Block *block, size_t size)
     block->nextPrivatizable = tls? (Block*)(tls + index) : NULL;
     TRACEF(( "[ScalableMalloc trace] Empty block %p is initialized, owner is %d, objectSize is %d, bumpPtr is %p\n",
              block, block->owner, block->objectSize, block->bumpPtr ));
-  }
+}
 
 /* Return an empty uninitialized block in a non-blocking fashion. */
 static Block *getRawBlock()
@@ -1197,8 +1199,10 @@ static Block *getEmptyBlock(size_t size)
 {
     Block *result = getRawBlock();
 
-    initEmptyBlock(result, size);
-    STAT_increment(result->owner, getIndex(result->objectSize), allocBlockNew);
+    if (result) {
+        initEmptyBlock(result, size);
+        STAT_increment(result->owner, getIndex(result->objectSize), allocBlockNew);
+    }
 
     return result;
 }
@@ -1904,12 +1908,43 @@ extern "C" void mallocThreadShutdownNotification(void* arg)
 
 extern "C" void mallocProcessShutdownNotification(void)
 {
-    // for now, this function is only necessary for dumping statistics
 #if COLLECT_STATISTICS
     ThreadId nThreads = ThreadIdCount;
     for( int i=1; i<=nThreads && i<MAX_THREADS; ++i )
         STAT_print(i);
 #endif
+}
+
+/**** Check if an object was allocated by scalable_malloc ****/
+
+/* 
+ * Bad dereference caused by a foreign pointer is possible only here, not earlier in call chain.
+ * Separate function isolates SEH code, as it has bad influence on compiler optimization.
+ */
+static inline uint64_t safer_dereference (uint64_t *ptr)
+{
+    uint64_t id;
+#if _MSC_VER
+    __try {
+#endif
+        id = *ptr;
+#if _MSC_VER
+    } __except( GetExceptionCode() == EXCEPTION_ACCESS_VIOLATION? 
+                EXCEPTION_EXECUTE_HANDLER : EXCEPTION_CONTINUE_SEARCH ) {
+        id = 0;
+    }
+#endif
+    return id;
+}
+
+static inline bool isRecognized (void* ptr)
+{
+    uint64_t id = safer_dereference(
+        isLargeObject(ptr)
+            ? &((LargeObjectHeader*)((uintptr_t)ptr-sizeof(LargeObjectHeader)))->mallocUniqueID
+            : &((Block *)alignDown(ptr, blockSize))->mallocUniqueID
+    );
+    return id == theMallocUniqueID;
 }
 
 /********* The malloc code          *************/
@@ -1948,6 +1983,10 @@ extern "C" void * scalable_malloc(size_t size)
      * It keeps ptr to the active block for allocations of this size
      */
     bin = getAllocationBin(size);
+    if ( !bin ) {
+        errno = ENOMEM;
+        return NULL;
+    }
 
     /* Get the block of you want to try to allocate in. */
     mallocBlock = getActiveBlock(bin);
@@ -2091,27 +2130,6 @@ extern "C" void scalable_free (void *object) {
     }
 }
 
-/* 
- * Unsuccessful dereference is possible only here, not before this call. 
- * Separate function created to isolate SEH code here, as it has bad influence
- * on compiler optimization.
- */
-static inline uint64_t safer_dereference (uint64_t *ptr)
-{
-    uint64_t id;
-#if _MSC_VER
-    __try {
-#endif
-        id = *ptr;
-#if _MSC_VER
-    } __except( GetExceptionCode() == EXCEPTION_ACCESS_VIOLATION? 
-                EXCEPTION_EXECUTE_HANDLER : EXCEPTION_CONTINUE_SEARCH ) {
-        id = 0;
-    }
-#endif
-    return id;
-}
-
 /*
  * A variant that provides additional memory safety, by checking whether the given address
  * was obtained with this allocator, and if not redirecting to the provided alternative call.
@@ -2121,13 +2139,7 @@ extern "C" void safer_scalable_free (void *object, void (*original_free)(void*))
     if (!object)
         return;
 
-    // Check if the memory was allocated by scalable_malloc
-    uint64_t id =
-        safer_dereference( isLargeObject(object)?
-                           &((LargeObjectHeader*)((uintptr_t)object-sizeof(LargeObjectHeader)))->mallocUniqueID :
-                           &((Block *)alignDown(object, blockSize))->mallocUniqueID );
-
-    if (id==theMallocUniqueID)
+    if (isRecognized(object))
         scalable_free(object);
     else if (original_free)
         original_free(object);
@@ -2164,18 +2176,12 @@ extern "C" void* scalable_realloc(void* ptr, size_t size)
  * A variant that provides additional memory safety, by checking whether the given address
  * was obtained with this allocator, and if not redirecting to the provided alternative call.
  */
-extern "C" void* safer_scalable_realloc (void* ptr, size_t sz, void* (*original_realloc)(void*,size_t)) 
+extern "C" void* safer_scalable_realloc (void* ptr, size_t sz, void* original_realloc) 
 {
     if (!ptr) {
         return scalable_malloc(sz);
     }
-    // Check if the memory was allocated by scalable_malloc
-    uint64_t id =
-        safer_dereference( isLargeObject(ptr)?
-                           &((LargeObjectHeader*)((uintptr_t)ptr-sizeof(LargeObjectHeader)))->mallocUniqueID :
-                           &((Block *)alignDown(ptr, blockSize))->mallocUniqueID );
-
-    if (id==theMallocUniqueID) {
+    if (isRecognized(ptr)) {
         if (!sz) {
             scalable_free(ptr);
             return NULL;
@@ -2184,20 +2190,27 @@ extern "C" void* safer_scalable_realloc (void* ptr, size_t sz, void* (*original_
         if (!tmp) errno = ENOMEM;
         return tmp;
     }
-    else if (original_realloc)
-        return original_realloc(ptr,sz);
 #if USE_WINTHREAD
-    // old memory is leaked, not much can be done with it, as original_free is not available
-    else if (sz) {
-        // tring to find maximal size of safe copy
-        MEMORY_BASIC_INFORMATION memInfo;
-        if (sizeof(memInfo) != VirtualQuery(ptr, &memInfo, sizeof(memInfo)))
-            return NULL;
-        size_t oldSize = 
-            memInfo.RegionSize - ((uintptr_t)ptr - (uintptr_t)memInfo.BaseAddress);
-        void *newBuf = scalable_malloc(sz);
-        memcpy(newBuf, ptr, sz<oldSize? sz : oldSize);
-        return newBuf;
+    else if (original_realloc && sz) {
+            orig_ptrs *original_ptrs = static_cast<orig_ptrs*>(original_realloc);
+            if ( original_ptrs->orig_msize ){
+                size_t oldSize = original_ptrs->orig_msize(ptr);
+                void *newBuf = scalable_malloc(sz);
+                if (newBuf) {
+                    memcpy(newBuf, ptr, sz<oldSize? sz : oldSize);
+                    if ( original_ptrs->orig_free ){
+                        original_ptrs->orig_free( ptr );
+                    }
+                }
+                return newBuf;
+             }
+    }
+#else
+    else if (original_realloc) {
+        typedef void* (*realloc_ptr_t)(void*,size_t);
+        realloc_ptr_t original_realloc_ptr;
+        (void *&)original_realloc_ptr = original_realloc;
+        return original_realloc_ptr(ptr,sz);
     }
 #endif
     return NULL;
@@ -2261,24 +2274,63 @@ extern "C" void * scalable_aligned_realloc(void *ptr, size_t size, size_t alignm
     if (!ptr) {
         return allocateAligned(size, alignment);
     }
-    // Check if the memory was allocated by scalable_malloc
-    uint64_t id = isLargeObject(ptr)?
-                    ((LargeObjectHeader*)((uintptr_t)ptr-sizeof(LargeObjectHeader)))->mallocUniqueID:
-                    ((Block *)alignDown(ptr, blockSize))->mallocUniqueID;
     if (!size) {
-        if (id==theMallocUniqueID)
-            scalable_free(ptr);
+        scalable_free(ptr);
         return NULL;
     }
-    if (id!=theMallocUniqueID)
-        return NULL;
 
     void* tmp = reallocAligned(ptr, size, alignment);
     if (!tmp) errno = ENOMEM;
     return tmp;
 }
 
-/********* End code for scalable_aligned_realloc   ***********/
+extern "C" void * safer_scalable_aligned_realloc(void *ptr, size_t size, size_t alignment, void* orig_function)
+{
+    /* corner cases left out of reallocAligned to not deal with errno there */
+    if (!isPowerOfTwo(alignment)) {
+        errno = EINVAL;
+        return NULL;
+    }
+    if (!ptr) {
+        return allocateAligned(size, alignment);
+    }
+    if (isRecognized(ptr)) {
+        if (!size) {
+            scalable_free(ptr);
+            return NULL;
+        }
+        void* tmp = reallocAligned(ptr, size, alignment);
+        if (!tmp) errno = ENOMEM;
+        return tmp;
+    }
+#if USE_WINTHREAD
+    else {
+        orig_ptrs *original_ptrs = static_cast<orig_ptrs*>(orig_function);
+        if (size) {
+            if ( original_ptrs->orig_msize ){
+                size_t oldSize = original_ptrs->orig_msize(ptr);
+                void *newBuf = allocateAligned(size, alignment);
+                if (newBuf) {
+                    memcpy(newBuf, ptr, size<oldSize? size : oldSize);
+                    if ( original_ptrs->orig_free ){
+                        original_ptrs->orig_free( ptr );
+                    }
+                }
+                return newBuf;
+            }else{
+                //We can't do anything with this. Just keeping old pointer
+                return NULL;
+            }
+        } else {
+            if ( original_ptrs->orig_free ){
+                original_ptrs->orig_free( ptr );
+            }
+            return NULL;
+        }
+    }
+#endif
+    return NULL;
+}
 
 extern "C" void scalable_aligned_free(void *ptr)
 {
@@ -2315,6 +2367,24 @@ extern "C" size_t scalable_msize(void* ptr)
     errno = EINVAL;
     // Unlike _msize, return 0 in case of parameter error.
     // Returning size_t(-1) looks more like the way to troubles.
+    return 0;
+}
+
+/*
+ * A variant that provides additional memory safety, by checking whether the given address
+ * was obtained with this allocator, and if not redirecting to the provided alternative call.
+ */
+extern "C" size_t safer_scalable_msize (void *object, size_t (*original_msize)(void*)) 
+{
+    if (object) {
+        // Check if the memory was allocated by scalable_malloc
+        if (isRecognized(object))
+            return scalable_msize(object);
+        else if (original_msize)
+            return original_msize(object);
+    }
+    // object is NULL or unknown
+    errno = EINVAL;
     return 0;
 }
 

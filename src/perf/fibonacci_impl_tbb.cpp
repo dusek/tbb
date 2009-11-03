@@ -78,7 +78,7 @@ struct FibTask: public tbb::task {
 };
 
 long ParallelFib( const long n ) {
-    long sum;
+    long sum = 0;
     FibTask& a = *new(tbb::task::allocate_root()) FibTask(n,&sum);
     tbb::task::spawn_root_and_wait(a);
     return sum;

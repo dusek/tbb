@@ -214,6 +214,29 @@ namespace internal {
 #if __TBB_EXCEPTIONS
         tbb::task_group_context &my_context;
 #endif
+
+        // The class is intended to destroy allocated tasks if exception occurs
+        class task_cleaner: internal::no_copy {
+            typedef internal::start_scan<Range,Body,Partitioner> start_pass1_type;
+
+            internal::sum_node<Range,Body>* my_root;
+            final_sum_type* my_temp_body;
+            const Range& my_range;
+            Body& my_body;
+            start_pass1_type* my_pass1;
+        public:
+            bool do_clean; // Set to true if cleanup is required.
+            task_cleaner(internal::sum_node<Range,Body>* _root, final_sum_type* _temp_body, const Range& _range, Body& _body, start_pass1_type* _pass1)
+                : my_root(_root), my_temp_body(_temp_body), my_range(_range), my_body(_body), my_pass1(_pass1), do_clean(true) {}
+            ~task_cleaner(){
+                if (do_clean) {
+                    my_body.assign(my_temp_body->body);
+                    my_temp_body->finish_construction( my_range, NULL );
+                    my_temp_body->destroy(*my_temp_body);
+                }
+            }
+        };
+
     public:
         start_scan( sum_node_type*& return_slot_, start_scan& parent, sum_node_type* parent_sum_ 
 #if __TBB_EXCEPTIONS
@@ -281,25 +304,6 @@ namespace internal {
                     *temp_body,
                     partitioner );
 #endif
-                // The class is intended to destroy allocated tasks if exception occurs
-                class task_cleaner: internal::no_copy {
-                    internal::sum_node<Range,Body>* my_root;
-                    final_sum_type* my_temp_body;
-                    const Range& my_range;
-                    Body& my_body;
-                    start_pass1_type* my_pass1;
-                public:
-                    bool do_clean; // Set to true if cleanup is required.
-                    task_cleaner(internal::sum_node<Range,Body>* _root, final_sum_type* _temp_body, const Range& _range, Body& _body, start_pass1_type* _pass1)
-                        : my_root(_root), my_temp_body(_temp_body), my_range(_range), my_body(_body), my_pass1(_pass1), do_clean(true) {}
-                    ~task_cleaner(){
-                        if (do_clean) {
-                            my_body.assign(my_temp_body->body);
-                            my_temp_body->finish_construction( my_range, NULL );
-                            my_temp_body->destroy(*my_temp_body);
-                        }
-                    }
-                };
                 task_cleaner my_cleaner(root, temp_body, range, body, &pass1);
 
                 task::spawn_root_and_wait( pass1 );

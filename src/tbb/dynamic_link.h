@@ -95,9 +95,7 @@ bool dynamic_link( const char* libraryname,
                    size_t required = ~(size_t)0,
                    dynamic_link_handle* handle = 0 );
 
-#if !__TBB_WEAK_SYMBOLS
 void dynamic_unlink( dynamic_link_handle handle );
-#endif /* !__TBB_WEAK_SYMBOLS */
 
 CLOSE_INTERNAL_NAMESPACE
 

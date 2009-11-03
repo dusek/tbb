@@ -67,6 +67,9 @@ class private_worker: no_copy {
     //! Associated client
     tbb_client& my_client; 
 
+    //! index used for avoiding the 64K aliasing problem
+    const size_t my_index;
+
     //! Monitor for sleeping when there is no work to do.
     /** The invariant that holds for sleeping workers is:
         "my_slack<=0 && my_state==st_normal && I am on server's list of asleep threads" */
@@ -86,9 +89,10 @@ class private_worker: no_copy {
     static __RML_DECL_THREAD_ROUTINE thread_routine( void* arg );
 
 protected:
-    private_worker( private_server& server, tbb_client& client ) : 
+    private_worker( private_server& server, tbb_client& client, const size_t i ) : 
         my_server(server),
-        my_client(client)
+        my_client(client),
+        my_index(i)
     {
         my_state = st_init;
     }
@@ -106,7 +110,7 @@ static const size_t cache_line_size = tbb::internal::NFS_MaxLineSize;
 class padded_private_worker: public private_worker {
     char pad[cache_line_size - sizeof(private_worker)%cache_line_size];
 public:
-    padded_private_worker( private_server& server, tbb_client& client ) : private_worker(server,client) {}
+    padded_private_worker( private_server& server, tbb_client& client, const size_t i ) : private_worker(server,client,i) {}
 };
 #if _MSC_VER && !defined(__INTEL_COMPILER)
     #pragma warning(pop)
@@ -185,11 +189,20 @@ public:
 //------------------------------------------------------------------------
 // Methods of private_worker
 //------------------------------------------------------------------------
+#if _MSC_VER && !defined(__INTEL_COMPILER)
+    // Suppress overzealous compiler warnings about an initialized variable 'sink_for_alloca' not referenced
+    #pragma warning(push)
+    #pragma warning(disable:4189)
+#endif
 __RML_DECL_THREAD_ROUTINE private_worker::thread_routine( void* arg ) {
     private_worker* self = static_cast<private_worker*>(arg);
+    AVOID_64K_ALIASING( self->my_index );
     self->run();
     return NULL;
 }
+#if _MSC_VER && !defined(__INTEL_COMPILER)
+    #pragma warning(pop)
+#endif
 
 void private_worker::start_shutdown() {
     state_t s; 
@@ -254,7 +267,7 @@ private_server::private_server( tbb_client& client ) :
     memset( my_thread_array, 0, sizeof(private_worker)*my_n_thread );
     // FIXME - use recursive chain reaction to launch the threads.
     for( size_t i=0; i<my_n_thread; ++i ) {
-        private_worker* t = new( &my_thread_array[i] ) padded_private_worker( *this, client ); 
+        private_worker* t = new( &my_thread_array[i] ) padded_private_worker( *this, client, i ); 
         thread_monitor::launch( private_worker::thread_routine, t, stack_size );
     } 
 }

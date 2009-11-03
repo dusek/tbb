@@ -146,7 +146,7 @@ public:
 #else /* !__TBB_NO_BUSY_WAIT_IN_CONCURRENT_QUEUE */
     atomic<ticket> head_counter;
     atomic<size_t> n_invalid_entries;
-    char pad1[NFS_MaxLineSize-sizeof(atomic<ticket>)-sizeof(size_t)];
+    char pad1[NFS_MaxLineSize-sizeof(atomic<ticket>)-sizeof(atomic<size_t>)];
     atomic<ticket> tail_counter;
     char pad2[NFS_MaxLineSize-sizeof(atomic<ticket>)];
 #endif /* __TBB_NO_BUSY_WAIT_IN_CONCURRENT_QUEUE */

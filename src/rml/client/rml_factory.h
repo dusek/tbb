@@ -53,6 +53,19 @@
 
 const ::rml::versioned_object::version_type CLIENT_VERSION = 1;
 
+#if __TBB_WEAK_SYMBOLS
+    #pragma weak __RML_open_factory
+    #pragma weak __TBB_make_rml_server
+    #pragma weak __RML_close_factory
+    #pragma weak __TBB_call_with_my_server_info
+    extern "C" {
+        ::rml::factory::status_type __RML_open_factory ( ::rml::factory&, ::rml::versioned_object::version_type&, ::rml::versioned_object::version_type );
+        ::rml::factory::status_type __TBB_make_rml_server( tbb::internal::rml::tbb_factory& f, tbb::internal::rml::tbb_server*& server, tbb::internal::rml::tbb_client& client );
+        void __TBB_call_with_my_server_info( ::rml::server_info_callback_t cb, void* arg );
+        void __RML_close_factory( ::rml::factory& f );
+    }
+#endif /* __TBB_WEAK_SYMBOLS */
+
 ::rml::factory::status_type FACTORY::open() {
     // Failure of following assertion indicates that factory is already open, or not zero-inited.
     LIBRARY_ASSERT( !library_handle, NULL );

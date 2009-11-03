@@ -32,7 +32,7 @@
 			<Tool
 				Name="VCCustomBuildTool"
 				Description="Constructing input.txt"
-				CommandLine="$(OutDir)\gen_input &gt;input.txt&#x0D;&#x0A;copy input.txt $(OutDir)"
+				CommandLine="$(OutDir)\gen_input &gt;$(OutDir)\input.txt"
 				AdditionalDependencies="gen_input.exe"
 				Outputs="input.txt"
 			/>
@@ -112,7 +112,7 @@
 			<Tool
 				Name="VCCustomBuildTool"
 				Description="Constructing input.txt"
-				CommandLine="$(OutDir)\gen_input &gt;input.txt&#x0D;&#x0A;copy input.txt $(OutDir)"
+				CommandLine="$(OutDir)\gen_input &gt;$(OutDir)\input.txt"
 				AdditionalDependencies="gen_input.exe"
 				Outputs="input.txt"
 			/>
@@ -193,7 +193,7 @@
 			<Tool
 				Name="VCCustomBuildTool"
 				Description="Constructing input.txt"
-				CommandLine="$(OutDir)\gen_input &gt;input.txt&#x0D;&#x0A;copy input.txt $(OutDir)"
+				CommandLine="$(OutDir)\gen_input &gt;$(OutDir)\input.txt"
 				AdditionalDependencies="gen_input.exe"
 				Outputs="input.txt"
 			/>
@@ -274,7 +274,7 @@
 			<Tool
 				Name="VCCustomBuildTool"
 				Description="Constructing input.txt"
-				CommandLine="$(OutDir)\gen_input &gt;input.txt&#x0D;&#x0A;copy input.txt $(OutDir)"
+				CommandLine="$(OutDir)\gen_input &gt;$(OutDir)\input.txt"
 				AdditionalDependencies="gen_input.exe"
 				Outputs="input.txt"
 			/>

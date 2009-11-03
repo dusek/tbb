@@ -38,6 +38,7 @@ int main( int argc, char* argv[] ) {
         printf("%u\n",a);
         b+=a;
         a=(b-a)%10000;
+        if (a<0) a=-a;
     }
     return 0;
 }

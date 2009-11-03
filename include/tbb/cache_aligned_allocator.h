@@ -36,12 +36,6 @@ namespace tbb {
 
 //! @cond INTERNAL
 namespace internal {
-    //! Compile-time constant that is upper bound on cache line/sector size.
-    /** It should be used only in situations where having a compile-time upper 
-        bound is more useful than a run-time exact answer.
-        @ingroup memory_allocation */
-    const size_t NFS_MaxLineSize = 128;
-
     //! Cache/sector line size.
     /** @ingroup memory_allocation */
     size_t __TBB_EXPORTED_FUNC NFS_GetLineSize();

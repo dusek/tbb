@@ -1,9 +1,43 @@
+TBB 2.2 Update 1 commercial-aligned release
+
+Changes (w.r.t. TBB 2.2 commercial-aligned release):
+
+- Incorporates all changes from open-source releases below.
+- Documentation was updated.
+- TBB scheduler auto-initialization now covers all possible use cases.
+- concurrent_queue: made argument types of sizeof used in paddings
+  consistent with those actually used.
+- Memory allocator was improved: supported corner case of user's malloc 
+    calling scalable_malloc (non-Windows), corrected processing of 
+    memory allocation requests during tbb memory allocator startup 
+    (Linux).
+- Windows malloc replacement has got better support for static objects.
+- In pipeline setups that do not allow actual parallelism, execution 
+    by a single thread is guaranteed, idle spinning eliminated, and 
+    performance improved.
+- RML refactoring and clean-up.
+- New constructor for concurrent_hash_map allows reserving space for 
+    a number of items.
+- Operator delete() added to the TBB exception classes.
+- Lambda support was improved in parallel_reduce.
+- gcc 4.3 warnings were fixed for concurrent_queue.
+- Fixed possible initialization deadlock in modules using TBB entities
+    during construction of global static objects.
+- Copy constructor in concurrent_hash_map was fixed.
+- Fixed a couple of rare crashes in the scheduler possible before 
+    in very specific use cases.
+- Fixed a rare crash in the TBB allocator running out of memory.
+- New tests were implemented, including test_lambda.cpp that checks 
+    support for lambda expressions.
+- A few other small changes in code, tests, and documentation.
+
+------------------------------------------------------------------------
 20090809 open-source release
 
 Changes (w.r.t. TBB 2.2 commercial-aligned release):
 
 - Fixed known exception safety issues in concurrent_vector.
-- Improved scalability of concurrent_vector
+- Better concurrency of simultaneous grow requests in concurrent_vector.
 - TBB allocator further improves performance of large object allocation.
 - Problem with source of text relocations was fixed on Linux
 - Fixed bugs related to malloc replacement under Windows
@@ -19,6 +53,8 @@ Changes (w.r.t. TBB 2.1 U4 commercial-aligned release):
     to ia64.
 - Major Interface version changed from 3 to 4. Deprecated interfaces 
     might be removed in future releases.
+- Parallel algorithms that use partitioners have switched to use 
+    the auto_partitioner by default.
 - Improved memory allocator performance for allocations bigger than 8K.
 - Added new thread-bound filters functionality for pipeline.
 - New implementation of concurrent_hash_map that improves performance 

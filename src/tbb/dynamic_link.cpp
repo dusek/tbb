@@ -48,7 +48,7 @@ OPEN_INTERNAL_NAMESPACE
 
 #if __TBB_WEAK_SYMBOLS
 
-bool dynamic_link( const char* /*library*/, const dynamic_link_descriptor descriptors[], size_t n, size_t required )
+bool dynamic_link( void*, const dynamic_link_descriptor descriptors[], size_t n, size_t required )
 {
     if ( required == ~(size_t)0 )
         required = n;
@@ -92,6 +92,8 @@ bool dynamic_link( void* module, const dynamic_link_descriptor descriptors[], si
     return true;
 }
 
+#endif /* !__TBB_WEAK_SYMBOLS */
+
 bool dynamic_link( const char* library, const dynamic_link_descriptor descriptors[], size_t n, size_t required, dynamic_link_handle* handle )
 {
 #if _WIN32||_WIN64
@@ -128,6 +130,5 @@ void dynamic_unlink( dynamic_link_handle handle ) {
 #endif /* _WIN32||_WIN64 */    
     }
 }
-#endif /* !__TBB_WEAK_SYMBOLS */
 
 CLOSE_INTERNAL_NAMESPACE

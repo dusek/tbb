@@ -113,8 +113,9 @@ test_release_ni:
 test_debug_ni:
 	$(MAKE) -C "$(call cross_cfg,$(work_dir)_debug)"  -r -f $(tbb_root)/build/Makefile.test cfg=debug tbb_root=$(tbb_root)
 
-.PHONY: tbbmalloc_release tbbmalloc_debug tbbmalloc_test_release tbbmalloc_test_debug
-.PHONY: tbbmalloc_test_release_no_depends tbbmalloc_test_debug_no_depends
+.PHONY: tbbmalloc_release tbbmalloc_debug
+.PHONY: tbbmalloc_dll_release tbbmalloc_dll_debug tbbmalloc_proxy_dll_release tbbmalloc_proxy_dll_debug
+.PHONY: tbbmalloc_test_release tbbmalloc_test_debug tbbmalloc_test_release_no_depends tbbmalloc_test_debug_no_depends
 
 tbbmalloc_release: mkdir_release
 	$(MAKE) -C "$(work_dir)_release"  -r -f $(tbb_root)/build/Makefile.tbbmalloc cfg=release malloc tbb_root=$(tbb_root)
@@ -208,7 +209,7 @@ do_codecov:
 	$(MAKE) rml_test_release
 	$(MAKE) clean_test_* cfg=release
 	$(MAKE) crosstest=yes rml_test_debug
-	$(MAKE) -C "$(work_dir)_release" -r -f ../Makefile.test tbb_root=../.. cfg=release codecov=yes codecov_gen
+	$(MAKE) -C "$(work_dir)_release" -r -f $(tbb_root)/build/Makefile.test tbb_root=$(tbb_root) cfg=release codecov=yes codecov_gen
 
 info:
 	@echo OS: $(tbb_os)

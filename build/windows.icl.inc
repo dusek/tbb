@@ -44,7 +44,11 @@ cfg ?= release
 CPLUS = icl /nologo $(VCCOMPAT_FLAG)
 LINK_FLAGS = /link /nologo
 LIB_LINK_FLAGS= /link /nologo /DLL /MAP /DEBUG /fixed:no /INCREMENTAL:NO
-MS_CRT_KEY = /MD$(if $(findstring debug,$(cfg)),d)
+ifeq ($(runtime), static)
+	MS_CRT_KEY = /MT$(if $(findstring debug,$(cfg)),d)
+else
+	MS_CRT_KEY = /MD$(if $(findstring debug,$(cfg)),d)
+endif
 EH_FLAGS = /EHsc /GR
 
 ifeq ($(cfg), release)
@@ -90,6 +94,10 @@ ifeq ($(runtime),vc8)
         CPLUS_FLAGS += /D_USE_RTM_VERSION
 endif
 
+ifeq ($(runtime),static)
+        CPLUS_FLAGS += /D_USE_RTM_VERSION
+endif
+
 C_FLAGS = $(CPLUS_FLAGS)
 
 ifneq (00,$(lambdas)$(cpp0x))
@@ -97,9 +105,12 @@ ifneq (00,$(lambdas)$(cpp0x))
 endif
 
 VCVERSION:=$(runtime)
-VCCOMPAT_FLAG := $(if $(findstring vc7.1, $(VCVERSION)),/Qvc7.1)
+VCCOMPAT_FLAG ?= $(if $(findstring vc7.1, $(VCVERSION)),/Qvc7.1)
 ifeq ($(VCCOMPAT_FLAG),)
         VCCOMPAT_FLAG := $(if $(findstring vc8, $(VCVERSION)),/Qvc8)
+endif
+ifeq ($(VCCOMPAT_FLAG),)
+        VCCOMPAT_FLAG := $(if $(findstring static, $(VCVERSION)),/Qvc8)
 endif
 ifeq ($(VCCOMPAT_FLAG),)
         VCCOMPAT_FLAG := $(if $(findstring vc9, $(VCVERSION)),/Qvc9)

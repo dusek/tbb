@@ -46,7 +46,7 @@ using namespace std;
 
 namespace cfg {
     // convex hull problem parameter defaults
-    const long    NP = 5000000; // problem size
+    const long    NP  = 5000000;  // problem size
     const int     SNT = 1;        // minimal number of threads
     const int     ENT = 8;        // maximal number of threads
 

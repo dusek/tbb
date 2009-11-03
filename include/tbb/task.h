@@ -32,10 +32,6 @@
 #include "tbb_stddef.h"
 #include "tbb_machine.h"
 
-#if __TBB_EXCEPTIONS
-#include "cache_aligned_allocator.h"
-#endif /* __TBB_EXCEPTIONS */
-
 namespace tbb {
 
 class task;
@@ -175,8 +171,9 @@ namespace internal {
         //! Miscellaneous state that is not directly visible to users, stored as a byte for compactness.
         /** 0x0 -> version 1.0 task
             0x1 -> version 3.0 task
-            0x2 -> task_proxy
-            0x40 -> task has live ref_count */
+            0x20 -> task_proxy
+            0x40 -> task has live ref_count
+            0x80 -> a stolen task */
         unsigned char extra_state;
 
         affinity_id affinity;
@@ -607,9 +604,7 @@ public:
 
     //! True if task is owned by different thread than thread that owns its parent.
     bool is_stolen_task() const {
-        internal::task_prefix& p = prefix();
-        internal::task_prefix& q = parent()->prefix();
-        return p.owner!=q.owner;
+        return (prefix().extra_state & 0x80)!=0;
     }
 
     //------------------------------------------------------------------------
@@ -628,7 +623,7 @@ public:
         return int(prefix().ref_count);
     }
 
-    //! True if this task is owned by the calling thread; false otherwise.
+    //! Obsolete, and only retained for the sake of backward compatibility. Always returns true.
     bool __TBB_EXPORTED_METHOD is_owned_by_current_thread() const;
 
     //------------------------------------------------------------------------

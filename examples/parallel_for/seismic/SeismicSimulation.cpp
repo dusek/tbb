@@ -283,11 +283,11 @@ void InitializeUniverse() {
         d *= 1-1.0f/(DamperSize*DamperSize);
         for( int j=1; j<UniverseWidth-1; ++j ) {
             D[k][j] *= d;
-            D[UniverseHeight-k][j] *= d;
+            D[UniverseHeight-1-k][j] *= d;
         }
         for( int i=1; i<UniverseHeight-1; ++i ) {
             D[i][k] *= d;
-            D[i][UniverseWidth-k] *= d;
+            D[i][UniverseWidth-1-k] *= d;
         }
     }
 }

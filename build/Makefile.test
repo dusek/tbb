@@ -109,7 +109,7 @@ TASK_CPP_DIRECTLY_INCLUDED = test_eh_tasks.$(TEST_EXT) \
  test_task_assertions.$(TEST_EXT) \
  test_assembly.$(TEST_EXT)
 
-$(TASK_CPP_DIRECTLY_INCLUDED): WARNING_KEY += $(WARNING_SUPPRESS)
+$(TASK_CPP_DIRECTLY_INCLUDED): WARNING_KEY += $(WARNING_SUPPRESS) $(RML_WARNING_SUPPRESS)
 
 $(TASK_CPP_DIRECTLY_INCLUDED): %.$(TEST_EXT) : %.$(OBJ) $(TASK_CPP_DEPENDENCIES)
 	$(CPLUS) $(OUTPUT_KEY)$@ $(CPLUS_FLAGS) $^ $(LIBDL) $(LIBS) $(LINK_FLAGS)
@@ -117,6 +117,12 @@ $(TASK_CPP_DIRECTLY_INCLUDED): %.$(TEST_EXT) : %.$(OBJ) $(TASK_CPP_DEPENDENCIES)
 test_handle_perror.$(TEST_EXT): test_handle_perror.$(OBJ) tbb_misc.$(OBJ) $(TBB_ASM.OBJ)
 	$(CPLUS) $(OUTPUT_KEY)$@ $(CPLUS_FLAGS) $^ $(LINK_TBB.LIB) $(LIBS) $(LINK_FLAGS)
 
+test_tbb_header2.$(OBJ): test_tbb_header.cpp
+	$(CPLUS) $(COMPILE_ONLY) $(CPLUS_FLAGS_NOSTRICT) $(CXX_ONLY_FLAGS) $(CXX_WARN_SUPPRESS) $(INCLUDES) $(DEFINE_KEY)__TBB_TEST_SECONDARY=1 $< $(OUTPUTOBJ_KEY)$@
+
+# Detecting "multiple definition" linker error using the test that covers the whole library
+test_tbb_header.$(TEST_EXT): test_tbb_header.$(OBJ) test_tbb_header2.$(OBJ) $(TBB.LIB)
+	$(CPLUS) $(OUTPUT_KEY)$@ $(CPLUS_FLAGS) $^ $(LINK_TBB.LIB) $(LIBS) $(LINK_FLAGS)
 
 # Rules for the tests, which depend on tbbmalloc
 test_concurrent_hash_map_string.$(TEST_EXT): test_concurrent_hash_map_string.$(OBJ)

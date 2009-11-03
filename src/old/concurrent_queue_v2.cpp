@@ -127,10 +127,10 @@ public:
     }
 
     atomic<ticket> head_counter;
-    char pad1[NFS_MaxLineSize-sizeof(size_t)];
+    char pad1[NFS_MaxLineSize-sizeof(atomic<ticket>)];
 
     atomic<ticket> tail_counter;
-    char pad2[NFS_MaxLineSize-sizeof(ticket)];
+    char pad2[NFS_MaxLineSize-sizeof(atomic<ticket>)];
     micro_queue array[n_queue];    
 
     micro_queue& choose( ticket k ) {

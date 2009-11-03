@@ -61,6 +61,20 @@ namespace internal {
 
     //! Type of a hash code.
     typedef size_t hashcode_t;
+    //! Node base type
+    struct hash_map_node_base : no_copy {
+        //! Mutex type
+        typedef spin_rw_mutex mutex_t;
+        //! Scoped lock type for mutex
+        typedef mutex_t::scoped_lock scoped_t;
+        //! Next node in chain
+        hash_map_node_base *next;
+        mutex_t mutex;
+    };
+    //! Incompleteness flag value
+    static hash_map_node_base *const rehash_req = reinterpret_cast<hash_map_node_base*>(size_t(3));
+    //! Rehashed empty bucket flag
+    static hash_map_node_base *const empty_rehashed = reinterpret_cast<hash_map_node_base*>(size_t(0));
     //! base class of concurrent_hash_map
     class hash_map_base {
     public:
@@ -71,19 +85,7 @@ namespace internal {
         //! Segment index type
         typedef size_t segment_index_t;
         //! Node base type
-        struct node_base : no_copy {
-            //! Mutex type
-            typedef spin_rw_mutex mutex_t;
-            //! Scoped lock type for mutex
-            typedef mutex_t::scoped_lock scoped_t;
-            //! Next node in chain
-            node_base *next;
-            mutex_t mutex;
-        };
-        //! Incompleteness flag value
-        static node_base *const rehash_req;
-        //! Rehashed empty bucket flag
-        static node_base *const empty_rehashed;
+        typedef hash_map_node_base node_base;
         //! Bucket type
         struct bucket : no_copy {
             //! Mutex type for buckets
@@ -288,8 +290,6 @@ namespace internal {
                 std::swap(this->my_table[i], table.my_table[i]);
         }
     };
-    hash_map_base::node_base *const hash_map_base::rehash_req = reinterpret_cast<node_base*>(size_t(3));
-    hash_map_base::node_base *const hash_map_base::empty_rehashed = reinterpret_cast<node_base*>(size_t(0));
 
     template<typename Iterator>
     class hash_map_range;
@@ -618,7 +618,7 @@ protected:
         node *n = static_cast<node*>( b->node_list );
         while( is_valid(n) && !my_hash_compare.equal(key, n->item.first) )
             n = static_cast<node*>( n->next );
-        __TBB_ASSERT(n != rehash_req, "Search can be executed only for rehashed bucket");
+        __TBB_ASSERT(n != internal::rehash_req, "Search can be executed only for rehashed bucket");
         return n;
     }
 
@@ -633,17 +633,17 @@ protected:
             my_b = base->get_bucket( h );
 #if TBB_USE_THREADING_TOOLS
             // TODO: actually, notification is unnecessary here, just hiding double-check
-            if( itt_load_pointer_with_acquire_v3(&my_b->node_list) == rehash_req
+            if( itt_load_pointer_with_acquire_v3(&my_b->node_list) == internal::rehash_req
 #else
-            if( __TBB_load_with_acquire(my_b->node_list) == rehash_req
+            if( __TBB_load_with_acquire(my_b->node_list) == internal::rehash_req
 #endif
                 && try_acquire( my_b->mutex, /*write=*/true ) )
             {
-                if( my_b->node_list == rehash_req ) base->rehash_bucket( my_b, h ); //recursive rehashing
+                if( my_b->node_list == internal::rehash_req ) base->rehash_bucket( my_b, h ); //recursive rehashing
                 my_is_writer = true;
             }
             else bucket::scoped_t::acquire( my_b->mutex, /*write=*/my_is_writer = writer );
-            __TBB_ASSERT( my_b->node_list != rehash_req, NULL);
+            __TBB_ASSERT( my_b->node_list != internal::rehash_req, NULL);
         }
         //! check whether bucket is locked for write
         bool is_writer() { return my_is_writer; }
@@ -657,7 +657,7 @@ protected:
     void rehash_bucket( bucket *b_new, const hashcode_t h ) {
         __TBB_ASSERT( *(intptr_t*)(&b_new->mutex), "b_new must be locked (for write)");
         __TBB_ASSERT( h > 1, "The lowermost buckets can't be rehashed" );
-        __TBB_store_with_release(b_new->node_list, empty_rehashed); // mark rehashed
+        __TBB_store_with_release(b_new->node_list, internal::empty_rehashed); // mark rehashed
         hashcode_t mask = ( 1u<<__TBB_Log2( h ) ) - 1; // get parent mask from the topmost bit
 
         bucket_accessor b_old( this, h & mask );
@@ -936,18 +936,18 @@ protected:
         bucket *b = get_bucket( h & m );
 #if TBB_USE_THREADING_TOOLS
         // TODO: actually, notification is unnecessary here, just hiding double-check
-        if( itt_load_pointer_with_acquire_v3(&b->node_list) == rehash_req )
+        if( itt_load_pointer_with_acquire_v3(&b->node_list) == internal::rehash_req )
 #else
-        if( __TBB_load_with_acquire(b->node_list) == rehash_req )
+        if( __TBB_load_with_acquire(b->node_list) == internal::rehash_req )
 #endif
         {
             bucket::scoped_t lock;
             if( lock.try_acquire( b->mutex, /*write=*/true ) ) {
-                if( b->node_list == rehash_req)
+                if( b->node_list == internal::rehash_req)
                     const_cast<concurrent_hash_map*>(this)->rehash_bucket( b, h & m ); //recursive rehashing
             }
             else lock.acquire( b->mutex, /*write=*/false );
-            __TBB_ASSERT(b->node_list!=rehash_req,NULL);
+            __TBB_ASSERT(b->node_list!=internal::rehash_req,NULL);
         }
         n = search_bucket( key, b );
         if( n )
@@ -1055,7 +1055,7 @@ std::pair<I, I> concurrent_hash_map<Key,T,HashCompare,A>::internal_equal_range( 
     __TBB_ASSERT((m&(m+1))==0, NULL);
     h &= m;
     bucket *b = get_bucket( h );
-    while( b->node_list == rehash_req ) {
+    while( b->node_list == internal::rehash_req ) {
         m = ( 1u<<__TBB_Log2( h ) ) - 1; // get parent mask from the topmost bit
         b = get_bucket( h &= m );
     }
@@ -1154,14 +1154,14 @@ void concurrent_hash_map<Key,T,HashCompare,A>::clear() {
     for( segment_index_t b = 0; b <= m; b++ ) {
         node_base *n = get_bucket(b)->node_list;
 #if TBB_USE_PERFORMANCE_WARNINGS
-        if( n == empty_rehashed ) empty_buckets++;
-        else if( n == rehash_req ) buckets--;
+        if( n == internal::empty_rehashed ) empty_buckets++;
+        else if( n == internal::rehash_req ) buckets--;
         else if( n->next ) overpopulated_buckets++;
 #endif
         for(; is_valid(n); n = n->next ) {
             hashcode_t h = my_hash_compare.hash( static_cast<node*>(n)->item.first );
             h &= m;
-            __TBB_ASSERT( h == b || get_bucket(h)->node_list == rehash_req, "Rehashing is not finished until serial stage due to concurrent or unexpectedly terminated operation" );
+            __TBB_ASSERT( h == b || get_bucket(h)->node_list == internal::rehash_req, "Rehashing is not finished until serial stage due to concurrent or unexpectedly terminated operation" );
         }
     }
 #if TBB_USE_PERFORMANCE_WARNINGS
@@ -1206,9 +1206,9 @@ void concurrent_hash_map<Key,T,HashCompare,A>::internal_copy( const concurrent_h
         for( hashcode_t k = 0; k <= mask; k++ ) {
             if( k & (k-2) ) ++dst,src++; // not the beginning of a segment
             else { dst = get_bucket( k ); src = source.get_bucket( k ); }
-            __TBB_ASSERT( dst->node_list != rehash_req, "Invalid bucket in destination table");
+            __TBB_ASSERT( dst->node_list != internal::rehash_req, "Invalid bucket in destination table");
             node *n = static_cast<node*>( src->node_list );
-            if( n == rehash_req ) { // source is not rehashed, items are in previous buckets
+            if( n == internal::rehash_req ) { // source is not rehashed, items are in previous buckets
                 bucket_accessor b( this, k );
                 rehash_bucket( b(), k ); // TODO: use without synchronization
             } else for(; n; n = static_cast<node*>( n->next ) ) {
@@ -1226,7 +1226,7 @@ void concurrent_hash_map<Key,T,HashCompare,A>::internal_copy(I first, I last) {
     for(; first != last; ++first) {
         hashcode_t h = my_hash_compare.hash( first->first );
         bucket *b = get_bucket( h & m );
-        __TBB_ASSERT( b->node_list != rehash_req, "Invalid bucket in destination table");
+        __TBB_ASSERT( b->node_list != internal::rehash_req, "Invalid bucket in destination table");
         node *n = new( my_allocator ) node(first->first, first->second);
         add_to_bucket( b, n );
         ++my_size; // TODO: replace by non-atomic op

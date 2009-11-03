@@ -88,8 +88,35 @@ struct ThreadedInit {
 #include <tchar.h>
 #endif /* _MSC_VER */
 
+#include "harness_concurrency_tracker.h"
+#include "tbb/parallel_for.h"
+#include "tbb/blocked_range.h"
+
+typedef tbb::blocked_range<int> Range;
+
+class ConcurrencyTrackingBody {
+public:
+    void operator() ( const Range& ) const {
+        Harness::ConcurrencyTracker ct;
+        for ( volatile int i = 0; i < 1000000; ++i );
+    }
+};
+
+/** The test will fail in particular if task_scheduler_init mistakenly hooks up 
+    auto-initialization mechanism. **/
+void AssertExplicitInitIsNotSupplanted () {
+    int hardwareConcurrency = tbb::task_scheduler_init::default_num_threads();
+    tbb::task_scheduler_init init(1);
+    Harness::ConcurrencyTracker::Reset();
+    tbb::parallel_for( Range(0, hardwareConcurrency * 2, 1), ConcurrencyTrackingBody(), tbb::simple_partitioner() );
+    ASSERT( Harness::ConcurrencyTracker::PeakParallelism() == 1, 
+            "Manual init provided more threads than requested. See also the comment at the beginning of main()." );
+}
+
 __TBB_TEST_EXPORT
 int main(int argc, char* argv[]) {
+    // Do not use tbb::task_scheduler_init directly in the scope of main's body,
+    // as a static variable, or as a member of a static variable.
 #if _MSC_VER && !__TBB_NO_IMPLICIT_LINKAGE
     #ifdef _DEBUG
         ASSERT(!GetModuleHandle(_T("tbb.dll")) && GetModuleHandle(_T("tbb_debug.dll")),
@@ -112,6 +139,7 @@ int main(int argc, char* argv[]) {
         REMARK("testing with %d threads\n", p );
         NativeParallelFor( p, ThreadedInit() );
     }
+    AssertExplicitInitIsNotSupplanted();
     REPORT("done\n");
     return 0;
 }

@@ -30,6 +30,18 @@
 // This program deliberately #includes ../internal/task.cpp so that
 // it can get intimate access to the scheduler.
 
+// Test correctness of forceful TBB initialization before any dynamic initialization
+// of static objects inside the library took place.
+namespace tbb { 
+namespace internal {
+    // Forward declaration of the TBB general initialization routine from task.cpp
+    void DoOneTimeInitializations();
+}}
+
+struct StaticInitializationChecker {
+    StaticInitializationChecker () { tbb::internal::DoOneTimeInitializations(); }
+} theChecker;
+
 #define TEST_ASSEMBLY_ROUTINES 1
 #define __TBB_TASK_CPP_DIRECTLY_INCLUDED 1
 // to avoid usage of #pragma comment

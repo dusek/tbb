@@ -79,6 +79,12 @@ void * __TBB_EXPORTED_FUNC scalable_aligned_realloc (void* ptr, size_t size, siz
     @ingroup memory_allocation */
 void __TBB_EXPORTED_FUNC scalable_aligned_free (void* ptr);
 
+/** The analogue of _msize/malloc_size/malloc_usable_size.
+    Returns the usable size of a memory block previously allocated by scalable_*,
+    or 0 (zero) if ptr does not point to such a block.
+    @ingroup memory_allocation */
+size_t __TBB_EXPORTED_FUNC scalable_msize (void* ptr);
+
 #ifdef __cplusplus
 } /* extern "C" */
 #endif /* __cplusplus */

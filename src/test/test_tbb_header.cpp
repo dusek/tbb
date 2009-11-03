@@ -34,10 +34,8 @@
 **/
 
 #include "tbb/tbb.h"
-#define HARNESS_NO_PARSE_COMMAND_LINE 1
-#include "harness.h"
 
-volatile size_t g_sink;
+static volatile size_t g_sink;
 
 #define TestTypeDefinitionPresence( Type) g_sink = sizeof(tbb::Type);
 #define TestTypeDefinitionPresence2(TypeStart, TypeEnd) g_sink = sizeof(tbb::TypeStart,TypeEnd);
@@ -64,8 +62,18 @@ struct Body3 {
     void assign( const Body3& ) {}
 };
 
+#if __TBB_TEST_SECONDARY
+/* This mode is used to produce secondary object file that should be linked with
+   main object file in order to detect "multiple definition" linker error.
+*/
+int secondary(int /*argc*/, char* /*argv*/[])
+#else
+#define HARNESS_NO_PARSE_COMMAND_LINE 1
+#include "harness.h"
 __TBB_TEST_EXPORT
-int main(int /*argc*/, char* /*argv*/[]) {
+int main(int /*argc*/, char* /*argv*/[])
+#endif
+{
     TestTypeDefinitionPresence2(aligned_space<int, 1> );
     TestTypeDefinitionPresence( atomic<int> );
     TestTypeDefinitionPresence( cache_aligned_allocator<int> );
@@ -111,6 +119,8 @@ int main(int /*argc*/, char* /*argv*/[]) {
     TestTypeDefinitionPresence( tbb_allocator<int> );
     TestTypeDefinitionPresence( zero_allocator<int> );
     TestTypeDefinitionPresence( tick_count );
+#if !__TBB_TEST_SECONDARY
     REPORT("done\n");
+#endif
     return 0;
 }

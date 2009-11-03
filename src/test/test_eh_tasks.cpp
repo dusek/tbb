@@ -35,6 +35,8 @@
 
 #if __TBB_EXCEPTIONS && !__TBB_EXCEPTION_HANDLING_TOTALLY_BROKEN
 
+#define __TBB_ATOMICS_CODEGEN_BROKEN __SUNPRO_CC
+
 #include "tbb/task_scheduler_init.h"
 #include "tbb/spin_mutex.h"
 #include "tbb/tick_count.h"
@@ -93,8 +95,10 @@ inline void ResetGlobals () {
 }
 
 inline void WaitForException () {
-    while ( !g_ExceptionCaught )
+    int n = 0;
+    while ( ++n < c_Timeout && !__TBB_load_with_acquire(g_ExceptionCaught) )
         __TBB_Yield();
+    ASSERT_WARNING( n < c_Timeout, "WaitForException failed" );
 }
 
 #define ASSERT_TEST_POSTCOND() \
@@ -231,14 +235,14 @@ class RootLauncherTask : public TaskBase {
     tbb::task_group_context::kind_type m_CtxKind;
  
     tbb::task* do_execute () {
-        tbb::task_group_context  ctx (tbb::task_group_context::isolated);
+        tbb::task_group_context  ctx(m_CtxKind);
         SimpleRootTask &r = *new( allocate_root(ctx) ) SimpleRootTask;
         TRY();
             spawn_root_and_wait(r);
             // Give a child of our siblings a chance to throw the test exception
             WaitForException();
         CATCH();
-        ASSERT (!g_UnknownException, "unknown exception was caught");
+        ASSERT (__TBB_EXCEPTION_TYPE_INFO_BROKEN || !g_UnknownException, "unknown exception was caught");
         return NULL;
     }
 public:
@@ -466,10 +470,14 @@ void Test9 () {
 
 template<typename T>
 void ThrowMovableException ( intptr_t threshold, const T& data ) {
-    if ( IsThrowingThread() )
+    if ( !IsThrowingThread() )
         return; 
     if ( !g_SolitaryException ) {
+#if __TBB_ATOMICS_CODEGEN_BROKEN
+        g_ExceptionsThrown = g_ExceptionsThrown + 1;
+#else
         ++g_ExceptionsThrown;
+#endif
         throw tbb::movable_exception<T>(data);
     }
     while ( g_CurStat.Existed() < threshold )
@@ -591,7 +599,7 @@ void Test10 () {
         g_UnknownException = true;
     }
     ASSERT (g_ExceptionCaught, "no exception occurred");
-    ASSERT (!g_UnknownException, "unknown exception was caught");
+    ASSERT (__TBB_EXCEPTION_TYPE_INFO_BROKEN || !g_UnknownException, "unknown exception was caught");
     r->destroy(*r);
 } // void Test10 ()
 
@@ -668,16 +676,15 @@ __TBB_TEST_EXPORT
 int main(int argc, char* argv[]) {
     ParseCommandLine( argc, argv );
     REMARK ("Using %s", TBB_USE_CAPTURED_EXCEPTION ? "tbb:captured_exception" : "exact exception propagation");
-    MinThread = min(NUM_ROOTS_IN_GROUP, max(2, MinThread));
-    MaxThread = min(NUM_ROOTS_IN_GROUP, max(MinThread, MaxThread));
+    MinThread = min(NUM_ROOTS_IN_GROUP, min(tbb::task_scheduler_init::default_num_threads(), max(2, MinThread)));
+    MaxThread = min(NUM_ROOTS_IN_GROUP, max(MinThread, min(tbb::task_scheduler_init::default_num_threads(), MaxThread)));
     ASSERT (NUM_ROOTS_IN_GROUP < NUM_ROOT_TASKS, "Fix defines");
 #if __TBB_EXCEPTIONS
     // Test0 always runs on one thread
     Test0();
-    for ( g_NumThreads = MinThread; g_NumThreads <= MaxThread; ++g_NumThreads ) {
-        g_SolitaryException = 0;
+    g_SolitaryException = 0;
+    for ( g_NumThreads = MinThread; g_NumThreads <= MaxThread; ++g_NumThreads )
         RunTests();
-    }
     REPORT("done\n");
 #else
     REPORT("skip\n");

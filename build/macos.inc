@@ -69,7 +69,7 @@ OBJ=o
 DLL=dylib
 LIBEXT=dylib
 
-def_prefix = $(if $(findstring 32,$(arch)),mac32,mac64)
+def_prefix = $(if $(findstring 64,$(arch)),mac64,mac32)
 
 TBB.DEF = $(tbb_root)/src/tbb/$(def_prefix)-tbb-export.def
 TBB.DLL = libtbb$(DEBUG_SUFFIX).$(DLL)

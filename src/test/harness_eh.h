@@ -31,6 +31,13 @@
 #include "harness.h"
 #include "harness_concurrency_tracker.h"
 
+#if _MSC_VER < 1400
+    #define __TBB_EXCEPTION_TYPE_INFO_BROKEN true
+#else
+    #define __TBB_EXCEPTION_TYPE_INFO_BROKEN false
+#endif
+
+
 namespace Harness {
 #if _WIN32 || _WIN64
     typedef DWORD tid_t;
@@ -140,23 +147,35 @@ static void ThrowTestException ( intptr_t threshold ) {
         REMARK_ONCE ("Multiple exceptions mode: %d throws", (intptr_t)g_ExceptionsThrown);
 
 #define ASSERT_EXCEPTION() \
-    ASSERT (g_ExceptionsThrown ? g_ExceptionCaught : !g_ExceptionCaught, "throw without catch or catch without throw"); \
+    ASSERT (g_ExceptionsThrown ? g_ExceptionCaught : true, "throw without catch"); \
+    ASSERT (!g_ExceptionsThrown ? !g_ExceptionCaught : true, "catch without throw"); \
     ASSERT (g_ExceptionCaught, "no exception occurred"); \
-    ASSERT (!g_UnknownException, "unknown exception was caught")
+    ASSERT (__TBB_EXCEPTION_TYPE_INFO_BROKEN || !g_UnknownException, "unknown exception was caught")
 
 #define CATCH_AND_ASSERT() \
     CATCH() \
     ASSERT_EXCEPTION()
 
-const int c_Timeout = 10000;
+const int c_Timeout = 1000000;
 
-void WaitUntilConcurrencyPeaks () {
+void WaitUntilConcurrencyPeaks ( int expected_peak ) {
     if ( g_Flog )
         return;
     int n = 0;
-    while ( ++n < c_Timeout && (int)Harness::ConcurrencyTracker::InstantParallelism() < g_NumThreads )
+retry:
+    while ( ++n < c_Timeout && (int)Harness::ConcurrencyTracker::PeakParallelism() < expected_peak )
         __TBB_Yield();
+    ASSERT_WARNING( n < c_Timeout, "Missed wakeup or machine is overloaded?" );
+    // Workaround in case a missed wakeup takes place
+    if ( n == c_Timeout ) {
+        tbb::task &r = *new( tbb::task::allocate_root() ) tbb::empty_task();
+        r.spawn(r);
+        n = 0;
+        goto retry;
+    }
 }
+
+inline void WaitUntilConcurrencyPeaks () { WaitUntilConcurrencyPeaks(g_NumThreads); }
 
 inline bool IsMaster() {
     return Harness::CurrentTid() == g_Master;
@@ -172,6 +191,7 @@ class CancellatorTask : public tbb::task {
     intptr_t m_cancellationThreshold;
 
     tbb::task* execute () {
+        Harness::ConcurrencyTracker ct;
         s_Ready = true;
         while ( g_CurExecuted < m_cancellationThreshold )
             __TBB_Yield();
