@@ -51,6 +51,20 @@ class task_group_context;
 #define __TBB_TASK_BASE_ACCESS private
 #endif
 
+namespace internal {
+
+    class allocate_additional_child_of_proxy: no_assign {
+        //! No longer used, but retained for binary layout compatibility.  Always NULL.
+        task* self;
+        task& parent;
+    public:
+        explicit allocate_additional_child_of_proxy( task& parent_ ) : self(NULL), parent(parent_) {}
+        task& __TBB_EXPORTED_METHOD allocate( size_t size ) const;
+        void __TBB_EXPORTED_METHOD free( task& ) const;
+    };
+
+}
+
 namespace interface5 {
     namespace internal {
         //! Base class for methods that became static in TBB 3.0.
@@ -69,6 +83,12 @@ namespace interface5 {
             //! Spawn multiple tasks and clear list.
             static void spawn( task_list& list );
 
+            //! Like allocate_child, except that task's parent becomes "t", not this.
+            /** Typically used in conjunction with schedule_to_reexecute to implement while loops.
+               Atomically increments the reference count of t.parent() */
+            static tbb::internal::allocate_additional_child_of_proxy allocate_additional_child_of( task& t ) {
+                return tbb::internal::allocate_additional_child_of_proxy(t);
+            }
 #endif /* !TBB_DEPRECATED_TASK_INTERFACE */
 #if !TBB_DEPRECATED_TASK_INTERFACE || __TBB_BUILD
             //! Destroy a task.
@@ -142,15 +162,6 @@ namespace internal {
 
     class allocate_child_proxy: no_assign {
     public:
-        task& __TBB_EXPORTED_METHOD allocate( size_t size ) const;
-        void __TBB_EXPORTED_METHOD free( task& ) const;
-    };
-
-    class allocate_additional_child_of_proxy: no_assign {
-        task& self;
-        task& parent;
-    public:
-        allocate_additional_child_of_proxy( task& self_, task& parent_ ) : self(self_), parent(parent_) {}
         task& __TBB_EXPORTED_METHOD allocate( size_t size ) const;
         void __TBB_EXPORTED_METHOD free( task& ) const;
     };
@@ -477,9 +488,7 @@ public:
         //! task object is on free list, or is going to be put there, or was just taken off.
         freed,
         //! task to be recycled as continuation
-        recycle, 
-        //! task to be scheduled for starvation-resistant execution
-        to_enqueue
+        recycle 
     };
 
     //------------------------------------------------------------------------
@@ -509,14 +518,14 @@ public:
         return *reinterpret_cast<internal::allocate_child_proxy*>(this);
     }
 
+#if TBB_DEPRECATED_TASK_INTERFACE
     //! Like allocate_child, except that task's parent becomes "t", not this.
     /** Typically used in conjunction with schedule_to_reexecute to implement while loops.
         Atomically increments the reference count of t.parent() */
     internal::allocate_additional_child_of_proxy allocate_additional_child_of( task& t ) {
-        return internal::allocate_additional_child_of_proxy(*this,t);
+        return internal::allocate_additional_child_of_proxy(t);
     }
 
-#if TBB_DEPRECATED_TASK_INTERFACE
     //! Destroy a task.
     /** Usually, calling this method is unnecessary, because a task is
         implicitly deleted after its execute() method runs.  However,
@@ -524,6 +533,9 @@ public:
         when a root task is used as the parent in spawn_and_wait_for_all. */
     void __TBB_EXPORTED_METHOD destroy( task& t );
 #else
+    //! Define recommended static form via import from base class.
+    using task_base::allocate_additional_child_of;
+
     //! Define recommended static form via import from base class.
     using task_base::destroy;
 #endif /* TBB_DEPRECATED_TASK_INTERFACE */

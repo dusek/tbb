@@ -158,7 +158,6 @@ void allocate_child_proxy::free( task& mytask ) const {
 // Methods of allocate_additional_child_of_proxy
 //------------------------------------------------------------------------
 task& allocate_additional_child_of_proxy::allocate( size_t size ) const {
-    __TBB_ASSERT( AssertOkay(self), NULL );
     parent.increment_ref_count();
     generic_scheduler* s = governor::local_scheduler();
     return s->allocate_task( size, __TBB_CONTEXT_ARG(&parent, parent.prefix().context) );

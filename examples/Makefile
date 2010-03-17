@@ -64,6 +64,7 @@ ifeq ($(tbb_os),windows)
     work_dir := $(subst /,$(SLASH),$(work_dir))
     export PATH := $(work_dir)_release;$(work_dir)_debug;$(PATH)
     export TBB_ARCH_PLATFORM = $(arch)\$(runtime)
+    export TBB_TARGET_ARCH = $(arch)
 else
     EXAMPLE_MAKEFILE = Makefile
     EXAMPLES := $(wildcard */*/$(EXAMPLE_MAKEFILE))

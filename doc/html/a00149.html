@@ -1,6 +1,6 @@
 <!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
 <html><head><meta http-equiv="Content-Type" content="text/html;charset=iso-8859-1">
-<title>tbb::interface4::concurrent_hash_map&lt; Key, T, HashCompare, Allocator &gt;::bucket_accessor Class Reference</title>
+<title>tbb::cache_aligned_allocator&lt; void &gt; Class Template Reference</title>
 <link href="doxygen.css" rel="stylesheet" type="text/css">
 <link href="tabs.css" rel="stylesheet" type="text/css">
 </head><body>
@@ -21,42 +21,39 @@
     <li><a href="functions.html"><span>Class&nbsp;Members</span></a></li>
   </ul></div>
 <div class="nav">
-<a class="el" href="a00257.html">tbb</a>::<b>interface4</b>::<a class="el" href="a00147.html">concurrent_hash_map</a>::<a class="el" href="a00149.html">bucket_accessor</a></div>
-<h1>tbb::interface4::concurrent_hash_map&lt; Key, T, HashCompare, Allocator &gt;::bucket_accessor Class Reference</h1><!-- doxytag: class="tbb::interface4::concurrent_hash_map::bucket_accessor" -->bucket accessor is to find, rehash, acquire a lock, and access a bucket  
+<a class="el" href="a00264.html">tbb</a>::<a class="el" href="a00149.html">cache_aligned_allocator&lt; void &gt;</a></div>
+<h1>tbb::cache_aligned_allocator&lt; void &gt; Class Template Reference<br>
+<small>
+[<a class="el" href="a00273.html">Memory Allocation</a>]</small>
+</h1><!-- doxytag: class="tbb::cache_aligned_allocator&lt; void &gt;" -->Analogous to std::allocator&lt;void&gt;, as defined in ISO C++ Standard, Section 20.4.1.  
 <a href="#_details">More...</a>
 <p>
-<code>#include &lt;<a class="el" href="a00315.html">concurrent_hash_map.h</a>&gt;</code>
+<code>#include &lt;<a class="el" href="a00319.html">cache_aligned_allocator.h</a>&gt;</code>
 <p>
-<a href="a00015.html">List of all members.</a><table border="0" cellpadding="0" cellspacing="0">
+<a href="a00009.html">List of all members.</a><table border="0" cellpadding="0" cellspacing="0">
 <tr><td></td></tr>
-<tr><td colspan="2"><br><h2>Public Member Functions</h2></td></tr>
-<tr><td class="memItemLeft" nowrap align="right" valign="top"><a class="anchor" name="5aa0b492fb4260a940ea7bda2ef486e2"></a><!-- doxytag: member="tbb::interface4::concurrent_hash_map::bucket_accessor::bucket_accessor" ref="5aa0b492fb4260a940ea7bda2ef486e2" args="(concurrent_hash_map *base, const hashcode_t h, bool writer=false)" -->
-&nbsp;</td><td class="memItemRight" valign="bottom"><b>bucket_accessor</b> (<a class="el" href="a00147.html">concurrent_hash_map</a> *base, const hashcode_t h, bool writer=false)</td></tr>
+<tr><td colspan="2"><br><h2>Public Types</h2></td></tr>
+<tr><td class="memItemLeft" nowrap align="right" valign="top"><a class="anchor" name="ce89776145998f0685a767b4f195272d"></a><!-- doxytag: member="tbb::cache_aligned_allocator&lt; void &gt;::pointer" ref="ce89776145998f0685a767b4f195272d" args="" -->
+typedef void *&nbsp;</td><td class="memItemRight" valign="bottom"><b>pointer</b></td></tr>
 
-<tr><td class="memItemLeft" nowrap align="right" valign="top"><a class="anchor" name="26b4fe0ca87a7ad4852cb787db880119"></a><!-- doxytag: member="tbb::interface4::concurrent_hash_map::bucket_accessor::acquire" ref="26b4fe0ca87a7ad4852cb787db880119" args="(concurrent_hash_map *base, const hashcode_t h, bool writer=false)" -->
-void&nbsp;</td><td class="memItemRight" valign="bottom"><a class="el" href="a00149.html#26b4fe0ca87a7ad4852cb787db880119">acquire</a> (<a class="el" href="a00147.html">concurrent_hash_map</a> *base, const hashcode_t h, bool writer=false)</td></tr>
+<tr><td class="memItemLeft" nowrap align="right" valign="top"><a class="anchor" name="4431fbbe1a8cfeb19c48ad0072078f45"></a><!-- doxytag: member="tbb::cache_aligned_allocator&lt; void &gt;::const_pointer" ref="4431fbbe1a8cfeb19c48ad0072078f45" args="" -->
+typedef const void *&nbsp;</td><td class="memItemRight" valign="bottom"><b>const_pointer</b></td></tr>
 
-<tr><td class="mdescLeft">&nbsp;</td><td class="mdescRight">find a bucket by masked hashcode, optionally rehash, and acquire the lock <br></td></tr>
-<tr><td class="memItemLeft" nowrap align="right" valign="top"><a class="anchor" name="fc194e3a186dc935a5fb513cc9f8e898"></a><!-- doxytag: member="tbb::interface4::concurrent_hash_map::bucket_accessor::is_writer" ref="fc194e3a186dc935a5fb513cc9f8e898" args="()" -->
-bool&nbsp;</td><td class="memItemRight" valign="bottom"><a class="el" href="a00149.html#fc194e3a186dc935a5fb513cc9f8e898">is_writer</a> ()</td></tr>
+<tr><td class="memItemLeft" nowrap align="right" valign="top"><a class="anchor" name="2ab296f4ecdd75f8e193ff92004a697d"></a><!-- doxytag: member="tbb::cache_aligned_allocator&lt; void &gt;::value_type" ref="2ab296f4ecdd75f8e193ff92004a697d" args="" -->
+typedef void&nbsp;</td><td class="memItemRight" valign="bottom"><b>value_type</b></td></tr>
 
-<tr><td class="mdescLeft">&nbsp;</td><td class="mdescRight">check whether bucket is locked for write <br></td></tr>
-<tr><td class="memItemLeft" nowrap align="right" valign="top"><a class="anchor" name="57c6110bd20e95c06de5a199de988941"></a><!-- doxytag: member="tbb::interface4::concurrent_hash_map::bucket_accessor::operator()" ref="57c6110bd20e95c06de5a199de988941" args="()" -->
-bucket *&nbsp;</td><td class="memItemRight" valign="bottom"><a class="el" href="a00149.html#57c6110bd20e95c06de5a199de988941">operator()</a> ()</td></tr>
-
-<tr><td class="mdescLeft">&nbsp;</td><td class="mdescRight">get bucket pointer <br></td></tr>
-<tr><td class="memItemLeft" nowrap align="right" valign="top"><a class="anchor" name="8f7f0dc61f528de29d06e6054b4a9835"></a><!-- doxytag: member="tbb::interface4::concurrent_hash_map::bucket_accessor::upgrade_to_writer" ref="8f7f0dc61f528de29d06e6054b4a9835" args="()" -->
-bool&nbsp;</td><td class="memItemRight" valign="bottom"><b>upgrade_to_writer</b> ()</td></tr>
+<tr><td colspan="2"><br><h2>Classes</h2></td></tr>
+<tr><td class="memItemLeft" nowrap align="right" valign="top">struct &nbsp;</td><td class="memItemRight" valign="bottom"><b>rebind</b></td></tr>
 
 </table>
 <hr><a name="_details"></a><h2>Detailed Description</h2>
-<h3>template&lt;typename Key, typename T, typename HashCompare, typename Allocator&gt;<br>
- class tbb::interface4::concurrent_hash_map&lt; Key, T, HashCompare, Allocator &gt;::bucket_accessor</h3>
+<h3>template&lt;&gt;<br>
+ class tbb::cache_aligned_allocator&lt; void &gt;</h3>
 
-bucket accessor is to find, rehash, acquire a lock, and access a bucket 
+Analogous to std::allocator&lt;void&gt;, as defined in ISO C++ Standard, Section 20.4.1. 
 <p>
 <hr>The documentation for this class was generated from the following file:<ul>
-<li><a class="el" href="a00315.html">concurrent_hash_map.h</a></ul>
+<li><a class="el" href="a00319.html">cache_aligned_allocator.h</a></ul>
 <hr>
 <p></p>
 Copyright &copy; 2005-2010 Intel Corporation.  All Rights Reserved.

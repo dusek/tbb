@@ -199,8 +199,8 @@ public:
     /*override*/ void adjust_job_count_estimate( int delta );
 
 #if _WIN32||_WIN64
-    /*override*/ void register_master ( ::rml::server::execution_resource_t& ) const {}
-    /*override*/ void unregister_master ( ::rml::server::execution_resource_t ) const {}
+    /*override*/ void register_master ( ::rml::server::execution_resource_t& ) {}
+    /*override*/ void unregister_master ( ::rml::server::execution_resource_t ) {}
 #endif /* _WIN32||_WIN64 */
 };
 

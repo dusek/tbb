@@ -1,6 +1,12 @@
+Changes (w.r.t 20100310 open-source release):
+
+- Added parallel_pipeline function and companion classes and functions
+    that together form a type-safe lambda-friendly pipeline interface.
+
+------------------------------------------------------------------------
 20100310 open-source release
 
-Changes (w.r.t. previous open-source release):
+Changes (w.r.t. TBB 2.2 Update 3 commercial-aligned release):
 
 - Version macros changed in anticipation of a future release.
 - Directory structure aligned with Intel(R) C++ Compiler;
@@ -29,8 +35,9 @@ Changes (w.r.t. previous open-source release):
     semantics of methods spawn() and destroy(). For exact semantics,
     refer to TBB Reference manual.
 - task_group_context now allows for destruction by non-owner threads.
-- Added TBB_EXCEPTIONS macro to control use of exceptions in TBB headers,
-    e.g. turn it off automatically when requested by compiler options.
+- Added TBB_USE_EXCEPTIONS macro to control use of exceptions in TBB
+    headers. It turns off (i.e. sets to 0) automatically if specified
+    compiler options disable exception handling.
 - TBB is enabled to run on top of Microsoft's Concurrency Runtime
     on Windows* 7 (via our worker dispatcher known as RML).
 - Removed old unused busy-waiting code in concurrent_queue.

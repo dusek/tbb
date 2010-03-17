@@ -118,6 +118,7 @@ int TestMain ()
     TestFuncDefinitionPresence( parallel_scan, (const tbb::blocked_range2d<int>&, Body3&, const tbb::auto_partitioner&), void );
     TestFuncDefinitionPresence( parallel_sort, (int*, int*), void );
     TestTypeDefinitionPresence( pipeline );
+    TestFuncDefinitionPresence( parallel_pipeline, (size_t, const tbb::filter_t<void,void>&), void );
     TestTypeDefinitionPresence( task );
     TestTypeDefinitionPresence( empty_task );
     TestTypeDefinitionPresence( task_list );

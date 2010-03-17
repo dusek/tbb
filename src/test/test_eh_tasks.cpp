@@ -721,7 +721,7 @@ void TestConcurrentCtxDestruction () {
 }
 
 void RunTests () {
-    REMARK ("Number of threads %d", g_NumThreads);
+    REMARK ("Number of threads %d\n", g_NumThreads);
     tbb::task_scheduler_init init (g_NumThreads);
     g_Master = Harness::CurrentTid();
 #if TBB_USE_EXCEPTIONS
@@ -737,7 +737,9 @@ void RunTests () {
 #endif /* TBB_USE_EXCEPTIONS */
     TestCancelation();
     TestCtxDestruction();
+#if !RML_USE_WCRM
     TestConcurrentCtxDestruction();
+#endif
 }
 #endif /* __TBB_TASK_GROUP_CONTEXT */
 

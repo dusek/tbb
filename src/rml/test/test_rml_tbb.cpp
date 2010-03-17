@@ -114,20 +114,33 @@ void FireUpJobs( MyServer& server, MyClient& client, int n_thread, int n_extra, 
     REMARK("client %d: wait for each job to be processed at least once\n",client.client_id());
     // Calculate the number of jobs that are expected to get threads.
     int expected = n_thread;
+    int default_concurrency = server.default_concurrency();
 #if __RML_USE_XNMETASCHEDULER
     // Adjust the value of 'expected' because XNMetaScheduler puts a hard limit on the size of the pool available to server.
     // Neither XNMetaScheduler nor server creates extra threads.
-    int default_concurrency = server.default_concurrency();
     if( expected > default_concurrency ) expected = default_concurrency;
 #endif /* __RML_USE_XNMETASCHEDULER */
     // Wait for expected number of jobs to be processed.
-    for(;;) {
-        int n = 0;
-        for( int k=0; k<n_thread; ++k ) 
-            if( client.job_array[k].processing_count!=0 ) 
-                ++n;
-        if( n>=expected ) break;
-        server.yield();
+    if( N_TestConnections>0 ) {
+        if( default_concurrency+1>=8 && n_thread<=3 && N_TestConnections<=3 && (default_concurrency/N_TestConnections-1)>=n_thread ) {
+            for(;;) {
+                int n = 0;
+                for( int k=0; k<n_thread; ++k ) 
+                    if( client.job_array[k].processing_count!=0 ) 
+                        ++n;
+                    if( n>=expected ) break;
+                server.yield();
+            }
+        } else if( n_thread>0 ) {
+            for( int m=0; m<20; ++m ) {
+                int n = 0;
+                for( int k=0; k<n_thread; ++k ) 
+                    if( client.job_array[k].processing_count!=0 ) 
+                        ++n;
+                if( n>=expected ) break;
+                MilliSleep(1);
+            }
+        }
     }
     server.adjust_job_count_estimate(-n_thread);
 #if _WIN32||_WIN64

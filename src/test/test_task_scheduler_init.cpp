@@ -112,7 +112,8 @@ class ConcurrencyTrackingBody {
 public:
     void operator() ( const Range& ) const {
         Harness::ConcurrencyTracker ct;
-        for ( volatile int i = 0; i < 1000000; ++i );
+        for ( volatile int i = 0; i < 1000000; ++i )
+            ;
     }
 };
 

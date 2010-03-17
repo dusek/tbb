@@ -1,6 +1,6 @@
 <!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
 <html><head><meta http-equiv="Content-Type" content="text/html;charset=iso-8859-1">
-<title>tbb::tick_count::interval_t Class Reference</title>
+<title>tbb::tbb_allocator&lt; T &gt; Class Template Reference</title>
 <link href="doxygen.css" rel="stylesheet" type="text/css">
 <link href="tabs.css" rel="stylesheet" type="text/css">
 </head><body>
@@ -21,57 +21,104 @@
     <li><a href="functions.html"><span>Class&nbsp;Members</span></a></li>
   </ul></div>
 <div class="nav">
-<a class="el" href="a00257.html">tbb</a>::<a class="el" href="a00200.html">tick_count</a>::<a class="el" href="a00201.html">interval_t</a></div>
-<h1>tbb::tick_count::interval_t Class Reference</h1><!-- doxytag: class="tbb::tick_count::interval_t" -->Relative time interval.  
+<a class="el" href="a00264.html">tbb</a>::<a class="el" href="a00201.html">tbb_allocator</a></div>
+<h1>tbb::tbb_allocator&lt; T &gt; Class Template Reference<br>
+<small>
+[<a class="el" href="a00273.html">Memory Allocation</a>]</small>
+</h1><!-- doxytag: class="tbb::tbb_allocator" -->Meets "allocator" requirements of ISO C++ Standard, Section 20.1.5.  
 <a href="#_details">More...</a>
 <p>
-<code>#include &lt;<a class="el" href="a00456.html">tick_count.h</a>&gt;</code>
+<code>#include &lt;<a class="el" href="a00444.html">tbb_allocator.h</a>&gt;</code>
 <p>
-<a href="a00111.html">List of all members.</a><table border="0" cellpadding="0" cellspacing="0">
+<a href="a00086.html">List of all members.</a><table border="0" cellpadding="0" cellspacing="0">
 <tr><td></td></tr>
+<tr><td colspan="2"><br><h2>Public Types</h2></td></tr>
+<tr><td class="memItemLeft" nowrap align="right" valign="top"><a class="anchor" name="3cdd9619bc0a802763e7823068f83a4c"></a><!-- doxytag: member="tbb::tbb_allocator::value_type" ref="3cdd9619bc0a802763e7823068f83a4c" args="" -->
+typedef internal::allocator_type&lt;<br>
+ T &gt;::value_type&nbsp;</td><td class="memItemRight" valign="bottom"><b>value_type</b></td></tr>
+
+<tr><td class="memItemLeft" nowrap align="right" valign="top"><a class="anchor" name="f979d0e74d7c6e5aeb0d26408776a9e1"></a><!-- doxytag: member="tbb::tbb_allocator::pointer" ref="f979d0e74d7c6e5aeb0d26408776a9e1" args="" -->
+typedef value_type *&nbsp;</td><td class="memItemRight" valign="bottom"><b>pointer</b></td></tr>
+
+<tr><td class="memItemLeft" nowrap align="right" valign="top"><a class="anchor" name="1622504886ef265016a5821d61bf7adc"></a><!-- doxytag: member="tbb::tbb_allocator::const_pointer" ref="1622504886ef265016a5821d61bf7adc" args="" -->
+typedef const value_type *&nbsp;</td><td class="memItemRight" valign="bottom"><b>const_pointer</b></td></tr>
+
+<tr><td class="memItemLeft" nowrap align="right" valign="top"><a class="anchor" name="b8e58d23c5c98fd65d4432c1e324f4c0"></a><!-- doxytag: member="tbb::tbb_allocator::reference" ref="b8e58d23c5c98fd65d4432c1e324f4c0" args="" -->
+typedef value_type &amp;&nbsp;</td><td class="memItemRight" valign="bottom"><b>reference</b></td></tr>
+
+<tr><td class="memItemLeft" nowrap align="right" valign="top"><a class="anchor" name="532f36f99650b1c26a2b8899383c5411"></a><!-- doxytag: member="tbb::tbb_allocator::const_reference" ref="532f36f99650b1c26a2b8899383c5411" args="" -->
+typedef const value_type &amp;&nbsp;</td><td class="memItemRight" valign="bottom"><b>const_reference</b></td></tr>
+
+<tr><td class="memItemLeft" nowrap align="right" valign="top"><a class="anchor" name="639df0fb169cfcb94ba1b12429b736f4"></a><!-- doxytag: member="tbb::tbb_allocator::size_type" ref="639df0fb169cfcb94ba1b12429b736f4" args="" -->
+typedef size_t&nbsp;</td><td class="memItemRight" valign="bottom"><b>size_type</b></td></tr>
+
+<tr><td class="memItemLeft" nowrap align="right" valign="top"><a class="anchor" name="54828b5d0b937d608f76650a5df0e39f"></a><!-- doxytag: member="tbb::tbb_allocator::difference_type" ref="54828b5d0b937d608f76650a5df0e39f" args="" -->
+typedef ptrdiff_t&nbsp;</td><td class="memItemRight" valign="bottom"><b>difference_type</b></td></tr>
+
+<tr><td class="memItemLeft" nowrap align="right" valign="top"><a class="anchor" name="09a7f81fb2c3055aaecf058b11538544d524c717485b74aa552fb45b45562cb5"></a><!-- doxytag: member="tbb::tbb_allocator::scalable" ref="09a7f81fb2c3055aaecf058b11538544d524c717485b74aa552fb45b45562cb5" args="" -->
+&nbsp;</td><td class="memItemRight" valign="bottom"><b>scalable</b></td></tr>
+
+<tr><td class="memItemLeft" nowrap align="right" valign="top"><a class="anchor" name="09a7f81fb2c3055aaecf058b11538544e108c3168e3be5de1d98e74723136fbf"></a><!-- doxytag: member="tbb::tbb_allocator::standard" ref="09a7f81fb2c3055aaecf058b11538544e108c3168e3be5de1d98e74723136fbf" args="" -->
+&nbsp;</td><td class="memItemRight" valign="bottom"><b>standard</b></td></tr>
+
+<tr><td class="memItemLeft" nowrap align="right" valign="top">enum &nbsp;</td><td class="memItemRight" valign="bottom"><a class="el" href="a00201.html#09a7f81fb2c3055aaecf058b11538544">malloc_type</a> { <b>scalable</b>, 
+<b>standard</b>
+ }</td></tr>
+
+<tr><td class="mdescLeft">&nbsp;</td><td class="mdescRight">Specifies current allocator. <br></td></tr>
 <tr><td colspan="2"><br><h2>Public Member Functions</h2></td></tr>
-<tr><td class="memItemLeft" nowrap align="right" valign="top"><a class="anchor" name="75a9a0949f8a8a84d6758835f1b48dad"></a><!-- doxytag: member="tbb::tick_count::interval_t::interval_t" ref="75a9a0949f8a8a84d6758835f1b48dad" args="()" -->
-&nbsp;</td><td class="memItemRight" valign="bottom"><a class="el" href="a00201.html#75a9a0949f8a8a84d6758835f1b48dad">interval_t</a> ()</td></tr>
+<tr><td class="memItemLeft" nowrap align="right" valign="top"><a class="anchor" name="d85cd071047b52eeb207d458d54098cc"></a><!-- doxytag: member="tbb::tbb_allocator::tbb_allocator" ref="d85cd071047b52eeb207d458d54098cc" args="(const tbb_allocator &amp;)" -->
+&nbsp;</td><td class="memItemRight" valign="bottom"><b>tbb_allocator</b> (const <a class="el" href="a00201.html">tbb_allocator</a> &amp;)  throw ()</td></tr>
 
-<tr><td class="mdescLeft">&nbsp;</td><td class="mdescRight">Construct a time interval representing zero time duration. <br></td></tr>
-<tr><td class="memItemLeft" nowrap align="right" valign="top"><a class="anchor" name="1a21a428e00cced2e6a49e0f5f2258bf"></a><!-- doxytag: member="tbb::tick_count::interval_t::interval_t" ref="1a21a428e00cced2e6a49e0f5f2258bf" args="(double sec)" -->
-&nbsp;</td><td class="memItemRight" valign="bottom"><a class="el" href="a00201.html#1a21a428e00cced2e6a49e0f5f2258bf">interval_t</a> (double sec)</td></tr>
+<tr><td class="memTemplParams" nowrap colspan="2"><a class="anchor" name="5c3cb04a50d15d38f4c66ca3e5d2f6af"></a><!-- doxytag: member="tbb::tbb_allocator::tbb_allocator" ref="5c3cb04a50d15d38f4c66ca3e5d2f6af" args="(const tbb_allocator&lt; U &gt; &amp;)" -->
+template&lt;typename U&gt; </td></tr>
+<tr><td class="memTemplItemLeft" nowrap align="right" valign="top">&nbsp;</td><td class="memTemplItemRight" valign="bottom"><b>tbb_allocator</b> (const <a class="el" href="a00201.html">tbb_allocator</a>&lt; U &gt; &amp;)  throw ()</td></tr>
 
-<tr><td class="mdescLeft">&nbsp;</td><td class="mdescRight">Construct a time interval representing sec seconds time duration. <br></td></tr>
-<tr><td class="memItemLeft" nowrap align="right" valign="top"><a class="anchor" name="d5d8429c0bc59cf6131b2abc7929fa59"></a><!-- doxytag: member="tbb::tick_count::interval_t::seconds" ref="d5d8429c0bc59cf6131b2abc7929fa59" args="() const " -->
-double&nbsp;</td><td class="memItemRight" valign="bottom"><a class="el" href="a00201.html#d5d8429c0bc59cf6131b2abc7929fa59">seconds</a> () const </td></tr>
+<tr><td class="memItemLeft" nowrap align="right" valign="top"><a class="anchor" name="08d3822344271d0a1c2e64e8c9c16b58"></a><!-- doxytag: member="tbb::tbb_allocator::address" ref="08d3822344271d0a1c2e64e8c9c16b58" args="(reference x) const " -->
+pointer&nbsp;</td><td class="memItemRight" valign="bottom"><b>address</b> (reference x) const </td></tr>
 
-<tr><td class="mdescLeft">&nbsp;</td><td class="mdescRight">Return the length of a time interval in seconds. <br></td></tr>
-<tr><td class="memItemLeft" nowrap align="right" valign="top"><a class="anchor" name="cd9814947902e26463a69a111530f81b"></a><!-- doxytag: member="tbb::tick_count::interval_t::operator+=" ref="cd9814947902e26463a69a111530f81b" args="(const interval_t &amp;i)" -->
-<a class="el" href="a00201.html">interval_t</a> &amp;&nbsp;</td><td class="memItemRight" valign="bottom"><a class="el" href="a00201.html#cd9814947902e26463a69a111530f81b">operator+=</a> (const <a class="el" href="a00201.html">interval_t</a> &amp;i)</td></tr>
+<tr><td class="memItemLeft" nowrap align="right" valign="top"><a class="anchor" name="2b388f25858f783d995d61506de24656"></a><!-- doxytag: member="tbb::tbb_allocator::address" ref="2b388f25858f783d995d61506de24656" args="(const_reference x) const " -->
+const_pointer&nbsp;</td><td class="memItemRight" valign="bottom"><b>address</b> (const_reference x) const </td></tr>
 
-<tr><td class="mdescLeft">&nbsp;</td><td class="mdescRight">Accumulation operator. <br></td></tr>
-<tr><td class="memItemLeft" nowrap align="right" valign="top"><a class="anchor" name="35ff7eaf7c2031b4a991402ac9ecb940"></a><!-- doxytag: member="tbb::tick_count::interval_t::operator-=" ref="35ff7eaf7c2031b4a991402ac9ecb940" args="(const interval_t &amp;i)" -->
-<a class="el" href="a00201.html">interval_t</a> &amp;&nbsp;</td><td class="memItemRight" valign="bottom"><a class="el" href="a00201.html#35ff7eaf7c2031b4a991402ac9ecb940">operator-=</a> (const <a class="el" href="a00201.html">interval_t</a> &amp;i)</td></tr>
+<tr><td class="memItemLeft" nowrap align="right" valign="top"><a class="anchor" name="f6cb487b1bdce0b581f265a77dca6d53"></a><!-- doxytag: member="tbb::tbb_allocator::allocate" ref="f6cb487b1bdce0b581f265a77dca6d53" args="(size_type n, const void *=0)" -->
+pointer&nbsp;</td><td class="memItemRight" valign="bottom"><a class="el" href="a00201.html#f6cb487b1bdce0b581f265a77dca6d53">allocate</a> (size_type n, const void *=0)</td></tr>
 
-<tr><td class="mdescLeft">&nbsp;</td><td class="mdescRight">Subtraction operator. <br></td></tr>
-<tr><td colspan="2"><br><h2>Friends</h2></td></tr>
-<tr><td class="memItemLeft" nowrap align="right" valign="top"><a class="anchor" name="cc3a7ad7000317951ce61f706163efe8"></a><!-- doxytag: member="tbb::tick_count::interval_t::tbb::tick_count" ref="cc3a7ad7000317951ce61f706163efe8" args="" -->
-class&nbsp;</td><td class="memItemRight" valign="bottom"><a class="el" href="a00201.html#cc3a7ad7000317951ce61f706163efe8">tbb::tick_count</a></td></tr>
+<tr><td class="mdescLeft">&nbsp;</td><td class="mdescRight">Allocate space for n objects. <br></td></tr>
+<tr><td class="memItemLeft" nowrap align="right" valign="top"><a class="anchor" name="fdd011fdf2f9ad07006dc7c0a7ec1da2"></a><!-- doxytag: member="tbb::tbb_allocator::deallocate" ref="fdd011fdf2f9ad07006dc7c0a7ec1da2" args="(pointer p, size_type)" -->
+void&nbsp;</td><td class="memItemRight" valign="bottom"><a class="el" href="a00201.html#fdd011fdf2f9ad07006dc7c0a7ec1da2">deallocate</a> (pointer p, size_type)</td></tr>
 
-<tr><td class="memItemLeft" nowrap align="right" valign="top"><a class="anchor" name="09dde78a4100800c11bb883d6204b586"></a><!-- doxytag: member="tbb::tick_count::interval_t::operator-" ref="09dde78a4100800c11bb883d6204b586" args="(const tick_count &amp;t1, const tick_count &amp;t0)" -->
-<a class="el" href="a00201.html">interval_t</a>&nbsp;</td><td class="memItemRight" valign="bottom"><a class="el" href="a00201.html#09dde78a4100800c11bb883d6204b586">operator-</a> (const <a class="el" href="a00200.html">tick_count</a> &amp;t1, const <a class="el" href="a00200.html">tick_count</a> &amp;t0)</td></tr>
+<tr><td class="mdescLeft">&nbsp;</td><td class="mdescRight">Free previously allocated block of memory. <br></td></tr>
+<tr><td class="memItemLeft" nowrap align="right" valign="top"><a class="anchor" name="f059ca2c96243024f0d562ee3a87a3a5"></a><!-- doxytag: member="tbb::tbb_allocator::max_size" ref="f059ca2c96243024f0d562ee3a87a3a5" args="() const " -->
+size_type&nbsp;</td><td class="memItemRight" valign="bottom"><a class="el" href="a00201.html#f059ca2c96243024f0d562ee3a87a3a5">max_size</a> () const   throw ()</td></tr>
 
-<tr><td class="mdescLeft">&nbsp;</td><td class="mdescRight">Extract the intervals from the tick_counts and subtract them. <br></td></tr>
-<tr><td class="memItemLeft" nowrap align="right" valign="top"><a class="anchor" name="5871ead1ca230efbe52a5008470e6428"></a><!-- doxytag: member="tbb::tick_count::interval_t::operator+" ref="5871ead1ca230efbe52a5008470e6428" args="(const interval_t &amp;i, const interval_t &amp;j)" -->
-<a class="el" href="a00201.html">interval_t</a>&nbsp;</td><td class="memItemRight" valign="bottom"><a class="el" href="a00201.html#5871ead1ca230efbe52a5008470e6428">operator+</a> (const <a class="el" href="a00201.html">interval_t</a> &amp;i, const <a class="el" href="a00201.html">interval_t</a> &amp;j)</td></tr>
+<tr><td class="mdescLeft">&nbsp;</td><td class="mdescRight">Largest value for which method allocate might succeed. <br></td></tr>
+<tr><td class="memItemLeft" nowrap align="right" valign="top"><a class="anchor" name="ab228ab9e324ed041c2226e1d717df5f"></a><!-- doxytag: member="tbb::tbb_allocator::construct" ref="ab228ab9e324ed041c2226e1d717df5f" args="(pointer p, const value_type &amp;value)" -->
+void&nbsp;</td><td class="memItemRight" valign="bottom"><a class="el" href="a00201.html#ab228ab9e324ed041c2226e1d717df5f">construct</a> (pointer p, const value_type &amp;value)</td></tr>
 
-<tr><td class="mdescLeft">&nbsp;</td><td class="mdescRight">Add two intervals. <br></td></tr>
-<tr><td class="memItemLeft" nowrap align="right" valign="top"><a class="anchor" name="fa509691e1d689830931e36edd274f76"></a><!-- doxytag: member="tbb::tick_count::interval_t::operator-" ref="fa509691e1d689830931e36edd274f76" args="(const interval_t &amp;i, const interval_t &amp;j)" -->
-<a class="el" href="a00201.html">interval_t</a>&nbsp;</td><td class="memItemRight" valign="bottom"><a class="el" href="a00201.html#fa509691e1d689830931e36edd274f76">operator-</a> (const <a class="el" href="a00201.html">interval_t</a> &amp;i, const <a class="el" href="a00201.html">interval_t</a> &amp;j)</td></tr>
+<tr><td class="mdescLeft">&nbsp;</td><td class="mdescRight">Copy-construct value at location pointed to by p. <br></td></tr>
+<tr><td class="memItemLeft" nowrap align="right" valign="top"><a class="anchor" name="ef133522bf55f05a605bee0763208281"></a><!-- doxytag: member="tbb::tbb_allocator::destroy" ref="ef133522bf55f05a605bee0763208281" args="(pointer p)" -->
+void&nbsp;</td><td class="memItemRight" valign="bottom"><a class="el" href="a00201.html#ef133522bf55f05a605bee0763208281">destroy</a> (pointer p)</td></tr>
 
-<tr><td class="mdescLeft">&nbsp;</td><td class="mdescRight">Subtract two intervals. <br></td></tr>
+<tr><td class="mdescLeft">&nbsp;</td><td class="mdescRight">Destroy value at location pointed to by p. <br></td></tr>
+<tr><td colspan="2"><br><h2>Static Public Member Functions</h2></td></tr>
+<tr><td class="memItemLeft" nowrap align="right" valign="top"><a class="anchor" name="78701e7454ef8e1a25b5acd364367080"></a><!-- doxytag: member="tbb::tbb_allocator::allocator_type" ref="78701e7454ef8e1a25b5acd364367080" args="()" -->
+static <a class="el" href="a00201.html#09a7f81fb2c3055aaecf058b11538544">malloc_type</a>&nbsp;</td><td class="memItemRight" valign="bottom"><a class="el" href="a00201.html#78701e7454ef8e1a25b5acd364367080">allocator_type</a> ()</td></tr>
+
+<tr><td class="mdescLeft">&nbsp;</td><td class="mdescRight">Returns current allocator. <br></td></tr>
+<tr><td colspan="2"><br><h2>Classes</h2></td></tr>
+<tr><td class="memItemLeft" nowrap align="right" valign="top">struct &nbsp;</td><td class="memItemRight" valign="bottom"><b>rebind</b></td></tr>
+
 </table>
 <hr><a name="_details"></a><h2>Detailed Description</h2>
-Relative time interval. 
+<h3>template&lt;typename T&gt;<br>
+ class tbb::tbb_allocator&lt; T &gt;</h3>
+
+Meets "allocator" requirements of ISO C++ Standard, Section 20.1.5. 
+<p>
+The class selects the best memory allocation mechanism available from scalable_malloc and standard malloc. The members are ordered the same way they are in section 20.4.1 of the ISO C++ standard. 
 <p>
 <hr>The documentation for this class was generated from the following file:<ul>
-<li><a class="el" href="a00456.html">tick_count.h</a></ul>
+<li><a class="el" href="a00444.html">tbb_allocator.h</a></ul>
 <hr>
 <p></p>
 Copyright &copy; 2005-2010 Intel Corporation.  All Rights Reserved.

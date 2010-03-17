@@ -563,7 +563,7 @@ class RelaxedOwnershipTask: public tbb::task {
         r.set_ref_count( 1 );
         m_barrier.wait();
         p.spawn( *new(p.allocate_child()) tbb::empty_task );
-        p.spawn( *new(p.allocate_additional_child_of(p)) tbb::empty_task );
+        p.spawn( *new(task::allocate_additional_child_of(p)) tbb::empty_task );
         p.spawn( m_taskToSpawn );
         p.destroy( m_taskToDestroy );
         r.spawn_and_wait_for_all( m_taskToExecute );

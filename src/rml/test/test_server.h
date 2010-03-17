@@ -51,11 +51,7 @@
 // Multiple connections do not work yet.
 #define TRIVIAL 1
 #else
-//#if RML_USE_WCRM
-//#define TRIVIAL 1
-//#else
 #define TRIVIAL 0
-//#endif /* FIXME: RML_USE_WCRM */
 #endif /* __RML_USE_XNMETASCHEDULER */
 
 //! Maximum number of clients 
@@ -79,6 +75,8 @@ const size_t OverheadStackSize = 500000;
 const size_t JobArraySize = 1000;
 
 static bool TestSingleConnection;
+
+static size_t N_TestConnections;
 
 #if _WIN32||_WIN64
 #include <Windows.h> /* Need Sleep */
@@ -377,6 +375,7 @@ template<typename Factory, typename Client>
 void SimpleTest() {
     Harness::ConcurrencyTracker::Reset();
     TestSingleConnection = true;
+    N_TestConnections = 1;
     for( int n_thread=MinThread; n_thread<=MaxThread; ++n_thread ) {
         // Test a single connection, no nesting, no extra threads
         DoOneConnection<Factory,Client> doc(n_thread,Nesting(0,0),0,false);
@@ -384,35 +383,27 @@ void SimpleTest() {
     }
 #if !TRIVIAL
     TestSingleConnection = false;
-#if !RML_USE_WCRM
     for( int n_thread=MinThread; n_thread<=MaxThread; ++n_thread ) {
-#else
-    for( int n_thread=MinThread; n_thread<=3; ++n_thread ) {
-#endif
         // Test parallel connections
-#if !RML_USE_WCRM
         for( int n_client=1; n_client<=int(MaxClient); ++n_client ) {
-#else
-        for( int n_client=1; n_client<=3; ++n_client ) {
-#endif
+            N_TestConnections = n_client;
             REMARK("SimpleTest: n_thread=%d n_client=%d\n",n_thread,n_client);
             NativeParallelFor( n_client, DoOneConnection<Factory,Client>(n_thread,Nesting(0,0),0,false) );
         }
-#if !RML_USE_WCRM
         // Test server::independent_thread_number_changed
+        N_TestConnections = 1;
         for( int n_extra=-4; n_extra<=32; n_extra=n_extra+1+n_extra/5 ) {
             DoOneConnection<Factory,Client> doc(n_thread,Nesting(0,0),n_extra,true);
             doc(0);
         }
+#if !RML_USE_WCRM
         // Test nested connections
         DoOneConnection<Factory,Client> doc(n_thread,Nesting(0,2),0,false);
         doc(0);
 #endif
     }
-#if !RML_USE_WCRM
     ASSERT( Harness::ConcurrencyTracker::PeakParallelism()>1, "No multiple connections exercised?" );
-#endif
-#endif
+#endif /* !TRIVIAL */
     // Let RML catch up.
     while( ClientConstructions!=ClientDestructions )
         MilliSleep(1);

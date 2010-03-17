@@ -276,7 +276,8 @@ namespace interface4 {
             if( (h & m_old) != (h & m) ) { // mask changed for this hashcode, rare event
                 // condition above proves that 'h' has some other bits set beside 'm_old'
                 // find next applicable mask after m_old    //TODO: look at bsl instruction
-                for( ++m_old; !(h & m_old); m_old <<= 1 ); // at maximum few rounds depending on the first block size
+                for( ++m_old; !(h & m_old); m_old <<= 1 ) // at maximum few rounds depending on the first block size
+                    ;
                 m_old = (m_old<<1) - 1; // get full mask from a bit
                 __TBB_ASSERT((m_old&(m_old+1))==0 && m_old <= m, NULL);
                 // check whether it is rehashing/ed

@@ -440,7 +440,7 @@ public:
     {
         // Skip all dummy, internal only iterators
         while (it != raw_end() && it.get_node_ptr()->is_dummy())
-            it++;
+            ++it;
 
         return iterator(it.get_node_ptr(), this);
     }
@@ -451,7 +451,7 @@ public:
     {
         // Skip all dummy, internal only iterators
         while (it != raw_end() && it.get_node_ptr()->is_dummy())
-            it++;
+            ++it;
 
         return const_iterator(it.get_node_ptr(), this);
     }
@@ -498,7 +498,7 @@ public:
 
         __TBB_ASSERT(where != last, "Invalid head node");
 
-        where++;
+        ++where;
 
         // Create a dummy element up front, even though it may be discarded (due to concurrent insertion)
         nodeptr_t dummy_node = create_node(order_key);
@@ -530,7 +530,7 @@ public:
                     // known to be larger (note: this is legal only because there is no safe
                     // concurrent erase operation supported).
                     where = it;
-                    where++;
+                    ++where;
                     continue;
                 }
             }
@@ -543,7 +543,7 @@ public:
 
             // Move the iterator forward
             it = where;
-            where++;
+            ++where;
         }
 
     }
@@ -551,7 +551,7 @@ public:
     // This erase function can handle both real and dummy nodes
     void erase_node(raw_iterator previous, raw_const_iterator& where)
     {
- 		nodeptr_t pnode = (where++).get_node_ptr();
+        nodeptr_t pnode = (where++).get_node_ptr();
         nodeptr_t prevnode = previous.get_node_ptr();
         __TBB_ASSERT(prevnode->my_next == pnode, "Erase must take consecutive iterators");
         prevnode->my_next = pnode->my_next;
@@ -602,10 +602,10 @@ private:
     void check_range()
     {
 #if TBB_USE_ASSERT
-        for (raw_iterator it = raw_begin(); it != raw_end(); it++)
+        for (raw_iterator it = raw_begin(); it != raw_end(); ++it)
         {
             raw_iterator next_iterator = it;
-            next_iterator++;
+            ++next_iterator;
 
             __TBB_ASSERT(next_iterator == end() || next_iterator.get_node_ptr()->get_order_key() >= it.get_node_ptr()->get_order_key(), "!!! List order inconsistency !!!");
         }
@@ -858,7 +858,7 @@ public:
 
     template<class Iterator>
     void insert(Iterator first, Iterator last) {
-        for (Iterator it = first; it != last; it++)
+        for (Iterator it = first; it != last; ++it)
             insert(*it);
     }
 
@@ -934,9 +934,9 @@ public:
         size_type item_count = 0;
         if (is_initialized(bucket)) {
             raw_iterator it = get_bucket(bucket);
-            it++;
-            for (; it != my_solist.raw_end() && !it.get_node_ptr()->is_dummy(); it++)
-                item_count++;
+            ++it;
+            for (; it != my_solist.raw_end() && !it.get_node_ptr()->is_dummy(); ++it)
+                ++item_count;
         }
         return item_count;
     }
@@ -976,7 +976,7 @@ public:
         raw_iterator it = get_bucket(bucket);
     
         // Find the end of the bucket, denoted by the dummy element
-        do it++;
+        do ++it;
         while(it != my_solist.raw_end() && !it.get_node_ptr()->is_dummy());
 
         // Return the first real element past the end of the bucket
@@ -993,7 +993,7 @@ public:
         raw_const_iterator it = get_bucket(bucket);
     
         // Find the end of the bucket, denoted by the dummy element
-        do it++;
+        do ++it;
         while(it != my_solist.raw_end() && !it.get_node_ptr()->is_dummy());
 
         // Return the first real element past the end of the bucket
@@ -1049,10 +1049,10 @@ private:
     }
 
     void internal_clear() {
-        for (size_type index = 0; index < pointers_per_table; index++) {
+        for (size_type index = 0; index < pointers_per_table; ++index) {
             if (my_buckets[index] != NULL) {
                 size_type sz = segment_size(index);
-                for (size_type index2 = 0; index2 < sz; index2++)
+                for (size_type index2 = 0; index2 < sz; ++index2)
                     my_allocator.destroy(&my_buckets[index][index2]);
                 my_allocator.deallocate(my_buckets[index], sz);
                 my_buckets[index] = 0;
@@ -1078,7 +1078,7 @@ private:
     void internal_swap_buckets(concurrent_unordered_base& right)
     {
         // Swap all node segments
-        for (size_type index = 0; index < pointers_per_table; index++)
+        for (size_type index = 0; index < pointers_per_table; ++index)
         {
             raw_iterator * iterator_pointer = my_buckets[index];
             my_buckets[index] = right.my_buckets[index];
@@ -1091,8 +1091,8 @@ private:
     {
         size_type num = 0;
 
-        for (const_iterator it = first; it != last; it++)
-            num++;
+        for (const_iterator it = first; it != last; ++it)
+            ++num;
 
         return num;
     }
@@ -1116,7 +1116,7 @@ private:
         __TBB_ASSERT(where != last, "Invalid head node");
 
         // First node is a dummy node
-        where++;
+        ++where;
 
         for (;;)
         {
@@ -1139,7 +1139,7 @@ private:
                     // known to be larger (note: this is legal only because there is no safe
                     // concurrent erase operation supported).
                     where = it;
-                    where++;
+                    ++where;
                     continue;
                 }
             }
@@ -1151,7 +1151,7 @@ private:
 
             // Move the iterator forward
             it = where;
-            where++;
+            ++where;
         }
     }
 
@@ -1168,7 +1168,7 @@ private:
         order_key = split_order_key_regular(order_key);
         raw_iterator last = my_solist.raw_end();
 
-        for (raw_iterator it = get_bucket(bucket); it != last; it++)
+        for (raw_iterator it = get_bucket(bucket); it != last; ++it)
         {
             if (solist_t::get_order_key(it) > order_key)
             {
@@ -1209,7 +1209,7 @@ private:
         __TBB_ASSERT(where != last, "Invalid head node");
 
         // First node is a dummy node
-        where++;
+        ++where;
 
         for (;;) {
             if (where == last)
@@ -1219,7 +1219,7 @@ private:
 
             // Move the iterator forward
             previous = where;
-            where++;
+            ++where;
         }
     }
 
@@ -1237,7 +1237,7 @@ private:
         order_key = split_order_key_regular(order_key);
         raw_iterator end_it = my_solist.raw_end();
 
-        for (raw_iterator it = get_bucket(bucket); it != end_it; it++)
+        for (raw_iterator it = get_bucket(bucket); it != end_it; ++it)
         {
             if (solist_t::get_order_key(it) > order_key)
             {
@@ -1249,8 +1249,8 @@ private:
                 iterator first = my_solist.get_iterator(it);
                 iterator last = first;
 
-                for (;last != end() && !my_hash_compare(get_key(*last), key); last++);
-
+                while( last != end() && !my_hash_compare(get_key(*last), key) )
+                    ++last;
                 return pairii_t(first, last);
             }
         }
@@ -1272,7 +1272,7 @@ private:
         order_key = split_order_key_regular(order_key);
         raw_const_iterator end_it = my_solist.raw_end();
 
-        for (raw_const_iterator it = get_bucket(bucket); it != end_it; it++)
+        for (raw_const_iterator it = get_bucket(bucket); it != end_it; ++it)
         {
             if (solist_t::get_order_key(it) > order_key)
             {
@@ -1284,8 +1284,8 @@ private:
                 const_iterator first = my_solist.get_iterator(it);
                 const_iterator last = first;
 
-                for (; last != end() && !my_hash_compare(get_key(*last), key); last++);
-
+                while( last != end() && !my_hash_compare(get_key(*last), key ) )
+                    ++last;
                 return paircc_t(first, last);
             }
         }
@@ -1423,7 +1423,7 @@ inline size_t tbb_hasher( P* ptr ) {
 template<typename E, typename S, typename A>
 inline size_t tbb_hasher( const std::basic_string<E,S,A>& s ) {
     size_t h = 0;
-    for( const E* c = s.c_str(); *c; c++ )
+    for( const E* c = s.c_str(); *c; ++c )
         h = static_cast<size_t>(*c) ^ (h * internal::hash_multiplier);
     return h;
 }

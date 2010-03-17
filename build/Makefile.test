@@ -152,6 +152,7 @@ TEST_TBB_PLAIN.EXE = test_assembly.$(TEST_EXT)   \
 	test_parallel_do.$(TEST_EXT)                 \
 	test_pipeline.$(TEST_EXT)                    \
 	test_pipeline_with_tbf.$(TEST_EXT)           \
+	test_parallel_pipeline.$(TEST_EXT)           \
 	test_task_scheduler_init.$(TEST_EXT)         \
 	test_task_scheduler_observer.$(TEST_EXT)     \
 	test_task.$(TEST_EXT)                        \
@@ -227,6 +228,7 @@ test_tbb_plain: $(TEST_PREREQUISITE) $(TASK_CPP_DIRECTLY_INCLUDED) $(TEST_TBB_PL
 	$(run_cmd) ./test_halt.$(TEST_EXT) $(args) 4:8
 	$(run_cmd) ./test_pipeline.$(TEST_EXT) $(args) 1:4
 	$(run_cmd) ./test_pipeline_with_tbf.$(TEST_EXT) $(args) 1:4
+	$(run_cmd) ./test_parallel_pipeline.$(TEST_EXT) $(args) 1:4
 	$(run_cmd) ./test_tick_count.$(TEST_EXT) $(args) 1:4
 	$(run_cmd) ./test_concurrent_queue.$(TEST_EXT) $(args) 1:4
 	$(run_cmd) ./test_concurrent_vector.$(TEST_EXT) $(args) 1:4

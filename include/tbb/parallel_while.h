@@ -185,7 +185,7 @@ template<typename Body>
 void parallel_while<Body>::add( const value_type& item ) {
     __TBB_ASSERT(my_barrier,"attempt to add to parallel_while that is not running");
     typedef internal::while_iteration_task<Body> iteration_type;
-    iteration_type& i = *new( task::self().allocate_additional_child_of(*my_barrier) ) iteration_type(item,*my_body);
+    iteration_type& i = *new( task::allocate_additional_child_of(*my_barrier) ) iteration_type(item,*my_body);
     task::self().spawn( i );
 }
 

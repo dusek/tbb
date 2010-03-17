@@ -51,10 +51,10 @@ public:
 
 #if _WIN32||_WIN64
     //! Inform server of a tbb master thread.
-    virtual void register_master( execution_resource_t& v ) const = 0;
+    virtual void register_master( execution_resource_t& v ) = 0;
 
     //! Inform server that the tbb master thread is done with its work.
-    virtual void unregister_master( execution_resource_t v ) const = 0;
+    virtual void unregister_master( execution_resource_t v ) = 0;
 #endif /* _WIN32||_WIN64 */
 };
 

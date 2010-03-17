@@ -109,9 +109,8 @@ class custom_scheduler: private generic_scheduler {
 #if TBB_USE_ASSERT
         p.extra_state &= ~es_ref_count_active;
 #endif /* TBB_USE_ASSERT */
-        if (p.state==task::to_enqueue)
-            local_enqueue( s );
-        else if( bypass_slot==NULL )
+
+        if( bypass_slot==NULL )
             bypass_slot = &s;
         else
             local_spawn( s, s.prefix().next );

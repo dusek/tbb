@@ -162,7 +162,7 @@ namespace internal {
         {
             typedef do_iteration_task<Body, Item> iteration_type;
 
-            iteration_type& t = *new (task::self().allocate_additional_child_of(*my_barrier)) iteration_type(item, *this);
+            iteration_type& t = *new (task::allocate_additional_child_of(*my_barrier)) iteration_type(item, *this);
 
             t.spawn( t );
         }

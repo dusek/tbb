@@ -1,6 +1,6 @@
 <!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
 <html><head><meta http-equiv="Content-Type" content="text/html;charset=iso-8859-1">
-<title>tbb::thread_bound_filter Class Reference</title>
+<title>tbb::task_list Class Reference</title>
 <link href="doxygen.css" rel="stylesheet" type="text/css">
 <link href="tabs.css" rel="stylesheet" type="text/css">
 </head><body>
@@ -21,97 +21,57 @@
     <li><a href="functions.html"><span>Class&nbsp;Members</span></a></li>
   </ul></div>
 <div class="nav">
-<a class="el" href="a00257.html">tbb</a>::<a class="el" href="a00199.html">thread_bound_filter</a></div>
-<h1>tbb::thread_bound_filter Class Reference<br>
+<a class="el" href="a00264.html">tbb</a>::<a class="el" href="a00199.html">task_list</a></div>
+<h1>tbb::task_list Class Reference<br>
 <small>
-[<a class="el" href="a00264.html">Algorithms</a>]</small>
-</h1><!-- doxytag: class="tbb::thread_bound_filter" --><!-- doxytag: inherits="tbb::filter" -->A stage in a pipeline served by a user thread.  
+[<a class="el" href="a00276.html">Task Scheduling</a>]</small>
+</h1><!-- doxytag: class="tbb::task_list" -->A list of children.  
 <a href="#_details">More...</a>
 <p>
-<code>#include &lt;<a class="el" href="a00399.html">pipeline.h</a>&gt;</code>
+<code>#include &lt;<a class="el" href="a00424.html">task.h</a>&gt;</code>
 <p>
-<p>Inheritance diagram for tbb::thread_bound_filter:
-<p><center><img src="a00199.png" usemap="#tbb::thread_bound_filter_map" border="0" alt=""></center>
-<map name="tbb::thread_bound_filter_map">
-<area href="a00156.html" alt="tbb::filter" shape="rect" coords="0,0,145,24">
-</map>
-<a href="a00050.html">List of all members.</a><table border="0" cellpadding="0" cellspacing="0">
+<a href="a00077.html">List of all members.</a><table border="0" cellpadding="0" cellspacing="0">
 <tr><td></td></tr>
-<tr><td colspan="2"><br><h2>Public Types</h2></td></tr>
-<tr><td class="memItemLeft" nowrap align="right" valign="top"><a class="anchor" name="902c4645e624e8f589b89841df5331de0c135a0274225f59d2b2a682d1103f23"></a><!-- doxytag: member="tbb::thread_bound_filter::success" ref="902c4645e624e8f589b89841df5331de0c135a0274225f59d2b2a682d1103f23" args="" -->
-&nbsp;</td><td class="memItemRight" valign="bottom"><b>success</b></td></tr>
-
-<tr><td class="memItemLeft" nowrap align="right" valign="top"><a class="anchor" name="902c4645e624e8f589b89841df5331de5243cf0030982cfa4ac1a8e97acb39f4"></a><!-- doxytag: member="tbb::thread_bound_filter::item_not_available" ref="902c4645e624e8f589b89841df5331de5243cf0030982cfa4ac1a8e97acb39f4" args="" -->
-&nbsp;</td><td class="memItemRight" valign="bottom"><b>item_not_available</b></td></tr>
-
-<tr><td class="memItemLeft" nowrap align="right" valign="top"><a class="anchor" name="902c4645e624e8f589b89841df5331ded4085a8b251604b51c0f19602eeef09f"></a><!-- doxytag: member="tbb::thread_bound_filter::end_of_stream" ref="902c4645e624e8f589b89841df5331ded4085a8b251604b51c0f19602eeef09f" args="" -->
-&nbsp;</td><td class="memItemRight" valign="bottom"><b>end_of_stream</b></td></tr>
-
-<tr><td class="memItemLeft" nowrap align="right" valign="top">enum &nbsp;</td><td class="memItemRight" valign="bottom"><b>result_type</b> { <b>success</b>, 
-<b>item_not_available</b>, 
-<b>end_of_stream</b>
- }</td></tr>
-
 <tr><td colspan="2"><br><h2>Public Member Functions</h2></td></tr>
-<tr><td class="memItemLeft" nowrap align="right" valign="top">result_type __TBB_EXPORTED_METHOD&nbsp;</td><td class="memItemRight" valign="bottom"><a class="el" href="a00199.html#c4f90f2c771bce748beb9be734fa286c">try_process_item</a> ()</td></tr>
+<tr><td class="memItemLeft" nowrap align="right" valign="top"><a class="anchor" name="416341c2047eaef50417b41eaf7e9de6"></a><!-- doxytag: member="tbb::task_list::task_list" ref="416341c2047eaef50417b41eaf7e9de6" args="()" -->
+&nbsp;</td><td class="memItemRight" valign="bottom"><a class="el" href="a00199.html#416341c2047eaef50417b41eaf7e9de6">task_list</a> ()</td></tr>
 
-<tr><td class="mdescLeft">&nbsp;</td><td class="mdescRight">If a data item is available, invoke operator() on that item.  <a href="#c4f90f2c771bce748beb9be734fa286c"></a><br></td></tr>
-<tr><td class="memItemLeft" nowrap align="right" valign="top">result_type __TBB_EXPORTED_METHOD&nbsp;</td><td class="memItemRight" valign="bottom"><a class="el" href="a00199.html#5e726bdc7fbd924c0b07bd558b1d4d5d">process_item</a> ()</td></tr>
+<tr><td class="mdescLeft">&nbsp;</td><td class="mdescRight">Construct empty list. <br></td></tr>
+<tr><td class="memItemLeft" nowrap align="right" valign="top"><a class="anchor" name="6d438f1499a02db1e59c24ab6043e5ba"></a><!-- doxytag: member="tbb::task_list::~task_list" ref="6d438f1499a02db1e59c24ab6043e5ba" args="()" -->
+&nbsp;</td><td class="memItemRight" valign="bottom"><a class="el" href="a00199.html#6d438f1499a02db1e59c24ab6043e5ba">~task_list</a> ()</td></tr>
 
-<tr><td class="mdescLeft">&nbsp;</td><td class="mdescRight">Wait until a data item becomes available, and invoke operator() on that item.  <a href="#5e726bdc7fbd924c0b07bd558b1d4d5d"></a><br></td></tr>
-<tr><td colspan="2"><br><h2>Protected Member Functions</h2></td></tr>
-<tr><td class="memItemLeft" nowrap align="right" valign="top"><a class="anchor" name="413fad2ade743d9af5dcabc56aedf4fe"></a><!-- doxytag: member="tbb::thread_bound_filter::thread_bound_filter" ref="413fad2ade743d9af5dcabc56aedf4fe" args="(mode filter_mode)" -->
-&nbsp;</td><td class="memItemRight" valign="bottom"><b>thread_bound_filter</b> (<a class="el" href="a00156.html#d3b6ed2c517144199d0c39c62ddfd8cf">mode</a> filter_mode)</td></tr>
+<tr><td class="mdescLeft">&nbsp;</td><td class="mdescRight">Destroys the list, but does not destroy the task objects. <br></td></tr>
+<tr><td class="memItemLeft" nowrap align="right" valign="top"><a class="anchor" name="f3ac31e092814b90929f81bb30441959"></a><!-- doxytag: member="tbb::task_list::empty" ref="f3ac31e092814b90929f81bb30441959" args="() const " -->
+bool&nbsp;</td><td class="memItemRight" valign="bottom"><a class="el" href="a00199.html#f3ac31e092814b90929f81bb30441959">empty</a> () const </td></tr>
+
+<tr><td class="mdescLeft">&nbsp;</td><td class="mdescRight">True if list if empty; false otherwise. <br></td></tr>
+<tr><td class="memItemLeft" nowrap align="right" valign="top"><a class="anchor" name="4cd34756bc4763dafb8c84838a0124ff"></a><!-- doxytag: member="tbb::task_list::push_back" ref="4cd34756bc4763dafb8c84838a0124ff" args="(task &amp;task)" -->
+void&nbsp;</td><td class="memItemRight" valign="bottom"><a class="el" href="a00199.html#4cd34756bc4763dafb8c84838a0124ff">push_back</a> (<a class="el" href="a00196.html">task</a> &amp;<a class="el" href="a00196.html">task</a>)</td></tr>
+
+<tr><td class="mdescLeft">&nbsp;</td><td class="mdescRight">Push task onto back of list. <br></td></tr>
+<tr><td class="memItemLeft" nowrap align="right" valign="top"><a class="anchor" name="5fe85df5ed524418389d34051750347d"></a><!-- doxytag: member="tbb::task_list::pop_front" ref="5fe85df5ed524418389d34051750347d" args="()" -->
+<a class="el" href="a00196.html">task</a> &amp;&nbsp;</td><td class="memItemRight" valign="bottom"><a class="el" href="a00199.html#5fe85df5ed524418389d34051750347d">pop_front</a> ()</td></tr>
+
+<tr><td class="mdescLeft">&nbsp;</td><td class="mdescRight">Pop the front task from the list. <br></td></tr>
+<tr><td class="memItemLeft" nowrap align="right" valign="top"><a class="anchor" name="fce446ee13e025969945328f3ff59b95"></a><!-- doxytag: member="tbb::task_list::clear" ref="fce446ee13e025969945328f3ff59b95" args="()" -->
+void&nbsp;</td><td class="memItemRight" valign="bottom"><a class="el" href="a00199.html#fce446ee13e025969945328f3ff59b95">clear</a> ()</td></tr>
+
+<tr><td class="mdescLeft">&nbsp;</td><td class="mdescRight">Clear the list. <br></td></tr>
+<tr><td colspan="2"><br><h2>Friends</h2></td></tr>
+<tr><td class="memItemLeft" nowrap align="right" valign="top"><a class="anchor" name="e656073628561c8fd68f6134d527e2de"></a><!-- doxytag: member="tbb::task_list::task" ref="e656073628561c8fd68f6134d527e2de" args="" -->
+class&nbsp;</td><td class="memItemRight" valign="bottom"><b>task</b></td></tr>
+
+<tr><td class="memItemLeft" nowrap align="right" valign="top"><a class="anchor" name="81d0122aee4ddae419a743ee50d7038e"></a><!-- doxytag: member="tbb::task_list::interface5::internal::task_base" ref="81d0122aee4ddae419a743ee50d7038e" args="" -->
+class&nbsp;</td><td class="memItemRight" valign="bottom"><b>interface5::internal::task_base</b></td></tr>
 
 </table>
 <hr><a name="_details"></a><h2>Detailed Description</h2>
-A stage in a pipeline served by a user thread. 
+A list of children. 
 <p>
-<hr><h2>Member Function Documentation</h2>
-<a class="anchor" name="5e726bdc7fbd924c0b07bd558b1d4d5d"></a><!-- doxytag: member="tbb::thread_bound_filter::process_item" ref="5e726bdc7fbd924c0b07bd558b1d4d5d" args="()" -->
-<div class="memitem">
-<div class="memproto">
-      <table class="memname">
-        <tr>
-          <td class="memname">result_type __TBB_EXPORTED_METHOD tbb::thread_bound_filter::process_item           </td>
-          <td>(</td>
-          <td class="paramname">          </td>
-          <td>&nbsp;)&nbsp;</td>
-          <td width="100%"></td>
-        </tr>
-      </table>
-</div>
-<div class="memdoc">
-
+Used for method task::spawn_children 
 <p>
-Wait until a data item becomes available, and invoke operator() on that item. 
-<p>
-This interface is blocking. Returns 'success' if an item was processed. Returns 'end_of_stream' if there are no more items to process. Never returns 'item_not_available', as it blocks until another return condition applies. 
-</div>
-</div><p>
-<a class="anchor" name="c4f90f2c771bce748beb9be734fa286c"></a><!-- doxytag: member="tbb::thread_bound_filter::try_process_item" ref="c4f90f2c771bce748beb9be734fa286c" args="()" -->
-<div class="memitem">
-<div class="memproto">
-      <table class="memname">
-        <tr>
-          <td class="memname">result_type __TBB_EXPORTED_METHOD tbb::thread_bound_filter::try_process_item           </td>
-          <td>(</td>
-          <td class="paramname">          </td>
-          <td>&nbsp;)&nbsp;</td>
-          <td width="100%"></td>
-        </tr>
-      </table>
-</div>
-<div class="memdoc">
-
-<p>
-If a data item is available, invoke operator() on that item. 
-<p>
-This interface is non-blocking. Returns 'success' if an item was processed. Returns 'item_not_available' if no item can be processed now but more may arrive in the future, or if token limit is reached. Returns 'end_of_stream' if there are no more items to process. 
-</div>
-</div><p>
 <hr>The documentation for this class was generated from the following file:<ul>
-<li><a class="el" href="a00399.html">pipeline.h</a></ul>
+<li><a class="el" href="a00424.html">task.h</a></ul>
 <hr>
 <p></p>
 Copyright &copy; 2005-2010 Intel Corporation.  All Rights Reserved.
