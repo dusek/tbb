@@ -1,5 +1,5 @@
 /*
-    Copyright 2005-2009 Intel Corporation.  All Rights Reserved.
+    Copyright 2005-2010 Intel Corporation.  All Rights Reserved.
 
     This file is part of Threading Building Blocks.
 
@@ -26,18 +26,28 @@
     the GNU General Public License.
 */
 
+#include "tbb/parallel_sort.h"
+#include "tbb/task_scheduler_init.h"
+#include "tbb/concurrent_vector.h"
+#include "harness.h"
 #include <math.h>
+#include <exception>
+
+#if !TBB_USE_EXCEPTIONS && _MSC_VER
+    // Suppress "C++ exception handler used, but unwind semantics are not enabled" warning in STL headers
+    #pragma warning (push)
+    #pragma warning (disable: 4530)
+#endif
+
 #include <algorithm>
 #include <iterator>
 #include <functional>
 #include <string>
 #include <cstring>
-#include <exception>
 
-#include "tbb/parallel_sort.h"
-#include "tbb/task_scheduler_init.h"
-#include "tbb/concurrent_vector.h"
-#include "harness.h"
+#if !TBB_USE_EXCEPTIONS && _MSC_VER
+    #pragma warning (pop)
+#endif
 
 /** Has tightly controlled interface so that we can verify
     that parallel_sort uses only the required interface. */
@@ -505,9 +515,7 @@ void Flog() {
 #include <cstdio>
 #include "harness_cpu.h"
 
-__TBB_TEST_EXPORT
-int main( int argc, char* argv[] ) {
-    ParseCommandLine(argc,argv);
+int TestMain () {
     if( MinThread<1 ) {
         REPORT("Usage: number of threads must be positive\n");
         exit(1);
@@ -522,7 +530,6 @@ int main( int argc, char* argv[] ) {
             TestCPUUserTime(p);
         }
     } 
-    REPORT("done\n");
-    return 0;
+    return Harness::Done;
 }
 

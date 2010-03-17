@@ -1,5 +1,5 @@
 /*
-    Copyright 2005-2009 Intel Corporation.  All Rights Reserved.
+    Copyright 2005-2010 Intel Corporation.  All Rights Reserved.
 
     This file is part of Threading Building Blocks.
 
@@ -103,9 +103,13 @@ bool dynamic_link( const char* library, const dynamic_link_descriptor descriptor
         return true;
     // Prevent Windows from displaying silly message boxes if it fails to load library
     // (e.g. because of MS runtime problems - one of those crazy manifest related ones)
+#if _XBOX
+    dynamic_link_handle module = LoadLibrary (library);
+#else
     UINT prev_mode = SetErrorMode (SEM_FAILCRITICALERRORS);
     dynamic_link_handle module = LoadLibrary (library);
     SetErrorMode (prev_mode);
+#endif /* _XBOX */
 #else
     dynamic_link_handle module = dlopen( library, RTLD_LAZY ); 
 #endif /* _WIN32||_WIN64 */

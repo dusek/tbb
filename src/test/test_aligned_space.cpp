@@ -1,5 +1,5 @@
 /*
-    Copyright 2005-2009 Intel Corporation.  All Rights Reserved.
+    Copyright 2005-2010 Intel Corporation.  All Rights Reserved.
 
     This file is part of Threading Building Blocks.
 
@@ -99,8 +99,7 @@ void TestAlignedSpace() {
 
 #include "harness_m128.h"
 
-__TBB_TEST_EXPORT
-int main() {
+int TestMain () {
     TestAlignedSpace<char>();
     TestAlignedSpace<short>();
     TestAlignedSpace<int>();
@@ -111,8 +110,7 @@ int main() {
 #if HAVE_m128
     TestAlignedSpace<__m128>();
 #endif /* HAVE_m128 */
-    REPORT("done\n");
-    return 0;
+    return Harness::Done;
 }
 
 static void PrintSpaceWastingWarning( const char* type_name ) {

@@ -1,5 +1,5 @@
 /*
-    Copyright 2005-2009 Intel Corporation.  All Rights Reserved.
+    Copyright 2005-2010 Intel Corporation.  All Rights Reserved.
 
     This file is part of Threading Building Blocks.
 
@@ -49,11 +49,35 @@ namespace tbb {
         }
     } // namespace internal
 } // namespace tbb
-
+#define __TBB_EXTRA_DEBUG 1 // enables additional checks
 #include "tbb/concurrent_hash_map.h"
 
 // Restore runtime_warning as an entry point into the TBB library.
 #undef runtime_warning
+
+namespace Jungle {
+    struct Tiger {};
+    size_t tbb_hasher( const Tiger& ) {return 0;}
+}
+
+#if !defined(_MSC_VER) || _MSC_VER>=1400 || __INTEL_COMPILER
+void test_ADL() {
+    tbb::tbb_hash_compare<Jungle::Tiger>::hash(Jungle::Tiger()); // Instantiation chain finds tbb_hasher via Argument Dependent Lookup
+}
+#endif
+
+struct UserDefinedKeyType {
+};
+
+namespace tbb {
+    // Test whether tbb_hash_compare can be partially specialized as stated in Reference manual.
+    template<> struct tbb_hash_compare<UserDefinedKeyType> {
+        size_t hash( UserDefinedKeyType ) const {return 0;}
+        bool equal( UserDefinedKeyType /*x*/, UserDefinedKeyType /*y*/ ) {return true;}
+    };
+};
+
+tbb::concurrent_hash_map<UserDefinedKeyType,int> TestInstantiationWithUserDefinedKeyType;
 
 // Test whether a sufficient set of headers were included to instantiate a concurernt_hash_map. OSS Bug #120 (& #130):
 // http://www.threadingbuildingblocks.org/bug_desc.php?id=120
@@ -106,7 +130,7 @@ public:
         my_state = LIVE;
         data = i;
         if(MyDataCountLimit && MyDataCount + 1 >= MyDataCountLimit)
-            throw MyException();
+            __TBB_THROW( MyException() );
         ++MyDataCount;
     }
     MyData( const MyData& other ) {
@@ -114,7 +138,7 @@ public:
         my_state = LIVE;
         data = other.data;
         if(MyDataCountLimit && MyDataCount + 1 >= MyDataCountLimit)
-            throw MyException();
+            __TBB_THROW( MyException() );
         ++MyDataCount;
     }
     ~MyData() {
@@ -738,6 +762,7 @@ void TestIteratorsAndRanges() {
     REMARK("testing construction and insertion from iterators range\n");
     FillTable( v, 1000 );
     MyTable2 t(v.begin(), v.end());
+    v.rehash();
     CheckTable(t, 1000);
     t.insert(v.begin(), v.end()); // do nothing
     CheckTable(t, 1000);
@@ -762,6 +787,30 @@ void TestIteratorsAndRanges() {
     ASSERT( t1 == t2, NULL);
 }
 
+void TestRehash() {
+    REMARK("testing rehashing\n");
+    MyTable w;
+    w.insert( std::make_pair(MyKey::make(-5), MyData()) );
+    w.rehash(); // without this, assertion will fail
+    MyTable::const_iterator it = w.begin();
+    int i = 0; // check for non-rehashed buckets
+    for( ; it != w.end(); ++it, i++ )
+        w.count( it->first );
+    ASSERT( i == 1, NULL );
+    for( i=0; i<1000; i=(i<29 ? i+1 : i*2) ) {
+        for( int j=max(256+i, i*2); j<10000; j*=3 ) {
+            MyTable v;
+            FillTable( v, i );
+            ASSERT(int(v.size()) == i, NULL);
+            ASSERT(int(v.bucket_count()) <= j, NULL);
+            v.rehash( j );
+            ASSERT(int(v.bucket_count()) >= j, NULL);
+            CheckTable( v, i );
+        }
+    }
+}
+
+#if TBB_USE_EXCEPTIONS
 void TestExceptions() {
     typedef local_counting_allocator<tbb::tbb_allocator<MyData2> > allocator_t;
     typedef tbb::concurrent_hash_map<MyKey,MyData2,MyHashCompare,allocator_t> ThrowingTable;
@@ -821,12 +870,16 @@ void TestExceptions() {
                 }
                 REMARK("Exception %d: %s\t- ok ()\n", m, e.what());
             }
+            catch ( ... ) {
+                ASSERT ( __TBB_EXCEPTION_TYPE_INFO_BROKEN, "Unrecognized exception" );
+            }
         }
     } catch(...) {
         ASSERT(false, "unexpected exception");
     }
     src.clear(); MyDataCount = 0;
 }
+#endif /* TBB_USE_EXCEPTIONS */
 
 //------------------------------------------------------------------------
 // Test driver
@@ -834,12 +887,7 @@ void TestExceptions() {
 
 #include "tbb/task_scheduler_init.h"
 
-__TBB_TEST_EXPORT
-int main( int argc, char* argv[] ) {
-    // Default minimum number of threads is 1.
-    MinThread = 1;
-
-    ParseCommandLine(argc,argv);
+int TestMain () {
     if( MinThread<0 ) {
         REPORT("ERROR: must use at least one thread\n");
         exit(1);
@@ -848,11 +896,12 @@ int main( int argc, char* argv[] ) {
     // Do serial tests
     TestTypes();
     TestCopy();
+    TestRehash();
     TestAssignment();
     TestIteratorsAndRanges();
-#if !__TBB_EXCEPTION_HANDLING_TOTALLY_BROKEN
+#if TBB_USE_EXCEPTIONS
     TestExceptions();
-#endif
+#endif /* TBB_USE_EXCEPTIONS */
 
     // Do concurrency tests.
     for( int nthread=MinThread; nthread<=MaxThread; ++nthread ) {
@@ -865,6 +914,5 @@ int main( int argc, char* argv[] ) {
         tbb::internal::runtime_warning("none\nERROR: it must not be executed");
     }
 
-    REPORT("done\n");
-    return 0;
+    return Harness::Done;
 }

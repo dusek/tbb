@@ -1,5 +1,5 @@
 /*
-    Copyright 2005-2009 Intel Corporation.  All Rights Reserved.
+    Copyright 2005-2010 Intel Corporation.  All Rights Reserved.
 
     This file is part of Threading Building Blocks.
 
@@ -204,9 +204,6 @@ int run_pipeline( int nthreads )
     tbb::tick_count t0 = tbb::tick_count::now();
     pipeline.run( MyInputFilter::n_buffer );
     tbb::tick_count t1 = tbb::tick_count::now();
-
-    // Remove filters from pipeline before they are implicitly destroyed.
-    pipeline.clear(); 
 
     fclose( output_file );
     fclose( input_file );

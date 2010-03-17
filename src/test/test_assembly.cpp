@@ -1,5 +1,5 @@
 /*
-    Copyright 2005-2009 Intel Corporation.  All Rights Reserved.
+    Copyright 2005-2010 Intel Corporation.  All Rights Reserved.
 
     This file is part of Threading Building Blocks.
 
@@ -27,69 +27,29 @@
 */
 
 // Program for basic correctness testing of assembly-language routines.
-// This program deliberately #includes ../internal/task.cpp so that
-// it can get intimate access to the scheduler.
 
-// Test correctness of forceful TBB initialization before any dynamic initialization
-// of static objects inside the library took place.
-namespace tbb { 
-namespace internal {
-    // Forward declaration of the TBB general initialization routine from task.cpp
-    void DoOneTimeInitializations();
-}}
+#include "tbb/task.h"
 
-struct StaticInitializationChecker {
-    StaticInitializationChecker () { tbb::internal::DoOneTimeInitializations(); }
-} theChecker;
-
-#define TEST_ASSEMBLY_ROUTINES 1
-#define __TBB_TASK_CPP_DIRECTLY_INCLUDED 1
-// to avoid usage of #pragma comment
-#define __TBB_NO_IMPLICIT_LINKAGE 1
-
-#include "../tbb/task.cpp"
 #include <new>
 #include "harness.h"
 
-namespace tbb {
-
-namespace internal {
-
-class TestTask: public task {
-public:
-    /*override*/ task* execute() {
-        return NULL;
-    }
-    const char* name;
-    TestTask( const char* name_ ) : name(name_) {}
-};
-
-void GenericScheduler::test_assembly_routines() {
-    __TBB_ASSERT( assert_okay(), NULL );
-    try_enter_arena();
-    ASSERT( arena_slot->task_pool == dummy_slot.task_pool, "entering arena must not lock the task pool" );
-    arena->mark_pool_full();
-    acquire_task_pool();
-    release_task_pool();
-    acquire_task_pool();    // leave_arena requires the pool to be locked
-    leave_arena();
-}
+using tbb::internal::reference_count;
 
 //! Test __TBB_CompareAndSwapW
 static void TestCompareExchange() {
-    ASSERT( intptr(-10)<10, "intptr not a signed integral type?" ); 
+    ASSERT( intptr_t(-10)<10, "intptr_t not a signed integral type?" ); 
     REMARK("testing __TBB_CompareAndSwapW\n");
-    for( intptr a=-10; a<10; ++a )
-        for( intptr b=-10; b<10; ++b )
-            for( intptr c=-10; c<10; ++c ) {
+    for( intptr_t a=-10; a<10; ++a )
+        for( intptr_t b=-10; b<10; ++b )
+            for( intptr_t c=-10; c<10; ++c ) {
 // Workaround for a bug in GCC 4.3.0; and one more is below.
 #if __GNUC__==4&&__GNUC_MINOR__==3&&__GNUC_PATCHLEVEL__==0
-                intptr x;
+                intptr_t x;
                 __TBB_store_with_release( x, a );
 #else
-                intptr x = a;
+                intptr_t x = a;
 #endif
-                intptr y = __TBB_CompareAndSwapW(&x,b,c);
+                intptr_t y = __TBB_CompareAndSwapW(&x,b,c);
                 ASSERT( y==a, NULL ); 
                 if( a==c ) 
                     ASSERT( x==b, NULL );
@@ -101,16 +61,16 @@ static void TestCompareExchange() {
 //! Test __TBB___TBB_FetchAndIncrement and __TBB___TBB_FetchAndDecrement
 static void TestAtomicCounter() {
     // "canary" is a value used to detect illegal overwrites.
-    const internal::reference_count canary = ~(internal::uintptr)0/3;
+    const reference_count canary = ~(uintptr_t)0/3;
     REMARK("testing __TBB_FetchAndIncrement\n");
     struct {
-        internal::reference_count prefix, i, suffix;
+        reference_count prefix, i, suffix;
     } x;
     x.prefix = canary;
     x.i = 0;
     x.suffix = canary;
     for( int k=0; k<10; ++k ) {
-        internal::reference_count j = __TBB_FetchAndIncrementWacquire((volatile void *)&x.i);
+        reference_count j = __TBB_FetchAndIncrementWacquire((volatile void *)&x.i);
         ASSERT( x.prefix==canary, NULL );
         ASSERT( x.suffix==canary, NULL );
         ASSERT( x.i==k+1, NULL );
@@ -119,7 +79,7 @@ static void TestAtomicCounter() {
     REMARK("testing __TBB_FetchAndDecrement\n");
     x.i = 10;
     for( int k=10; k>0; --k ) {
-        internal::reference_count j = __TBB_FetchAndDecrementWrelease((volatile void *)&x.i);
+        reference_count j = __TBB_FetchAndDecrementWrelease((volatile void *)&x.i);
         ASSERT( j==k, NULL );
         ASSERT( x.i==k-1, NULL );
         ASSERT( x.prefix==canary, NULL );
@@ -131,7 +91,7 @@ static void TestTinyLock() {
     REMARK("testing __TBB_LockByte\n");
     unsigned char flags[16];
     for( int i=0; i<16; ++i )
-        flags[i] = i;
+        flags[i] = (unsigned char)i;
 #if __GNUC__==4&&__GNUC_MINOR__==3&&__GNUC_PATCHLEVEL__==0
     __TBB_store_with_release( flags[8], 0 );
 #else
@@ -139,7 +99,11 @@ static void TestTinyLock() {
 #endif
     __TBB_LockByte(flags[8]);
     for( int i=0; i<16; ++i )
+	#ifdef __sparc
+        ASSERT( flags[i]==(i==8?0xff:i), NULL );
+	#else
         ASSERT( flags[i]==(i==8?1:i), NULL );
+	#endif
 }
 
 static void TestLog2() {
@@ -162,30 +126,15 @@ static void TestPause() {
 }
 
 
-} // namespace internal 
-} // namespace tbb
-
-using namespace tbb;
-
-__TBB_TEST_EXPORT
-int main( int argc, char* argv[] ) {
-    try {
-        ParseCommandLine( argc, argv );
+int TestMain () {
+    __TBB_TRY {
         TestLog2();
         TestTinyLock();
         TestCompareExchange();
         TestAtomicCounter();
         TestPause();
-
-        task_scheduler_init init(1);
-
-        REMARK("testing __TBB_(scheduler assists)\n");
-        GenericScheduler* scheduler = internal::Governor::local_scheduler();
-        scheduler->test_assembly_routines();
-
-    } catch(...) {
+    } __TBB_CATCH(...) {
         ASSERT(0,"unexpected exception");
     }
-    REPORT("done\n");
-    return 0;
+    return Harness::Done;
 }

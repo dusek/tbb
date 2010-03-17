@@ -1,5 +1,5 @@
 /*
-    Copyright 2005-2009 Intel Corporation.  All Rights Reserved.
+    Copyright 2005-2010 Intel Corporation.  All Rights Reserved.
 
     This file is part of Threading Building Blocks.
 
@@ -30,42 +30,60 @@
 #include <cstdlib>
 #include "harness_assert.h"
 
+#include <cstdio>
+
+#if !TBB_USE_EXCEPTIONS && _MSC_VER
+    // Suppress "C++ exception handler used, but unwind semantics are not enabled" warning in STL headers
+    #pragma warning (push)
+    #pragma warning (disable: 4530)
+#endif
+
+#include <stdexcept>
+
+#if !TBB_USE_EXCEPTIONS && _MSC_VER
+    #pragma warning (pop)
+#endif
+
+#include "harness.h"
+
 //! Test that task::initialize and task::terminate work when doing nothing else.
 /** maxthread is treated as the "maximum" number of worker threads. */
 void InitializeAndTerminate( int maxthread ) {
-    for( int i=0; i<200; ++i ) {
-        switch( i&3 ) {
-            default: {
-                tbb::task_scheduler_init init( std::rand() % maxthread + 1 );
-                ASSERT(init.is_active(), NULL);
-                break;
-            }
-            case 0: {   
-                tbb::task_scheduler_init init;
-                ASSERT(init.is_active(), NULL);
-                break;
-            }
-            case 1: {
-                tbb::task_scheduler_init init( tbb::task_scheduler_init::automatic );
-                ASSERT(init.is_active(), NULL);
-                break;
-            }
-            case 2: {
-                tbb::task_scheduler_init init( tbb::task_scheduler_init::deferred );
-                ASSERT(!init.is_active(), "init should not be active; initialization was deferred");
-                init.initialize( std::rand() % maxthread + 1 );
-                ASSERT(init.is_active(), NULL);
-                init.terminate();
-                ASSERT(!init.is_active(), "init should not be active; it was terminated");
-                break;
+    __TBB_TRY {
+        for( int i=0; i<200; ++i ) {
+            switch( i&3 ) {
+                default: {
+                    tbb::task_scheduler_init init( std::rand() % maxthread + 1 );
+                    ASSERT(init.is_active(), NULL);
+                    break;
+                }
+                case 0: {   
+                    tbb::task_scheduler_init init;
+                    ASSERT(init.is_active(), NULL);
+                    break;
+                }
+                case 1: {
+                    tbb::task_scheduler_init init( tbb::task_scheduler_init::automatic );
+                    ASSERT(init.is_active(), NULL);
+                    break;
+                }
+                case 2: {
+                    tbb::task_scheduler_init init( tbb::task_scheduler_init::deferred );
+                    ASSERT(!init.is_active(), "init should not be active; initialization was deferred");
+                    init.initialize( std::rand() % maxthread + 1 );
+                    ASSERT(init.is_active(), NULL);
+                    init.terminate();
+                    ASSERT(!init.is_active(), "init should not be active; it was terminated");
+                    break;
+                }
             }
         }
+    } __TBB_CATCH( std::runtime_error& error ) {
+#if TBB_USE_EXCEPTIONS
+        REPORT("ERROR: %s\n", error.what() );
+#endif /* TBB_USE_EXCEPTIONS */
     }
 }
-
-#include <cstdio>
-#include <stdexcept>
-#include "harness.h"
 
 #if _WIN64
 namespace std {      // 64-bit Windows compilers have not caught up with 1998 ISO C++ standard
@@ -75,11 +93,7 @@ namespace std {      // 64-bit Windows compilers have not caught up with 1998 IS
 
 struct ThreadedInit {
     void operator()( int ) const {
-        try {
-            InitializeAndTerminate(MaxThread);
-        } catch( std::runtime_error& error ) {
-            REPORT("ERROR: %s\n", error.what() );
-        }
+        InitializeAndTerminate(MaxThread);
     }
 };
 
@@ -113,8 +127,7 @@ void AssertExplicitInitIsNotSupplanted () {
             "Manual init provided more threads than requested. See also the comment at the beginning of main()." );
 }
 
-__TBB_TEST_EXPORT
-int main(int argc, char* argv[]) {
+int TestMain () {
     // Do not use tbb::task_scheduler_init directly in the scope of main's body,
     // as a static variable, or as a member of a static variable.
 #if _MSC_VER && !__TBB_NO_IMPLICIT_LINKAGE
@@ -127,19 +140,11 @@ int main(int argc, char* argv[]) {
     #endif
 #endif /* _MSC_VER && !__TBB_NO_IMPLICIT_LINKAGE */
     std::srand(2);
-    // Set defaults
-    MaxThread = MinThread = 2;
-    ParseCommandLine( argc, argv );
-    try {
-        InitializeAndTerminate(MaxThread);
-    } catch( std::runtime_error& error ) {
-        REPORT("ERROR: %s\n", error.what() );
-    }
+    InitializeAndTerminate(MaxThread);
     for( int p=MinThread; p<=MaxThread; ++p ) {
         REMARK("testing with %d threads\n", p );
         NativeParallelFor( p, ThreadedInit() );
     }
     AssertExplicitInitIsNotSupplanted();
-    REPORT("done\n");
-    return 0;
+    return Harness::Done;
 }

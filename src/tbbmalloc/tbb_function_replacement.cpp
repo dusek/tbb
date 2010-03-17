@@ -1,5 +1,5 @@
 /*
-    Copyright 2005-2009 Intel Corporation.  All Rights Reserved.
+    Copyright 2005-2010 Intel Corporation.  All Rights Reserved.
 
     This file is part of Threading Building Blocks.
 
@@ -35,10 +35,6 @@
 #include <new>
 #include <stdio.h>
 #include "tbb_function_replacement.h"
-
-#ifndef __TBB_REMOVE_THIS_MACRO_FROM_RELEASE
-#define TBB_USE_ASSERT 1 
-#endif
 
 #include "tbb/tbb_config.h"
 #include "tbb/tbb_stddef.h"
@@ -240,12 +236,8 @@ UINT CheckOpcodes( const char ** opcodes, void *inpAddr )
         if( result ) 
             return (UINT)(result/2-1);
     }
-    // TODO: to add more stuff to patterns :)
-    // should be removed for production
-    // there is a dummy macros to catch this by tbb_util
-#ifndef __TBB_REMOVE_THIS_MACRO_FROM_RELEASE
+    // TODO: to add more stuff to patterns
     __TBB_ASSERT( NULL, "CheckOpcodes failed" );
-#endif
 
     // No matches found just do not store original calls
     return 0;

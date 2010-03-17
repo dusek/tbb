@@ -1,5 +1,5 @@
 /*
-    Copyright 2005-2009 Intel Corporation.  All Rights Reserved.
+    Copyright 2005-2010 Intel Corporation.  All Rights Reserved.
 
     This file is part of Threading Building Blocks.
 
@@ -31,13 +31,6 @@
 #include "harness.h"
 #include "harness_concurrency_tracker.h"
 
-#if _MSC_VER < 1400
-    #define __TBB_EXCEPTION_TYPE_INFO_BROKEN true
-#else
-    #define __TBB_EXCEPTION_TYPE_INFO_BROKEN false
-#endif
-
-
 namespace Harness {
 #if _WIN32 || _WIN64
     typedef DWORD tid_t;
@@ -46,33 +39,10 @@ namespace Harness {
     typedef pthread_t tid_t;
     tid_t CurrentTid () { return pthread_self(); }
 #endif /* !WIN */
-} // namespace util
+} // namespace Harness
 
 int g_NumThreads = 0;
 Harness::tid_t  g_Master = 0;
-
-class test_exception : public std::exception {
-    const char* my_description;
-public:
-    test_exception ( const char* description ) : my_description(description) {}
-
-    const char* what() const throw() { return my_description; }
-};
-
-class solitary_test_exception : public test_exception {
-public:
-    solitary_test_exception ( const char* description ) : test_exception(description) {}
-};
-
-#if TBB_USE_CAPTURED_EXCEPTION
-    typedef tbb::captured_exception PropagatedException;
-    #define EXCEPTION_NAME(e) e.name()
-#else
-    typedef test_exception PropagatedException;
-    #define EXCEPTION_NAME(e) typeid(e).name()
-#endif
-
-#define EXCEPTION_DESCR "Test exception"
 
 tbb::atomic<intptr_t> g_CurExecuted,
                       g_ExecutedAtCatch,
@@ -99,6 +69,30 @@ inline void ResetEhGlobals ( bool throwException = true, bool flog = false ) {
     g_ExceptionsThrown = g_Exceptions = 0;
 }
 
+#if TBB_USE_EXCEPTIONS
+class test_exception : public std::exception {
+    const char* my_description;
+public:
+    test_exception ( const char* description ) : my_description(description) {}
+
+    const char* what() const throw() { return my_description; }
+};
+
+class solitary_test_exception : public test_exception {
+public:
+    solitary_test_exception ( const char* description ) : test_exception(description) {}
+};
+
+#if TBB_USE_CAPTURED_EXCEPTION
+    typedef tbb::captured_exception PropagatedException;
+    #define EXCEPTION_NAME(e) e.name()
+#else
+    typedef test_exception PropagatedException;
+    #define EXCEPTION_NAME(e) typeid(e).name()
+#endif
+
+#define EXCEPTION_DESCR "Test exception"
+
 #if HARNESS_EH_SIMPLE_MODE
 
 static void ThrowTestException () { 
@@ -122,15 +116,12 @@ static void ThrowTestException ( intptr_t threshold ) {
 }
 #endif /* !HARNESS_EH_SIMPLE_MODE */
 
-#define TRY()   \
-    bool exceptionCaught = false, unknownException = false;    \
-    try {
-
 #define CATCH()     \
     } catch ( PropagatedException& e ) { \
         g_ExecutedAtCatch = g_CurExecuted; \
-        ASSERT (strcmp(EXCEPTION_NAME(e), (g_SolitaryException ? typeid(solitary_test_exception) : typeid(test_exception)).name() ) == 0, "Unexpected original exception name"); \
-        ASSERT (strcmp(e.what(), EXCEPTION_DESCR) == 0, "Unexpected original exception info"); \
+        ASSERT( e.what(), "Empty what() string" );  \
+        ASSERT (__TBB_EXCEPTION_TYPE_INFO_BROKEN || strcmp(EXCEPTION_NAME(e), (g_SolitaryException ? typeid(solitary_test_exception) : typeid(test_exception)).name() ) == 0, "Unexpected original exception name"); \
+        ASSERT (__TBB_EXCEPTION_TYPE_INFO_BROKEN || strcmp(e.what(), EXCEPTION_DESCR) == 0, "Unexpected original exception info"); \
         g_ExceptionCaught = exceptionCaught = true; \
         ++g_Exceptions; \
     } catch ( tbb::tbb_exception& e ) { \
@@ -155,6 +146,22 @@ static void ThrowTestException ( intptr_t threshold ) {
 #define CATCH_AND_ASSERT() \
     CATCH() \
     ASSERT_EXCEPTION()
+
+#else /* !TBB_USE_EXCEPTIONS */
+
+inline void ThrowTestException ( intptr_t ) {}
+
+#endif /* !TBB_USE_EXCEPTIONS */
+
+#define TRY()   \
+    bool exceptionCaught = false, unknownException = false;    \
+    __TBB_TRY {
+
+// "exceptionCaught || unknownException" is used only to "touch" otherwise unused local variables
+#define CATCH_AND_FAIL() } __TBB_CATCH(...) { \
+        ASSERT (false, "Canceling tasks must not cause any exceptions");    \
+        (void)(exceptionCaught && unknownException);                        \
+    }
 
 const int c_Timeout = 1000000;
 
@@ -208,10 +215,14 @@ public:
 
     static void Reset () { s_Ready = false; }
 
-    static void WaitUntilReady () {
+    static bool WaitUntilReady () {
+        const intptr_t limit = 10000000;
+        intptr_t n = 0;
         do {
             __TBB_Yield();
-        } while( !s_Ready );
+        } while( !s_Ready && ++n < limit );
+        ASSERT( s_Ready || n == limit, NULL );
+        return s_Ready;
     }
 };
 
@@ -228,7 +239,6 @@ void RunCancellationTest ( intptr_t threshold = 1 )
     r.spawn( *new( r.allocate_child() ) LauncherTaskT(ctx) );
     TRY();
         r.wait_for_all();
-    CATCH();
+    CATCH_AND_FAIL();
     r.destroy(r);
-    ASSERT (!g_ExceptionCaught && !exceptionCaught, "Cancelling tasks should not cause any exceptions");
 }

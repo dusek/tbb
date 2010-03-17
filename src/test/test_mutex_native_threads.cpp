@@ -1,5 +1,5 @@
 /*
-    Copyright 2005-2009 Intel Corporation.  All Rights Reserved.
+    Copyright 2005-2010 Intel Corporation.  All Rights Reserved.
 
     This file is part of Threading Building Blocks.
 
@@ -210,9 +210,7 @@ void TestReaderWriter( const char * mutex_name, int nthread ) {
     REMARK("%s readers & writers time = %g usec\n",mutex_name,(t1-t0).seconds());
 }
 
-__TBB_TEST_EXPORT
-int main( int argc, char * argv[] ) {
-    ParseCommandLine( argc, argv );
+int TestMain () {
     for( int p=MinThread; p<=MaxThread; ++p ) {
         REMARK( "testing with %d threads\n", p );
         Test<tbb::spin_mutex>( "spin_mutex", p );
@@ -222,6 +220,5 @@ int main( int argc, char * argv[] ) {
         TestReaderWriter<tbb::queuing_rw_mutex>( "queuing_rw_mutex", p );
         TestReaderWriter<tbb::spin_rw_mutex>( "spin_rw_mutex", p );
     }
-    REPORT("done\n");
-    return 0;
+    return Harness::Done;
 }

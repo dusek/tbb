@@ -1,5 +1,5 @@
 /*
-    Copyright 2005-2009 Intel Corporation.  All Rights Reserved.
+    Copyright 2005-2010 Intel Corporation.  All Rights Reserved.
 
     This file is part of Threading Building Blocks.
 
@@ -100,16 +100,12 @@ void Measure(const char *name, MeasureFunc func, int n)
     REMARK("\t- in %f msec\n", T.seconds()*1000);
 }
 
-__TBB_TEST_EXPORT
-int main( int argc, char* argv[] ) {
-    MaxThread = 8; MinThread = 2;
-    ParseCommandLine( argc, argv );
+int TestMain () {
+    MinThread = max(2, MinThread);
     int NumbersCount = 100;
     short recycle = 100;
-
     do {
-        for(int threads = 2; threads <= MaxThread; threads++)
-        {
+        for(int threads = MinThread; threads <= MaxThread; threads++) {
             task_scheduler_init scheduler_init(threads);
             REMARK("Threads number is %d\t", threads);
             Measure("Shared serial (wrapper mutex)\t", SharedSerialFib<mutex>, NumbersCount);
@@ -117,6 +113,5 @@ int main( int argc, char* argv[] ) {
             //sum = Measure("Shared serial (queuing_mutex)", SharedSerialFib<tbb::queuing_mutex>, NumbersCount);
         }
     } while(--recycle);
-    REPORT("done\n");
-    return 0;
+    return Harness::Done;
 }

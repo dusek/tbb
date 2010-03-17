@@ -1,5 +1,5 @@
 /*
-    Copyright 2005-2009 Intel Corporation.  All Rights Reserved.
+    Copyright 2005-2010 Intel Corporation.  All Rights Reserved.
 
     This file is part of Threading Building Blocks.
 
@@ -44,6 +44,14 @@
 #endif 
 #include <stdio.h>
 #include "tbb/itt_notify.h"
+
+#if __LRB__
+#ifndef __RML_USE_XNMETASCHEDULER
+#define __RML_USE_XNMETASCHEDULER 1
+#include "common/XN0_Common.h"
+#include "common/XN0MetaScheduler_common.h"
+#endif
+#endif /* __LRB__ */
 
 // All platform-specific threading support is in this header.
 
@@ -113,6 +121,21 @@ public:
     static void launch( thread_routine_type thread_routine, void* arg, size_t stack_size );
     static void yield();
 
+#if __RML_USE_XNMETASCHEDULER
+    static void xncheck( XNERROR xn_error_code, const char* routine_name );
+    static void xnMetaSchedulerInitialize( void );
+    static void xnMetaInsertScheduler( thread_monitor::thread_routine_type thread_routine_addr, void* arg, size_t stack_size );
+    static void xnMetaStartScheduler( XNHANDLE sched_handle );
+    static void xnMetaRemoveScheduler( XNHANDLE sched_handle );
+    static void xnMetaStopScheduler( XNHANDLE sched_handle );
+    static void xnMetaSchedulerShutdown( void );
+#endif /* __RML_USE_XNMETASCHEDULER */
+
+#if __RML_USE_XNMETASCHEDULER
+    XNHANDLE sched_handle;
+    thread_monitor::thread_routine_type thread_routine_addr;
+#endif /* __RML_USE_XNMETASCHEDULER */
+
 private:
     cookie my_cookie;
 #if USE_WINTHREAD
@@ -126,12 +149,102 @@ private:
 #endif /* USE_PTHREAD */
 };
 
+#if __RML_USE_XNMETASCHEDULER
+inline void thread_monitor::xncheck( XNERROR xn_error_code, const char* routine ) {
+    if( XN_SUCCESS != xn_error_code ) {
+        fprintf( stderr,"thread_monitor::xncheck : routine=%s xn_error=%s\n", routine, XN0ErrorGetName( xn_error_code ) );
+        exit(1);
+    }
+}
+
+// For general purpose usage,
+// let's model a server thread as if it were a single pthread.
+// A server thread represents a workload with 1 gang. The gang consists of 1 thread.
+const static uint16_t threadsPerGang = 1; // Number of threads in a gang.
+const static uint16_t maxGangs       = 1; // Number of gangs in a workload.
+
+static inline unsigned get_recommended_max_L2_cache_count() {
+    unsigned L2CacheCount = XN0SysGetL2CacheCount();
+    unsigned do_not_use = 1; // Do not use one L2 cache.
+    return ( L2CacheCount - do_not_use );
+}
+
+// Number of workloads a connection can use.
+// server->default_concurrency() uses this value as a base.
+static inline unsigned get_hardware_concurrency() {
+    return get_recommended_max_L2_cache_count() * threadsPerGang;
+}
+
+static XNERROR metaRunFunction( void* in_pPerThreadData );
+static void xnSetupMonitor( XNHANDLE sched_handle, thread_monitor::thread_routine_type thread_routine_addr, void* arg, size_t stack_size );
+
+static XNERROR metaInitFunction(
+        uint16_t /*in_gangIndex*/,
+        uint16_t /*in_gangCount*/,
+        uint16_t /*in_threadIndex*/,
+        uint16_t /*in_threadCount*/,
+        void*    in_pCookie,
+        void**   out_pPerThreadData ) {
+    *out_pPerThreadData = in_pCookie; // Will be passed as in_pPerThreadData to init, run and shutdown functions.
+    return XN_SUCCESS;
+}
+
+static XNERROR metaShutdownFunction( void* /*in_pPerThreadData*/ ) {
+    return XN_SUCCESS;
+}
+
+static const XN_SCHEDULER_FUNCTIONS schedFunctions = {
+    metaInitFunction,
+    metaRunFunction,
+    metaShutdownFunction
+};
+
+void thread_monitor::xnMetaSchedulerInitialize( void ) {
+    xncheck( XN0MetaConfig1( get_recommended_max_L2_cache_count() ), "XN0MetaConfig1" );
+}
+
+void thread_monitor::xnMetaInsertScheduler( thread_monitor::thread_routine_type thread_routine_addr, void* arg, size_t stack_size ) {
+    XNHANDLE sched_handle_var;
+    xnMetaSchedulerInitialize(); // Workaround. Implement a one-time initialization instead.
+    XNERROR r = XN0MetaInsertScheduler(
+        schedFunctions,     // const XN_SCHEDULER_FUNCTIONS in_newSchedFunctions,
+        threadsPerGang,     // const uint16_t               in_threadsPerGang,
+        maxGangs,           // const uint16_t               in_maxGangs,
+        0,                  // const uint8_t                in_relativePriority,
+        arg,                // void*                        in_pSchedCookie,
+        &sched_handle_var   // XNHANDLE* const              out_pNewSchedHandle
+    );
+    xncheck( r, "XN0MetaInsertScheduler" );
+    xnSetupMonitor( sched_handle_var, thread_routine_addr, arg, stack_size );
+    xnMetaStartScheduler( sched_handle_var );
+}
+
+void thread_monitor::xnMetaStartScheduler( XNHANDLE sched_handle ) {
+    xncheck( XN0MetaStartScheduler( sched_handle ), "XN0MetaStartScheduler" );
+}
+
+void thread_monitor::xnMetaStopScheduler( XNHANDLE sched_handle ) {
+    xncheck( XN0MetaStopScheduler( sched_handle ), "XN0MetaStopScheduler" );
+}
+
+void thread_monitor::xnMetaRemoveScheduler( XNHANDLE sched_handle ) {
+    xncheck( XN0MetaRemoveScheduler( sched_handle ), "XN0MetaRemoveScheduler" );
+}
+
+void thread_monitor::xnMetaSchedulerShutdown( void ) {
+    xncheck( XN0MetaShutdown(), "XN0MetaShutdown" );
+}
+#endif /* __RML_USE_XNMETASCHEDULER */
+
 
 #if USE_WINTHREAD
 #ifndef STACK_SIZE_PARAM_IS_A_RESERVATION
 #define STACK_SIZE_PARAM_IS_A_RESERVATION 0x00010000
 #endif
 inline void thread_monitor::launch( thread_routine_type thread_routine, void* arg, size_t stack_size ) {
+#if __RML_USE_XNMETASCHEDULER
+    xnMetaInsertScheduler( thread_routine, arg, stack_size );
+#else
     unsigned thread_id;
     uintptr_t status = _beginthreadex( NULL, unsigned(stack_size), thread_routine, arg, STACK_SIZE_PARAM_IS_A_RESERVATION, &thread_id );
     if( status==0 ) {
@@ -140,6 +253,7 @@ inline void thread_monitor::launch( thread_routine_type thread_routine, void* ar
     } else {
         CloseHandle((HANDLE)status);
     }
+#endif /* __RML_USE_XNMETASCHEDULER */
 }
 
 inline void thread_monitor::yield() {
@@ -199,8 +313,10 @@ inline void thread_monitor::check( int error_code, const char* routine ) {
 inline void thread_monitor::launch( void* (*thread_routine)(void*), void* arg, size_t stack_size ) {
     // FIXME - consider more graceful recovery than just exiting if a thread cannot be launched.
     // Note that there are some tricky situations to deal with, such that the thread is already 
-    // grabbed as part of an OpenMP team, or is being launched as a replacement for a thread with
-    // too small a stack.
+    // grabbed as part of an OpenMP team. 
+#if __RML_USE_XNMETASCHEDULER
+    xnMetaInsertScheduler( thread_routine, arg, stack_size );
+#else
     pthread_attr_t s;
     check(pthread_attr_init( &s ), "pthread_attr_init");
     if( stack_size>0 ) {
@@ -209,6 +325,7 @@ inline void thread_monitor::launch( void* (*thread_routine)(void*), void* arg, s
     pthread_t handle;
     check( pthread_create( &handle, &s, thread_routine, arg ), "pthread_create" );
     check( pthread_detach( handle ), "pthread_detach" );
+#endif /* __RML_USE_XNMETASCHEDULER */
 }
 
 inline void thread_monitor::yield() {

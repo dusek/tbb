@@ -1,5 +1,5 @@
 /*
-    Copyright 2005-2009 Intel Corporation.  All Rights Reserved.
+    Copyright 2005-2010 Intel Corporation.  All Rights Reserved.
 
     This file is part of Threading Building Blocks.
 
@@ -43,8 +43,24 @@ public:
     volatile int ack;
     volatile unsigned clock;
     volatile unsigned stamp;
-    ThreadState() : request(-1), ack(-1) {}
+    ThreadState() : request(-1), ack(-1), clock(0) {}
 };
+
+#if __RML_USE_XNMETASCHEDULER
+static XNERROR rml::internal::metaRunFunction( void* in_pPerThreadData ) {
+    ThreadState* self = static_cast<ThreadState*>(in_pPerThreadData);
+    (*(self->monitor.thread_routine_addr))( in_pPerThreadData );
+    return XN_SUCCESS;
+}
+
+static void rml::internal::xnSetupMonitor( 
+        XNHANDLE sched_handle_var, rml::internal::thread_monitor::thread_routine_type thread_routine_addr, 
+        void* arg, size_t /*stack_size*/ ) {
+    ThreadState* self = static_cast<ThreadState*>(arg);
+    self->monitor.sched_handle = sched_handle_var;
+    self->monitor.thread_routine_addr = thread_routine_addr;
+}
+#endif /* __RML_USE_XNMETASCHEDULER */
 
 void ThreadState::loop() {
     for(;;) {
@@ -53,9 +69,7 @@ void ThreadState::loop() {
             thread_monitor::cookie c;
             monitor.prepare_wait(c);
             if( ack==request ) {
-                if( Verbose ) {
-                    printf("%p: request=%d ack=%d\n", this, request, ack );
-                }
+                REMARK("%p: request=%d ack=%d\n", this, request, ack );
                 monitor.commit_wait(c);
             } else
                 monitor.cancel_wait();
@@ -78,17 +92,14 @@ void ThreadState::loop() {
 const size_t MinStackSize = 1<<18;
 const size_t MaxStackSize = 1<<22;
 
-int main( int argc, char* argv[] ) {
-    // Set defaults
-    MinThread = 1;
-    MaxThread = 4;
-    ParseCommandLine( argc, argv );
-
+int TestMain () {
+#if __RML_USE_XNMETASCHEDULER
+    return Harness::Skipped; // The test doesn't work yet. The test can use more threads at a time than the default concurrency. It needs to be reworked.
+#else
     for( int p=MinThread; p<=MaxThread; ++p ) {
         ThreadState* t = new ThreadState[p];
         for( size_t stack_size = MinStackSize; stack_size<=MaxStackSize; stack_size*=2 ) {
-            if( Verbose )
-                printf("launching %d threads\n",p);
+            REMARK("launching %d threads\n",p);
             for( int i=0; i<p; ++i )
                 rml::internal::thread_monitor::launch( ThreadState::routine, t+i, stack_size ); 
             for( int k=1000; k>=0; --k ) {
@@ -100,21 +111,19 @@ int main( int argc, char* argv[] ) {
                             t[i].stamp = t[i].clock;
                             rml::internal::thread_monitor::yield();
                             if( ++count>=1000 ) {
-                                printf("Warning: thread %d not waiting\n",i);
+                                REPORT("Warning: thread %d not waiting\n",i);
                                 break;
                             }
                         } while( t[i].stamp!=t[i].clock );
                     }
                 }
-                if( Verbose ) 
-                    printf("notifying threads\n");
+                REMARK("notifying threads\n");
                 for( int i=0; i<p; ++i ) {
                     // Change state visible to launched thread
                     t[i].request = k;
                     t[i].monitor.notify();
                 }
-                if( Verbose ) 
-                    printf("waiting for threads to respond\n");
+                REMARK("waiting for threads to respond\n");
                 for( int i=0; i<p; ++i ) 
                     // Wait for thread to respond 
                     while( t[i].ack!=k ) 
@@ -124,6 +133,6 @@ int main( int argc, char* argv[] ) {
         delete[] t;
     }
 
-    printf("done\n");
-    return 0;
+    return Harness::Done;
+#endif /* __RML_USE_XNMETASCHEDULER */
 }

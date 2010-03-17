@@ -1,5 +1,5 @@
 /*
-    Copyright 2005-2009 Intel Corporation.  All Rights Reserved.
+    Copyright 2005-2010 Intel Corporation.  All Rights Reserved.
 
     This file is part of Threading Building Blocks.
 
@@ -26,12 +26,25 @@
     the GNU General Public License.
 */
 
+#if __LRB__
+#ifdef __RML_USE_XNMETASCHEDULER
+#undef __RML_USE_XNMETASCHEDULER
+#endif
+#define __RML_USE_XNMETASCHEDULER 0
+#endif /* __LRB__ */
+
 #include "rml_tbb.h"
 #include "../server/thread_monitor.h"
 #include "tbb/atomic.h"
 #include "tbb/cache_aligned_allocator.h"
 #include "tbb/spin_mutex.h"
 #include "tbb/tbb_thread.h"
+
+#if _XBOX
+    #define NONET
+    #define NOD3D
+    #include <xtl.h>
+#endif
 
 using rml::internal::thread_monitor;
 
@@ -171,7 +184,7 @@ public:
         return 0;
     } 
 
-    /*override*/ void request_close_connection() {
+    /*override*/ void request_close_connection( bool /*exiting*/ ) {
         for( size_t i=0; i<my_n_thread; ++i ) 
             my_thread_array[i].start_shutdown();
         remove_server_ref();
@@ -184,6 +197,11 @@ public:
     /*override*/ unsigned default_concurrency() const {return tbb::tbb_thread::hardware_concurrency()-1;}
 
     /*override*/ void adjust_job_count_estimate( int delta );
+
+#if _WIN32||_WIN64
+    /*override*/ void register_master ( ::rml::server::execution_resource_t& ) const {}
+    /*override*/ void unregister_master ( ::rml::server::execution_resource_t ) const {}
+#endif /* _WIN32||_WIN64 */
 };
 
 //------------------------------------------------------------------------
@@ -197,6 +215,10 @@ public:
 __RML_DECL_THREAD_ROUTINE private_worker::thread_routine( void* arg ) {
     private_worker* self = static_cast<private_worker*>(arg);
     AVOID_64K_ALIASING( self->my_index );
+#if _XBOX
+    int HWThreadIndex = GetHardwareThreadIndex(i);
+    XSetThreadProcessor(GetCurrentThread(), HWThreadIndex);
+#endif
     self->run();
     return NULL;
 }

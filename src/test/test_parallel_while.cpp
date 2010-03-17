@@ -1,5 +1,5 @@
 /*
-    Copyright 2005-2009 Intel Corporation.  All Rights Reserved.
+    Copyright 2005-2010 Intel Corporation.  All Rights Reserved.
 
     This file is part of Threading Building Blocks.
 
@@ -161,9 +161,7 @@ static void Run( int nthread, int n ) {
 #include "tbb/task_scheduler_init.h"
 #include "harness_cpu.h"
 
-__TBB_TEST_EXPORT
-int main( int argc, char* argv[] ) {
-    ParseCommandLine( argc, argv );
+int TestMain () {
     if( MinThread<1 ) {
         REPORT("number of threads must be positive\n");
         exit(1);
@@ -176,7 +174,6 @@ int main( int argc, char* argv[] ) {
         // Test that all workers sleep when no work
         TestCPUUserTime(p);
     }
-    REPORT("done\n");
-    return 0;
+    return Harness::Done;
 }
 

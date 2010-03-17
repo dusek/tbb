@@ -1,5 +1,5 @@
 /*
-    Copyright 2005-2009 Intel Corporation.  All Rights Reserved.
+    Copyright 2005-2010 Intel Corporation.  All Rights Reserved.
 
     This file is part of Threading Building Blocks.
 
@@ -121,7 +121,7 @@ struct TestThreadBody : NoAssign, Harness::NoAfterlife {
 #include "../tbb/tls.h"
 
 void UseAFewNewTlsKeys () {
-    tbb::internal::tls<volatile intptr_t> tls1, tls2, tls3, tls4;
+    tbb::internal::tls<intptr_t> tls1, tls2, tls3, tls4;
     tls1 = tls2 = tls3 = tls4 = -1;
 }
 
@@ -142,6 +142,7 @@ class FireAndForgetTask : public tbb::task {
         FafCompleted = true;
         return NULL;
     }
+public: // to make gcc 3.2.3 happy
     ~FireAndForgetTask() {
         ASSERT(FafCompleted, "FireAndForgetTask got erroneously cancelled?");
     }
@@ -170,8 +171,8 @@ struct DriverThreadBody : NoAssign, Harness::NoAfterlife {
 
             // This test checks the validity of temporarily restoring the value of 
             // the last TLS slot for a given key during the termination of an 
-            // auto-initialized master thread (in Governor::auto_terminate). 
-            // If anything goes wrong, GenericScheduler::cleanup_master() will assert.
+            // auto-initialized master thread (in governor::auto_terminate). 
+            // If anything goes wrong, generic_scheduler::cleanup_master() will assert.
             // The context for this task must be valid till the task completion.
             tbb::task &r = *new( tbb::task::allocate_root(*g_Ctx) ) FireAndForgetTask;
             r.spawn(r);
@@ -188,12 +189,8 @@ struct DriverThreadBody : NoAssign, Harness::NoAfterlife {
     }
 };
 
-__TBB_TEST_EXPORT
-int main() {
+int TestMain () {
     // Do not use any TBB functionality in the main thread!
-
     NativeParallelFor( 2, DriverThreadBody() );
-    
-    REPORT("done\n");
-    return 0;
+    return Harness::Done;
 }

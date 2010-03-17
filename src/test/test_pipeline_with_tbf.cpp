@@ -1,5 +1,5 @@
 /*
-    Copyright 2005-2009 Intel Corporation.  All Rights Reserved.
+    Copyright 2005-2010 Intel Corporation.  All Rights Reserved.
 
     This file is part of Threading Building Blocks.
 
@@ -152,11 +152,10 @@ public:
         unsigned long next_input;
         unsigned free_buffer = 0; 
         { // lock protected scope
-            tbb::atomic<tbb::internal::Token>& current_token = this->current_token;
             tbb::spin_mutex::scoped_lock lock(input_lock);
-            if( current_token>=StreamSize )
+            if( this->current_token>=StreamSize )
                 return NULL;
-            next_input = current_token++; 
+            next_input = this->current_token++; 
             // once in a while, emulate waiting for input; this only makes sense for serial input
             if( this->is_serial() && WaitTest.required() )
                 WaitTest.probe( );
@@ -337,6 +336,8 @@ void TestTrivialPipeline( unsigned nthread, unsigned number_of_filters ) {
                 delete filter[i];
                 filter[i] = NULL;
             }
+            for( unsigned j = 0; j<number_of_tb_filters; j++)
+                delete t[j];
             pipeline.clear();
         }
     }
@@ -356,12 +357,8 @@ void waiting_probe::probe( ) {
 
 #include "tbb/task_scheduler_init.h"
 
-__TBB_TEST_EXPORT
-int main( int argc, char* argv[] ) {
-    // Default is at least one thread.
-    MinThread = 1;
+int TestMain () {
     out_of_order_count = 0;
-    ParseCommandLine(argc,argv);
     if( MinThread<1 ) {
         REPORT("must have at least one thread");
         exit(1);
@@ -384,6 +381,5 @@ int main( int argc, char* argv[] ) {
     }
     if( !out_of_order_count )
         REPORT("Warning: out of order serial filter received tokens in order\n");
-    REPORT("done\n");
-    return 0;
+    return Harness::Done;
 }

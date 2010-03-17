@@ -1,5 +1,5 @@
 /*
-    Copyright 2005-2009 Intel Corporation.  All Rights Reserved.
+    Copyright 2005-2010 Intel Corporation.  All Rights Reserved.
 
     This file is part of Threading Building Blocks.
 
@@ -94,7 +94,7 @@ private:
 };
 
 MyInputFilter::MyInputFilter( FILE* input_file_ ) : 
-    filter(/*is_serial=*/true),
+    filter(serial_in_order),
     input_file(input_file_),
     next_slice( TextSlice::allocate( MAX_CHAR_PER_INPUT_SLICE ) )
 { 
@@ -135,7 +135,7 @@ public:
 };
 
 MyTransformFilter::MyTransformFilter() : 
-    tbb::filter(/*ordered=*/false) 
+    tbb::filter(parallel) 
 {}  
 
 /*override*/void* MyTransformFilter::operator()( void* item ) {
@@ -172,7 +172,7 @@ public:
 };
 
 MyOutputFilter::MyOutputFilter( FILE* output_file ) : 
-    tbb::filter(/*is_serial=*/true),
+    tbb::filter(serial_in_order),
     my_output_file(output_file)
 {
 }
@@ -250,9 +250,6 @@ int run_pipeline( int nthreads )
     // busy; 2-4 works
     pipeline.run( nthreads*4 );
     tbb::tick_count t1 = tbb::tick_count::now();
-
-    // Remove filters from pipeline before they are implicitly destroyed.
-    pipeline.clear(); 
 
     fclose( output_file );
     fclose( input_file );

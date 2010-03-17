@@ -1,5 +1,5 @@
 /*
-    Copyright 2005-2009 Intel Corporation.  All Rights Reserved.
+    Copyright 2005-2010 Intel Corporation.  All Rights Reserved.
 
     This file is part of Threading Building Blocks.
 
@@ -26,17 +26,27 @@
     the GNU General Public License.
 */
 
-#include <cstring>   // for memset()
 #include "tbb/tbb_stddef.h"
 #include "tbb/tbb_machine.h"
+#include "tbb/tbb_exception.h"
 #include "tbb/_concurrent_queue_internal.h"
 #include "concurrent_monitor.h"
 #include "itt_notify.h"
 #include <new>
-using namespace std;
 
-// enable sleep support
-#define __TBB_NO_BUSY_WAIT_IN_CONCURRENT_QUEUE 1
+#if !TBB_USE_EXCEPTIONS && _MSC_VER
+    // Suppress "C++ exception handler used, but unwind semantics are not enabled" warning in STL headers
+    #pragma warning (push)
+    #pragma warning (disable: 4530)
+#endif
+
+#include <cstring>   // for memset()
+
+#if !TBB_USE_EXCEPTIONS && _MSC_VER
+    #pragma warning (pop)
+#endif
+
+using namespace std;
 
 #if defined(_MSC_VER) && defined(_Wp64)
     // Workaround for overzealous compiler warnings in /Wp64 mode
@@ -134,7 +144,6 @@ public:
         return k*phi%n_queue;
     }
 
-#if __TBB_NO_BUSY_WAIT_IN_CONCURRENT_QUEUE
     atomic<ticket> head_counter;
     concurrent_monitor items_avail;
     atomic<size_t> n_invalid_entries;
@@ -143,13 +152,6 @@ public:
     atomic<ticket> tail_counter;
     concurrent_monitor slots_avail;
     char pad2[NFS_MaxLineSize-((sizeof(atomic<ticket>)+sizeof(concurrent_monitor))&(NFS_MaxLineSize-1))];
-#else /* !__TBB_NO_BUSY_WAIT_IN_CONCURRENT_QUEUE */
-    atomic<ticket> head_counter;
-    atomic<size_t> n_invalid_entries;
-    char pad1[NFS_MaxLineSize-sizeof(atomic<ticket>)-sizeof(atomic<size_t>)];
-    atomic<ticket> tail_counter;
-    char pad2[NFS_MaxLineSize-sizeof(atomic<ticket>)];
-#endif /* __TBB_NO_BUSY_WAIT_IN_CONCURRENT_QUEUE */
     micro_queue array[n_queue];    
 
     micro_queue& choose( ticket k ) {
@@ -177,9 +179,9 @@ void micro_queue::push( const void* item, ticket k, concurrent_queue_base& base 
     page* p = NULL;
     size_t index = k/concurrent_queue_rep::n_queue & (base.items_per_page-1);
     if( !index ) {
-        try {
+        __TBB_TRY {
             p = base.allocate_page();
-        } catch (...) {
+        } __TBB_CATCH(...) {
             ++base.my_rep->n_invalid_entries;
             make_invalid( k );
         }
@@ -194,7 +196,7 @@ void micro_queue::push( const void* item, ticket k, concurrent_queue_base& base 
             // no memory. throws an exception; assumes concurrent_queue_rep::n_queue>1
             if( tail_counter&0x1 ) {
                 ++base.my_rep->n_invalid_entries;
-                throw bad_last_alloc();
+                throw_exception( eid_bad_last_alloc );
             }
         } while( tail_counter!=k ) ;
     }
@@ -211,16 +213,16 @@ void micro_queue::push( const void* item, ticket k, concurrent_queue_base& base 
     }
     ITT_NOTIFY( sync_acquired, p );
 
-    try {
+    __TBB_TRY {
         base.copy_item( *p, index, item );
         ITT_NOTIFY( sync_releasing, p );
         // If no exception was thrown, mark item as present.
         p->mask |= uintptr(1)<<index;
         tail_counter += concurrent_queue_rep::n_queue; 
-    } catch (...) {
+    } __TBB_CATCH(...) {
         ++base.my_rep->n_invalid_entries;
         tail_counter += concurrent_queue_rep::n_queue; 
-        throw;
+        __TBB_RETHROW();
     }
 }
 
@@ -236,12 +238,7 @@ bool micro_queue::pop( void* dst, ticket k, concurrent_queue_base& base ) {
         micro_queue_pop_finalizer finalizer( *this, base, k+concurrent_queue_rep::n_queue, index==base.items_per_page-1 ? &p : NULL ); 
         if( p.mask & uintptr(1)<<index ) {
             success = true;
-#if DO_ITT_NOTIFY
-            if( ((intptr_t)dst&1) ) {
-                dst = (void*) ((intptr_t)dst&~1);
-                ITT_NOTIFY( sync_acquired, dst );
-            }
-#endif
+            ITT_NOTIFY( sync_acquired, dst );
             ITT_NOTIFY( sync_acquired, head_page );
             base.assign_and_destroy_item( dst, p, index );
             ITT_NOTIFY( sync_releasing, head_page );
@@ -261,7 +258,7 @@ micro_queue& micro_queue::assign( const micro_queue& src, concurrent_queue_base&
     const page* srcp = src.head_page;
     if( srcp ) {
         ticket g_index = head_counter;
-        try {
+        __TBB_TRY {
             size_t n_items  = (tail_counter-head_counter)/concurrent_queue_rep::n_queue;
             size_t index = head_counter/concurrent_queue_rep::n_queue & (base.items_per_page-1);
             size_t end_in_first_page = (index+n_items<base.items_per_page)?(index+n_items):base.items_per_page;
@@ -284,7 +281,7 @@ micro_queue& micro_queue::assign( const micro_queue& src, concurrent_queue_base&
                 cur_page = cur_page->next;
             }
             tail_page = cur_page;
-        } catch (...) {
+        } __TBB_CATCH(...) {
             make_invalid( g_index );
         }
     } else {
@@ -318,7 +315,7 @@ void micro_queue::make_invalid( ticket k )
             head_page = static_cast<page*>(invalid_page); 
         tail_page = static_cast<page*>(invalid_page);
     }
-    throw;
+    __TBB_RETHROW();
 }
 
 #if _MSC_VER && !defined(__INTEL_COMPILER)
@@ -356,19 +353,6 @@ concurrent_queue_base_v3::~concurrent_queue_base_v3() {
 
 void concurrent_queue_base_v3::internal_push( const void* src ) {
     concurrent_queue_rep& r = *my_rep;
-#if !__TBB_NO_BUSY_WAIT_IN_CONCURRENT_QUEUE
-    ticket k = r.tail_counter++;
-    ptrdiff_t e = my_capacity;
-    if( e<concurrent_queue_rep::infinite_capacity ) {
-        atomic_backoff backoff;
-        for(;;) {
-            if( (ptrdiff_t)(k-r.head_counter)<e ) break;
-            backoff.pause();
-            e = const_cast<volatile ptrdiff_t&>(my_capacity);
-        }
-    } 
-    r.choose(k).push(src,k,*this);
-#else 
     ticket k = r.tail_counter++;
     ptrdiff_t e = my_capacity;
     atomic_backoff backoff;
@@ -397,23 +381,13 @@ void concurrent_queue_base_v3::internal_push( const void* src ) {
         }
         e = const_cast<volatile ptrdiff_t&>(my_capacity);
     }
-#if DO_ITT_NOTIFY
-    if( sync_prepare_done )
-        ITT_NOTIFY( sync_acquired, &sync_prepare_done );
-#endif
+    ITT_NOTIFY( sync_acquired, &sync_prepare_done );
     r.choose( k ).push( src, k, *this );
     r.items_avail.notify( predicate_leq(k) );
-#endif /* !__TBB_NO_BUSY_WAIT_IN_CONCURRENT_QUEUE */
 }
 
 void concurrent_queue_base_v3::internal_pop( void* dst ) {
     concurrent_queue_rep& r = *my_rep;
-#if !__TBB_NO_BUSY_WAIT_IN_CONCURRENT_QUEUE
-    ticket k;
-    do {
-        k = r.head_counter++;
-    } while( !r.choose(k).pop(dst,k,*this) );
-#else
     ticket k;
     atomic_backoff backoff;
     concurrent_monitor::thread_context thr_ctx;
@@ -426,7 +400,6 @@ void concurrent_queue_base_v3::internal_pop( void* dst ) {
 #if DO_ITT_NOTIFY
             if( !sync_prepare_done ) {
                 ITT_NOTIFY( sync_prepare, dst );
-                dst = (void*) ((intptr_t)dst | 1);
                 sync_prepare_done = true;
             }
 #endif
@@ -448,7 +421,6 @@ void concurrent_queue_base_v3::internal_pop( void* dst ) {
 
     // wake up a producer..
     r.slots_avail.notify( predicate_leq(k) );
-#endif /* !__TBB_NO_BUSY_WAIT_IN_CONCURRENT_QUEUE */
 }
 
 bool concurrent_queue_base_v3::internal_pop_if_present( void* dst ) {
@@ -470,9 +442,7 @@ bool concurrent_queue_base_v3::internal_pop_if_present( void* dst ) {
         }
     } while( !r.choose( k ).pop( dst, k, *this ) );
 
-#if __TBB_NO_BUSY_WAIT_IN_CONCURRENT_QUEUE
     r.slots_avail.notify( predicate_leq(k) );
-#endif /* __TBB_NO_BUSY_WAIT_IN_CONCURRENT_QUEUE */
 
     return true;
 }
@@ -494,9 +464,7 @@ bool concurrent_queue_base_v3::internal_push_if_not_full( const void* src ) {
     }
     r.choose(k).push(src,k,*this);
 
-#if __TBB_NO_BUSY_WAIT_IN_CONCURRENT_QUEUE
     r.items_avail.notify( predicate_leq(k) );
-#endif /* __TBB_NO_BUSY_WAIT_IN_CONCURRENT_QUEUE */
     return true;
 }
 
@@ -529,7 +497,7 @@ void concurrent_queue_base_v3::internal_finish_clear() {
 }
 
 void concurrent_queue_base_v3::internal_throw_exception() const {
-    throw bad_alloc();
+    throw_exception( eid_bad_alloc );
 }
 
 void concurrent_queue_base_v3::assign( const concurrent_queue_base& src ) {
@@ -556,10 +524,12 @@ class concurrent_queue_iterator_rep: no_assign {
 public:
     ticket head_counter;   
     const concurrent_queue_base& my_queue;
+    const size_t offset_of_last;
     concurrent_queue_base::page* array[concurrent_queue_rep::n_queue];
-    concurrent_queue_iterator_rep( const concurrent_queue_base& queue ) : 
+    concurrent_queue_iterator_rep( const concurrent_queue_base& queue, size_t offset_of_last_ ) : 
         head_counter(queue.my_rep->head_counter),
-        my_queue(queue)
+        my_queue(queue),
+        offset_of_last(offset_of_last_)
     {
         const concurrent_queue_rep& rep = *queue.my_rep;
         for( size_t k=0; k<concurrent_queue_rep::n_queue; ++k )
@@ -574,7 +544,7 @@ public:
             concurrent_queue_base::page* p = array[concurrent_queue_rep::index(k)];
             __TBB_ASSERT(p,NULL);
             size_t i = k/concurrent_queue_rep::n_queue & (my_queue.items_per_page-1);
-            item = static_cast<unsigned char*>(static_cast<void*>(p+1)) + my_queue.item_size*i;
+            item = static_cast<unsigned char*>(static_cast<void*>(p)) + offset_of_last + my_queue.item_size*i;
             return (p->mask & uintptr(1)<<i)!=0;
         }
     }
@@ -583,11 +553,20 @@ public:
 //------------------------------------------------------------------------
 // concurrent_queue_iterator_base
 //------------------------------------------------------------------------
-concurrent_queue_iterator_base_v3::concurrent_queue_iterator_base_v3( const concurrent_queue_base& queue ) {
+
+void concurrent_queue_iterator_base_v3::initialize( const concurrent_queue_base& queue, size_t offset_of_last ) {
     my_rep = cache_aligned_allocator<concurrent_queue_iterator_rep>().allocate(1);
-    new( my_rep ) concurrent_queue_iterator_rep(queue);
+    new( my_rep ) concurrent_queue_iterator_rep(queue,offset_of_last);
     size_t k = my_rep->head_counter;
     if( !my_rep->get_item(my_item, k) ) advance();
+}
+
+concurrent_queue_iterator_base_v3::concurrent_queue_iterator_base_v3( const concurrent_queue_base& queue ) {
+    initialize(queue,0);
+}
+
+concurrent_queue_iterator_base_v3::concurrent_queue_iterator_base_v3( const concurrent_queue_base& queue, size_t offset_of_last ) {
+    initialize(queue,offset_of_last);
 }
 
 void concurrent_queue_iterator_base_v3::assign( const concurrent_queue_iterator_base& other ) {

@@ -1,5 +1,5 @@
 /*
-    Copyright 2005-2009 Intel Corporation.  All Rights Reserved.
+    Copyright 2005-2010 Intel Corporation.  All Rights Reserved.
 
     This file is part of Threading Building Blocks.
 
@@ -27,6 +27,16 @@
 */
 
 #include "proxy.h"
+
+#if !defined(__EXCEPTIONS) && !defined(_CPPUNWIND) && !defined(__SUNPRO_CC) || defined(_XBOX)
+    #if TBB_USE_EXCEPTIONS
+        #error Compilation settings do not support exception handling. Please do not set TBB_USE_EXCEPTIONS macro or set it to 0.
+    #elif !defined(TBB_USE_EXCEPTIONS)
+        #define TBB_USE_EXCEPTIONS 0
+    #endif
+#elif !defined(TBB_USE_EXCEPTIONS)
+    #define TBB_USE_EXCEPTIONS 1
+#endif
 
 #if MALLOC_LD_PRELOAD
 
@@ -149,12 +159,18 @@ extern "C" struct mallinfo mallinfo() __THROW
 
 void * operator new(size_t sz) throw (std::bad_alloc) {
     void *res = scalable_malloc(sz);
-    if (NULL == res) throw std::bad_alloc();
+#if TBB_USE_EXCEPTIONS
+    if (NULL == res)
+        throw std::bad_alloc();
+#endif /* TBB_USE_EXCEPTIONS */
     return res;
 }
 void* operator new[](size_t sz) throw (std::bad_alloc) {
     void *res = scalable_malloc(sz);
-    if (NULL == res) throw std::bad_alloc();
+#if TBB_USE_EXCEPTIONS
+    if (NULL == res)
+        throw std::bad_alloc();
+#endif /* TBB_USE_EXCEPTIONS */
     return res;
 }
 void operator delete(void* ptr) throw() {
@@ -230,11 +246,13 @@ const char* known_bytecodes[] = {
     "4885C974375348",         //release free() 8.0.50727.42 win64
     "48894C24084883EC28BA",   //debug prologue for win64
     "4C8BC1488B0DA6E4040033", //win64 SDK
+    "4883EC284885C975",       //release msize() 10.0.21003.1 win64
 #else
     "558BEC6A018B",           //debug free() & _msize() 8.0.50727.4053 win32
     "6A1868********E8",       //release free() 8.0.50727.4053 win32
     "6A1C68********E8",       //release _msize() 8.0.50727.4053 win32
     "8BFF558BEC6A",           //debug free() & _msize() 9.0.21022.8 win32
+    "8BFF558BEC83",           //debug free() & _msize() 10.0.21003.1 win32
 #endif
     NULL
     };
@@ -273,6 +291,8 @@ __TBB_ORIG_ALLOCATOR_REPLACEMENT_WRAPPER(msvcr80d);
 __TBB_ORIG_ALLOCATOR_REPLACEMENT_WRAPPER(msvcr80);
 __TBB_ORIG_ALLOCATOR_REPLACEMENT_WRAPPER(msvcr90d);
 __TBB_ORIG_ALLOCATOR_REPLACEMENT_WRAPPER(msvcr90);
+__TBB_ORIG_ALLOCATOR_REPLACEMENT_WRAPPER(msvcr100d);
+__TBB_ORIG_ALLOCATOR_REPLACEMENT_WRAPPER(msvcr100);
 
 
 /*** replacements for global operators new and delete ***/
@@ -318,6 +338,8 @@ void operator_delete_arr_t(void* ptr, const std::nothrow_t&) throw() {
 }
 
 const char* modules_to_replace[] = {
+    "msvcr100d.dll",
+    "msvcr100.dll",
     "msvcr80d.dll",
     "msvcr80.dll",
     "msvcr90d.dll",
@@ -421,6 +443,7 @@ void doMallocReplacement()
     __TBB_ORIG_ALLOCATOR_REPLACEMENT_CALL(msvcr71)
     __TBB_ORIG_ALLOCATOR_REPLACEMENT_CALL(msvcr80)
     __TBB_ORIG_ALLOCATOR_REPLACEMENT_CALL(msvcr90)
+    __TBB_ORIG_ALLOCATOR_REPLACEMENT_CALL(msvcr100)
 }
 
 extern "C" BOOL WINAPI DllMain( HINSTANCE hInst, DWORD callReason, LPVOID reserved )

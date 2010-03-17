@@ -1,5 +1,5 @@
 /*
-    Copyright 2005-2009 Intel Corporation.  All Rights Reserved.
+    Copyright 2005-2010 Intel Corporation.  All Rights Reserved.
 
     This file is part of Threading Building Blocks.
 
@@ -118,9 +118,9 @@ namespace tbb {
             Value& operator*() const {
                 Value* value = my_value;
                 if( !value ) {
-                    value = my_value = &(*my_container)[my_index].value;
+                    value = my_value = reinterpret_cast<Value *>(&(*my_container)[my_index].value);
                 }
-                __TBB_ASSERT( value==&(*my_container)[my_index].value, "corrupt cache" );
+                __TBB_ASSERT( value==reinterpret_cast<Value *>(&(*my_container)[my_index].value), "corrupt cache" );
                 return *value;
             }
         
@@ -454,14 +454,63 @@ namespace tbb {
             typedef typename base_type::const_pointer const_pointer;
             typedef typename base_type::key_type key_type;
             const_pointer find( const key_type &k ) {
-                return internal_fast_find( k );
+                return this->internal_fast_find( k );
             } // make public
         };
-    
+
+        //! Template for adding padding in order to avoid false sharing
+        /** ModularSize should be sizeof(U) modulo the cache line size.
+            All maintenance of the space will be done explicitly on push_back,
+            and all thread local copies must be destroyed before the concurrent
+            vector is deleted.
+        */
+        template<typename U, size_t ModularSize>
+        struct ets_element {
+            char value[sizeof(U) + NFS_MaxLineSize-ModularSize];
+            void unconstruct() {
+                // "reinterpret_cast<U*>(&value)->~U();" causes type-punning warning with gcc 4.4,
+                // "U* u = reinterpret_cast<U*>(&value); u->~U();" causes unused variable warning with VS2010.
+                // Thus another "casting via union" hack.
+                union { void* space; U* val; } helper;
+                helper.space = &value;
+                helper.val->~U();
+            }
+        };
+
+        //! Partial specialization for case where no padding is needed.
+        template<typename U>
+        struct ets_element<U,0> {
+            char value[sizeof(U)];
+            void unconstruct() { // Same implementation as in general case
+                union { void* space; U* val; } helper;
+                helper.space = &value;
+                helper.val->~U();
+            }
+        };
+
     } // namespace internal
     //! @endcond
 
-    //! The thread local class template
+    //! The enumerable_thread_specific container
+    /** enumerable_thread_specific has the following properties:
+        - thread-local copies are lazily created, with default, exemplar or function initialization.
+        - thread-local copies do not move (during lifetime, and excepting clear()) so the address of a copy is invariant.
+        - the contained objects need not have operator=() defined if combine is not used.
+        - enumerable_thread_specific containers may be copy-constructed or assigned.
+        - thread-local copies can be managed by hash-table, or can be accessed via TLS storage for speed.
+        - outside of parallel contexts, the contents of all thread-local copies are accessible by iterator or using combine or combine_each methods
+        
+    @par Segmented iterator
+        When the thread-local objects are containers with input_iterators defined, a segmented iterator may
+        be used to iterate over all the elements of all thread-local copies.
+
+    @par combine and combine_each
+        - Both methods are defined for enumerable_thread_specific. 
+        - combine() requires the the type T have operator=() defined.  
+        - neither method modifies the contents of the object (though there is no guarantee that the applied methods do not modify the object.)  
+        - Both are evaluated in serial context (the methods are assumed to be non-benign.)
+        
+    @ingroup containers */
     template <typename T, 
               typename Allocator=cache_aligned_allocator<T>, 
               ets_key_usage_type ETS_key_type=ets_no_key > 
@@ -471,15 +520,8 @@ namespace tbb {
     
         typedef internal::tls_manager< ETS_key_type > my_tls_manager;
 
-        //! The padded elements; padded to avoid false sharing
-        template<typename U>
-        struct padded_element {
-            U value;
-            char padding[ ( (sizeof(U) - 1) / internal::NFS_MaxLineSize + 1 ) * internal::NFS_MaxLineSize - sizeof(U) ];
-            padded_element(const U &v) : value(v) {}
-            padded_element() {}
-        };
-    
+        typedef internal::ets_element<T,sizeof(T)%internal::NFS_MaxLineSize> padded_element;
+
         //! A generic range, used to create range objects from the iterators
         template<typename I>
         class generic_range_type: public blocked_range<I> {
@@ -489,14 +531,14 @@ namespace tbb {
             typedef const T& const_reference;
             typedef I iterator;
             typedef ptrdiff_t difference_type;
-            generic_range_type( I begin_, I end_, size_t grainsize = 1) : blocked_range<I>(begin_,end_,grainsize) {} 
+            generic_range_type( I begin_, I end_, size_t grainsize_ = 1) : blocked_range<I>(begin_,end_,grainsize_) {} 
             template<typename U>
             generic_range_type( const generic_range_type<U>& r) : blocked_range<I>(r.begin(),r.end(),r.grainsize()) {} 
             generic_range_type( generic_range_type& r, split ) : blocked_range<I>(r,split()) {}
         };
     
-        typedef typename Allocator::template rebind< padded_element<T> >::other padded_allocator_type;
-        typedef tbb::concurrent_vector< padded_element<T>, padded_allocator_type > internal_collection_type;
+        typedef typename Allocator::template rebind< padded_element >::other padded_allocator_type;
+        typedef tbb::concurrent_vector< padded_element, padded_allocator_type > internal_collection_type;
         typedef typename internal_collection_type::size_type hash_table_index_type; // storing array indices rather than iterators to simplify
         // copying the hash table that correlates thread IDs with concurrent vector elements.
         
@@ -516,30 +558,26 @@ namespace tbb {
         // using tbb_allocator instead of padded_element_allocator because we may be
         // copying an exemplar from one instantiation of ETS to another with a different
         // allocator.
-        typedef typename tbb::tbb_allocator<padded_element<T> > exemplar_allocator_type;
-        static padded_element<T> * create_exemplar(const T& my_value) {
-            padded_element<T> *new_exemplar = 0;
-            // void *new_space = padded_allocator_type().allocate(1);
-            void *new_space = exemplar_allocator_type().allocate(1);
-            new_exemplar = new(new_space) padded_element<T>(my_value);
+        typedef typename tbb::tbb_allocator<padded_element > exemplar_allocator_type;
+        static padded_element * create_exemplar(const T& my_value) {
+            padded_element *new_exemplar = reinterpret_cast<padded_element *>(exemplar_allocator_type().allocate(1));
+            new(new_exemplar->value) T(my_value);
             return new_exemplar;
         }
 
-        static padded_element<T> *create_exemplar( ) {
-            // void *new_space = padded_allocator_type().allocate(1);
-            void *new_space = exemplar_allocator_type().allocate(1);
-            padded_element<T> *new_exemplar = new(new_space) padded_element<T>( );
+        static padded_element *create_exemplar( ) {
+            padded_element *new_exemplar = reinterpret_cast<padded_element *>(exemplar_allocator_type().allocate(1));
+            new(new_exemplar->value) T( );
             return new_exemplar;
         }
 
-        static void free_exemplar(padded_element<T> *my_ptr) {
-            // padded_allocator_type().destroy(my_ptr);
-            // padded_allocator_type().deallocate(my_ptr,1);
+        static void free_exemplar(padded_element *my_ptr) {
+            my_ptr->unconstruct();
             exemplar_allocator_type().destroy(my_ptr);
             exemplar_allocator_type().deallocate(my_ptr,1);
         }
 
-        padded_element<T>* my_exemplar_ptr;
+        padded_element* my_exemplar_ptr;
 
         internal_collection_type my_locals;
         thread_to_index_type my_hash_tbl;
@@ -566,7 +604,7 @@ namespace tbb {
     
         //! Default constructor, which leads to default construction of local copies
         enumerable_thread_specific() : my_finit_callback(0) { 
-            my_exemplar_ptr = create_exemplar();
+            my_exemplar_ptr = 0;
             my_tls_manager::create_key(my_key); 
         }
 
@@ -576,8 +614,8 @@ namespace tbb {
         enumerable_thread_specific( Finit _finit )
         {
             my_finit_callback = internal::callback_leaf<T,Finit>::new_callback( _finit );
-            my_tls_manager::create_key(my_key);
             my_exemplar_ptr = 0; // don't need exemplar if function is provided
+            my_tls_manager::create_key(my_key);
         }
     
         //! Constuction with exemplar, which leads to copy construction of local copies
@@ -588,6 +626,7 @@ namespace tbb {
     
         //! Destructor
         ~enumerable_thread_specific() { 
+            unconstruct_locals();
             my_tls_manager::destroy_key(my_key); 
             if(my_finit_callback) {
                 my_finit_callback->destroy();
@@ -630,21 +669,21 @@ namespace tbb {
                     else {
                         // create new entry
                         exists = false;
-                        if(my_finit_callback) {
-                            // convert iterator to array index
 #if TBB_DEPRECATED
-                            local_index = my_locals.push_back(my_finit_callback->apply());
+                        local_index = my_locals.push_back(padded_element());
 #else
-                            local_index = my_locals.push_back(my_finit_callback->apply()) - my_locals.begin();
+                        local_index = my_locals.push_back(padded_element()) - my_locals.begin();
 #endif
+                        pointer lref =  reinterpret_cast<T*>((my_locals[local_index].value));
+                        if(my_finit_callback) {
+                            new(lref) T(my_finit_callback->apply());
+                        }
+                        else if(my_exemplar_ptr) {
+                            pointer t_exemp = reinterpret_cast<T *>(&(my_exemplar_ptr->value));
+                            new(lref) T(*t_exemp);
                         }
                         else {
-                            // convert iterator to array index
-#if TBB_DEPRECATED
-                            local_index = my_locals.push_back(*my_exemplar_ptr);
-#else
-                            local_index = my_locals.push_back(*my_exemplar_ptr) - my_locals.begin();
-#endif
+                            new(lref) T();
                         }
                         // insert into hash table
                         a->second = local_index;
@@ -652,9 +691,9 @@ namespace tbb {
                 }
             }
 
-            reference local_ref = (my_locals[local_index].value);
-            my_tls_manager::set_tls( my_key, static_cast<void *>(&local_ref) );
-            return local_ref;
+            pointer local_ref = reinterpret_cast<T*>((my_locals[local_index].value));
+            my_tls_manager::set_tls( my_key, static_cast<void *>(local_ref) );
+            return *local_ref;
         } // local
 
         //! Get the number of local copies
@@ -679,9 +718,16 @@ namespace tbb {
         
         //! Get const range for parallel algorithms
         const_range_type range( size_t grainsize=1 ) const { return const_range_type( begin(), end(), grainsize ); }
+
+        void unconstruct_locals() {
+            for(typename internal_collection_type::iterator cvi = my_locals.begin(); cvi != my_locals.end(); ++cvi) {
+                cvi->unconstruct();
+            }
+        }
     
         //! Destroys local copies
         void clear() {
+            unconstruct_locals();
             my_locals.clear();
             my_hash_tbl.clear();
             reset_key();
@@ -699,7 +745,13 @@ namespace tbb {
         internal_copy_construct( const enumerable_thread_specific<U, A2, C2>& other) {
             typedef typename tbb::enumerable_thread_specific<U, A2, C2> other_type;
             for(typename other_type::const_iterator ci = other.begin(); ci != other.end(); ++ci) {
-                my_locals.push_back(*ci);
+                hash_table_index_type local_index;
+#if TBB_DEPRECATED
+                local_index = my_locals.push_back(padded_element());
+#else
+                local_index = my_locals.push_back(padded_element()) - my_locals.begin();
+#endif
+                (void) new(my_locals[local_index].value) T(*ci);
             }
             if(other.my_finit_callback) {
                 my_finit_callback = other.my_finit_callback->make_copy();
@@ -708,7 +760,8 @@ namespace tbb {
                 my_finit_callback = 0;
             }
             if(other.my_exemplar_ptr) {
-                my_exemplar_ptr = create_exemplar(other.my_exemplar_ptr->value);
+                pointer local_ref = reinterpret_cast<T*>(other.my_exemplar_ptr->value);
+                my_exemplar_ptr = create_exemplar(*local_ref);
             }
             else {
                 my_exemplar_ptr = 0;
@@ -720,11 +773,10 @@ namespace tbb {
 
         template<typename U, typename Alloc, ets_key_usage_type Cachetype>
         enumerable_thread_specific( const enumerable_thread_specific<U, Alloc, Cachetype>& other ) : my_hash_tbl(other.my_hash_tbl) 
-        {   // Have to do push_back because the contained elements are not necessarily assignable.
+        {
             internal_copy_construct(other);
         }
 
-        // non-templatized version
         enumerable_thread_specific( const enumerable_thread_specific& other ) : my_hash_tbl(other.my_hash_tbl) 
         {
             internal_copy_construct(other);
@@ -739,9 +791,14 @@ namespace tbb {
             if(static_cast<void *>( this ) != static_cast<const void *>( &other )) {
                 this->clear(); // resets TLS key
                 my_hash_tbl = other.my_hash_tbl;
-                // cannot use assign because T may not be assignable.
                 for(typename other_type::const_iterator ci = other.begin(); ci != other.end(); ++ci) {
-                    my_locals.push_back(*ci);
+                    hash_table_index_type local_index;
+#if TBB_DEPRECATED
+                        local_index = my_locals.push_back(padded_element());
+#else
+                        local_index = my_locals.push_back(padded_element()) - my_locals.begin();
+#endif
+                    (void) new(my_locals[local_index].value) T(*ci);
                 }
 
                 if(my_finit_callback) {
@@ -757,7 +814,8 @@ namespace tbb {
                 }
 
                 if(other.my_exemplar_ptr) {
-                    my_exemplar_ptr = create_exemplar(other.my_exemplar_ptr->value);
+                    pointer local_ref = reinterpret_cast<T*>(other.my_exemplar_ptr->value);
+                    my_exemplar_ptr = create_exemplar(*local_ref);
                 }
             }
             return *this;
@@ -776,36 +834,21 @@ namespace tbb {
             return internal_assign(other);
         }
 
-    private:
-
-        // combine_func_t has signature T(T,T) or T(const T&, const T&)
-        template <typename combine_func_t>
-        T internal_combine(typename internal_collection_type::const_range_type r, combine_func_t f_combine) {
-            if(r.is_divisible()) {
-                typename internal_collection_type::const_range_type r2(r,split());
-                return f_combine(internal_combine(r2, f_combine), internal_combine(r, f_combine));
-            }
-            if(r.size() == 1) {
-                return r.begin()->value;
-            }
-            typename internal_collection_type::const_iterator i2 = r.begin();
-            ++i2;
-            return f_combine(r.begin()->value, i2->value);
-        }
-
-    public:
-
         // combine_func_t has signature T(T,T) or T(const T&, const T&)
         template <typename combine_func_t>
         T combine(combine_func_t f_combine) {
-            if(my_locals.begin() == my_locals.end()) {
+            if(begin() == end()) {
                 if(my_finit_callback) {
                     return my_finit_callback->apply();
                 }
-                return (*my_exemplar_ptr).value;
+                pointer local_ref = reinterpret_cast<T*>((my_exemplar_ptr->value));
+                return T(*local_ref);
             }
-            typename internal_collection_type::const_range_type r(my_locals.begin(), my_locals.end(), (size_t)2);
-            return internal_combine(r, f_combine);
+            const_iterator ci = begin();
+            T my_result = *ci;
+            while(++ci != end()) 
+                my_result = f_combine( my_result, *ci );
+            return my_result;
         }
 
         // combine_func_t has signature void(T) or void(const T&)
@@ -815,6 +858,7 @@ namespace tbb {
                 f_combine( *ci );
             }
         }
+
     }; // enumerable_thread_specific
 
     template< typename Container >

@@ -1,4 +1,4 @@
-# Copyright 2005-2009 Intel Corporation.  All Rights Reserved.
+# Copyright 2005-2010 Intel Corporation.  All Rights Reserved.
 #
 # This file is part of Threading Building Blocks.
 #
@@ -27,9 +27,9 @@
 # default target
 default_malloc: malloc malloc_test
 
-tbb_root ?= $(TBB22_INSTALL_DIR)
+tbb_root ?= $(TBB30_INSTALL_DIR)
 BUILDING_PHASE=1
-TEST_RESOURCE = $(TBB.RES)
+TEST_RESOURCE = $(MALLOC.RES)
 include $(tbb_root)/build/common.inc
 DEBUG_SUFFIX=$(findstring _debug,_$(cfg))
 
@@ -55,7 +55,7 @@ MALLOC_CUSTOM.OBJ += tbb_misc_malloc.$(OBJ)
 MALLOC_ASM.OBJ = $(TBB_ASM.OBJ)
 
 # MALLOC_CPLUS.OBJ is built in two steps due to Intel Compiler Tracker # C69574
-MALLOC.OBJ := $(MALLOC_CPLUS.OBJ) $(MALLOC_ASM.OBJ) $(MALLOC_CUSTOM.OBJ) MemoryAllocator.$(OBJ) itt_notify_proxy.$(OBJ)
+MALLOC.OBJ := $(MALLOC_CPLUS.OBJ) $(MALLOC_ASM.OBJ) $(MALLOC_CUSTOM.OBJ) MemoryAllocator.$(OBJ) itt_notify.$(OBJ)
 MALLOC_CPLUS.OBJ += MemoryAllocator.$(OBJ)
 PROXY.OBJ := proxy.$(OBJ) tbb_function_replacement.$(OBJ)
 M_CPLUS_FLAGS := $(subst $(WARNING_KEY),,$(M_CPLUS_FLAGS)) $(DEFINE_KEY)__TBB_BUILD=1
@@ -64,7 +64,7 @@ M_INCLUDES = $(INCLUDES) $(INCLUDE_KEY)$(MALLOC_ROOT) $(INCLUDE_KEY)$(MALLOC_SOU
 # Suppress superfluous warnings for TBBmalloc compilation
 $(MALLOC.OBJ): M_CPLUS_FLAGS += $(WARNING_SUPPRESS)
 
-itt_notify_proxy.$(OBJ): C_FLAGS += $(PIC_KEY)
+itt_notify.$(OBJ): CPLUS_FLAGS += $(PIC_KEY)
 
 $(PROXY.OBJ): %.$(OBJ): %.cpp
 	$(CPLUS) $(COMPILE_ONLY) $(CPLUS_FLAGS) $(PIC_KEY) $(M_INCLUDES) $<
@@ -166,18 +166,19 @@ $(MALLOC_C_TESTS): %.$(TEST_EXT): %.$(OBJ) $(MALLOC_LIB)
 	$(CPLUS) $(OUTPUT_KEY)$@ $(CPLUS_FLAGS) $^ $(LIBS) $(LINK_FLAGS)
 endif
 
+MALLOC_TESTS = $(MALLOC_MAIN_TESTS) $(MALLOC_OVERLOAD_TESTS) $(MALLOC_C_TESTS) test_malloc_whitebox.$(TEST_EXT) test_malloc_lib_unload.$(TEST_EXT)
 # run_cmd is usually empty
-malloc_test: $(call cross_suffix,$(MALLOC.DLL)) $(MALLOC_MAIN_TESTS) $(MALLOC_C_TESTS) $(MALLOC_OVERLOAD_TESTS) test_malloc_whitebox.$(TEST_EXT) test_malloc_lib_unload.$(TEST_EXT) $(AUX_TEST_DEPENDENCIES)
-	$(run_cmd) ./test_malloc_lib_unload.$(TEST_EXT)
-	$(run_cmd) ./test_malloc_whitebox.$(TEST_EXT) 1:4
-	$(run_cmd) $(TEST_LAUNCHER) -l $(call cross_suffix,$(MALLOCPROXY.DLL)) test_malloc_overload.$(TEST_EXT)
-	$(run_cmd) $(TEST_LAUNCHER) test_malloc_overload_proxy.$(TEST_EXT)
-	$(run_cmd) $(TEST_LAUNCHER) test_malloc_compliance.$(TEST_EXT) 1:4
-	$(run_cmd) ./test_ScalableAllocator.$(TEST_EXT)
-	$(run_cmd) ./test_ScalableAllocator_STL.$(TEST_EXT)
-	$(run_cmd) ./test_malloc_regression.$(TEST_EXT)
+malloc_test: $(call cross_suffix,$(MALLOC.DLL)) $(TEST_PREREQUISITE) $(MALLOC_TESTS)
+	$(run_cmd) ./test_malloc_lib_unload.$(TEST_EXT) $(args)
+	$(run_cmd) ./test_malloc_whitebox.$(TEST_EXT) $(args) 1:4
+	$(run_cmd) $(TEST_LAUNCHER) -l $(call cross_suffix,$(MALLOCPROXY.DLL)) test_malloc_overload.$(TEST_EXT) $(args)
+	$(run_cmd) $(TEST_LAUNCHER) test_malloc_overload_proxy.$(TEST_EXT) $(args)
+	$(run_cmd) $(TEST_LAUNCHER) test_malloc_compliance.$(TEST_EXT) $(args) 1:4
+	$(run_cmd) ./test_ScalableAllocator.$(TEST_EXT) $(args)
+	$(run_cmd) ./test_ScalableAllocator_STL.$(TEST_EXT) $(args)
+	$(run_cmd) ./test_malloc_regression.$(TEST_EXT) $(args)
 ifeq (,$(NO_C_TESTS))
-	$(run_cmd) ./test_malloc_pure_c.$(TEST_EXT)
+	$(run_cmd) ./test_malloc_pure_c.$(TEST_EXT) $(args)
 endif
 
 #------------------------------------------------------

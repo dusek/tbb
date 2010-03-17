@@ -1,5 +1,5 @@
 /*
-    Copyright 2005-2009 Intel Corporation.  All Rights Reserved.
+    Copyright 2005-2010 Intel Corporation.  All Rights Reserved.
 
     This file is part of Threading Building Blocks.
 
@@ -34,7 +34,13 @@
 #include "tbb/spin_mutex.h"
 
 #if _WIN32||_WIN64
+#if _XBOX
+    #define NONET
+    #define NOD3D
+    #include <xtl.h>
+#else
 #include <windows.h>
+#endif
 #elif __APPLE__
 #include <pthread.h>
 #include <mach/semaphore.h>

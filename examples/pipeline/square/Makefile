@@ -1,4 +1,4 @@
-# Copyright 2005-2009 Intel Corporation.  All Rights Reserved.
+# Copyright 2005-2010 Intel Corporation.  All Rights Reserved.
 #
 # This file is part of Threading Building Blocks.
 #
@@ -30,7 +30,9 @@ ARGS=input.txt output.txt
 GEN=gen_input
 
 # The C++ compiler
-#CXX=g++
+ifneq (,$(shell which icc 2>/dev/null))
+CXX=icc
+endif # icc
 
 SQUARE = square.cpp
 

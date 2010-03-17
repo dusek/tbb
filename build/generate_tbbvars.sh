@@ -1,6 +1,6 @@
 #!/bin/bash
 #
-# Copyright 2005-2009 Intel Corporation.  All Rights Reserved.
+# Copyright 2005-2010 Intel Corporation.  All Rights Reserved.
 #
 # This file is part of Threading Building Blocks.
 #
@@ -89,12 +89,12 @@ EOF
 else # make with TBB_INSTALL_DIR
 [ -f ./tbbvars.sh ] || cat >./tbbvars.sh <<EOF
 #!/bin/bash
-export TBB22_INSTALL_DIR="${tbb_root}" #
-tbb_bin="\${TBB22_INSTALL_DIR}/build/$1" #
+export TBB30_INSTALL_DIR="${tbb_root}" #
+tbb_bin="\${TBB30_INSTALL_DIR}/build/$1" #
 if [ -z "\$CPATH" ]; then #
-    export CPATH="\${TBB22_INSTALL_DIR}/include" #
+    export CPATH="\${TBB30_INSTALL_DIR}/include" #
 else #
-    export CPATH="\${TBB22_INSTALL_DIR}/include:\$CPATH" #
+    export CPATH="\${TBB30_INSTALL_DIR}/include:\$CPATH" #
 fi #
 if [ -z "\$LIBRARY_PATH" ]; then #
     export LIBRARY_PATH="\${tbb_bin}" #
@@ -110,12 +110,12 @@ ${custom_exp_sh} #
 EOF
 [ -f ./tbbvars.csh ] || cat >./tbbvars.csh <<EOF
 #!/bin/csh
-setenv TBB22_INSTALL_DIR "${tbb_root}" #
-setenv tbb_bin "\${TBB22_INSTALL_DIR}/build/$1" #
+setenv TBB30_INSTALL_DIR "${tbb_root}" #
+setenv tbb_bin "\${TBB30_INSTALL_DIR}/build/$1" #
 if (! \$?CPATH) then #
-    setenv CPATH "\${TBB22_INSTALL_DIR}/include" #
+    setenv CPATH "\${TBB30_INSTALL_DIR}/include" #
 else #
-    setenv CPATH "\${TBB22_INSTALL_DIR}/include:\$CPATH" #
+    setenv CPATH "\${TBB30_INSTALL_DIR}/include:\$CPATH" #
 endif #
 if (! \$?LIBRARY_PATH) then #
     setenv LIBRARY_PATH "\${tbb_bin}" #

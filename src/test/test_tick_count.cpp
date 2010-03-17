@@ -1,5 +1,5 @@
 /*
-    Copyright 2005-2009 Intel Corporation.  All Rights Reserved.
+    Copyright 2005-2010 Intel Corporation.  All Rights Reserved.
 
     This file is part of Threading Building Blocks.
 
@@ -133,10 +133,7 @@ void TestTickCountDifference( int n ) {
     }
 }
 
-__TBB_TEST_EXPORT
-int main( int argc, char* argv[]) {
-    ParseCommandLine(argc, argv);
-
+int TestMain () {
     tbb::tick_count t0 = tbb::tick_count::now();
     TestSimpleDelay(/*ntrial=*/1000000,/*duration=*/0,    /*tolerance=*/2E-6);
     tbb::tick_count t1 = tbb::tick_count::now();
@@ -147,6 +144,5 @@ int main( int argc, char* argv[]) {
     for( int n=MinThread; n<=MaxThread; ++n ) {
         TestTickCountDifference(n);
     }
-    REPORT("done\n");
-    return 0;
+    return Harness::Done;
 }

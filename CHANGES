@@ -1,3 +1,100 @@
+20100310 open-source release
+
+Changes (w.r.t. previous open-source release):
+
+- Version macros changed in anticipation of a future release.
+- Directory structure aligned with Intel(R) C++ Compiler;
+    now TBB binaries reside in <arch>/<os_key>/[bin|lib]
+    (in TBB 2.x, it was [bin|lib]/<arch>/<os_key>).
+- Visual Studio projects changed for examples: instead of separate set
+    of files for each VS version, now there is single 'msvs' directory
+    that contains workspaces for MS C++ compiler (<example>_cl.sln) and
+    Intel C++ compiler (<example>_icl.sln). Works with VS 2005 and above.
+- The name versioning scheme for backward compatibility was improved;
+    now compatibility-breaking changes are done in a separate namespace.
+- Added concurrent_unordered_map implementation based on a prototype
+    developed in Microsoft for a future version of PPL.
+- Added PPL-compatible writer-preference RW lock (reader_writer_lock).
+- Added TBB_IMPLEMENT_CPP0X macro to control injection of C++0x names
+    implemented in TBB into namespace std.
+- Added almost-C++0x-compatible std::condition_variable, plus a bunch
+    of other C++0x classes required by condition_variable.
+- With TBB_IMPLEMENT_CPP0X, tbb_thread can be also used as std::thread.
+- task.cpp was split into several translation units to structure 
+    TBB scheduler sources layout. Static data layout and library 
+    initialization logic were also updated.
+- TBB scheduler reworked to prevent master threads from stealing
+    work belonging to other masters.
+- Class task was extended with enqueue() method, and slightly changed
+    semantics of methods spawn() and destroy(). For exact semantics,
+    refer to TBB Reference manual.
+- task_group_context now allows for destruction by non-owner threads.
+- Added TBB_EXCEPTIONS macro to control use of exceptions in TBB headers,
+    e.g. turn it off automatically when requested by compiler options.
+- TBB is enabled to run on top of Microsoft's Concurrency Runtime
+    on Windows* 7 (via our worker dispatcher known as RML).
+- Removed old unused busy-waiting code in concurrent_queue.
+- Described the advanced build & test options in src/index.html.
+- Warning level for GCC raised with -Wextra and a few other options.
+- Multiple fixes and improvements in code, tests, examples, and docs.
+
+Open-source contributions integrated:
+
+- Xbox support by Roman Lut (Deep Shadows), though further changes are
+    required to make it working; e.g. post-2.1 entry points are missing.
+- "Eventcount" by Dmitry Vyukov evolved into concurrent_monitor,
+    an internal class used in the implementation of concurrent_queue.
+
+------------------------------------------------------------------------
+TBB 2.2 Update 3 commercial-aligned release
+
+Changes (w.r.t. TBB 2.2 Update 2 commercial-aligned release):
+
+- PDF documentation updated.
+
+Bugs fixed: 
+
+- concurrent_hash_map compatibility issue exposed on Linux in case
+    two versions of the container were used by different modules.
+- enforce 16 byte stack alignment for consistence with GCC; required 
+    to work correctly with 128-bit variables processed by SSE.
+- construct() methods of allocator classes now use global operator new.
+
+------------------------------------------------------------------------
+TBB 2.2 Update 2 commercial-aligned release
+
+Changes (w.r.t. TBB 2.2 Update 1 commercial-aligned release):
+
+- parallel_invoke and parallel_for_each now take function objects
+    by const reference, not by value.
+- Building TBB with /MT is supported, to avoid dependency on particular
+    versions of Visual C++* runtime DLLs. TBB DLLs built with /MT 
+    are located in vc_mt directory.
+- Class critical_section introduced.
+- Improvements in exception support: new exception classes introduced,
+    all exceptions are thrown via an out-of-line internal method.
+- Improvements and fixes in the TBB allocator and malloc replacement,
+    including robust memory identification, and more reliable dynamic
+    function substitution on Windows*.
+- Method swap() added to class tbb_thread.
+- Methods rehash() and bucket_count() added to concurrent_hash_map.
+- Added support for Visual Studio* 2010 Beta2. No special binaries 
+    provided, but CRT-independent DLLs (vc_mt) should work.
+- Other fixes and improvements in code, tests, examples, and docs.
+
+Open-source contributions integrated:
+
+- The fix to build 32-bit TBB on Mac OS X* 10.6.
+- GCC-based port for SPARC Solaris by Michailo Matijkiw, with use of
+    earlier work by Raf Schietekat.
+
+Bugs fixed: 
+
+- 159 - TBB build for PowerPC* running Mac OS X*.
+- 160 - IBM* Java segfault if used with TBB allocator.
+- crash in concurrent_queue<char> (1616).
+
+------------------------------------------------------------------------
 TBB 2.2 Update 1 commercial-aligned release
 
 Changes (w.r.t. TBB 2.2 commercial-aligned release):

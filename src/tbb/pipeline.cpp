@@ -1,5 +1,5 @@
 /*
-    Copyright 2005-2009 Intel Corporation.  All Rights Reserved.
+    Copyright 2005-2010 Intel Corporation.  All Rights Reserved.
 
     This file is part of Threading Building Blocks.
 
@@ -161,7 +161,7 @@ public:
             spawner.spawn_stage_task(wakee);
     }
 
-#if __TBB_EXCEPTIONS
+#if __TBB_TASK_GROUP_CONTEXT
     //! The method destroys all data in filters to prevent memory leaks
     void clear( filter* my_filter ) {
         long t=low_token;
@@ -258,7 +258,7 @@ public:
     }
     //! The virtual task execution method
     /*override*/ task* execute();
-#if __TBB_EXCEPTIONS
+#if __TBB_TASK_GROUP_CONTEXT
     ~stage_task()    
     {
         if (my_filter && my_object && (my_filter->my_filter_mode & filter::version_mask) >= __TBB_PIPELINE_VERSION(4)) {
@@ -267,7 +267,7 @@ public:
             my_object = NULL;
         }
     }
-#endif // __TBB_EXCEPTIONS
+#endif // __TBB_TASK_GROUP_CONTEXT
     //! Creates and spawns stage_task from task_info
     void spawn_stage_task(const task_info& info)
     {
@@ -465,7 +465,7 @@ public:
         my_pipeline(_pipeline)
     {}
     ~pipeline_cleaner(){
-#if __TBB_EXCEPTIONS
+#if __TBB_TASK_GROUP_CONTEXT
         if (my_pipeline.end_counter->is_cancelled()) // Pipeline was cancelled
             my_pipeline.clear_filters(); 
 #endif
@@ -479,7 +479,7 @@ void pipeline::inject_token( task& ) {
     __TBB_ASSERT(0,"illegal call to inject_token");
 }
 
-#if __TBB_EXCEPTIONS
+#if __TBB_TASK_GROUP_CONTEXT
 void pipeline::clear_filters() {
     for( filter* f = filter_list; f; f = f->next_filter_in_pipeline ) {
         if ((f->my_filter_mode & filter::version_mask) >= __TBB_PIPELINE_VERSION(4))
@@ -591,7 +591,7 @@ void pipeline::remove_filter( filter& filter_ ) {
 }
 
 void pipeline::run( size_t max_number_of_live_tokens
-#if __TBB_EXCEPTIONS
+#if __TBB_TASK_GROUP_CONTEXT
     , tbb::task_group_context& context
 #endif
     ) {
@@ -600,7 +600,7 @@ void pipeline::run( size_t max_number_of_live_tokens
     if( filter_list ) {
         internal::pipeline_cleaner my_pipeline_cleaner(*this);
         end_of_input = false;
-#if __TBB_EXCEPTIONS            
+#if __TBB_TASK_GROUP_CONTEXT            
         end_counter = new( task::allocate_root(context) ) internal::pipeline_root_task( *this );
 #else
         end_counter = new( task::allocate_root() ) internal::pipeline_root_task( *this );
@@ -611,12 +611,12 @@ void pipeline::run( size_t max_number_of_live_tokens
     } 
 }
 
-#if __TBB_EXCEPTIONS
+#if __TBB_TASK_GROUP_CONTEXT
 void pipeline::run( size_t max_number_of_live_tokens ) {
     tbb::task_group_context context;
     run(max_number_of_live_tokens, context);
 }
-#endif // __TBB_EXCEPTIONS
+#endif // __TBB_TASK_GROUP_CONTEXT
 
 filter::~filter() {
     if ( (my_filter_mode & version_mask) >= __TBB_PIPELINE_VERSION(3) ) {

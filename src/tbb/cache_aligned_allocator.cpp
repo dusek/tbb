@@ -1,5 +1,5 @@
 /*
-    Copyright 2005-2009 Intel Corporation.  All Rights Reserved.
+    Copyright 2005-2010 Intel Corporation.  All Rights Reserved.
 
     This file is part of Threading Building Blocks.
 
@@ -28,12 +28,19 @@
 
 #include "tbb/cache_aligned_allocator.h"
 #include "tbb/tbb_allocator.h"
+#include "tbb/tbb_exception.h"
 #include "tbb_misc.h"
 #include "dynamic_link.h"
 #include <cstdlib>
 
 #if _WIN32||_WIN64
+#if _XBOX
+    #define NONET
+    #define NOD3D
+    #include <xtl.h>
+#else
 #include <windows.h>
+#endif // _XBOX
 #else
 #include <dlfcn.h>
 #endif /* _WIN32||_WIN64 */
@@ -204,15 +211,15 @@ void* NFS_Allocate( size_t n, size_t element_size, void* /*hint*/ ) {
 
     if (bytes<n || bytes+m<bytes) {
         // Overflow
-        throw bad_alloc();
+        throw_exception(eid_bad_alloc);
     }
     
     void* result = (*padded_allocate_handler)( bytes, m );
 #else
-    unsigned char* base;
+    unsigned char* base = 0;
     if( bytes<n || bytes+m<bytes || !(base=(unsigned char*)(bytes>=BigSize?malloc(m+bytes):(*MallocHandler)(m+bytes))) ) {
         // Overflow
-        throw bad_alloc();
+        throw_exception(eid_bad_alloc);
     }
     // Round up to next line
     unsigned char* result = (unsigned char*)((uintptr)(base+m)&-m);
@@ -249,7 +256,7 @@ void NFS_Free( void* p ) {
 static void* padded_allocate_via_scalable_malloc( size_t bytes, size_t alignment  ) {  
     unsigned char* base;
     if( !(base=(unsigned char*)(*MallocHandler)((bytes+alignment)&-alignment))) {
-        throw bad_alloc();
+        throw_exception(eid_bad_alloc);
     }        
     return base; // scalable_malloc returns aligned pointer
 }
@@ -257,7 +264,7 @@ static void* padded_allocate_via_scalable_malloc( size_t bytes, size_t alignment
 static void* padded_allocate( size_t bytes, size_t alignment ) {    
     unsigned char* base;
     if( !(base=(unsigned char*)malloc(alignment+bytes)) ) {        
-        throw bad_alloc();
+        throw_exception(eid_bad_alloc);
     }
     // Round up to the next line
     unsigned char* result = (unsigned char*)((uintptr)(base+alignment)&-alignment);
@@ -282,7 +289,7 @@ void* __TBB_EXPORTED_FUNC allocate_via_handler_v3( size_t n ) {
     result = (*MallocHandler) (n);
     if (!result) {
         // Overflow
-        throw bad_alloc();
+        throw_exception(eid_bad_alloc);
     }
     return result;
 }

@@ -1,4 +1,4 @@
-# Copyright 2005-2009 Intel Corporation.  All Rights Reserved.
+# Copyright 2005-2010 Intel Corporation.  All Rights Reserved.
 #
 # This file is part of Threading Building Blocks.
 #
@@ -97,6 +97,9 @@ ifeq (ia32,$(arch))
     CPLUS_FLAGS += -m32
     LIB_LINK_FLAGS += -m32
 endif 
+
+# For examples
+UNIXMODE = 1
 
 #------------------------------------------------------------------------------
 # End of command lines

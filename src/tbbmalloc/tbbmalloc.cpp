@@ -1,5 +1,5 @@
 /*
-    Copyright 2005-2009 Intel Corporation.  All Rights Reserved.
+    Copyright 2005-2010 Intel Corporation.  All Rights Reserved.
 
     This file is part of Threading Building Blocks.
 
@@ -28,7 +28,7 @@
 
 #include "TypeDefinitions.h" // Customize.h and proxy.h get included
 
-#include "tbb/itt_notify.cpp"
+#include "tbb/itt_notify.h" // for __TBB_load_ittnotify()
 
 #undef UNICODE
 
@@ -74,30 +74,19 @@ static void* (*original_realloc_ptr)(void*,size_t) = 0;
 
 #endif /* MALLOC_CHECK_RECURSION */
 
-#if __TBB_NEW_ITT_NOTIFY
-extern "C" 
-#endif
-void ITT_DoOneTimeInitialization() {} // required for itt_notify.cpp to work
-
 #if DO_ITT_NOTIFY
 /** Caller is responsible for ensuring this routine is called exactly once. */
 void MallocInitializeITT() {
-#if __TBB_NEW_ITT_NOTIFY
     tbb::internal::__TBB_load_ittnotify();
-#else
-    bool success = false;
-    // Check if we are running under control of VTune.
-    if( GetBoolEnvironmentVariable("KMP_FOR_TCHECK") || GetBoolEnvironmentVariable("KMP_FOR_TPROFILE") ) {
-        // Yes, we are under control of VTune.  Check for libittnotify library.
-        success = dynamic_link( LIBITTNOTIFY_NAME, ITT_HandlerTable, 5 );
-    }
-    if (!success){
-        for (int i = 0; i < 5; i++)
-            *ITT_HandlerTable[i].handler = NULL;
-    }
-#endif /* !__TBB_NEW_ITT_NOTIFY */
 }
+#else
+void MallocInitializeITT() {}
 #endif /* DO_ITT_NOTIFY */
+
+extern "C" 
+void ITT_DoOneTimeInitialization() {
+    MallocInitializeITT();
+} // required for itt_notify.cpp to work
 
 #if TBB_USE_DEBUG
 #define DEBUG_SUFFIX "_debug"
@@ -209,7 +198,14 @@ void __TBB_internal_free(void *object)
 } } // namespaces
 
 #ifdef _WIN32
+
+#if _XBOX
+    #define NONET
+    #define NOD3D
+    #include <xtl.h>
+#else
 #include <windows.h>
+#endif    
 
 extern "C" BOOL WINAPI DllMain( HINSTANCE hInst, DWORD callReason, LPVOID )
 {

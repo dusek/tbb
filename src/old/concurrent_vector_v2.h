@@ -1,5 +1,5 @@
 /*
-    Copyright 2005-2009 Intel Corporation.  All Rights Reserved.
+    Copyright 2005-2010 Intel Corporation.  All Rights Reserved.
 
     This file is part of Threading Building Blocks.
 
@@ -30,13 +30,23 @@
 #define __TBB_concurrent_vector_H
 
 #include "tbb/tbb_stddef.h"
-#include <iterator>
-#include <new>
 #include "tbb/atomic.h"
 #include "tbb/cache_aligned_allocator.h"
 #include "tbb/blocked_range.h"
-
 #include "tbb/tbb_machine.h"
+#include <new>
+
+#if !TBB_USE_EXCEPTIONS && _MSC_VER
+    // Suppress "C++ exception handler used, but unwind semantics are not enabled" warning in STL headers
+    #pragma warning (push)
+    #pragma warning (disable: 4530)
+#endif
+
+#include <iterator>
+
+#if !TBB_USE_EXCEPTIONS && _MSC_VER
+    #pragma warning (pop)
+#endif
 
 namespace tbb {
 

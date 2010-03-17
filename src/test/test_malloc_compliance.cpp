@@ -1,5 +1,5 @@
 /*
-    Copyright 2005-2009 Intel Corporation.  All Rights Reserved.
+    Copyright 2005-2010 Intel Corporation.  All Rights Reserved.
 
     This file is part of Threading Building Blocks.
 
@@ -90,11 +90,11 @@ void limitMem( int limit )
 
 #include <time.h>
 #include <errno.h>
-#include <vector>
 #define __TBB_NO_IMPLICIT_LINKAGE 1
 #include "tbb/scalable_allocator.h"
 #include "tbb/tbb_machine.h"
 
+#define HARNESS_CUSTOM_MAIN 1
 #include "harness.h"
 #include "harness_barrier.h"
 #if __linux__
@@ -102,6 +102,18 @@ void limitMem( int limit )
 #endif
 #if _WIN32 || _WIN64
 #include <malloc.h> // _aligned_(malloc|free|realloc)
+#endif
+
+#if !TBB_USE_EXCEPTIONS && _MSC_VER
+    // Suppress "C++ exception handler used, but unwind semantics are not enabled" warning in STL headers
+    #pragma warning (push)
+    #pragma warning (disable: 4530)
+#endif
+
+#include <vector>
+
+#if !TBB_USE_EXCEPTIONS && _MSC_VER
+    #pragma warning (pop)
 #endif
 
 const size_t COUNT_ELEM_CALLOC = 2;
@@ -332,17 +344,20 @@ int main(int argc, char* argv[]) {
     limitMem(0);
 #endif
     
+//for linux and dynamic runtime errno is used to check allocator fuctions
+//check if library compiled with /MD(d) and we can use errno
 #if _MSC_VER 
-    #ifdef _DEBUG
-#define __TBBMALLOCDLL "tbbmalloc_debug.dll"
-    #else
-#define __TBBMALLOCDLL "tbbmalloc.dll"
-#endif
+#if defined(_MT) && defined(_DLL) //check errno if test itself compiled with /MD(d) only
     #pragma comment(lib, "version.lib")
     char*  version_info_block = NULL;
     int version_info_block_size; 
     LPVOID comments_block = NULL;
     UINT comments_block_size;
+#ifdef _DEBUG
+#define __TBBMALLOCDLL "tbbmalloc_debug.dll"
+#else  //_DEBUG
+#define __TBBMALLOCDLL "tbbmalloc.dll"
+#endif //_DEBUG
     version_info_block_size = GetFileVersionInfoSize( __TBBMALLOCDLL, (LPDWORD)&version_info_block_size );
     if( version_info_block_size 
         && ((version_info_block = (char*)malloc(version_info_block_size)) != NULL)
@@ -353,9 +368,10 @@ int main(int argc, char* argv[]) {
             __tbb_test_errno = true;
      }
      if( version_info_block ) free( version_info_block );
-#else
+#endif // defined(_MT) && defined(_DLL)
+#else  // _MSC_VER
     __tbb_test_errno = true;
-#endif /* _MSC_VER */
+#endif // _MSC_VER
 
     for( int p=MaxThread; p>=MinThread; --p ) {
         REMARK("testing with %d threads\n", p );
@@ -363,7 +379,8 @@ int main(int argc, char* argv[]) {
         NativeParallelFor( p, RoundRobin(p, barrier, Verbose) );
         delete barrier;
     }
-    if( !error_occurred ) REPORT("done\n");
+    if( !error_occurred ) 
+        REPORT("done\n");
     return 0;
 }
 
@@ -988,7 +1005,7 @@ void CMemTest::RunAllTests(int total_threads)
 #else
     UniquePointer();
     AddrArifm();
-#if !__TBB_EXCEPTION_HANDLING_TOTALLY_BROKEN
+#if !__TBB_LRB_NATIVE
     NULLReturn(1*MByte,100*MByte,total_threads);
 #endif
 #endif

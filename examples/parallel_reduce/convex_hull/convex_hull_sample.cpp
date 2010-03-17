@@ -1,5 +1,5 @@
 /*
-    Copyright 2005-2009 Intel Corporation.  All Rights Reserved.
+    Copyright 2005-2010 Intel Corporation.  All Rights Reserved.
 
     This file is part of Threading Building Blocks.
 
@@ -100,6 +100,8 @@ public:
         : points(points_), exType(exType_), extrXPoint(points[0]) {}
 
     FindXExtremum(const FindXExtremum& fxex, tbb::split)
+        // Can run in parallel with fxex.operator()() or fxex.join().
+        // The data race reported by tools is harmless.
         : points(fxex.points), exType(fxex.exType), extrXPoint(fxex.extrXPoint) {}
 
     void operator()(const range_t& range) {

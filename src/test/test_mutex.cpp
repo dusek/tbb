@@ -1,5 +1,5 @@
 /*
-    Copyright 2005-2009 Intel Corporation.  All Rights Reserved.
+    Copyright 2005-2010 Intel Corporation.  All Rights Reserved.
 
     This file is part of Threading Building Blocks.
 
@@ -36,6 +36,7 @@
 // Compile with _OPENMP and -openmp
 //------------------------------------------------------------------------
 #include "tbb/spin_mutex.h"
+#include "tbb/critical_section.h"
 #include "tbb/spin_rw_mutex.h"
 #include "tbb/queuing_rw_mutex.h"
 #include "tbb/queuing_mutex.h"
@@ -561,11 +562,7 @@ void TestRecursiveMutexISO( const char * name ) {
 
 #include "tbb/task_scheduler_init.h"
 
-__TBB_TEST_EXPORT
-int main( int argc, char * argv[] ) {
-    // Default is to run on two threads
-    MinThread = MaxThread = 2;
-    ParseCommandLine( argc, argv );
+int TestMain () {
     for( int p=MinThread; p<=MaxThread; ++p ) {
         tbb::task_scheduler_init init( p );
         REMARK( "testing with %d workers\n", static_cast<int>(p) );
@@ -613,6 +610,7 @@ int main( int argc, char * argv[] ) {
             TestISO<tbb::mutex>( "ISO Mutex" );
             TestISO<tbb::spin_rw_mutex>( "ISO Spin RW Mutex" );
             TestISO<tbb::recursive_mutex>( "ISO Recursive Mutex" );
+            TestISO<tbb::critical_section>( "ISO Critical Section" );
             TestTryAcquire_OneThreadISO<tbb::spin_mutex>( "ISO Spin Mutex" );
 #if USE_PTHREAD 
             // under ifdef because on Windows tbb::mutex is reenterable and the test will fail
@@ -620,11 +618,11 @@ int main( int argc, char * argv[] ) {
 #endif /* USE_PTHREAD */
             TestTryAcquire_OneThreadISO<tbb::spin_rw_mutex>( "ISO Spin RW Mutex" );
             TestTryAcquire_OneThreadISO<tbb::recursive_mutex>( "ISO Recursive Mutex" );
+            TestTryAcquire_OneThreadISO<tbb::critical_section>( "ISO Critical Section" );
             TestReaderWriterLockISO<tbb::spin_rw_mutex>( "ISO Spin RW Mutex" );
             TestRecursiveMutexISO<tbb::recursive_mutex>( "ISO Recursive Mutex" );
         }
         REMARK( "calling destructor for task_scheduler_init\n" );
     }
-    REPORT("done\n");
-    return 0;
+    return Harness::Done;
 }

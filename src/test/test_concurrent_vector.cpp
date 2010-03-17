@@ -1,5 +1,5 @@
 /*
-    Copyright 2005-2009 Intel Corporation.  All Rights Reserved.
+    Copyright 2005-2010 Intel Corporation.  All Rights Reserved.
 
     This file is part of Threading Building Blocks.
 
@@ -32,13 +32,14 @@
 #include "tbb/tbb_exception.h"
 #include <cstdio>
 #include <cstdlib>
-#include <stdexcept>
 #include "harness_report.h"
 #include "harness_assert.h"
 #include "harness_allocator.h"
 
+#if TBB_USE_EXCEPTIONS
 static bool known_issue_verbose = false;
 #define KNOWN_ISSUE(msg) if(!known_issue_verbose) known_issue_verbose = true, REPORT(msg)
+#endif /* TBB_USE_EXCEPTIONS */
 
 tbb::atomic<long> FooCount;
 long MaxFooCount = 0;
@@ -81,10 +82,10 @@ public:
         ASSERT( is_valid(), NULL );
         return my_bar;
     }
-    Foo( int bar = initial_value_of_bar ) {
-        my_bar = bar;
+    Foo( int barr = initial_value_of_bar ) {
+        my_bar = barr;
         if(MaxFooCount && FooCount >= MaxFooCount)
-            throw Foo_exception();
+            __TBB_THROW( Foo_exception() );
         FooCount++;
         state = DefaultInitialized;
     }
@@ -92,7 +93,7 @@ public:
         my_bar = foo.my_bar;
         ASSERT( foo.is_valid_or_zero(), "bad source for copy" );
         if(MaxFooCount && FooCount >= MaxFooCount)
-            throw Foo_exception();
+            __TBB_THROW( Foo_exception() );
         FooCount++;
         state = CopyInitialized;
     }
@@ -409,24 +410,24 @@ void TestSequentialFor() {
     }
 
     // Now go forwards and backwards
-    ptrdiff_t j = 0;
+    ptrdiff_t k = 0;
     cp = u.begin();
     for( size_t i=0; i<u.size(); ++i ) {
-        CheckConstIterator(u,int(j),cp);
+        CheckConstIterator(u,int(k),cp);
         typename V::difference_type delta = i*3 % u.size();
-        if( 0<=j+delta && size_t(j+delta)<u.size() ) {
+        if( 0<=k+delta && size_t(k+delta)<u.size() ) {
             V::const_iterator &cpr = (cp += delta);
             ASSERT( &cpr == &cp, "+= not returning a reference?");
-            j += delta; 
+            k += delta; 
         } 
         delta = i*7 % u.size();
-        if( 0<=j-delta && size_t(j-delta)<u.size() ) {
+        if( 0<=k-delta && size_t(k-delta)<u.size() ) {
             if( i&1 ) { 
                 V::const_iterator &cpr = (cp -= delta);
                 ASSERT( &cpr == &cp, "-= not returning a reference?");
             } else
                 cp = cp - delta;        // Test operator-
-            j -= delta; 
+            k -= delta; 
         } 
     }
     
@@ -678,7 +679,18 @@ void TestAssign() {
 }
 
 // Test the comparison operators
+#if !TBB_USE_EXCEPTIONS && _MSC_VER
+    // Suppress "C++ exception handler used, but unwind semantics are not enabled" warning in STL headers
+    #pragma warning (push)
+    #pragma warning (disable: 4530)
+#endif
+
 #include <string>
+
+#if !TBB_USE_EXCEPTIONS && _MSC_VER
+    #pragma warning (pop)
+#endif
+
 void TestComparison() {
     std::string str[3]; str[0] = "abc";
     str[1].assign("cba");
@@ -752,8 +764,11 @@ void TestFindPrimes() {
     double t2 = TimeFindPrimes( tbb::task_scheduler_init::automatic );
 
     // Time parallel run that is very likely oversubscribed.  
+#if _XBOX
+    double t128 = TimeFindPrimes(32);  //XBOX360 can't handle too many threads
+#else    
     double t128 = TimeFindPrimes(128);
-
+#endif
     REMARK("TestFindPrimes: t2==%g t128=%g k=%g\n", t2, t128, t128/t2);
 
     // We allow the 128-thread run a little extra time to allow for thread overhead.
@@ -782,10 +797,10 @@ void TestSort() {
     }
 }
 
+#if TBB_USE_EXCEPTIONS
 //------------------------------------------------------------------------
 // Test exceptions safety (from allocator and items constructors)
 //------------------------------------------------------------------------
-#if __TBB_EXCEPTIONS
 void TestExceptions() {
     typedef static_counting_allocator<debug_allocator<FooWithAssign>, std::size_t> allocator_t;
     typedef tbb::concurrent_vector<FooWithAssign, allocator_t> vector_t;
@@ -941,14 +956,28 @@ void TestExceptions() {
         ASSERT(false, "unexpected exception");
     }
 }
-#endif// __TBB_EXCEPTIONS
+#endif /* TBB_USE_EXCEPTIONS */
+
+//------------------------------------------------------------------------
+// Test SSE
+//------------------------------------------------------------------------
+#include "harness_m128.h"
+
+#if HAVE_m128
+
+void TestSSE() {
+    tbb::concurrent_vector<ClassWithSSE> v;
+    for( int i=0; i<100; ++i ) {
+        v.push_back(ClassWithSSE(i));
+        for( int j=0; i<i; ++j ) 
+            ASSERT( v[j]==ClassWithSSE(j), NULL );
+    }
+}
+#endif /* HAVE_m128 */
+
 //------------------------------------------------------------------------
 
-__TBB_TEST_EXPORT
-int main( int argc, char* argv[] ) {
-    // Test requires at least one thread.
-    MinThread = 1;
-    ParseCommandLine( argc, argv );
+int TestMain () {
     if( MinThread<1 ) {
         REPORT("ERROR: MinThread=%d, but must be at least 1\n",MinThread); MinThread = 1;
     }
@@ -958,6 +987,9 @@ int main( int argc, char* argv[] ) {
     TestSequentialFor<FooWithAssign> ();
     TestResizeAndCopy();
     TestAssign();
+#if HAVE_m128
+    TestSSE();
+#endif /* HAVE_m128 */    
 #endif
     TestCapacity();
     ASSERT( !FooCount, NULL );
@@ -974,16 +1006,13 @@ int main( int argc, char* argv[] ) {
     TestFindPrimes();
 #endif
     TestSort();
-#if __TBB_EXCEPTIONS
-#if __TBB_EXCEPTION_HANDLING_BROKEN
+#if __TBB_THROW_ACROSS_MODULE_BOUNDARY_BROKEN
     REPORT("Warning: Exception safety test is skipped due to a known issue.\n");
-#else
+#elif TBB_USE_EXCEPTIONS
     TestExceptions();
-#endif
-#endif//__TBB_EXCEPTIONS
-#endif//!TBB_DEPRECATED
+#endif /* TBB_USE_EXCEPTIONS */
+#endif /* !TBB_DEPRECATED */
     ASSERT( !FooCount, NULL );
     REMARK("sizeof(concurrent_vector<int>) == %d\n", (int)sizeof(tbb::concurrent_vector<int>));
-    REPORT("done\n");
-    return 0;
+    return Harness::Done;
 }

@@ -1,5 +1,5 @@
 /*
-    Copyright 2005-2009 Intel Corporation.  All Rights Reserved.
+    Copyright 2005-2010 Intel Corporation.  All Rights Reserved.
 
     This file is part of Threading Building Blocks.
 
@@ -27,11 +27,21 @@
 */
 
 #define NOMINMAX
-#include <cstdio>
-#include <list>
-
 #include "tbb/tbb.h"
 #include "tbb/combinable.h"
+#include <cstdio>
+
+#if !TBB_USE_EXCEPTIONS && _MSC_VER
+    // Suppress "C++ exception handler used, but unwind semantics are not enabled" warning in STL headers
+    #pragma warning (push)
+    #pragma warning (disable: 4530)
+#endif
+
+#include <list>
+
+#if !TBB_USE_EXCEPTIONS && _MSC_VER
+    #pragma warning (pop)
+#endif
 
 using namespace std;
 using namespace tbb;
@@ -67,10 +77,7 @@ int Fib(int n) {
 #include "harness_report.h"
 #include "harness_assert.h"
 
-int main(int argc, char* argv[]) {
-    MinThread = 1;
-    ParseCommandLine(argc, argv);
-
+int TestMain () {
 #if __TBB_LAMBDAS_PRESENT
     ASSERT( MinThread>=1, "Error: Number of threads must be positive.\n");
 
@@ -226,10 +233,8 @@ int main(int argc, char* argv[]) {
                "enumerable_thread_specific w/lambda failed.\n");
         REMARK("passed.\n");
     }
-    REPORT("done\n");
-    return 0;
+    return Harness::Done;
 #else
-    REPORT("skip\n");
-    return 0;
-#endif
+    return Harness::Skipped;
+#endif /* !__TBB_LAMBDAS_PRESENT */
 }

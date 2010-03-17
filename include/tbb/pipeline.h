@@ -1,5 +1,5 @@
 /*
-    Copyright 2005-2009 Intel Corporation.  All Rights Reserved.
+    Copyright 2005-2010 Intel Corporation.  All Rights Reserved.
 
     This file is part of Threading Building Blocks.
 
@@ -59,7 +59,7 @@ class pipeline_cleaner;
 class filter: internal::no_copy {
 private:
     //! Value used to mark "not in pipeline"
-    static filter* not_in_pipeline() {return reinterpret_cast<filter*>(internal::intptr(-1));}
+    static filter* not_in_pipeline() {return reinterpret_cast<filter*>(intptr_t(-1));}
     
     //! The lowest bit 0 is for parallel vs. serial
     static const unsigned char filter_is_serial = 0x1; 
@@ -128,7 +128,7 @@ public:
     /** If the filter was added to a pipeline, the pipeline must be destroyed first. */
     virtual __TBB_EXPORTED_METHOD ~filter();
 
-#if __TBB_EXCEPTIONS
+#if __TBB_TASK_GROUP_CONTEXT
     //! Destroys item if pipeline was cancelled.
     /** Required to prevent memory leaks.
         Note it can be called concurrently even for serial filters.*/
@@ -216,7 +216,7 @@ public:
     //! Run the pipeline to completion.
     void __TBB_EXPORTED_METHOD run( size_t max_number_of_live_tokens );
 
-#if __TBB_EXCEPTIONS
+#if __TBB_TASK_GROUP_CONTEXT
     //! Run the pipeline to completion with user-supplied context.
     void __TBB_EXPORTED_METHOD run( size_t max_number_of_live_tokens, tbb::task_group_context& context );
 #endif
@@ -258,7 +258,7 @@ private:
     //! Not used, but retained to satisfy old export files.
     void __TBB_EXPORTED_METHOD inject_token( task& self );
 
-#if __TBB_EXCEPTIONS
+#if __TBB_TASK_GROUP_CONTEXT
     //! Does clean up if pipeline is cancelled or exception occured
     void clear_filters();
 #endif

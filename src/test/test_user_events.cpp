@@ -1,5 +1,5 @@
 /*
-    Copyright 2005-2009 Intel Corporation.  All Rights Reserved.
+    Copyright 2005-2010 Intel Corporation.  All Rights Reserved.
 
     This file is part of Threading Building Blocks.
 
@@ -200,11 +200,10 @@ void Test()
 }  // namespace internal
 }  // namespace tbb
 
-__TBB_TEST_EXPORT
-int main() {
-    tbb::internal::Test();
-    REPORT("done\n");
-}
-
 #define HARNESS_NO_PARSE_COMMAND_LINE 1
 #include "harness.h"
+
+int TestMain () {
+    tbb::internal::Test();
+    return Harness::Done;
+}

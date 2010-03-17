@@ -1,6 +1,6 @@
 <!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
 <html><head><meta http-equiv="Content-Type" content="text/html;charset=iso-8859-1">
-<title>tbb::parallel_while&lt; Body &gt; Class Template Reference</title>
+<title>tbb::interface4::concurrent_hash_map&lt; Key, T, HashCompare, Allocator &gt;::const_accessor Class Reference</title>
 <link href="doxygen.css" rel="stylesheet" type="text/css">
 <link href="tabs.css" rel="stylesheet" type="text/css">
 </head><body>
@@ -21,117 +21,68 @@
     <li><a href="functions.html"><span>Class&nbsp;Members</span></a></li>
   </ul></div>
 <div class="nav">
-<a class="el" href="a00230.html">tbb</a>::<a class="el" href="a00150.html">parallel_while</a></div>
-<h1>tbb::parallel_while&lt; Body &gt; Class Template Reference<br>
-<small>
-[<a class="el" href="a00234.html">Algorithms</a>]</small>
-</h1><!-- doxytag: class="tbb::parallel_while" -->Parallel iteration over a stream, with optional addition of more work.  
+<a class="el" href="a00257.html">tbb</a>::<b>interface4</b>::<a class="el" href="a00147.html">concurrent_hash_map</a>::<a class="el" href="a00150.html">const_accessor</a></div>
+<h1>tbb::interface4::concurrent_hash_map&lt; Key, T, HashCompare, Allocator &gt;::const_accessor Class Reference</h1><!-- doxytag: class="tbb::interface4::concurrent_hash_map::const_accessor" -->Combines data access, locking, and garbage collection.  
 <a href="#_details">More...</a>
 <p>
-<code>#include &lt;<a class="el" href="a00340.html">parallel_while.h</a>&gt;</code>
+<code>#include &lt;<a class="el" href="a00315.html">concurrent_hash_map.h</a>&gt;</code>
 <p>
-<a href="a00038.html">List of all members.</a><table border="0" cellpadding="0" cellspacing="0">
+<p>Inheritance diagram for tbb::interface4::concurrent_hash_map&lt; Key, T, HashCompare, Allocator &gt;::const_accessor:
+<p><center><img src="a00150.png" usemap="#tbb::interface4::concurrent_hash_map< Key, T, HashCompare, Allocator >::const_accessor_map" border="0" alt=""></center>
+<map name="tbb::interface4::concurrent_hash_map< Key, T, HashCompare, Allocator >::const_accessor_map">
+<area href="a00148.html" alt="tbb::interface4::concurrent_hash_map< Key, T, HashCompare, Allocator >::accessor" shape="rect" coords="0,56,530,80">
+</map>
+<a href="a00016.html">List of all members.</a><table border="0" cellpadding="0" cellspacing="0">
 <tr><td></td></tr>
 <tr><td colspan="2"><br><h2>Public Types</h2></td></tr>
-<tr><td class="memItemLeft" nowrap align="right" valign="top"><a class="anchor" name="fa297e53d3af2a101e712bc200233e9c"></a><!-- doxytag: member="tbb::parallel_while::value_type" ref="fa297e53d3af2a101e712bc200233e9c" args="" -->
-typedef Body::argument_type&nbsp;</td><td class="memItemRight" valign="bottom"><a class="el" href="a00150.html#fa297e53d3af2a101e712bc200233e9c">value_type</a></td></tr>
+<tr><td class="memItemLeft" nowrap align="right" valign="top"><a class="anchor" name="48647ca0d79c1233b997f5768403c926"></a><!-- doxytag: member="tbb::interface4::concurrent_hash_map::const_accessor::value_type" ref="48647ca0d79c1233b997f5768403c926" args="" -->
+typedef const concurrent_hash_map::value_type&nbsp;</td><td class="memItemRight" valign="bottom"><a class="el" href="a00150.html#48647ca0d79c1233b997f5768403c926">value_type</a></td></tr>
 
-<tr><td class="mdescLeft">&nbsp;</td><td class="mdescRight">Type of items. <br></td></tr>
+<tr><td class="mdescLeft">&nbsp;</td><td class="mdescRight">Type of value. <br></td></tr>
 <tr><td colspan="2"><br><h2>Public Member Functions</h2></td></tr>
-<tr><td class="memItemLeft" nowrap align="right" valign="top"><a class="anchor" name="36e26ba3880c7bcf804a97ba0cbe133f"></a><!-- doxytag: member="tbb::parallel_while::parallel_while" ref="36e26ba3880c7bcf804a97ba0cbe133f" args="()" -->
-&nbsp;</td><td class="memItemRight" valign="bottom"><a class="el" href="a00150.html#36e26ba3880c7bcf804a97ba0cbe133f">parallel_while</a> ()</td></tr>
+<tr><td class="memItemLeft" nowrap align="right" valign="top"><a class="anchor" name="5cce3104cb0a52e08d2131370871c614"></a><!-- doxytag: member="tbb::interface4::concurrent_hash_map::const_accessor::empty" ref="5cce3104cb0a52e08d2131370871c614" args="() const " -->
+bool&nbsp;</td><td class="memItemRight" valign="bottom"><a class="el" href="a00150.html#5cce3104cb0a52e08d2131370871c614">empty</a> () const </td></tr>
 
-<tr><td class="mdescLeft">&nbsp;</td><td class="mdescRight">Construct empty non-running parallel while. <br></td></tr>
-<tr><td class="memItemLeft" nowrap align="right" valign="top"><a class="anchor" name="6fcfc973cc56b79c6d0fbb8a31be7e84"></a><!-- doxytag: member="tbb::parallel_while::~parallel_while" ref="6fcfc973cc56b79c6d0fbb8a31be7e84" args="()" -->
-&nbsp;</td><td class="memItemRight" valign="bottom"><a class="el" href="a00150.html#6fcfc973cc56b79c6d0fbb8a31be7e84">~parallel_while</a> ()</td></tr>
+<tr><td class="mdescLeft">&nbsp;</td><td class="mdescRight">True if result is empty. <br></td></tr>
+<tr><td class="memItemLeft" nowrap align="right" valign="top"><a class="anchor" name="d5ce4f88d8870290238a8ad621e6f270"></a><!-- doxytag: member="tbb::interface4::concurrent_hash_map::const_accessor::release" ref="d5ce4f88d8870290238a8ad621e6f270" args="()" -->
+void&nbsp;</td><td class="memItemRight" valign="bottom"><a class="el" href="a00150.html#d5ce4f88d8870290238a8ad621e6f270">release</a> ()</td></tr>
 
-<tr><td class="mdescLeft">&nbsp;</td><td class="mdescRight">Destructor cleans up data members before returning. <br></td></tr>
-<tr><td class="memTemplParams" nowrap colspan="2">template&lt;typename Stream&gt; </td></tr>
-<tr><td class="memTemplItemLeft" nowrap align="right" valign="top">void&nbsp;</td><td class="memTemplItemRight" valign="bottom"><a class="el" href="a00150.html#b32a0a6e5e09ebb7fad3e6652c19afe5">run</a> (Stream &amp;stream, const Body &amp;body)</td></tr>
+<tr><td class="mdescLeft">&nbsp;</td><td class="mdescRight">Set to null. <br></td></tr>
+<tr><td class="memItemLeft" nowrap align="right" valign="top"><a class="anchor" name="30f31106840700a4c3664b9cb1c31ca7"></a><!-- doxytag: member="tbb::interface4::concurrent_hash_map::const_accessor::operator *" ref="30f31106840700a4c3664b9cb1c31ca7" args="() const " -->
+const_reference&nbsp;</td><td class="memItemRight" valign="bottom"><a class="el" href="a00150.html#30f31106840700a4c3664b9cb1c31ca7">operator *</a> () const </td></tr>
 
-<tr><td class="mdescLeft">&nbsp;</td><td class="mdescRight">Apply body.apply to each item in the stream.  <a href="#b32a0a6e5e09ebb7fad3e6652c19afe5"></a><br></td></tr>
-<tr><td class="memItemLeft" nowrap align="right" valign="top">void&nbsp;</td><td class="memItemRight" valign="bottom"><a class="el" href="a00150.html#e131c560057a58229992b61eb8dba4c6">add</a> (const <a class="el" href="a00150.html#fa297e53d3af2a101e712bc200233e9c">value_type</a> &amp;item)</td></tr>
+<tr><td class="mdescLeft">&nbsp;</td><td class="mdescRight">Return reference to associated value in hash table. <br></td></tr>
+<tr><td class="memItemLeft" nowrap align="right" valign="top"><a class="anchor" name="3d03a48ecb8cd9549bd8be64b09c9b0d"></a><!-- doxytag: member="tbb::interface4::concurrent_hash_map::const_accessor::operator-&gt;" ref="3d03a48ecb8cd9549bd8be64b09c9b0d" args="() const " -->
+const_pointer&nbsp;</td><td class="memItemRight" valign="bottom"><a class="el" href="a00150.html#3d03a48ecb8cd9549bd8be64b09c9b0d">operator-&gt;</a> () const </td></tr>
 
-<tr><td class="mdescLeft">&nbsp;</td><td class="mdescRight">Add a work item while running.  <a href="#e131c560057a58229992b61eb8dba4c6"></a><br></td></tr>
+<tr><td class="mdescLeft">&nbsp;</td><td class="mdescRight">Return pointer to associated value in hash table. <br></td></tr>
+<tr><td class="memItemLeft" nowrap align="right" valign="top"><a class="anchor" name="a9ead65cca68d4c49c7ef64d7899a4c8"></a><!-- doxytag: member="tbb::interface4::concurrent_hash_map::const_accessor::const_accessor" ref="a9ead65cca68d4c49c7ef64d7899a4c8" args="()" -->
+&nbsp;</td><td class="memItemRight" valign="bottom"><a class="el" href="a00150.html#a9ead65cca68d4c49c7ef64d7899a4c8">const_accessor</a> ()</td></tr>
+
+<tr><td class="mdescLeft">&nbsp;</td><td class="mdescRight">Create empty result. <br></td></tr>
+<tr><td class="memItemLeft" nowrap align="right" valign="top"><a class="anchor" name="752b0c1ec74b94786403a75e42917d01"></a><!-- doxytag: member="tbb::interface4::concurrent_hash_map::const_accessor::~const_accessor" ref="752b0c1ec74b94786403a75e42917d01" args="()" -->
+&nbsp;</td><td class="memItemRight" valign="bottom"><a class="el" href="a00150.html#752b0c1ec74b94786403a75e42917d01">~const_accessor</a> ()</td></tr>
+
+<tr><td class="mdescLeft">&nbsp;</td><td class="mdescRight">Destroy result after releasing the underlying reference. <br></td></tr>
+<tr><td colspan="2"><br><h2>Friends</h2></td></tr>
+<tr><td class="memItemLeft" nowrap align="right" valign="top"><a class="anchor" name="d062d8ecb243a6ec62fa30bca52a1bcf"></a><!-- doxytag: member="tbb::interface4::concurrent_hash_map::const_accessor::concurrent_hash_map&lt; Key, T, HashCompare, Allocator &gt;" ref="d062d8ecb243a6ec62fa30bca52a1bcf" args="" -->
+class&nbsp;</td><td class="memItemRight" valign="bottom"><b>concurrent_hash_map&lt; Key, T, HashCompare, Allocator &gt;</b></td></tr>
+
+<tr><td class="memItemLeft" nowrap align="right" valign="top"><a class="anchor" name="ddd77aff56c12366acc02d0f1588a706"></a><!-- doxytag: member="tbb::interface4::concurrent_hash_map::const_accessor::accessor" ref="ddd77aff56c12366acc02d0f1588a706" args="" -->
+class&nbsp;</td><td class="memItemRight" valign="bottom"><b>accessor</b></td></tr>
+
 </table>
 <hr><a name="_details"></a><h2>Detailed Description</h2>
-<h3>template&lt;typename Body&gt;<br>
- class tbb::parallel_while&lt; Body &gt;</h3>
+<h3>template&lt;typename Key, typename T, typename HashCompare, typename Allocator&gt;<br>
+ class tbb::interface4::concurrent_hash_map&lt; Key, T, HashCompare, Allocator &gt;::const_accessor</h3>
 
-Parallel iteration over a stream, with optional addition of more work. 
+Combines data access, locking, and garbage collection. 
 <p>
-The Body b has the requirement: <br>
- "b(v)" <br>
- "b.argument_type" <br>
- where v is an argument_type 
-<p>
-<hr><h2>Member Function Documentation</h2>
-<a class="anchor" name="e131c560057a58229992b61eb8dba4c6"></a><!-- doxytag: member="tbb::parallel_while::add" ref="e131c560057a58229992b61eb8dba4c6" args="(const value_type &amp;item)" -->
-<div class="memitem">
-<div class="memproto">
-<div class="memtemplate">
-template&lt;typename Body&gt; </div>
-      <table class="memname">
-        <tr>
-          <td class="memname">void <a class="el" href="a00150.html">tbb::parallel_while</a>&lt; Body &gt;::add           </td>
-          <td>(</td>
-          <td class="paramtype">const <a class="el" href="a00150.html#fa297e53d3af2a101e712bc200233e9c">value_type</a> &amp;&nbsp;</td>
-          <td class="paramname"> <em>item</em>          </td>
-          <td>&nbsp;)&nbsp;</td>
-          <td width="100%"></td>
-        </tr>
-      </table>
-</div>
-<div class="memdoc">
-
-<p>
-Add a work item while running. 
-<p>
-Should be executed only by body.apply or a thread spawned therefrom. 
-</div>
-</div><p>
-<a class="anchor" name="b32a0a6e5e09ebb7fad3e6652c19afe5"></a><!-- doxytag: member="tbb::parallel_while::run" ref="b32a0a6e5e09ebb7fad3e6652c19afe5" args="(Stream &amp;stream, const Body &amp;body)" -->
-<div class="memitem">
-<div class="memproto">
-<div class="memtemplate">
-template&lt;typename Body&gt; </div>
-<div class="memtemplate">
-template&lt;typename Stream&gt; </div>
-      <table class="memname">
-        <tr>
-          <td class="memname">void <a class="el" href="a00150.html">tbb::parallel_while</a>&lt; Body &gt;::run           </td>
-          <td>(</td>
-          <td class="paramtype">Stream &amp;&nbsp;</td>
-          <td class="paramname"> <em>stream</em>, </td>
-        </tr>
-        <tr>
-          <td class="paramkey"></td>
-          <td></td>
-          <td class="paramtype">const Body &amp;&nbsp;</td>
-          <td class="paramname"> <em>body</em></td><td>&nbsp;</td>
-        </tr>
-        <tr>
-          <td></td>
-          <td>)</td>
-          <td></td><td></td><td width="100%"></td>
-        </tr>
-      </table>
-</div>
-<div class="memdoc">
-
-<p>
-Apply body.apply to each item in the stream. 
-<p>
-A Stream s has the requirements <br>
- "S::value_type" <br>
- "s.pop_if_present(value) is convertible to bool 
-</div>
-</div><p>
 <hr>The documentation for this class was generated from the following file:<ul>
-<li><a class="el" href="a00340.html">parallel_while.h</a></ul>
+<li><a class="el" href="a00315.html">concurrent_hash_map.h</a></ul>
 <hr>
 <p></p>
-Copyright &copy; 2005-2009 Intel Corporation.  All Rights Reserved.
+Copyright &copy; 2005-2010 Intel Corporation.  All Rights Reserved.
 <p></p>
 Intel, Pentium, Intel Xeon, Itanium, Intel XScale and VTune are
 registered trademarks or trademarks of Intel Corporation or its

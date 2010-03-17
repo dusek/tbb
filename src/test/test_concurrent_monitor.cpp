@@ -1,5 +1,5 @@
 /*
-    Copyright 2005-2009 Intel Corporation.  All Rights Reserved.
+    Copyright 2005-2010 Intel Corporation.  All Rights Reserved.
 
     This file is part of Threading Building Blocks.
 
@@ -231,10 +231,7 @@ void Test() {
         REPORT("ERROR : counter.value=%ld\n",counter.value);
 }
 
-int main( int argc, char * argv[] ) {
-    // Default is to run on two threads
-    MinThread = MaxThread = 2;
-    ParseCommandLine( argc, argv );
+int TestMain () {
     for( int p=MinThread; p<=MaxThread; ++p ) {
         REMARK( "testing with %d workers\n", static_cast<int>(p) );
         // test the predicated notify 
@@ -243,6 +240,5 @@ int main( int argc, char * argv[] ) {
         Test<SpinMutex>();
         REMARK( "calling destructor for task_scheduler_init\n" );
     }
-    REPORT("done\n");
-    return 0;
+    return Harness::Done;
 }

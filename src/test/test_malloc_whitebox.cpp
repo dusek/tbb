@@ -1,5 +1,5 @@
 /*
-    Copyright 2005-2009 Intel Corporation.  All Rights Reserved.
+    Copyright 2005-2010 Intel Corporation.  All Rights Reserved.
 
     This file is part of Threading Building Blocks.
 
@@ -32,7 +32,7 @@
 
 // To not depends on ITT support stuff
 #ifdef DO_ITT_NOTIFY
- #undef DO_ITT_NOTIFY
+#undef DO_ITT_NOTIFY
 #endif
 
 #include "MemoryAllocator.cpp" // can be in ../tbbmalloc or another directory
@@ -77,7 +77,7 @@ public:
         // push to maximal cache limit
         for (int i=0; i<2; i++) {
             const int sizes[] = { MByte/sizeof(int),
-                                  (MByte-2*largeObjectCacheStep)/sizeof(int) };
+                                  (MByte-2*largeBlockCacheStep)/sizeof(int) };
             for (int q=0; q<2; q++) {
                 size_t curr = 0;
                 for (int j=0; j<LARGE_MEM_SIZES_NUM; j++, curr++)
@@ -163,9 +163,152 @@ Harness::SpinBarrier TestStartupAlloc::init_barrier;
 
 #endif /* MALLOC_CHECK_RECURSION */
 
-__TBB_TEST_EXPORT
-int main(int argc, char* argv[]) {
-    ParseCommandLine( argc, argv );
+class BackRefWork: NoAssign {
+    struct TestBlock {
+        intptr_t   data;
+        BackRefIdx idx;
+    };
+    static const int ITERS = 2*BR_MAX_CNT+2;
+public:
+    BackRefWork() {}
+    void operator()(int) const {
+        TestBlock blocks[ITERS];
+
+        for (int i=0; i<ITERS; i++) {
+            blocks[i].idx = newBackRef();
+            setBackRef(blocks[i].idx, &blocks[i].data);
+        }
+        for (int i=0; i<ITERS; i++)
+            ASSERT((Block*)&blocks[i].data == getBackRef(blocks[i].idx), NULL);
+        for (int i=ITERS-1; i>=0; i--)
+            removeBackRef(blocks[i].idx);
+    }
+};
+
+class FreeBlockPoolHit: NoAssign {
+    // to trigger possible leak for both cleanup on pool overflow 
+    // and on thread termination
+    static const int ITERS = 2*FreeBlockPool::POOL_HIGH_MARK;
+public:
+    FreeBlockPoolHit() {}
+    void operator()(int) const {
+        void *objs[ITERS];
+
+        for (int i=0; i<ITERS; i++)
+            objs[i] = scalable_malloc(minLargeObjectSize-1);
+        for (int i=0; i<ITERS; i++)
+            scalable_free(objs[i]);
+
+#ifdef USE_WINTHREAD
+        // under Windows DllMain used to call mallocThreadShutdownNotification,
+        // as we don't use it have to call the callback manually
+        mallocThreadShutdownNotification(NULL);
+#endif
+    }
+};
+
+static size_t allocatedBackRefCount()
+{
+    size_t cnt = 0;
+    for (int i=0; i<=backRefMaster->lastUsed; i++)
+        cnt += backRefMaster->backRefBl[i]->allocatedCount;
+    return cnt;
+}
+
+void TestBackRef() {
+    size_t beforeNumBackRef, afterNumBackRef;
+
+    beforeNumBackRef = allocatedBackRefCount();
+    for( int p=MaxThread; p>=MinThread; --p )
+        NativeParallelFor( p, BackRefWork() );
+    afterNumBackRef = allocatedBackRefCount();
+    ASSERT(beforeNumBackRef==afterNumBackRef, "backreference leak detected");
+
+    // lastUsed marks peak resource consumption. As we allocate below the mark,
+    // it must not move up, otherwise there is a resource leak.
+    int sustLastUsed = backRefMaster->lastUsed;
+    NativeParallelFor( 1, BackRefWork() );
+    ASSERT(sustLastUsed == backRefMaster->lastUsed, "backreference leak detected");
+    
+    // check leak of back references while per-thread small object pool is in use
+    // warm up need to cover bootStrapMalloc call
+    NativeParallelFor( 1, FreeBlockPoolHit() );
+    beforeNumBackRef = allocatedBackRefCount();
+    NativeParallelFor( 1, FreeBlockPoolHit() );
+    afterNumBackRef = allocatedBackRefCount();
+    ASSERT(beforeNumBackRef==afterNumBackRef, "backreference leak detected");
+}
+
+void TestObjectRecognition() {
+    size_t headersSize = sizeof(LargeMemoryBlock)+sizeof(LargeObjectHdr);
+    unsigned falseObjectSize = 113; // unsigned is the type expected by getObjectSize
+    size_t obtainedSize;
+    Block *auxBackRef;
+
+    ASSERT(getObjectSize(falseObjectSize)!=falseObjectSize, "Error in test: bad choice for false object size");
+
+    void* mem = scalable_malloc(2*blockSize);
+    Block* falseBlock = (Block*)alignUp((uintptr_t)mem, blockSize);
+    falseBlock->objectSize = falseObjectSize;
+    char* falseSO = (char*)falseBlock + falseObjectSize*7;
+    ASSERT(alignDown(falseSO, blockSize)==(void*)falseBlock, "Error in test: false object offset is too big");
+
+    void* bufferLOH = scalable_malloc(2*blockSize + headersSize);
+    LargeObjectHdr* falseLO = 
+        (LargeObjectHdr*)alignUp((uintptr_t)bufferLOH + headersSize, blockSize);
+    LargeObjectHdr* headerLO = (LargeObjectHdr*)falseLO-1;
+    headerLO->memoryBlock = (LargeMemoryBlock*)bufferLOH;
+    headerLO->memoryBlock->unalignedSize = 2*blockSize + headersSize;
+    headerLO->backRefIdx = newBackRef();
+    setBackRef(headerLO->backRefIdx, headerLO);
+    ASSERT(scalable_msize(falseLO) == blockSize + headersSize,
+           "Error in test: LOH falsification failed");
+    removeBackRef(headerLO->backRefIdx);
+
+    const int NUM_OF_IDX = BR_MAX_CNT+2;
+    BackRefIdx idxs[NUM_OF_IDX];
+    for (int cnt=0; cnt<2; cnt++) {
+        for (int master = -10; master<10; master++) {
+            falseBlock->backRefIdx.s.master = (uint16_t)master;
+            headerLO->backRefIdx.s.master = (uint16_t)master;
+        
+            for (int bl = -10; bl<BR_MAX_CNT+10; bl++) {
+                falseBlock->backRefIdx.s.offset = (uint16_t)bl;
+                headerLO->backRefIdx.s.offset = (uint16_t)bl;
+                
+                obtainedSize = safer_scalable_msize(falseSO, NULL);
+                ASSERT(obtainedSize==0, "Incorrect pointer accepted");
+                obtainedSize = safer_scalable_msize(falseLO, NULL);
+                ASSERT(obtainedSize==0, "Incorrect pointer accepted");
+            }
+        }
+        if (cnt == 1) {
+            for (int i=0; i<NUM_OF_IDX; i++)
+                removeBackRef(idxs[i]);
+            break;
+        }
+        for (int i=0; i<NUM_OF_IDX; i++) {
+            idxs[i] = newBackRef();
+            setBackRef(idxs[i], NULL);
+        }
+    }
+    char *smallPtr = (char*)scalable_malloc(falseObjectSize);
+    obtainedSize = safer_scalable_msize(smallPtr, NULL);
+    ASSERT(obtainedSize==getObjectSize(falseObjectSize), "Correct pointer not accepted?");
+    scalable_free(smallPtr);
+
+    obtainedSize = safer_scalable_msize(mem, NULL);
+    ASSERT(obtainedSize>2*blockSize, "Correct pointer not accepted?");
+    scalable_free(mem);
+    scalable_free(bufferLOH);
+}
+
+
+int TestMain () {
+    // backreference requires that initialization was done
+    checkInitialization();
+     // to succeed, leak detection must be the 1st memory-intensive test
+    TestBackRef();
 
 #if MALLOC_CHECK_RECURSION
     for( int p=MaxThread; p>=MinThread; --p ) {
@@ -184,6 +327,6 @@ int main(int argc, char* argv[]) {
         NativeParallelFor( p, TestLargeObjCache() );
     }
 
-    REPORT("done\n");
-    return 0;
+    TestObjectRecognition();
+    return Harness::Done;
 }

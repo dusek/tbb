@@ -1,4 +1,4 @@
-# Copyright 2005-2009 Intel Corporation.  All Rights Reserved.
+# Copyright 2005-2010 Intel Corporation.  All Rights Reserved.
 #
 # This file is part of Threading Building Blocks.
 #
@@ -45,8 +45,13 @@ ifndef runtime
         export runtime:=cc$(gcc_version)_kernel$(os_kernel_version)
 endif
 
-native_compiler := suncc
-export compiler ?= suncc
+ifeq ($(arch),sparc)
+        native_compiler := gcc
+        export compiler ?= gcc
+else
+        native_compiler := suncc
+        export compiler ?= suncc
+endif
 # debugger ?= gdb
 
 CMD=$(SHELL) -c

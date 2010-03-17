@@ -1,5 +1,5 @@
 /*
-    Copyright 2005-2009 Intel Corporation.  All Rights Reserved.
+    Copyright 2005-2010 Intel Corporation.  All Rights Reserved.
 
     This file is part of Threading Building Blocks.
 
@@ -159,7 +159,7 @@ namespace Harness {
 
 //! printf style remark macro
 /** Produces output only when the test is run with the -v (verbose) option. **/
-#define REMARK  !Verbose ? (void)0 : TRACE
+#define REMARK  !Verbose ? (void)0 : TRACENL
 
 //! printf style remark macro
 /** Produces output only when invoked first time. 

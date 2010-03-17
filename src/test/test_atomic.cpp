@@ -1,5 +1,5 @@
 /*
-    Copyright 2005-2009 Intel Corporation.  All Rights Reserved.
+    Copyright 2005-2010 Intel Corporation.  All Rights Reserved.
 
     This file is part of Threading Building Blocks.
 
@@ -462,9 +462,7 @@ class ArrayElement {
     char item[N];
 };
 
-__TBB_TEST_EXPORT
-int main( int argc, char* argv[] ) {
-    ParseCommandLine( argc, argv );
+int TestMain () {
 #if defined(__INTEL_COMPILER)||!defined(_MSC_VER)||_MSC_VER>=1400
     TestAtomicInteger<unsigned long long>("unsigned long long");
     TestAtomicInteger<long long>("long long");
@@ -502,8 +500,7 @@ int main( int argc, char* argv[] ) {
     ASSERT( !ParallelError, NULL );
     TestMaskedCAS<unsigned char>();
     TestMaskedCAS<unsigned short>();
-    REPORT("done\n");
-    return 0;
+    return Harness::Done;
 }
 
 template<typename T>

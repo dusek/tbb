@@ -1,5 +1,5 @@
 /*
-    Copyright 2005-2009 Intel Corporation.  All Rights Reserved.
+    Copyright 2005-2010 Intel Corporation.  All Rights Reserved.
 
     This file is part of Threading Building Blocks.
 
@@ -249,11 +249,7 @@ static void TestScanTags() {
 #include "tbb/task_scheduler_init.h"
 #include "harness_cpu.h"
 
-__TBB_TEST_EXPORT
-int main(int argc, char* argv[]) {
-    // Default is to run on two threads.
-    MinThread = MaxThread = 2;
-    ParseCommandLine(argc,argv);
+int TestMain () {
     TestScanTags();
     for( int p=MinThread; p<=MaxThread; ++p ) {
         for (int mode = 0; mode < 3; mode++) {
@@ -270,6 +266,5 @@ int main(int argc, char* argv[]) {
             ASSERT( NumberOfLiveAccumulator==0, NULL );
         }
     }
-    REPORT("done\n");
-    return 0;
+    return Harness::Done;
 }

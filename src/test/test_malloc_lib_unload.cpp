@@ -1,5 +1,5 @@
 /*
-    Copyright 2005-2009 Intel Corporation.  All Rights Reserved.
+    Copyright 2005-2010 Intel Corporation.  All Rights Reserved.
 
     This file is part of Threading Building Blocks.
 
@@ -34,26 +34,44 @@
 #include <dlfcn.h>
 #endif
 #include <tbb/tbb_stddef.h>
+#define HARNESS_NO_PARSE_COMMAND_LINE 1
 #include "harness.h"
 #include "harness_memory.h"
 
 #if TBB_USE_DEBUG
-#define DEBUG_SUFFIX "_debug"
+#define SUFFIX1 "_debug"
+#define SUFFIX2
 #else
-#define DEBUG_SUFFIX
+#define SUFFIX1
+#define SUFFIX2 "_debug"
 #endif /* TBB_USE_DEBUG */
 
-// MALLOCLIB_NAME is the name of the TBB memory allocator library.
 #if _WIN32||_WIN64
-#define MALLOCLIB_NAME "tbbmalloc" DEBUG_SUFFIX ".dll"
-#elif __APPLE__
-#define MALLOCLIB_NAME "libtbbmalloc" DEBUG_SUFFIX ".dylib"
+#define PREFIX
+#define EXT ".dll"
+#else
+#define PREFIX "lib"
+#if __APPLE__
+#define EXT ".dylib"
 #elif __linux__
-#define MALLOCLIB_NAME "libtbbmalloc" DEBUG_SUFFIX  __TBB_STRING(.so.TBB_COMPATIBLE_INTERFACE_VERSION)
+#define EXT __TBB_STRING(.so.TBB_COMPATIBLE_INTERFACE_VERSION)
 #elif __FreeBSD__ || __sun
-#define MALLOCLIB_NAME "libtbbmalloc" DEBUG_SUFFIX ".so"
+#define EXT ".so"
 #else
 #error Unknown OS
+#endif
+#endif
+
+// Form the names of the TBB memory allocator binaries.
+#define MALLOCLIB_NAME1 PREFIX "tbbmalloc" SUFFIX1 EXT
+#define MALLOCLIB_NAME2 PREFIX "tbbmalloc" SUFFIX2 EXT
+
+#if _WIN32 || _WIN64
+#define LIBRARY_HANDLE HMODULE
+#define LOAD_LIBRARY(name) LoadLibrary((name))
+#else
+#define LIBRARY_HANDLE void*
+#define LOAD_LIBRARY(name) dlopen((name), RTLD_NOW|RTLD_GLOBAL)
 #endif
 
 struct Run {
@@ -61,13 +79,11 @@ struct Run {
         void* (*malloc_ptr)(size_t);
         void (*free_ptr)(void*);
 
-#if _WIN32 || _WIN64
-        HMODULE lib = LoadLibrary(MALLOCLIB_NAME);
-#else
-        void *lib = dlopen(MALLOCLIB_NAME, RTLD_NOW|RTLD_GLOBAL);
-#endif
-        if (NULL == lib) {
-            REPORT("Can't load " MALLOCLIB_NAME "\n");
+        const char* actual_name;
+        LIBRARY_HANDLE lib = LOAD_LIBRARY(actual_name = MALLOCLIB_NAME1);
+        if (!lib)      lib = LOAD_LIBRARY(actual_name = MALLOCLIB_NAME2);
+        if (!lib) {
+            REPORT("Can't load " MALLOCLIB_NAME1 " or " MALLOCLIB_NAME2 "\n");
             exit(1);
         }
 #if _WIN32 || _WIN64
@@ -78,7 +94,7 @@ struct Run {
         (void *&)free_ptr = dlsym(lib, "scalable_free");
 #endif
         if (!malloc_ptr || !free_ptr)  {
-            REPORT("Can't find scalable_(malloc|free) in " MALLOCLIB_NAME "\n");
+            REPORT("Can't find scalable_(malloc|free) in %s \n", actual_name);
             exit(1);
         }
 
@@ -87,23 +103,26 @@ struct Run {
         free_ptr(p);
 
 #if _WIN32 || _WIN64
-        FreeLibrary(lib);
-        ASSERT(GetModuleHandle(MALLOCLIB_NAME),  
-               MALLOCLIB_NAME " must not be unloaded");
+        BOOL ret = FreeLibrary(lib);
+        ASSERT(ret, "FreeLibrary must be successful");
+        ASSERT(GetModuleHandle(actual_name),  
+               "allocator library must not be unloaded");
 #else
-        dlclose(lib);
+        int ret = dlclose(lib);
+        ASSERT(ret == 0, "dlclose must be successful");
         ASSERT(dlsym(RTLD_DEFAULT, "scalable_malloc"),  
-               MALLOCLIB_NAME " must not be unloaded");
+               "allocator library must not be unloaded");
 #endif
     }
 };
 
-int main()
-{
+int TestMain () {
+    int i;
+    ptrdiff_t memory_leak;
+
     // warm-up run
     NativeParallelFor( 1, Run() );
-
-    /* Check for leaks. 1st call to GetMemoryUsage() allocate some memory, 
+    /* 1st call to GetMemoryUsage() allocate some memory,
        but it seems memory consumption stabilized after this.
      */
     GetMemoryUsage();
@@ -111,15 +130,20 @@ int main()
     ASSERT(memory_in_use == GetMemoryUsage(), 
            "Memory consumption should not increase after 1st GetMemoryUsage() call");
 
-    for (int i=0; i<10; i++)
-        NativeParallelFor( 1, Run() );
-
-    ptrdiff_t memory_leak = GetMemoryUsage() - memory_in_use;
-    if( memory_leak>0 ) { // possibly too strong?
+    // expect that memory consumption stabilized after several runs
+    for (i=0; i<3; i++) {
+        size_t memory_in_use = GetMemoryUsage();
+        for (int j=0; j<10; j++)
+            NativeParallelFor( 1, Run() );
+        memory_leak = GetMemoryUsage() - memory_in_use;
+        if (memory_leak == 0)  // possibly too strong?
+            break;
+    }
+    if(3==i) {
+        // not stabilized, could be leak
         REPORT( "Error: memory leak of up to %ld bytes\n", static_cast<long>(memory_leak));
         exit(1);
     }
 
-    REPORT("done\n");
-    return 0;
+    return Harness::Done;
 }

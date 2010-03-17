@@ -1,5 +1,5 @@
 /*
-    Copyright 2005-2009 Intel Corporation.  All Rights Reserved.
+    Copyright 2005-2010 Intel Corporation.  All Rights Reserved.
 
     This file is part of Threading Building Blocks.
 
@@ -26,6 +26,7 @@
     the GNU General Public License.
 */
 
+#define __TBB_EXTRA_DEBUG 1 // for concurrent_hash_map
 #include "tbb/combinable.h"
 #include "tbb/task_scheduler_init.h"
 #include "tbb/parallel_for.h"
@@ -35,9 +36,19 @@
 #include "tbb/tbb_allocator.h"
 #include "tbb/tbb_thread.h"
 
+#if !TBB_USE_EXCEPTIONS && _MSC_VER
+    // Suppress "C++ exception handler used, but unwind semantics are not enabled" warning in STL headers
+    #pragma warning (push)
+    #pragma warning (disable: 4530)
+#endif
+
 #include <cstring>
 #include <vector>
 #include <utility>
+
+#if !TBB_USE_EXCEPTIONS && _MSC_VER
+    #pragma warning (pop)
+#endif
 
 #include "harness_assert.h"
 #include "harness.h"
@@ -433,14 +444,10 @@ RunAssignmentAndCopyConstructorTests() {
     RunAssignmentAndCopyConstructorTest<minimal>("minimal");
 }
 
-__TBB_TEST_EXPORT
-int main(int argc, char *argv[]) {
-   ParseCommandLine(argc, argv);
-
-   if (MaxThread > 0) {
-      RunParallelTests();
-   }
-
+int TestMain () {
+    if (MaxThread > 0) {
+        RunParallelTests();
+    }
     RunAssignmentAndCopyConstructorTests();
     for(int i = 1 <= MinThread ? MinThread : 1; i <= MaxThread; ++i) {
         REMARK("Testing local() allocation with nthreads=%d\n", i);
@@ -448,8 +455,6 @@ int main(int argc, char *argv[]) {
             TestLocalAllocations(i);
         }
     }
-
-   REPORT("done\n");
-   return 0;
+    return Harness::Done;
 }
 

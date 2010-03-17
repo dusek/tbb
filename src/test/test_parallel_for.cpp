@@ -1,5 +1,5 @@
 /*
-    Copyright 2005-2009 Intel Corporation.  All Rights Reserved.
+    Copyright 2005-2010 Intel Corporation.  All Rights Reserved.
 
     This file is part of Threading Building Blocks.
 
@@ -163,7 +163,18 @@ public:
     }
 };
 
+#if !TBB_USE_EXCEPTIONS && _MSC_VER
+    // Suppress "C++ exception handler used, but unwind semantics are not enabled" warning in STL headers
+    #pragma warning (push)
+    #pragma warning (disable: 4530)
+#endif
+
 #include <stdexcept> // std::invalid_argument
+
+#if !TBB_USE_EXCEPTIONS && _MSC_VER
+    #pragma warning (pop)
+#endif
+
 template <typename T>
 void TestParallelForWithStepSupport()
 {
@@ -193,14 +204,16 @@ void TestParallelForWithStepSupport()
 
     // Testing some corner cases
     tbb::parallel_for(static_cast<T>(2), static_cast<T>(1), static_cast<T>(1), TestFunctor<T>());
-#if !__TBB_EXCEPTION_HANDLING_TOTALLY_BROKEN
+#if TBB_USE_EXCEPTIONS && !__TBB_THROW_ACROSS_MODULE_BOUNDARY_BROKEN
     try{
         tbb::parallel_for(static_cast<T>(1), static_cast<T>(100), static_cast<T>(0), TestFunctor<T>());  // should cause std::invalid_argument
     }catch(std::invalid_argument){
         return;
     }
-    ASSERT(0, "std::invalid_argument should be thrown");
-#endif
+    catch ( ... ) {
+        ASSERT ( __TBB_EXCEPTION_TYPE_INFO_BROKEN, "Unrecognized exception. std::invalid_argument is expected" );
+    }
+#endif /* TBB_USE_EXCEPTIONS && !__TBB_THROW_ACROSS_MODULE_BOUNDARY_BROKEN */
 }
 
 // Exception support test
@@ -208,16 +221,13 @@ void TestParallelForWithStepSupport()
 #include "tbb/tbb_exception.h"
 #include "harness_eh.h"
 
-class test_functor_with_exception
-{
+#if TBB_USE_EXCEPTIONS
+class test_functor_with_exception {
 public:
-    void operator ()(size_t) const{
-        ThrowTestException();
-    }
+    void operator ()(size_t) const { ThrowTestException(); }
 };
 
-void TestExceptionsSupport()
-{
+void TestExceptionsSupport() {
     REMARK (__FUNCTION__);
     { // Tests version with a step provided
         ResetEhGlobals();
@@ -232,6 +242,7 @@ void TestExceptionsSupport()
         CATCH_AND_ASSERT();
     }
 }
+#endif /* TBB_USE_EXCEPTIONS */
 
 // Cancellation support test
 class functor_to_cancel {
@@ -257,7 +268,7 @@ class my_worker_pfor_step_task : public tbb::task
         return NULL;
     }
 public:
-    my_worker_pfor_step_task ( tbb::task_group_context &context) : my_ctx(context) { }
+    my_worker_pfor_step_task ( tbb::task_group_context &context_) : my_ctx(context_) { }
 };
 
 void TestCancellation()
@@ -273,14 +284,35 @@ void TestCancellation()
     RunCancellationTest<my_worker_pfor_step_task, CancellatorTask>();
 }
 
+#include "harness_m128.h"
+
+#if HAVE_m128
+ClassWithSSE Global1[N], Global2[N];
+
+struct SSE_Functor {
+    void operator()( tbb::blocked_range<int>& r ) const {
+        for( int i=r.begin(); i!=r.end(); ++i )
+            Global2[i] = Global1[i];
+    }     
+};
+
+//! Test that parallel_for works with stack-allocated __m128
+void TestSSE() {
+    for( int i=0; i<N; ++i ) {
+        Global1[i] = ClassWithSSE(i);
+        Global2[i] = ClassWithSSE();
+    }
+    tbb::parallel_for( tbb::blocked_range<int>(0,N), SSE_Functor() );
+    for( int i=0; i<N; ++i )
+        ASSERT( Global2[i]==ClassWithSSE(i), NULL ) ;
+}
+#endif /* HAVE_m128 */
+
 #include <cstdio>
 #include "tbb/task_scheduler_init.h"
 #include "harness_cpu.h"
 
-__TBB_TEST_EXPORT
-int main( int argc, char* argv[] ) {
-    MinThread = 1;
-    ParseCommandLine(argc,argv);
+int TestMain () {
     if( MinThread<1 ) {
         REPORT("number of threads must be positive\n");
         exit(1);
@@ -304,19 +336,22 @@ int main( int argc, char* argv[] ) {
             TestParallelForWithStepSupport<long long>();
             TestParallelForWithStepSupport<unsigned long long>();
             TestParallelForWithStepSupport<size_t>();
-#if !__TBB_EXCEPTION_HANDLING_BROKEN && !(__GNUC__==4 && __GNUC_MINOR__==1 && __TBB_ipf)
+#if TBB_USE_EXCEPTIONS && !__TBB_THROW_ACROSS_MODULE_BOUNDARY_BROKEN
             TestExceptionsSupport();
-#endif
+#endif /* TBB_USE_EXCEPTIONS && !__TBB_THROW_ACROSS_MODULE_BOUNDARY_BROKEN */
             if (p>1) TestCancellation();
+#if HAVE_m128
+            TestSSE();
+#endif /* HAVE_m128 */
+
             // Test that all workers sleep when no work
             TestCPUUserTime(p);
         }
     }
-#if __TBB_EXCEPTION_HANDLING_BROKEN || (__GNUC__==4 && __GNUC_MINOR__==1 && __TBB_ipf)
+#if __TBB_THROW_ACROSS_MODULE_BOUNDARY_BROKEN
     REPORT("Warning: Exception handling tests are skipped due to a known issue.\n");
 #endif
-    REPORT("done\n");
-    return 0;
+    return Harness::Done;
 }
 
 #if _MSC_VER

@@ -1,5 +1,5 @@
 /*
-    Copyright 2005-2009 Intel Corporation.  All Rights Reserved.
+    Copyright 2005-2010 Intel Corporation.  All Rights Reserved.
 
     This file is part of Threading Building Blocks.
 
@@ -294,7 +294,7 @@ void InitializeUniverse() {
 
 //////////////////////////////// Interface ////////////////////////////////////
 #ifdef _WINDOWS
-#include "vc7.1/resource.h"
+#include "msvs/resource.h"
 #endif
 
 int main(int argc, char *argv[])

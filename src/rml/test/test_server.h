@@ -1,5 +1,5 @@
 /*
-    Copyright 2005-2009 Intel Corporation.  All Rights Reserved.
+    Copyright 2005-2010 Intel Corporation.  All Rights Reserved.
 
     This file is part of Threading Building Blocks.
 
@@ -38,9 +38,25 @@
 #include "tbb/tbb_thread.h"
 #include "harness.h"
 #include "harness_memory.h"
+#include "harness_concurrency_tracker.h"
+
+#if __LRB__
+#ifndef __RML_USE_XNMETASCHEDULER
+#define __RML_USE_XNMETASCHEDULER 1
+#endif
+#endif /* __LRB__ */
 
 //! Define TRIVIAL as 1 to test only a single client, no nesting, no extra threads.
+#if __RML_USE_XNMETASCHEDULER
+// Multiple connections do not work yet.
+#define TRIVIAL 1
+#else
+//#if RML_USE_WCRM
+//#define TRIVIAL 1
+//#else
 #define TRIVIAL 0
+//#endif /* FIXME: RML_USE_WCRM */
+#endif /* __RML_USE_XNMETASCHEDULER */
 
 //! Maximum number of clients 
 #if TRIVIAL 
@@ -61,6 +77,8 @@ const size_t ClientStackSize[MaxClient] = {
 const size_t OverheadStackSize = 500000;
 
 const size_t JobArraySize = 1000;
+
+static bool TestSingleConnection;
 
 #if _WIN32||_WIN64
 #include <Windows.h> /* Need Sleep */
@@ -90,7 +108,7 @@ public:
         clean
     };
     tbb::atomic<int> state;
-    volatile int processing_count;
+    tbb::atomic<int> processing_count;
     void update( state_t new_state, state_t old_state ) {
         int o = state.compare_and_swap(new_state,old_state);
         ASSERT( o==old_state, "illegal transition" );
@@ -185,13 +203,13 @@ public:
     }
 
     /*override*/void cleanup( job& j_ ) {
-        if( Verbose ) 
-            printf("client %d: cleanup(%p) called\n",client_id(),&j_);
+        REMARK("client %d: cleanup(%p) called\n",client_id(),&j_);
         ASSERT( state==live, NULL );
         MyJob& j = static_cast<MyJob&>(j_);
+        while( j.state==MyJob::busy )
+            my_server->yield();
         j.update(MyJob::clean,MyJob::idle);
-        if( Verbose ) 
-            printf("client %d: cleanup(%p) returns\n",client_id(),&j_);
+        REMARK("client %d: cleanup(%p) returns\n",client_id(),&j_);
     }
    
     job* create_one_job();
@@ -202,14 +220,18 @@ protected:
         MyJob& j = static_cast<MyJob&>(j_);
         ASSERT( &j, NULL );
         j.update(MyJob::busy,MyJob::idle);
-        ++j.processing_count;
+        // use of the plain addition (not the atomic increment) is intentonial
+        j.processing_count = j.processing_count + 1;
         ASSERT( my_stack_size>OverheadStackSize, NULL ); 
 #ifdef __ia64__
         // Half of the stack is reserved for RSE, so test only remaining half.
         UseStackSpace( (my_stack_size-OverheadStackSize)/2 );
 #else
+#if ! __RML_USE_XNMETASCHEDULER
+        // XNMetaScheduler does not expose API for changing stack size.
         UseStackSpace( my_stack_size-OverheadStackSize );
-#endif 
+#endif /* ! __RML_USE_XNMETASCHEDULER */
+#endif
         j.update(MyJob::idle,MyJob::busy);
         my_server->yield();
     } 
@@ -234,6 +256,8 @@ public:
 
     void set_server( rml::server* s ) {my_server=s;}
 
+    unsigned default_concurrency() const { ASSERT( my_server, NULL); return my_server->default_concurrency(); }
+
     virtual ~ClientBase() {
         ASSERT( state==destroyed, NULL );
         ++ClientDestructions;
@@ -242,8 +266,7 @@ public:
 
 template<typename Client>
 typename Client::job* ClientBase<Client>::create_one_job() {
-    if( Verbose ) 
-        printf("client %d: create_one_job() called\n",client_id());
+    REMARK("client %d: create_one_job() called\n",client_id());
     size_t k = next_job_index++;
     ASSERT( state==live, NULL );
     // Following assertion depends on assumption that implementation does not destroy jobs until 
@@ -253,8 +276,7 @@ typename Client::job* ClientBase<Client>::create_one_job() {
     ASSERT( k<JobArraySize, "JobArraySize not big enough (problem is in test, not RML)" );
     MyJob& j = job_array[k];
     j.update(MyJob::idle,MyJob::unallocated);
-    if( Verbose ) 
-        printf("client %d: create_one_job() for k=%d returns %p\n",client_id(),int(k),&j);
+    REMARK("client %d: create_one_job() for k=%d returns %p\n",client_id(),int(k),&j);
     return &j;
 }
 
@@ -273,8 +295,6 @@ void Checker::check_number_of_threads_delivered( int n_delivered, int n_requeste
         n_avail-=n_extra;
     if( n_avail<0 ) 
         n_avail=0;
-    // If the client asked for more threads than the hardware provides, the difference becomes private threads
-    // that are available regardless of what else is running.
     if( n_requested>default_concurrency ) 
         n_avail += n_requested-default_concurrency;
     int n_expected = n_requested;
@@ -285,10 +305,10 @@ void Checker::check_number_of_threads_delivered( int n_delivered, int n_requeste
         msg = "server delivered more threads than were theoretically available";
     else if( n_delivered>n_expected ) 
         msg = "server delivered more threads than expected";
-    else if( n_delivered<n_expected ) 
-        msg = "server delivered fewer threads than ideal";
+    else if( n_delivered<n_expected )
+        msg = "server delivered fewer threads than ideal; or, the system is overloaded?";
     if( msg ) {
-        printf("Warning: %s (n_delivered=%d n_avail=%d n_requested=%d n_extra=%d default_concurrency=%d)\n",
+        REPORT("Warning: %s (n_delivered=%d n_avail=%d n_requested=%d n_extra=%d default_concurrency=%d)\n",
                msg, n_delivered, n_avail, n_requested, n_extra, default_concurrency );
     }
 }
@@ -324,13 +344,14 @@ void DoOneConnection<Factory,Client>::operator()( size_t i ) const {
     Factory factory;
     memset( &factory, 0, sizeof(factory) );
     typename Factory::status_type status = factory.open();
+    ASSERT( status==Factory::st_success, NULL );
 
     typename Factory::server_type* server; 
     status = factory.make_server( server, *client );
-    if( Verbose ) 
-        printf("client %d: opened server n_thread=%d nesting=(%d,%d)\n",
+    ASSERT( status==Factory::st_success, NULL );
+    Harness::ConcurrencyTracker ct;
+    REMARK("client %d: opened server n_thread=%d nesting=(%d,%d)\n",
                client->client_id(), n_thread, nesting.level, nesting.limit);
-
     client->set_server( server );
     Checker checker( *server );
  
@@ -338,25 +359,63 @@ void DoOneConnection<Factory,Client>::operator()( size_t i ) const {
 
     // Close the connection
     client->expect_close_connection = true;
-    if( Verbose )
-        printf("client %d: calling request_close_connection\n", client->client_id());
+    REMARK("client %d: calling request_close_connection\n", client->client_id());
+#if !RML_USE_WCRM
+    int default_concurrency = server->default_concurrency();
+#endif
     server->request_close_connection();
     // Client deletes itself when it sees call to acknowledge_close_connection from server.
     factory.close();
+#if !RML_USE_WCRM
+    if( TestSingleConnection )
+        __TBB_ASSERT_EX( uintptr_t(factory.scratch_ptr)==uintptr_t(default_concurrency), "under/over subscription?" );
+#endif
 }
 
 //! Test with n_threads threads and n_client clients.
 template<typename Factory, typename Client>
 void SimpleTest() {
+    Harness::ConcurrencyTracker::Reset();
+    TestSingleConnection = true;
     for( int n_thread=MinThread; n_thread<=MaxThread; ++n_thread ) {
-        // Test nested connections
-        DoOneConnection<Factory,Client> doc(n_thread,Nesting(0,1),0,false);
+        // Test a single connection, no nesting, no extra threads
+        DoOneConnection<Factory,Client> doc(n_thread,Nesting(0,0),0,false);
         doc(0);
     }
-    // Let RML catch up.
-    while( ClientConstructions!=ClientDestructions ) {
-        MilliSleep(1);
+#if !TRIVIAL
+    TestSingleConnection = false;
+#if !RML_USE_WCRM
+    for( int n_thread=MinThread; n_thread<=MaxThread; ++n_thread ) {
+#else
+    for( int n_thread=MinThread; n_thread<=3; ++n_thread ) {
+#endif
+        // Test parallel connections
+#if !RML_USE_WCRM
+        for( int n_client=1; n_client<=int(MaxClient); ++n_client ) {
+#else
+        for( int n_client=1; n_client<=3; ++n_client ) {
+#endif
+            REMARK("SimpleTest: n_thread=%d n_client=%d\n",n_thread,n_client);
+            NativeParallelFor( n_client, DoOneConnection<Factory,Client>(n_thread,Nesting(0,0),0,false) );
+        }
+#if !RML_USE_WCRM
+        // Test server::independent_thread_number_changed
+        for( int n_extra=-4; n_extra<=32; n_extra=n_extra+1+n_extra/5 ) {
+            DoOneConnection<Factory,Client> doc(n_thread,Nesting(0,0),n_extra,true);
+            doc(0);
+        }
+        // Test nested connections
+        DoOneConnection<Factory,Client> doc(n_thread,Nesting(0,2),0,false);
+        doc(0);
+#endif
     }
+#if !RML_USE_WCRM
+    ASSERT( Harness::ConcurrencyTracker::PeakParallelism()>1, "No multiple connections exercised?" );
+#endif
+#endif
+    // Let RML catch up.
+    while( ClientConstructions!=ClientDestructions )
+        MilliSleep(1);
 }
 
 static void check_server_info( void* arg, const char* server_info )
@@ -374,24 +433,22 @@ void VerifyInitialization( int n_thread ) {
     ASSERT( status!=Factory::st_not_found, "could not find RML library" );
     ASSERT( status!=Factory::st_incompatible, NULL );
     ASSERT( status==Factory::st_success, NULL );
-    factory.call_with_server_info( check_server_info, (void*)"Intel(R) RML library built:" );
+    factory.call_with_server_info( check_server_info, (void*)"Intel(R) RML library" );
     typename Factory::server_type* server; 
     status = factory.make_server( server, *client );
     ASSERT( status!=Factory::st_incompatible, NULL );
     ASSERT( status!=Factory::st_not_found, NULL );
     ASSERT( status==Factory::st_success, NULL );
-    if( Verbose ) 
-        printf("client %d: opened server n_thread=%d nesting=(%d,%d)\n",
+    REMARK("client %d: opened server n_thread=%d nesting=(%d,%d)\n",
                client->client_id(), n_thread, 0, 0);
     ASSERT( server, NULL );
     client->set_server( server );
 
     DoClientSpecificVerification( *server, n_thread );
- 
+
     // Close the connection
     client->expect_close_connection = true;
-    if( Verbose )
-        printf("client %d: calling request_close_connection\n", client->client_id());
+    REMARK("client %d: calling request_close_connection\n", client->client_id());
     server->request_close_connection();
     // Client deletes itself when it sees call to acknowledge_close_connection from server.
     factory.close();
