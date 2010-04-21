@@ -214,11 +214,6 @@ namespace internal {
 
 using std::size_t;
 
-//! An unsigned integral type big enough to hold a pointer.
-/** There's no guarantee by the C++ standard that a size_t is really big enough,
-    but it happens to be for all platforms of interest. */
-typedef size_t uintptr;
-
 //! Compile-time constant that is upper bound on cache line/sector size.
 /** It should be used only in situations where having a compile-time upper 
     bound is more useful than a run-time exact answer.

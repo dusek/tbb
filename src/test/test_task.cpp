@@ -137,14 +137,10 @@ static int Expected( int child_count, int depth ) {
 #include "harness.h"
 
 void TestStealLimit( int nthread ) {
-#if __LRB__
-    REMARK( "skipping steal limiting heuristics for %d threads\n", nthread );
-#else//!LRB
     REMARK( "testing steal limiting heuristics for %d threads\n", nthread );
     tbb::task_scheduler_init init(nthread);
     tbb::task &t = *new( tbb::task::allocate_root() ) UnboundedlyRecursiveOnUnboundedStealingTask();
     tbb::task::spawn_root_and_wait(t);
-#endif//__LRB__
 }
 
 //! Test task::spawn( task_list& )
@@ -645,19 +641,19 @@ public:
         m_GoAhead = true;
         if ( m_Depth > 0 ) {
             TaskWithChildToSteal &t = *new( tbb::task::allocate_child() ) TaskWithChildToSteal(m_Depth - 1);
-            t.SpawnMeAndWaitOn( *this );
+            t.SpawnAndWaitOnParent();
         }
         else
             Harness::Sleep(50); // The last task in chain sleeps for 50 ms
         return NULL;
     }
 
-    void SpawnMeAndWaitOn( tbb::task& parent_ ) {
-        parent_.set_ref_count( 2 );
-        parent_.spawn( *this );
+    void SpawnAndWaitOnParent() {
+        parent()->set_ref_count( 2 );
+        parent()->spawn( *this );
         while (!this->m_GoAhead )
             __TBB_Yield();
-        parent_.wait_for_all();
+        parent()->wait_for_all();
     }
 }; // TaskWithChildToSteal
 
@@ -671,7 +667,7 @@ void TestDispatchLoopResponsiveness() {
     tbb::task &r = *new( tbb::task::allocate_root() ) tbb::empty_task;
     for ( int depth = 0; depth < 3; ++depth ) {
         TaskWithChildToSteal &t = *new( r.allocate_child() ) TaskWithChildToSteal(depth);
-        t.SpawnMeAndWaitOn(r);
+        t.SpawnAndWaitOnParent();
     }
     r.destroy(r);
     // The success criteria of this test is not hanging
@@ -689,8 +685,8 @@ void TestWaitDiscriminativenessWithoutStealing() {
     for( int i=0; i < NumChildren; ++i ) {
         tbb::empty_task &t1 = *new( r1.allocate_child() ) tbb::empty_task;
         tbb::empty_task &t2 = *new( r2.allocate_child() ) tbb::empty_task;
-        r1.spawn(t1);
-        r2.spawn(t2);
+        tbb::task::spawn(t1);
+        tbb::task::spawn(t2);
     }
     r2.wait_for_all();
     ASSERT( r2.ref_count() <= 1, "Not all children of r2 executed" );
@@ -701,31 +697,44 @@ void TestWaitDiscriminativenessWithoutStealing() {
     r2.destroy(r2);
 }
 
+
+using tbb::internal::spin_wait_until_eq;
+
+//! Deterministic emulation of a long running task
+class LongRunningTask : public tbb::task {
+    volatile bool& m_CanProceed;
+
+    tbb::task* execute() {
+        spin_wait_until_eq( m_CanProceed, true );
+        return NULL;
+    }
+public:
+    LongRunningTask ( volatile bool& canProceed ) : m_CanProceed(canProceed) {}
+};
+
 void TestWaitDiscriminativenessWithStealing() {
     if( tbb::tbb_thread::hardware_concurrency() < 2 )
         return;
     REMARK( "testing that task::wait_for_all is specific to the root it is called on (one worker)\n" );
+    volatile bool canProceed = false;
     tbb::task_scheduler_init init(2);
     tbb::task &r1 = *new( tbb::task::allocate_root() ) tbb::empty_task;
     tbb::task &r2 = *new( tbb::task::allocate_root() ) tbb::empty_task;
     r1.set_ref_count( 2 );
     r2.set_ref_count( 2 );
-    tbb::task& t1 = *new( r1.allocate_child() ) RecursiveTask(8,3);
-    tbb::task& t2 = *new( r2.allocate_child() ) RecursiveTask(64,5);
-    r1.spawn(t1);
-    // Give the worker a chance to steal and execute r1
-    Harness::Sleep(100);
-    r2.spawn(t2);
+    tbb::task& t1 = *new( r1.allocate_child() ) tbb::empty_task;
+    tbb::task& t2 = *new( r2.allocate_child() ) LongRunningTask(canProceed);
+    tbb::task::spawn(t2);
+    tbb::task::spawn(t1);
     r1.wait_for_all();
     ASSERT( r1.ref_count() <= 1, "Not all children of r1 executed" );
     ASSERT( r2.ref_count() == 2, "All children of r2 prematurely executed" );
+    canProceed = true;
     r2.wait_for_all();
     ASSERT( r2.ref_count() <= 1, "Not all children of r2 executed" );
     r1.destroy(r1);
     r2.destroy(r2);
 }
-
-using tbb::internal::spin_wait_until_eq;
 
 struct MasterBody : NoAssign, Harness::NoAfterlife {
     static Harness::SpinBarrier my_barrier;

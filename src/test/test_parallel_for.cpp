@@ -349,7 +349,7 @@ int TestMain () {
         }
     }
 #if __TBB_THROW_ACROSS_MODULE_BOUNDARY_BROKEN
-    REPORT("Warning: Exception handling tests are skipped due to a known issue.\n");
+    REPORT("Known issue: exception handling tests are skipped.\n");
 #endif
     return Harness::Done;
 }

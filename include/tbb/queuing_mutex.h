@@ -107,7 +107,7 @@ public:
         /** Inverted (0 - blocked, 1 - acquired the mutex) for the sake of 
             zero-initialization.  Defining it as an entire word instead of
             a byte seems to help performance slightly. */
-        internal::uintptr going;
+        uintptr_t going;
     };
 
     void __TBB_EXPORTED_METHOD internal_construct();

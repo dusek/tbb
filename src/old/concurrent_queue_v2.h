@@ -59,7 +59,7 @@ protected:
     //! Prefix on a page
     struct page {
         page* next;
-        uintptr mask; 
+        uintptr_t mask; 
     };
 
     //! Capacity of the queue

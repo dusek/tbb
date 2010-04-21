@@ -87,8 +87,9 @@ struct Run {
             exit(1);
         }
 #if _WIN32 || _WIN64
-        (void *&)malloc_ptr = GetProcAddress(lib, "scalable_malloc");
-        (void *&)free_ptr = GetProcAddress(lib, "scalable_free");
+        // casts at both sides are to soothe MinGW compiler
+        (void *&)malloc_ptr = (void*)GetProcAddress(lib, "scalable_malloc");
+        (void *&)free_ptr = (void*)GetProcAddress(lib, "scalable_free");
 #else
         (void *&)malloc_ptr = dlsym(lib, "scalable_malloc");
         (void *&)free_ptr = dlsym(lib, "scalable_free");

@@ -684,7 +684,7 @@ void DoCondVarTest()
         TestConditionVariable<Mutex>( "mutex", p );
     }
 #if __TBB_THROW_ACROSS_MODULE_BOUNDARY_BROKEN
-    REPORT("Warning: Exception handling tests are skipped due to a known issue.\n");
+    REPORT("Known issue: exception handling tests are skipped.\n");
 #elif TBB_USE_EXCEPTIONS
     TestUniqueLockException<Mutex>( "mutex" );
     TestUniqueLockException<RecursiveMutex>( "recursive_mutex" );

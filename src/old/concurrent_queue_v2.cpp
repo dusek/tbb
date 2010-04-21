@@ -176,7 +176,7 @@ void micro_queue::push( const void* item, ticket k, concurrent_queue_base& base 
         }
         base.copy_item( *p, index, item );
         // If no exception was thrown, mark item as present.
-        p->mask |= uintptr(1)<<index;
+        p->mask |= uintptr_t(1)<<index;
     } 
 }
 
@@ -190,7 +190,7 @@ bool micro_queue::pop( void* dst, ticket k, concurrent_queue_base& base ) {
     bool success = false; 
     {
         pop_finalizer finalizer( *this, k+concurrent_queue_rep::n_queue, index==base.items_per_page-1 ? &p : NULL ); 
-        if( p.mask & uintptr(1)<<index ) {
+        if( p.mask & uintptr_t(1)<<index ) {
             success = true;
             base.assign_and_destroy_item( dst, p, index );
         }

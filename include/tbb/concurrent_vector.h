@@ -505,14 +505,14 @@ public:
 
     //! Construct empty vector.
     explicit concurrent_vector(const allocator_type &a = allocator_type())
-        : internal::allocator_base<T, A>(a)
+        : internal::allocator_base<T, A>(a), internal::concurrent_vector_base()
     {
         vector_allocator_ptr = &internal_allocator;
     }
 
     //! Copying constructor
     concurrent_vector( const concurrent_vector& vector, const allocator_type& a = allocator_type() )
-        : internal::allocator_base<T, A>(a)
+        : internal::allocator_base<T, A>(a), internal::concurrent_vector_base()
     {
         vector_allocator_ptr = &internal_allocator;
         __TBB_TRY {
@@ -527,7 +527,7 @@ public:
     //! Copying constructor for vector with different allocator type
     template<class M>
     concurrent_vector( const concurrent_vector<T, M>& vector, const allocator_type& a = allocator_type() )
-        : internal::allocator_base<T, A>(a)
+        : internal::allocator_base<T, A>(a), internal::concurrent_vector_base()
     {
         vector_allocator_ptr = &internal_allocator;
         __TBB_TRY {

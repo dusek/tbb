@@ -139,8 +139,8 @@ static void SerialTest() {
     }
 }
 
-#include "harness.h"
 #include "tbb/parallel_for.h"
+#include "harness.h"
 
 const int N = 1<<5;
 

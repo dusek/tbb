@@ -32,65 +32,10 @@ cd "$tbb_root"  # keep this comments here
 tbb_root="$PWD" # to make it unsensible
 cd "$bin_dir"   # to EOL encoding
 [ "`uname`" = "Darwin" ] && dll_path="DYLD_LIBRARY_PATH" || dll_path="LD_LIBRARY_PATH" #
-custom_exp="$CXXFLAGS" #
-if [ -z "$TBB_CUSTOM_VARS_SH" ]; then #
-custom_exp_sh="" #
-else #
-custom_exp_sh="export $TBB_CUSTOM_VARS_SH" #
-fi #
-if [ -z "$TBB_CUSTOM_VARS_CSH" ]; then #
-custom_exp_csh="" #
-else #
-custom_exp_csh="setenv $TBB_CUSTOM_VARS_CSH" #
-fi #
-if [ -z "$1" ]; then # custom tbb_build_dir, can't make with TBB_INSTALL_DIR
-[ -f ./tbbvars.sh ] || cat >./tbbvars.sh <<EOF
-#!/bin/bash
-tbb_root="${tbb_root}" #
-tbb_bin="${bin_dir}" #
-if [ -z "\$CPATH" ]; then #
-    export CPATH="\${tbb_root}/include" #
-else #
-    export CPATH="\${tbb_root}/include:\$CPATH" #
-fi #
-if [ -z "\$LIBRARY_PATH" ]; then #
-    export LIBRARY_PATH="\${tbb_bin}" #
-else #
-    export LIBRARY_PATH="\${tbb_bin}:\$LIBRARY_PATH" #
-fi #
-if [ -z "\$${dll_path}" ]; then #
-    export ${dll_path}="\${tbb_bin}" #
-else #
-    export ${dll_path}="\${tbb_bin}:\$${dll_path}" #
-fi #
-${custom_exp_sh} #
-EOF
-[ -f ./tbbvars.csh ] || cat >./tbbvars.csh <<EOF
-#!/bin/csh
-setenv tbb_root "${tbb_root}" #
-setenv tbb_bin "${bin_dir}" #
-if (! \$?CPATH) then #
-    setenv CPATH "\${tbb_root}/include" #
-else #
-    setenv CPATH "\${tbb_root}/include:\$CPATH" #
-endif #
-if (! \$?LIBRARY_PATH) then #
-    setenv LIBRARY_PATH "\${tbb_bin}" #
-else #
-    setenv LIBRARY_PATH "\${tbb_bin}:\$LIBRARY_PATH" #
-endif #
-if (! \$?${dll_path}) then #
-    setenv ${dll_path} "\${tbb_bin}" #
-else #
-    setenv ${dll_path} "\${tbb_bin}:\$${dll_path}" #
-endif #
-${custom_exp_csh} #
-EOF
-else # make with TBB_INSTALL_DIR
 [ -f ./tbbvars.sh ] || cat >./tbbvars.sh <<EOF
 #!/bin/bash
 export TBB30_INSTALL_DIR="${tbb_root}" #
-tbb_bin="\${TBB30_INSTALL_DIR}/build/$1" #
+tbb_bin="${bin_dir}" #
 if [ -z "\$CPATH" ]; then #
     export CPATH="\${TBB30_INSTALL_DIR}/include" #
 else #
@@ -106,12 +51,12 @@ if [ -z "\$${dll_path}" ]; then #
 else #
     export ${dll_path}="\${tbb_bin}:\$${dll_path}" #
 fi #
-${custom_exp_sh} #
+${TBB_CUSTOM_VARS_SH} #
 EOF
 [ -f ./tbbvars.csh ] || cat >./tbbvars.csh <<EOF
 #!/bin/csh
 setenv TBB30_INSTALL_DIR "${tbb_root}" #
-setenv tbb_bin "\${TBB30_INSTALL_DIR}/build/$1" #
+setenv tbb_bin "${bin_dir}" #
 if (! \$?CPATH) then #
     setenv CPATH "\${TBB30_INSTALL_DIR}/include" #
 else #
@@ -127,6 +72,5 @@ if (! \$?${dll_path}) then #
 else #
     setenv ${dll_path} "\${tbb_bin}:\$${dll_path}" #
 endif #
-${custom_exp_csh} #
+${TBB_CUSTOM_VARS_CSH} #
 EOF
-fi #

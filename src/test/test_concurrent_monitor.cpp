@@ -55,7 +55,7 @@ public:
     private:
         QueuingMutex* mutex;
         ScopedLock* next;
-        internal::uintptr going;
+        uintptr_t going;
         internal::concurrent_monitor::thread_context thr_ctx;
     };
 

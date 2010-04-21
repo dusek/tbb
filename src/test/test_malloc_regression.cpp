@@ -52,7 +52,7 @@ void RunThread(const Body& body, const Arg& arg) {
 #include "harness_memory.h"
 
 // The regression test for bug #1518 where thread boot strap allocations "leaked"
-bool test_bootstrap_leak(void) {
+bool TestBootstrapLeak() {
     /* In the bug 1518, each thread leaked ~384 bytes.
        Initially, scalable allocator maps 1MB. Thus it is necessary to take out most of this space.
        1MB is chunked into 16K blocks; of those, one block is for thread boot strap, and one more 
@@ -98,14 +98,44 @@ bool test_bootstrap_leak(void) {
     return memory_leak<=0;
 }
 
+bool TestReallocMsize(size_t startSz) {
+    bool passed = true;
+
+    char *buf = (char*)scalable_malloc(startSz);
+    ASSERT(buf, "");
+    size_t realSz = scalable_msize(buf);
+    ASSERT(realSz>=startSz, "scalable_msize must be not less then allocated size");
+    memset(buf, 'a', realSz-1);
+    buf[realSz-1] = 0;
+    char *buf1 = (char*)scalable_realloc(buf, 2*realSz);
+    ASSERT(buf1, "");
+    ASSERT(scalable_msize(buf1)>=2*realSz, 
+           "scalable_msize must be not less then allocated size");
+    buf1[2*realSz-1] = 0;
+    if ( strspn(buf1, "a") < realSz-1 ) {
+        REPORT( "Error: data broken for %d Bytes object.\n", startSz);
+        passed = false;
+    }
+    scalable_free(buf1);
+
+    return passed;
+}
+
 int TestMain () {
     bool passed = true;
     // Check whether memory usage data can be obtained; if not, skip test_bootstrap_leak.
-    if( !GetMemoryUsage() )
-        return Harness::Skipped;
+    if( GetMemoryUsage() )
+        passed &= TestBootstrapLeak();
 
-    passed &= test_bootstrap_leak();
-
+    for (size_t a=1, b=1, sum=1; sum<=64*1024; ) {
+        passed &= TestReallocMsize(sum);
+        a = b;
+        b = sum;
+        sum = a+b;
+    }
+    for (size_t a=2; a<=64*1024; a*=2)
+        passed &= TestReallocMsize(a);
+    
     ASSERT( passed, "Test failed" );
     return Harness::Done;
 }

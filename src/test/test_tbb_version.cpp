@@ -71,7 +71,7 @@ void initialize_strings_vector(std::vector <string_pair>* vector);
 const char stderr_stream[] = "version_test.err";
 const char stdout_stream[] = "version_test.out";
 
-__TBB_TEST_EXPORT
+HARNESS_EXPORT
 int main(int argc, char *argv[] ) {
 /* We first introduced runtime version identification in 3014 */
 #if TBB_INTERFACE_VERSION>=3014 
@@ -81,9 +81,6 @@ int main(int argc, char *argv[] ) {
     ASSERT(tbb::TBB_runtime_interface_version()==TBB_INTERFACE_VERSION,
            "Running with the library of different version than the test was compiled against");
 #endif
-#if __LRB__
-    (argc, argv);
-#else
     __TBB_TRY {
         FILE *stream_out;
         FILE *stream_err;   
@@ -207,7 +204,6 @@ int main(int argc, char *argv[] ) {
     } __TBB_CATCH(...) {
         ASSERT( 0,"unexpected exception" );
     }
-#endif//!__LRB__
     REPORT("done\n");
     return 0;
 }

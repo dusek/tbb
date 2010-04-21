@@ -29,15 +29,17 @@ PROG=sudoku
 ARGS=input1 4 0 -p
 
 # The C++ compiler
-CXX=icc
+ifeq ($(CXX),icc)
+CXX0XFLAGS=-std=c++0x -D_TBB_CPP0X
+endif # icc
 
 all:	release test
 
 release: *.cpp
-	icc -O2 -DNDEBUG $(CXXFLAGS) -o $(PROG) $^ -ltbb $(LIBS) -std=c++0x
+	$(CXX) -O2 -DNDEBUG $(CXXFLAGS) -o $(PROG) $^ -ltbb $(LIBS) $(CXX0XFLAGS)
 
 debug: *.cpp
-	icc -O0 -g -DTBB_USE_DEBUG $(CXXFLAGS) -o $(PROG) $^ -ltbb_debug $(LIBS) -std=c++0x
+	$(CXX) -O0 -g -DTBB_USE_DEBUG $(CXXFLAGS) -o $(PROG) $^ -ltbb_debug $(LIBS) $(CXX0XFLAGS)
 
 clean:
 	$(RM) $(PROG) *.o *.d

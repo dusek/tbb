@@ -759,7 +759,7 @@ public:
 
     //! Construct empty table.
     concurrent_hash_map(const allocator_type &a = allocator_type())
-        : my_allocator(a)
+        : internal::hash_map_base(), my_allocator(a)
     {}
 
     //! Construct empty table with n preallocated buckets. This number serves also as initial concurrency level.
@@ -771,7 +771,7 @@ public:
 
     //! Copy constructor
     concurrent_hash_map( const concurrent_hash_map& table, const allocator_type &a = allocator_type())
-        : my_allocator(a)
+        : internal::hash_map_base(), my_allocator(a)
     {
         internal_copy(table);
     }

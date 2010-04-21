@@ -217,7 +217,7 @@ void micro_queue::push( const void* item, ticket k, concurrent_queue_base& base 
         base.copy_item( *p, index, item );
         ITT_NOTIFY( sync_releasing, p );
         // If no exception was thrown, mark item as present.
-        p->mask |= uintptr(1)<<index;
+        p->mask |= uintptr_t(1)<<index;
         tail_counter += concurrent_queue_rep::n_queue; 
     } __TBB_CATCH(...) {
         ++base.my_rep->n_invalid_entries;
@@ -236,7 +236,7 @@ bool micro_queue::pop( void* dst, ticket k, concurrent_queue_base& base ) {
     bool success = false; 
     {
         micro_queue_pop_finalizer finalizer( *this, base, k+concurrent_queue_rep::n_queue, index==base.items_per_page-1 ? &p : NULL ); 
-        if( p.mask & uintptr(1)<<index ) {
+        if( p.mask & uintptr_t(1)<<index ) {
             success = true;
             ITT_NOTIFY( sync_acquired, dst );
             ITT_NOTIFY( sync_acquired, head_page );
@@ -296,7 +296,7 @@ concurrent_queue_base::page* micro_queue::make_copy( concurrent_queue_base& base
     new_page->next = NULL;
     new_page->mask = src_page->mask;
     for( ; begin_in_page!=end_in_page; ++begin_in_page, ++g_index )
-        if( new_page->mask & uintptr(1)<<begin_in_page )
+        if( new_page->mask & uintptr_t(1)<<begin_in_page )
             base.copy_page_item( *new_page, begin_in_page, *src_page, begin_in_page );
     return new_page;
 }
@@ -545,7 +545,7 @@ public:
             __TBB_ASSERT(p,NULL);
             size_t i = k/concurrent_queue_rep::n_queue & (my_queue.items_per_page-1);
             item = static_cast<unsigned char*>(static_cast<void*>(p)) + offset_of_last + my_queue.item_size*i;
-            return (p->mask & uintptr(1)<<i)!=0;
+            return (p->mask & uintptr_t(1)<<i)!=0;
         }
     }
 };

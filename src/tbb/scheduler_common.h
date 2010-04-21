@@ -116,7 +116,7 @@ enum free_task_hint {
     But we do not want to publish it, so it is here instead. */
 inline bool AssertOkay( const task& task ) {
     __TBB_ASSERT( &task!=NULL, NULL );
-    __TBB_ASSERT( (uintptr)&task % task_alignment == 0, "misaligned task" );
+    __TBB_ASSERT( (uintptr_t)&task % task_alignment == 0, "misaligned task" );
     __TBB_ASSERT( (unsigned)task.state()<=(unsigned)task::recycle, "corrupt task (invalid state)" );
     return true;
 }

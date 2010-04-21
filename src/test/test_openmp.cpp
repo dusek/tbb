@@ -198,7 +198,7 @@ const int N = 13*13;
 
 int TestMain () {
 #ifdef _PGO_INSTRUMENT
-    REPORT("Warning: test_openmp.exe has problems if compiled with -prof-genx; skipping\n");
+    REPORT("Known issue: test_openmp.exe has problems if compiled with -prof-genx; skipping\n");
     return Harness::Skipped;
 #endif
     MinThread = 1;

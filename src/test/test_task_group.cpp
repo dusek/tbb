@@ -210,7 +210,8 @@ public:
         , m_pImpl( new SharedGroupBodyImpl(numThreads, sharingMode) )
     {}
     SharedGroupBody ( const SharedGroupBody& src )
-        : Harness::NoAfterlife()
+        : NoAssign()
+        , Harness::NoAfterlife()
         , m_bOwner(false)
         , m_pImpl(src.m_pImpl)
     {}
@@ -841,7 +842,7 @@ int TestMain () {
 #endif
     }
 #if __TBB_THROW_ACROSS_MODULE_BOUNDARY_BROKEN
-    REPORT("Warning: Exception handling tests are skipped because of a known issue.\n");
+    REPORT("Known issue: exception handling tests are skipped.\n");
 #endif
     return Harness::Done;
 }

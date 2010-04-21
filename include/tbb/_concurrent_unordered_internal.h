@@ -26,6 +26,9 @@
     the GNU General Public License.
 */
 
+/* Container implementations in this header are based on PPL implementations 
+   provided by Microsoft. */
+
 #ifndef __TBB_concurrent_unordered_internal_H
 #define __TBB_concurrent_unordered_internal_H
 

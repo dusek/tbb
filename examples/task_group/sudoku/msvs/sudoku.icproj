@@ -1,18 +1,11 @@
-<?xml version="1.0" encoding="UTF-8"?>
+<?xml version="1.0" encoding="Windows-1252"?>
 <VisualStudioProject
 	ProjectType="Intel C++ Project"
 	Version="11.1"
 	Name="sudoku"
-	ProjectGUID="{E8A5340E-FEF1-498F-823D-7BE969C3FBBC}"
-	VCNestedProjectGUID="{22C97765-E25B-46AA-A6AB-FC8526FACCD7}"
+	ProjectGUID="{CB292CD9-903E-464C-AAFE-E7A49003565C}"
+	VCNestedProjectGUID="{C931C7A2-074E-4150-9E7A-39A03250411E}"
 	VCNestedProjectFileName="sudoku.vcproj">
-	<Configurations>
-		<Configuration
-			Name="Release|Win32">
-			<Tool
-				Name="CppCmplrTool"
-				Cpp0xSupport="true"/>
-		</Configuration>
-	</Configurations>
+	<Configurations/>
 	<Files/>
 </VisualStudioProject>

@@ -168,7 +168,7 @@ public:
     };
 
 private:
-    typedef internal::uintptr state_t;
+    typedef uintptr_t state_t;
     static const state_t WRITER = 1;
     static const state_t WRITER_PENDING = 2;
     static const state_t READERS = ~(WRITER | WRITER_PENDING);

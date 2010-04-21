@@ -45,9 +45,9 @@ using namespace std;
 /** Instances *must* be allocated/freed using methods herein, because the C++ declaration
     represents only the header of a much larger object in memory. */
 class TextSlice {
-    //! Pointer to one past last character in slice
+    //! Pointer to one past last character in sequence
     char* logical_end;
-    //! Pionter to one past last available byte in slice.
+    //! Pointer to one past last available byte in sequence.
     char* physical_end;
 public:
     //! Allocate a TextSlice object that can hold up to max_size characters.
@@ -60,7 +60,7 @@ public:
     }
     //! Free a TextSlice object 
     void free() {
-        tbb::tbb_allocator<char>().deallocate((char*)this,size());
+        tbb::tbb_allocator<char>().deallocate((char*)this,sizeof(TextSlice)+(physical_end-begin())+1);
     } 
     //! Pointer to beginning of sequence
     char* begin() {return (char*)(this+1);}
@@ -68,14 +68,14 @@ public:
     char* end() {return logical_end;}
     //! Length of sequence
     size_t size() const {return logical_end-(char*)(this+1);}
-    //! Maximum number of characters that can be appended to sequkence
+    //! Maximum number of characters that can be appended to sequence
     size_t avail() const {return physical_end-logical_end;}
     //! Append sequence [first,last) to this sequence.
     void append( char* first, char* last ) {
         memcpy( logical_end, first, last-first );
         logical_end += last-first;
     }
-    //! Set end to given value.
+    //! Set end() to given value.
     void set_end( char* p ) {logical_end=p;}
 };
 
@@ -140,11 +140,11 @@ MyTransformFilter::MyTransformFilter() :
 
 /*override*/void* MyTransformFilter::operator()( void* item ) {
     TextSlice& input = *static_cast<TextSlice*>(item);
-    // Add terminating NULL so that strtol works right even if number is at end of the input.
+    // Add terminating null so that strtol works right even if number is at end of the input.
     *input.end() = '\0';
     char* p = input.begin();
-    TextSlice& output = *TextSlice::allocate( 2*MAX_CHAR_PER_INPUT_SLICE );
-    char* q = output.begin();
+    TextSlice& out = *TextSlice::allocate( 2*MAX_CHAR_PER_INPUT_SLICE );
+    char* q = out.begin();
     for(;;) {
         while( p<input.end() && !isdigit(*p) ) 
             *q++ = *p++; 
@@ -158,9 +158,9 @@ MyTransformFilter::MyTransformFilter() :
         sprintf(q,"%ld",y);
         q = strchr(q,0);
     }
-    output.set_end(q);
+    out.set_end(q);
     input.free();
-    return &output;
+    return &out;
 }
          
 //! Filter that writes each buffer to a file.
@@ -178,13 +178,13 @@ MyOutputFilter::MyOutputFilter( FILE* output_file ) :
 }
 
 void* MyOutputFilter::operator()( void* item ) {
-    TextSlice& output = *static_cast<TextSlice*>(item);
-    size_t n = fwrite( output.begin(), 1, output.size(), my_output_file );
-    if( n!=output.size() ) {
-        fprintf(stderr,"Can't write into %s file\n", OutputFileName);
+    TextSlice& out = *static_cast<TextSlice*>(item);
+    size_t n = fwrite( out.begin(), 1, out.size(), my_output_file );
+    if( n!=out.size() ) {
+        fprintf(stderr,"Can't write into file '%s'\n", OutputFileName);
         exit(1);
     }
-    output.free();
+    out.free();
     return NULL;
 }
 

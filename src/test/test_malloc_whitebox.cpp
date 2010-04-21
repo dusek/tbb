@@ -259,6 +259,7 @@ void TestObjectRecognition() {
     LargeObjectHdr* headerLO = (LargeObjectHdr*)falseLO-1;
     headerLO->memoryBlock = (LargeMemoryBlock*)bufferLOH;
     headerLO->memoryBlock->unalignedSize = 2*blockSize + headersSize;
+    headerLO->memoryBlock->objectSize = blockSize + headersSize;
     headerLO->backRefIdx = newBackRef();
     setBackRef(headerLO->backRefIdx, headerLO);
     ASSERT(scalable_msize(falseLO) == blockSize + headersSize,
@@ -298,7 +299,7 @@ void TestObjectRecognition() {
     scalable_free(smallPtr);
 
     obtainedSize = safer_scalable_msize(mem, NULL);
-    ASSERT(obtainedSize>2*blockSize, "Correct pointer not accepted?");
+    ASSERT(obtainedSize>=2*blockSize, "Correct pointer not accepted?");
     scalable_free(mem);
     scalable_free(bufferLOH);
 }

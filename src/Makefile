@@ -27,6 +27,7 @@
 tbb_root?=..
 examples_root:=$(tbb_root)/examples
 include $(tbb_root)/build/common.inc
+
 .PHONY: all tbb tbbmalloc test test_no_depends release debug examples clean
 
 all: release debug examples
@@ -176,11 +177,11 @@ clean_examples:
 
 mkdir_release:
 	$(shell $(MD) "$(work_dir)_release" >$(NUL) 2>$(NUL))
-	$(if $(subst undefined,,$(origin_build_dir)),,cd "$(work_dir)_release" && $(MAKE_TBBVARS) $(tbb_build_prefix)_release)
+	@echo Created $(work_dir)_release directory
 
 mkdir_debug:
 	$(shell $(MD) "$(work_dir)_debug" >$(NUL) 2>$(NUL))
-	$(if $(subst undefined,,$(origin_build_dir)),,cd "$(work_dir)_debug" && $(MAKE_TBBVARS) $(tbb_build_prefix)_debug)
+	@echo Created $(work_dir)_debug directory
 
 codecov: compiler=$(if $(findstring windows,$(tbb_os)),icl,icc)
 codecov:

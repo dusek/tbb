@@ -69,8 +69,8 @@ namespace internal {
         static const int min_segment_size = segment_index_t(1)<<lg_min_segment_size;
       
         static segment_index_t segment_index_of( size_t index ) { 
-            uintptr i = index|1<<(lg_min_segment_size-1);
-            uintptr j = __TBB_Log2(i); 
+            uintptr_t i = index|1<<(lg_min_segment_size-1);
+            uintptr_t j = __TBB_Log2(i); 
             return segment_index_t(j-(lg_min_segment_size-1)); 
         }
 

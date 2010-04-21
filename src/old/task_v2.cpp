@@ -33,9 +33,8 @@
     The macro switch should be set prior to including task.h
     or any TBB file that might bring task.h up.
 */
-#define TBB_DEPRECATED_TASK_INTERFACE 1
-// Do not include task.h directly. Use scheduler_common.h instead
-#include "../tbb/scheduler_common.h"
+#define __TBB_DEPRECATED_TASK_INTERFACE 1
+#include "tbb/task.h"
 
 namespace tbb {
 

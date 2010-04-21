@@ -352,7 +352,7 @@
 			<Tool
 				Name="VCPostBuildEventTool"
 				Description="Copying DLLs and PDBs"
-        CommandLine="call &quot;$(TBB30_INSTALL_DIR)\examples\common\copy_libraries.bat&quot;  ia32 release &quot;$(OutDir)&quot;"
+        CommandLine="call &quot;$(TBB30_INSTALL_DIR)\examples\common\copy_libraries.bat&quot;  intel64 release &quot;$(OutDir)&quot;"
 			/>
 		</Configuration>
 		<Configuration

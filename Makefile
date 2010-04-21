@@ -72,9 +72,8 @@ clean_examples:
 
 mkdir:
 	$(shell $(MD) "$(work_dir)_release" >$(NUL) 2>$(NUL))
-	$(if $(subst undefined,,$(origin_build_dir)),,cd "$(work_dir)_release" && $(MAKE_TBBVARS) $(tbb_build_prefix)_release)
 	$(shell $(MD) "$(work_dir)_debug" >$(NUL) 2>$(NUL))
-	$(if $(subst undefined,,$(origin_build_dir)),,cd "$(work_dir)_debug" && $(MAKE_TBBVARS) $(tbb_build_prefix)_debug)
+	@echo Created $(work_dir)_release and ..._debug directories
 
 info:
 	@echo OS: $(tbb_os)

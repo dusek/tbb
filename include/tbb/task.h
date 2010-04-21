@@ -76,7 +76,7 @@ namespace interface5 {
         class task_base: tbb::internal::no_copy {
         __TBB_TASK_BASE_ACCESS:
             friend class tbb::task;
-#if !TBB_DEPRECATED_TASK_INTERFACE
+
             //! Schedule task for execution when a worker becomes available.
             static void spawn( task& t );
  
@@ -89,15 +89,13 @@ namespace interface5 {
             static tbb::internal::allocate_additional_child_of_proxy allocate_additional_child_of( task& t ) {
                 return tbb::internal::allocate_additional_child_of_proxy(t);
             }
-#endif /* !TBB_DEPRECATED_TASK_INTERFACE */
-#if !TBB_DEPRECATED_TASK_INTERFACE || __TBB_BUILD
+
             //! Destroy a task.
             /** Usually, calling this method is unnecessary, because a task is
                 implicitly deleted after its execute() method runs.  However,
                 sometimes a task needs to be explicitly deallocated, such as
                 when a root task is used as the parent in spawn_and_wait_for_all. */
             static void __TBB_EXPORTED_FUNC destroy( task& victim );
-#endif /* TBB_DEPRECATED_TASK_INTERFACE || __TBB_BUILD */
         }; 
     } // internal
 } // interface5
@@ -296,7 +294,6 @@ public:
 
     enum traits_type {
         exact_exception = 0x0001ul << traits_offset,
-        no_cancellation = 0x0002ul << traits_offset,
         concurrent_wait = 0x0004ul << traits_offset,
 #if TBB_USE_CAPTURED_EXCEPTION
         default_traits = 0
@@ -518,27 +515,20 @@ public:
         return *reinterpret_cast<internal::allocate_child_proxy*>(this);
     }
 
-#if TBB_DEPRECATED_TASK_INTERFACE
-    //! Like allocate_child, except that task's parent becomes "t", not this.
-    /** Typically used in conjunction with schedule_to_reexecute to implement while loops.
-        Atomically increments the reference count of t.parent() */
-    internal::allocate_additional_child_of_proxy allocate_additional_child_of( task& t ) {
-        return internal::allocate_additional_child_of_proxy(t);
-    }
+    //! Define recommended static form via import from base class.
+    using task_base::allocate_additional_child_of;
 
+#if __TBB_DEPRECATED_TASK_INTERFACE
     //! Destroy a task.
     /** Usually, calling this method is unnecessary, because a task is
         implicitly deleted after its execute() method runs.  However,
         sometimes a task needs to be explicitly deallocated, such as
         when a root task is used as the parent in spawn_and_wait_for_all. */
     void __TBB_EXPORTED_METHOD destroy( task& t );
-#else
-    //! Define recommended static form via import from base class.
-    using task_base::allocate_additional_child_of;
-
+#else /* !__TBB_DEPRECATED_TASK_INTERFACE */
     //! Define recommended static form via import from base class.
     using task_base::destroy;
-#endif /* TBB_DEPRECATED_TASK_INTERFACE */
+#endif /* !__TBB_DEPRECATED_TASK_INTERFACE */
 
     //------------------------------------------------------------------------
     // Recycling of tasks
@@ -623,20 +613,8 @@ public:
 #endif /* TBB_USE_THREADING_TOOLS||TBB_USE_ASSERT */
     }
 
-#if TBB_DEPRECATED_TASK_INTERFACE
-    //! Schedule task for execution when a worker becomes available.
-    /** After all children spawned so far finish their method task::execute,
-        their parent's method task::execute may start running.  Therefore, it
-        is important to ensure that at least one child has not completed until
-        the parent is ready to run. */
-    void spawn( task& t );
-
-    //! Spawn multiple tasks and clear list.
-    void spawn( task_list& list );
-#else
     //! Define recommended static forms via import from base class.
     using task_base::spawn;
-#endif /* TBB_DEPRECATED_TASK_INTERFACE */
 
     //! Similar to spawn followed by wait_for_all, but more efficient.
     void spawn_and_wait_for_all( task& child ) {
@@ -803,21 +781,11 @@ public:
     }
 };
 
-#if TBB_DEPRECATED_TASK_INTERFACE
-inline void task::spawn( task& t ) 
-#else
-inline void interface5::internal::task_base::spawn( task& t ) 
-#endif
-{
+inline void interface5::internal::task_base::spawn( task& t ) {
     t.prefix().owner->spawn( t, t.prefix().next );
 }
 
-#if TBB_DEPRECATED_TASK_INTERFACE
-inline void task::spawn( task_list& list ) 
-#else
-inline void interface5::internal::task_base::spawn( task_list& list ) 
-#endif
-{
+inline void interface5::internal::task_base::spawn( task_list& list ) {
     if( task* t = list.first ) {
         t->prefix().owner->spawn( *t, *list.next_ptr );
         list.clear();

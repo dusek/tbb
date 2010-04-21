@@ -64,7 +64,7 @@ public:
         spin_mutex* my_mutex; 
 
         //! Value to store into spin_mutex::flag to unlock the mutex.
-        internal::uintptr my_unlock_value;
+        uintptr_t my_unlock_value;
 
         //! Like acquire, but with ITT instrumentation.
         void __TBB_EXPORTED_METHOD internal_acquire( spin_mutex& m );

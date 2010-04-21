@@ -26,7 +26,6 @@
     the GNU General Public License.
 */
 
-#define __TBB_EXTRA_DEBUG 1 // for concurrent_hash_map
 #include "tbb/enumerable_thread_specific.h"
 #include "tbb/task_scheduler_init.h"
 #include "tbb/parallel_for.h"
@@ -75,13 +74,14 @@ template<size_t N=tbb::internal::NFS_MaxLineSize>
 class minimal: NoAssign {
 private:
     int my_value;
-    char pad[N-sizeof(int)];
+    bool is_constructed;
+    char pad[N-sizeof(int) - sizeof(bool)];
 public:
-    minimal() : my_value(0) { ++construction_counter; }
-    minimal( const minimal &m ) : my_value(m.my_value) { ++construction_counter; }
-    ~minimal() { ++destruction_counter; }
-    void set_value( const int i ) { my_value = i; }
-    int value( ) const { return my_value; }
+    minimal() : NoAssign(), my_value(0) { ++construction_counter; is_constructed = true; }
+    minimal( const minimal &m ) : NoAssign(), my_value(m.my_value) { ++construction_counter; is_constructed = true; }
+    ~minimal() { ++destruction_counter; ASSERT(is_constructed, NULL); is_constructed = false; }
+    void set_value( const int i ) { ASSERT(is_constructed, NULL); my_value = i; }
+    int value( ) const { ASSERT(is_constructed, NULL); return my_value; }
 };
 
 //

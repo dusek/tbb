@@ -29,8 +29,8 @@
 #ifndef __TBB_combinable_H
 #define __TBB_combinable_H
 
-#include "tbb/enumerable_thread_specific.h"
-#include "tbb/cache_aligned_allocator.h"
+#include "enumerable_thread_specific.h"
+#include "cache_aligned_allocator.h"
 
 namespace tbb {
 /** \name combinable

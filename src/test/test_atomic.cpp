@@ -60,6 +60,11 @@ struct TestStruct {
     #pragma warning( pop )
 #endif
 
+#if defined(__INTEL_COMPILER)
+    // reference to EBX in a function requiring stack alignment
+    #pragma warning( disable: 998 )
+#endif
+
 //! Test compare_and_swap template members of class atomic<T> for memory_semantics=M
 template<typename T,tbb::memory_semantics M>
 void TestCompareAndSwapAcquireRelease( T i, T j, T k ) {
@@ -259,7 +264,7 @@ void TestAtomicInteger( const char* name ) {
     // SUNPRO_CC does have this problem as well
     if( sizeof(T)==8 ) {
         if( sizeof(AlignmentChecker<T>)!=2*sizeof(tbb::atomic<T>) ) {
-            REPORT("Warning: alignment for atomic<%s> is wrong (known issue with gcc 3.3 and sunCC 5.9 2008/01/28 for IA32)\n",name);
+            REPORT("Known issue: alignment for atomic<%s> is wrong with gcc 3.3 and sunCC 5.9 2008/01/28 for IA32\n",name);
         }
     } else
 #endif /* ( __linux__ && __TBB_x86_32 && __GNUC__==3 && __GNUC_MINOR__==3 ) || defined(__SUNPRO_CC) */
@@ -467,7 +472,7 @@ int TestMain () {
     TestAtomicInteger<unsigned long long>("unsigned long long");
     TestAtomicInteger<long long>("long long");
 #else
-    REPORT("Warning: atomic<64-bits> not tested because of known problem in Microsoft compiler\n");
+    REPORT("Known issue: atomic<64-bits> does not compile with VC 7.1\n");
 #endif /*defined(__INTEL_COMPILER)||!defined(_MSC_VER)||_MSC_VER>=1400 */
     TestAtomicInteger<unsigned long>("unsigned long");
     TestAtomicInteger<long>("long");

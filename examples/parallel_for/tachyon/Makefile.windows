@@ -76,7 +76,8 @@ DATASET = balls
 ARGS =
 
 # Add these for tbb/tbb1d release builds
-CXXFLAGS_TBB_NDEBUG = $(CXXFLAGS)
+# /GL is a workaround to prevent run-time crash when built by VS2010
+CXXFLAGS_TBB_NDEBUG = $(CXXFLAGS) /GL
 LIBS_TBB_NDEBUG = tbb.lib $(LIBS)
 
 # Add these for tbb/tbb1d debug builds

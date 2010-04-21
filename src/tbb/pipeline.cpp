@@ -613,8 +613,15 @@ void pipeline::run( size_t max_number_of_live_tokens
 
 #if __TBB_TASK_GROUP_CONTEXT
 void pipeline::run( size_t max_number_of_live_tokens ) {
-    tbb::task_group_context context;
-    run(max_number_of_live_tokens, context);
+    if( filter_list ) {
+        // Construct task group context with the exception propagation mode expected 
+        // by the pipeline caller.
+        uintptr_t ctx_traits = filter_list->my_filter_mode & filter::exact_exception_propagation ? 
+                task_group_context::default_traits :
+                task_group_context::default_traits & ~task_group_context::exact_exception;
+        task_group_context context(task_group_context::bound, ctx_traits);
+        run(max_number_of_live_tokens, context);
+    }
 }
 #endif // __TBB_TASK_GROUP_CONTEXT
 

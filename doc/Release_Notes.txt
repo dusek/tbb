@@ -1,6 +1,6 @@
 ------------------------------------------------------------------------
 Intel(R) Threading Building Blocks - Release Notes
-		  Version 2.2
+		  Version 3.0
 ------------------------------------------------------------------------
 
 
@@ -61,33 +61,31 @@ Software - Supported Operating Systems
 	Microsoft* Windows* Server 2008
 	Microsoft* Windows* 7
     Linux* Systems
-	Red Hat* Enterprise Linux* 3, 4, 5
+	Red Hat* Enterprise Linux* 4, 5
 	    (when using Red Hat* Enterprise Linux* 4 with Intel(R)
 	    Itanium(R) processors, operating system Update 2 or higher
 	    is recommended)
-	Fedora* 10, 11
+	Fedora* 10, 11, 12
 	    (not with Intel(R) Itanium(R) processors)
 	Asianux* 3.0
-	Debian* GNU/Linux* 4.0, 5.0
-	Ubuntu* 8.04, 8.10, 9.04
-	SuSE* Linux* Enterprise Server (SLES) 9, 10, 11
-	SGI* Propack* 5.0 (not with IA-32 architecture processors)
-	Turbolinux* 11
+	Debian* GNU/Linux* 5.0
+	Ubuntu* 9.04, 9.10
+	SuSE* Linux* Enterprise Server (SLES) 10, 11
     Mac OS* X Systems
 	Mac OS* X 10.5.6 or higher
 
 Software - Supported Compilers
 
-    Microsoft* Visual C++* 7.1 (Microsoft* Visual Studio* .NET 2003,
-	Windows* systems only, deprecated)
     Microsoft* Visual C++ 8.0 (Microsoft* Visual Studio* 2005,
 	Windows* systems only)
     Microsoft* Visual C++ 9.0 (Microsoft* Visual Studio* 2008,
 	Windows* systems only)
+    Microsoft* Visual C++ 10.0 (Microsoft* Visual Studio* 2010,
+	Windows* systems only)
     Intel(R) C++ Compiler 10.1 or higher
     For each supported Linux* operating system, the standard gcc
 	version provided with that operating system is supported,
-	including gcc 3.2 through 4.4
+	including gcc 3.4 through 4.4
     For each supported Mac OS* X operating system, the standard gcc
 	version provided with that operating system is supported,
 	including: 4.0.1 or higher (Xcode* tool suite 3.1.2 or higher)
@@ -100,10 +98,6 @@ Please note the following with respect to this particular release of
 Intel(R) Threading Building Blocks.
 
 Library Issues
-
-    - The atomic<long long> and atomic<unsigned long long> templates are
-	not supported when using the Microsoft* Visual C++* 7.1
-	(Microsoft* Visual Studio* .NET 2003) compiler.
 
     - Unhandled exceptions in the user code executed in the context of
 	TBB algorithms or containers may cause segmentation faults when
@@ -139,16 +133,8 @@ Library Issues
 
     - Intel(R) TBB 2.2 Update 1 fixed known bugs with exception handling
 	in concurrent_vector. For applications using both exceptions 
-	and concurrent_vector, recompilation with newer TBB version 
-	is recommended.
-
-    - To use TBB examples with Microsoft Visual Studio* 2010 Beta2,
-	first open a solution for a previous version of Visual Studio
-	and proceed with automatic conversion of the projects. Then 
-	open project properties, and for every configuration replace 
-	vc8 or vc9 with vc_mt in TBB paths used in:
-	- Linker -> General -> Additional Library Directories;
-	- Build Events -> Post-Build Event -> Command Line.
+	and concurrent_vector, recompilation with TBB 2.2 Update 1
+	or a newer version is recommended.
 
 ------------------------------------------------------------------------
 Copyright (C) 2005-2010 Intel Corporation.  All Rights Reserved.

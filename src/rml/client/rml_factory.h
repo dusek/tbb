@@ -89,8 +89,9 @@ const ::rml::versioned_object::version_type CLIENT_VERSION = 2;
 }
 
 void FACTORY::close() {
-    if( library_handle ) {
+    if( library_handle )
         (*my_wait_to_close_routine)(*this);
+    if( (size_t)library_handle>FACTORY::c_dont_unload ) {
         dynamic_link_handle h = library_handle;
         dynamic_unlink(h);
         library_handle = NULL;

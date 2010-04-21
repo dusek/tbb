@@ -38,11 +38,11 @@ SQUARE = square.cpp
 
 all:	release test
 
-release: $(SQUARE)
-	$(CXX) -O2 -DNDEBUG $(CXXFLAGS) -o $(PROG) $^ -ltbb $(LIBS)
+release: $(SQUARE) input.txt
+	$(CXX) -O2 -DNDEBUG $(CXXFLAGS) -o $(PROG) $(SQUARE) -ltbb $(LIBS)
 
-debug: $(SQUARE)
-	$(CXX) -O0 -g -DTBB_USE_DEBUG $(CXXFLAGS) -o $(PROG) $^ -ltbb_debug $(LIBS)
+debug: $(SQUARE) input.txt
+	$(CXX) -O0 -g -DTBB_USE_DEBUG $(CXXFLAGS) -o $(PROG) $(SQUARE) -ltbb_debug $(LIBS)
 
 clean:
 	$(RM) $(PROG) $(GEN) *.o *.d input.txt output.txt

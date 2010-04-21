@@ -56,8 +56,8 @@
 #endif /* _OPENMP */
 #include "tbb/tbb_profiling.h"
 
-#ifndef TBBTEST_LOW_WORKLOAD
-    #define TBBTEST_LOW_WORKLOAD TBB_USE_THREADING_TOOLS
+#ifndef TBB_TEST_LOW_WORKLOAD
+    #define TBB_TEST_LOW_WORKLOAD TBB_USE_THREADING_TOOLS
 #endif
 
 // This test deliberately avoids a "using tbb" statement,
@@ -181,11 +181,11 @@ void Test( const char * name ) {
     Counter<M> counter;
     counter.value = 0;
     tbb::profiling::set_name(counter.mutex, name);
-#if TBBTEST_LOW_WORKLOAD
+#if TBB_TEST_LOW_WORKLOAD
     const int n = 10000;
 #else
     const int n = 100000;
-#endif /* TBBTEST_LOW_WORKLOAD */
+#endif /* TBB_TEST_LOW_WORKLOAD */
     tbb::tick_count t0 = tbb::tick_count::now();
     tbb::parallel_for(tbb::blocked_range<size_t>(0,n,n/10),AddOne<Counter<M> >(counter));
     tbb::tick_count t1 = tbb::tick_count::now();
@@ -302,11 +302,11 @@ template<typename M>
 void TestReaderWriterLock( const char * mutex_name ) {
     REMARK( "%s readers & writers time = ", mutex_name );
     Invariant<M,8> invariant(mutex_name);
-#if TBBTEST_LOW_WORKLOAD
+#if TBB_TEST_LOW_WORKLOAD
     const size_t n = 10000;
 #else
     const size_t n = 500000;
-#endif /* TBBTEST_LOW_WORKLOAD */
+#endif /* TBB_TEST_LOW_WORKLOAD */
     tbb::tick_count t0 = tbb::tick_count::now();
     tbb::parallel_for(tbb::blocked_range<size_t>(0,n,n/100),TwiddleInvariant<Invariant<M,8> >(invariant));
     tbb::tick_count t1 = tbb::tick_count::now();
@@ -566,7 +566,7 @@ int TestMain () {
     for( int p=MinThread; p<=MaxThread; ++p ) {
         tbb::task_scheduler_init init( p );
         REMARK( "testing with %d workers\n", static_cast<int>(p) );
-#if TBBTEST_LOW_WORKLOAD
+#if TBB_TEST_LOW_WORKLOAD
         // The amount of work is decreased in this mode to bring the length 
         // of the runs under tools into the tolerable limits.
         const int n = 1;

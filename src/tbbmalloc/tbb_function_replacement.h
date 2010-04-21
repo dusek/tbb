@@ -62,16 +62,16 @@ inline UINT_PTR Ptr2Addrint(LPVOID ptr);
 inline LPVOID Addrint2Ptr(UINT_PTR ptr);
 
 // Use this value as the maximum size the trampoline region
-const int MAX_PROBE_SIZE = 32;
+const unsigned MAX_PROBE_SIZE = 32;
 
 // The size of a jump relative instruction "e9 00 00 00 00"
-const int SIZE_OF_RELJUMP = 5;
+const unsigned SIZE_OF_RELJUMP = 5;
 
 // The size of jump RIP relative indirect "ff 25 00 00 00 00"
-const int SIZE_OF_INDJUMP = 6;
+const unsigned SIZE_OF_INDJUMP = 6;
 
 // The size of address we put in the location (in Intel64)
-const int SIZE_OF_ADDRESS = 8;
+const unsigned SIZE_OF_ADDRESS = 8;
 
 // The max distance covered in 32 bits: 2^31 - 1 - C
 // where C should not be smaller than the size of a probe.
@@ -79,6 +79,6 @@ const int SIZE_OF_ADDRESS = 8;
 const __int64 MAX_DISTANCE = (((__int64)1 << 31) - 1) - MAX_PROBE_SIZE;
 
 // The maximum number of distinct buffers in memory
-const int MAX_NUM_BUFFERS = 256;
+const ptrdiff_t MAX_NUM_BUFFERS = 256;
 
 #endif //__TBB_function_replacement_H

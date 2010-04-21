@@ -633,7 +633,7 @@ bool concurrent_queue_iterator_rep<T>::get_item( T*& item, size_t k ) {
 /** @ingroup containers */
 template<typename Value>
 class concurrent_queue_iterator_base_v3 : no_assign {
-    //! Concurrentconcurrent_queue over which we are iterating.
+    //! Represents concurrent_queue over which we are iterating.
     /** NULL if one past last element in queue. */
     concurrent_queue_iterator_rep<Value>* my_rep;
 
@@ -655,7 +655,8 @@ protected:
     }
 
     //! Copy constructor
-    concurrent_queue_iterator_base_v3( const concurrent_queue_iterator_base_v3& i ) : my_rep(NULL), my_item(NULL) {
+    concurrent_queue_iterator_base_v3( const concurrent_queue_iterator_base_v3& i )
+    : no_assign(), my_rep(NULL), my_item(NULL) {
         assign(i);
     }
 
@@ -830,9 +831,9 @@ protected:
     //! Size of an item
     size_t item_size;
 
-#if __GNUC__==3&&__GNUC_MINOR__==3
+#if __TBB_GCC_3_3_PROTECTED_BROKEN
 public:
-#endif /* __GNUC__==3&&__GNUC_MINOR__==3 */
+#endif
     template<typename T>
     struct padded_page: page {
         //! Not defined anywhere - exists to quiet warnings.

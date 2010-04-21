@@ -26,7 +26,10 @@
     the GNU General Public License.
 */
 
-
+// Before including pipeline.h, set up the variable to count heap allocated
+// filter_node objects, and make it known for the header.
+int filter_node_count = 0;
+#define __TBB_TEST_FILTER_NODE_COUNT filter_node_count
 #include "tbb/pipeline.h"
 
 #include "tbb/atomic.h"
@@ -103,10 +106,12 @@ static const tbb::filter::mode filter_table[] = { tbb::filter::parallel, tbb::fi
 const unsigned number_of_filter_types = sizeof(filter_table)/sizeof(filter_table[0]);
 
 void run_function_spec() {
+    ASSERT(!filter_node_count, NULL);
     input_filter<void> i_filter;
     // Test pipeline that contains only one filter
     for( unsigned i = 0; i<number_of_filter_types; i++) {
-        tbb::filter_t<void, void> one_filter = tbb::make_filter<void, void>(filter_table[i], i_filter);
+        tbb::filter_t<void, void> one_filter( filter_table[i], i_filter );
+        ASSERT(filter_node_count==1, "some filter nodes left after previous iteration?");
         tbb::parallel_pipeline( n_tokens, one_filter );
 #if __TBB_LAMBDAS_PRESENT
         tbb::atomic<int> counter;
@@ -121,10 +126,13 @@ void run_function_spec() {
         );
 #endif
     }
+    ASSERT(!filter_node_count, "filter_node objects leaked");
 }
 
 template<typename type1, typename type2>
 void run_function() {
+    ASSERT(!filter_node_count, NULL);
+
     const size_t number_of_filters = 3;
 
     input_filter<type1> i_filter;
@@ -141,10 +149,11 @@ void run_function() {
         tbb::filter::mode filter_type[number_of_filter_types];
         for( unsigned i=0; i<number_of_filters; ++i, temp/=number_of_filter_types ) 
             filter_type[i] = filter_table[temp%number_of_filter_types];
-        
-        tbb::filter_t<void, type1> filter1 = tbb::make_filter<void, type1>(filter_type[0], i_filter);
-        tbb::filter_t<type1, type2> filter2 = tbb::make_filter<type1, type2>(filter_type[1], m_filter);
-        tbb::filter_t<type2, void> filter3 = tbb::make_filter<type2, void>(filter_type[2], o_filter);
+
+        tbb::filter_t<void, type1> filter1( filter_type[0], i_filter );
+        tbb::filter_t<type1, type2> filter2( filter_type[1], m_filter );
+        tbb::filter_t<type2, void> filter3( filter_type[2], o_filter );
+        ASSERT(filter_node_count==3, "some filter nodes left after previous iteration?");
         // Create filters sequence when parallel_pipeline() is being run
         tbb::parallel_pipeline( n_tokens, filter1 & filter2 & filter3 );
         check_and_reset();
@@ -177,16 +186,21 @@ void run_function() {
         check_and_reset();
 
         // Construct filters, make a copy, destroy the original filters, and run with the copy
+        int cnt = filter_node_count;
         {
             tbb::filter_t<void, void>* p123 = new tbb::filter_t<void,void> (
                    tbb::make_filter<void, type1>(filter_type[0], i_filter) &
                    tbb::make_filter<type1, type2>(filter_type[1], m_filter) &
                    tbb::make_filter<type2, void>(filter_type[2], o_filter) );
+            ASSERT(filter_node_count==cnt+5, "filter node accounting error?");
             tbb::filter_t<void, void> copy123( *p123 );
             delete p123;
+            ASSERT(filter_node_count==cnt+5, "filter nodes deleted prematurely?");
             tbb::parallel_pipeline( n_tokens, copy123 );
             check_and_reset();
         }
+        ASSERT(filter_node_count==cnt, "scope ended but filter nodes not deleted?");
+
 #if __TBB_LAMBDAS_PRESENT
         tbb::atomic<int> counter;
         counter = max_counter;
@@ -207,6 +221,7 @@ void run_function() {
         check_and_reset();
 #endif
     }
+    ASSERT(!filter_node_count, "filter_node objects leaked");
 }
 
 #include "tbb/task_scheduler_init.h"

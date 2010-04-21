@@ -916,7 +916,7 @@ void TestExceptions() {
                             try {
                                 FooWithAssign &foo = victim.at(i);
                                 if( !foo.is_valid_or_zero() ) {
-                                    std::printf("i: %d size: %zd req_size: %zd  state: %d\n", i, size, req_size, foo.state);
+                                    std::printf("i: %d size: %u req_size: %u  state: %d\n", i, unsigned(size), unsigned(req_size), foo.state);
                                 }
                                 int bar = foo.zero_bar();
                                 if(m != grow) ASSERT( bar == i || (t && bar == 0), NULL);
@@ -1007,7 +1007,7 @@ int TestMain () {
 #endif
     TestSort();
 #if __TBB_THROW_ACROSS_MODULE_BOUNDARY_BROKEN
-    REPORT("Warning: Exception safety test is skipped due to a known issue.\n");
+    REPORT("Known issue: exception safety test is skipped.\n");
 #elif TBB_USE_EXCEPTIONS
     TestExceptions();
 #endif /* TBB_USE_EXCEPTIONS */

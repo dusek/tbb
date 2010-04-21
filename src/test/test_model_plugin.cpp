@@ -26,17 +26,6 @@
     the GNU General Public License.
 */
 
-#if __LRB__
-
-#ifndef _USRDLL
-#define HARNESS_NO_PARSE_COMMAND_LINE 1
-#include "harness.h"
-int TestMain() {
-    return Harness::Skipped;
-}
-#endif
-
-#else /* !__LRB__ */
 
 #if _WIN32 || _WIN64
 #include <windows.h>
@@ -228,8 +217,7 @@ int TestMain () {
             report_error_in("LoadLibrary");
             return -1;
 #else
-            REPORT("skip\n");
-            return 0;
+            return Harness::Skipped;
 #endif
         }
         my_plugin_call = (PLUGIN_CALL) GetProcAddress(hLib, "plugin_call");
@@ -272,4 +260,3 @@ int TestMain () {
 }
 
 #endif//_USRDLL
-#endif//__LRB__

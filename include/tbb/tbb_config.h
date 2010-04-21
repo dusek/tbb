@@ -173,6 +173,11 @@
     #define __TBB_ICL_11_1_CODE_GEN_BROKEN 1
 #endif
 
+#if __GNUC__==3 && __GNUC_MINOR__==3 && !defined(__INTEL_COMPILER)
+    /** A bug in GCC 3.3 with access to nested classes declared in protected area */
+    #define __TBB_GCC_3_3_PROTECTED_BROKEN 1
+#endif
+
 #if __FreeBSD__
     /** A bug in FreeBSD 8.0 results in kernel panic when there is contention 
         on a mutex created with this attribute. **/
@@ -189,8 +194,5 @@
     #define __TBB_ICC_ASM_VOLATILE_BROKEN 1
 #endif
 
-#if __LRB__
-#include "tbb_config_lrb.h"
-#endif
 
 #endif /* __TBB_tbb_config_H */

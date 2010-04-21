@@ -46,7 +46,7 @@ DEFINE RPolygon_allocator rAlloc;
 
 enum MallocBehavior {
     UseMalloc,
-    UseScalableAllocator,
+    UseScalableAllocator
 };
 
 DEFINE MallocBehavior gMBehavior INIT(UseScalableAllocator);

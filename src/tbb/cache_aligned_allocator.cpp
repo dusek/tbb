@@ -222,9 +222,9 @@ void* NFS_Allocate( size_t n, size_t element_size, void* /*hint*/ ) {
         throw_exception(eid_bad_alloc);
     }
     // Round up to next line
-    unsigned char* result = (unsigned char*)((uintptr)(base+m)&-m);
+    unsigned char* result = (unsigned char*)((uintptr_t)(base+m)&-m);
     // Record where block actually starts.  Use low order bit to record whether we used malloc or MallocHandler.
-    ((uintptr*)result)[-1] = uintptr(base)|(bytes>=BigSize);
+    ((uintptr_t*)result)[-1] = uintptr_t(base)|(bytes>=BigSize);
 #endif // __TBB_IS_SCALABLE_MALLOC_FIX_READY    
     /** The test may fail with TBB_IS_SCALABLE_MALLOC_FIX_READY = 1 
         because scalable_malloc returns addresses aligned to 64 when large block is allocated */
@@ -237,11 +237,11 @@ void NFS_Free( void* p ) {
     (*padded_free_handler)( p );
 #else
     if( p ) {
-        __TBB_ASSERT( (uintptr)p>=0x4096, "attempt to free block not obtained from cache_aligned_allocator" );
+        __TBB_ASSERT( (uintptr_t)p>=0x4096, "attempt to free block not obtained from cache_aligned_allocator" );
         // Recover where block actually starts
         unsigned char* base = ((unsigned char**)p)[-1];
-        __TBB_ASSERT( (void*)((uintptr)(base+NFS_LineSize)&-NFS_LineSize)==p, "not allocated by NFS_Allocate?" );
-        if( uintptr(base)&1 ) {
+        __TBB_ASSERT( (void*)((uintptr_t)(base+NFS_LineSize)&-NFS_LineSize)==p, "not allocated by NFS_Allocate?" );
+        if( uintptr_t(base)&1 ) {
             // Is a big block - use free
             free(base-1);
         } else {
@@ -267,18 +267,18 @@ static void* padded_allocate( size_t bytes, size_t alignment ) {
         throw_exception(eid_bad_alloc);
     }
     // Round up to the next line
-    unsigned char* result = (unsigned char*)((uintptr)(base+alignment)&-alignment);
+    unsigned char* result = (unsigned char*)((uintptr_t)(base+alignment)&-alignment);
     // Record where block actually starts.
-    ((uintptr*)result)[-1] = uintptr(base);
+    ((uintptr_t*)result)[-1] = uintptr_t(base);
     return result;    
 }
 
 static void padded_free( void* p ) {
     if( p ) {
-        __TBB_ASSERT( (uintptr)p>=0x4096, "attempt to free block not obtained from cache_aligned_allocator" );
+        __TBB_ASSERT( (uintptr_t)p>=0x4096, "attempt to free block not obtained from cache_aligned_allocator" );
         // Recover where block actually starts
         unsigned char* base = ((unsigned char**)p)[-1];
-        __TBB_ASSERT( (void*)((uintptr)(base+NFS_LineSize)&-NFS_LineSize)==p, "not allocated by NFS_Allocate?" );
+        __TBB_ASSERT( (void*)((uintptr_t)(base+NFS_LineSize)&-NFS_LineSize)==p, "not allocated by NFS_Allocate?" );
         free(base);
     }
 }

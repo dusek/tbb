@@ -81,6 +81,14 @@ private:
     //! 5th bit distinguishes thread-bound and regular filters.
     static const unsigned char filter_is_bound = 0x1<<5;  
 
+    //! 7th bit defines exception propagation mode expected by the application.
+    static const unsigned char exact_exception_propagation =
+#if TBB_USE_CAPTURED_EXCEPTION
+            0x0;
+#else
+            0x1<<7;
+#endif /* TBB_USE_CAPTURED_EXCEPTION */
+
     static const unsigned char current_version = __TBB_PIPELINE_VERSION(5);
     static const unsigned char version_mask = 0x7<<1; // bits 1-3 are for version
 public:
@@ -98,7 +106,7 @@ protected:
     filter( bool is_serial_ ) : 
         next_filter_in_pipeline(not_in_pipeline()),
         my_input_buffer(NULL),
-        my_filter_mode(static_cast<unsigned char>(is_serial_ ? serial : parallel)),
+        my_filter_mode(static_cast<unsigned char>((is_serial_ ? serial : parallel) | exact_exception_propagation)),
         prev_filter_in_pipeline(not_in_pipeline()),
         my_pipeline(NULL),
         next_segment(NULL)
@@ -107,7 +115,7 @@ protected:
     filter( mode filter_mode ) :
         next_filter_in_pipeline(not_in_pipeline()),
         my_input_buffer(NULL),
-        my_filter_mode(static_cast<unsigned char>(filter_mode)),
+        my_filter_mode(static_cast<unsigned char>(filter_mode | exact_exception_propagation)),
         prev_filter_in_pipeline(not_in_pipeline()),
         my_pipeline(NULL),
         next_segment(NULL)
@@ -185,7 +193,7 @@ public:
     };
 protected:
     thread_bound_filter(mode filter_mode): 
-         filter(static_cast<mode>(filter_mode | filter::filter_is_bound))
+         filter(static_cast<mode>(filter_mode | filter::filter_is_bound | filter::exact_exception_propagation))
     {}
 public:
     //! If a data item is available, invoke operator() on that item.  
@@ -374,7 +382,10 @@ class filter_node: tbb::internal::no_copy {
     tbb::atomic<intptr_t> ref_count;
 protected:
     filter_node() {
-        ref_count=1;
+        ref_count = 0;
+#ifdef __TBB_TEST_FILTER_NODE_COUNT
+        ++(__TBB_TEST_FILTER_NODE_COUNT);
+#endif
     }
 public:
     //! Add concrete_filter to pipeline 
@@ -387,7 +398,11 @@ public:
         if( --ref_count==0 ) 
             delete this;
     }
-    virtual ~filter_node() {}
+    virtual ~filter_node() {
+#ifdef __TBB_TEST_FILTER_NODE_COUNT
+        --(__TBB_TEST_FILTER_NODE_COUNT);
+#endif
+    }
 };
 
 //! Node in parse tree representing result of make_filter.
@@ -405,6 +420,7 @@ public:
 
 //! Node in parse tree representing join of two filters.
 class filter_node_join: public filter_node {
+    friend class filter_node; // to suppress GCC 3.2 warnings
     filter_node& left;
     filter_node& right;
     /*override*/~filter_node_join() {
@@ -416,7 +432,10 @@ class filter_node_join: public filter_node {
         right.add_to(p);
     }
 public:
-    filter_node_join( filter_node& x, filter_node& y ) : left(x), right(y) {}
+    filter_node_join( filter_node& x, filter_node& y ) : left(x), right(y) {
+       left.add_ref();
+       right.add_ref();
+    }
 };
 
 } // namespace internal
@@ -452,7 +471,15 @@ public:
     filter_t( const filter_t<T,U>& rhs ) : root(rhs.root) {
         if( root ) root->add_ref();
     }
+    template<typename Body>
+    filter_t( tbb::filter::mode mode, const Body& body ) :
+        root( new internal::filter_node_leaf<T,U,Body>(mode, body) ) {
+        root->add_ref();
+    }
+
     void operator=( const filter_t<T,U>& rhs ) {
+        // Order of operations below carefully chosen so that reference counts remain correct
+        // in unlikely event that remove_ref throws exception.
         filter_node* old = root;
         root = rhs.root; 
         if( root ) root->add_ref();

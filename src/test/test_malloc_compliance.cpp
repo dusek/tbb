@@ -302,7 +302,7 @@ void ReallocParam()
         Trealloc(bufs[j], 0);
 }
 
-__TBB_TEST_EXPORT
+HARNESS_EXPORT
 int main(int argc, char* argv[]) {
     argC=argc;
     argV=argv;
@@ -1001,7 +1001,7 @@ void CMemTest::RunAllTests(int total_threads)
         InvariantDataRealloc(/*aligned=*/true);
     TestAlignedParameters();
 #if __APPLE__
-    REPORT("Warning: skipping some tests (known issue on Mac OS* X)\n");
+    REPORT("Known issue: some tests are skipped on Mac OS* X\n");
 #else
     UniquePointer();
     AddrArifm();

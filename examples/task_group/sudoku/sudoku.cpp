@@ -33,10 +33,15 @@
 #include "tbb/task_scheduler_init.h"
 #include "tbb/task_group.h"
 
+#pragma warning(disable: 4996)
+
+#define __TBB_LAMBDAS_PRESENT  ( _MSC_VER >= 1600 && !__INTEL_COMPILER || __INTEL_COMPILER > 1100 && _TBB_CPP0X )
+
 const unsigned BOARD_SIZE=81;
 const unsigned BOARD_DIM=9;
 
 using namespace tbb;
+using namespace std;
 
 atomic<unsigned> nSols;
 unsigned NThreads, NSolutions;
@@ -51,16 +56,22 @@ typedef struct {
 
 void read_board(char *filename) {
     FILE *fp;
+    int input;
     fp = fopen(filename, "r");
-    for (int i=0; i<BOARD_SIZE; ++i) {
-        fscanf(fp, "%d", &(init_values[i]));
+    for (unsigned i=0; i<BOARD_SIZE; ++i) {
+        if (fscanf(fp, "%d", &input))
+            init_values[i] = input;
+        else {
+            fprintf(stderr, "sudoku: Error in input file at entry %d, assuming 0.\n", i);
+            init_values[i] = 0;
+        }
     }
     fclose(fp);
 }
 
 void print_board(board_element *b) {
-    for (int row=0; row<BOARD_DIM; ++row) {
-        for (int col=0; col<BOARD_DIM; ++col) {
+    for (unsigned row=0; row<BOARD_DIM; ++row) {
+        for (unsigned col=0; col<BOARD_DIM; ++col) {
             printf(" %d", b[row*BOARD_DIM+col].solved_element);
             if (col==2 || col==5) printf(" |");
         }
@@ -70,8 +81,8 @@ void print_board(board_element *b) {
 }
 
 void print_potential_board(board_element *b) {
-    for (int row=0; row<BOARD_DIM; ++row) {
-        for (int col=0; col<BOARD_DIM; ++col) {
+    for (unsigned row=0; row<BOARD_DIM; ++row) {
+        for (unsigned col=0; col<BOARD_DIM; ++col) {
             if (b[row*BOARD_DIM+col].solved_element) 
                 printf("  %4d ", b[row*BOARD_DIM+col].solved_element);
             else
@@ -85,24 +96,24 @@ void print_potential_board(board_element *b) {
 }
 
 void init_board(board_element *b) {
-    for (int i=0; i<BOARD_SIZE; ++i)
+    for (unsigned i=0; i<BOARD_SIZE; ++i)
         b[i].solved_element = b[i].potential_set = 0;
 }
 
 void init_board(board_element *b, unsigned short arr[81]) {
-    for (int i=0; i<BOARD_SIZE; ++i) {
+    for (unsigned i=0; i<BOARD_SIZE; ++i) {
         b[i].solved_element = arr[i]; 
         b[i].potential_set = 0;
     }
 }
 
 void init_potentials(board_element *b) {
-    for (int i=0; i<BOARD_SIZE; ++i)
+    for (unsigned i=0; i<BOARD_SIZE; ++i)
         b[i].potential_set = 0;
 }
 
 void copy_board(board_element *src, board_element *dst) {
-    for (int i=0; i<BOARD_SIZE; ++i)
+    for (unsigned i=0; i<BOARD_SIZE; ++i)
         dst[i].solved_element = src[i].solved_element;
 }
 
@@ -113,31 +124,31 @@ bool fixed_board(board_element *b) {
 }
 
 bool in_row(board_element *b, unsigned row, unsigned col, unsigned short p) {
-    for (int c=0; c<BOARD_DIM; ++c)
+    for (unsigned c=0; c<BOARD_DIM; ++c)
         if (c!=col && b[row*BOARD_DIM+c].solved_element==p)  return true;
     return false;
 }
 
 bool in_col(board_element *b, unsigned row, unsigned col, unsigned short p) {
-    for (int r=0; r<BOARD_DIM; ++r)
+    for (unsigned r=0; r<BOARD_DIM; ++r)
         if (r!=row && b[r*BOARD_DIM+col].solved_element==p)  return true;
     return false;
 }
 
 bool in_block(board_element *b, unsigned row, unsigned col, unsigned short p) {
     unsigned b_row = row/3 * 3, b_col = col/3 * 3;
-    for (int i=b_row; i<b_row+3; ++i)
-        for (int j=b_col; j<b_col+3; ++j)
+    for (unsigned i=b_row; i<b_row+3; ++i)
+        for (unsigned j=b_col; j<b_col+3; ++j)
             if (!(i==row && j==col) && b[i*BOARD_DIM+j].solved_element==p) return true;
     return false;
 }
 
 void calculate_potentials(board_element *b) {
-    for (int i=0; i<BOARD_SIZE; ++i) {
+    for (unsigned i=0; i<BOARD_SIZE; ++i) {
         b[i].potential_set = 0;
         if (!b[i].solved_element) { // element is not yet fixed
             unsigned row = i/BOARD_DIM, col = i%BOARD_DIM;
-            for (int potential=1; potential<=BOARD_DIM; ++potential) {
+            for (unsigned potential=1; potential<=BOARD_DIM; ++potential) {
                 if (!in_row(b, row, col, potential) && !in_col(b, row, col, potential)
                     && !in_block(b, row, col, potential))
                     b[i].potential_set |= 1<<(potential-1);
@@ -148,7 +159,7 @@ void calculate_potentials(board_element *b) {
 
 bool valid_board(board_element *b) {
     bool success=true;
-    for (int i=0; i<BOARD_SIZE; ++i) {
+    for (unsigned i=0; i<BOARD_SIZE; ++i) {
         if (success && b[i].solved_element) { // element is fixed
             unsigned row = i/BOARD_DIM, col = i%BOARD_DIM;
             if (in_row(b, row, col, b[i].solved_element) || in_col(b, row, col, b[i].solved_element) || in_block(b, row, col, b[i].solved_element))
@@ -160,9 +171,9 @@ bool valid_board(board_element *b) {
 
 bool examine_potentials(board_element *b, bool *progress) {
     bool singletons = false;
-    for (int i=0; i<BOARD_SIZE; ++i) {
+    for (unsigned i=0; i<BOARD_SIZE; ++i) {
         if (b[i].solved_element==0 && b[i].potential_set==0) // empty set
-	    return false;
+            return false;
         switch (b[i].potential_set) {
         case 1:   { b[i].solved_element = 1; singletons=true; break; }
         case 2:   { b[i].solved_element = 2; singletons=true; break; }
@@ -178,6 +189,21 @@ bool examine_potentials(board_element *b, bool *progress) {
     *progress = singletons;
     return valid_board(b);
 }
+
+#if !__TBB_LAMBDAS_PRESENT
+void partial_solve(board_element *b, unsigned first_potential_set);
+
+class PartialSolveBoard {
+    board_element *b;
+    unsigned first_potential_set;
+public:
+    PartialSolveBoard(board_element *_b, unsigned fps) :
+        b(_b), first_potential_set(fps) {}
+    void operator() () const {
+        partial_solve(b, first_potential_set);
+    }
+};
+#endif
 
 void partial_solve(board_element *b, unsigned first_potential_set) {
     if (fixed_board(b)) {
@@ -202,13 +228,17 @@ void partial_solve(board_element *b, unsigned first_potential_set) {
                 new_board = (board_element *)malloc(BOARD_SIZE*sizeof(board_element));
                 copy_board(b, new_board);
                 new_board[first_potential_set].solved_element = potential;
+#if __TBB_LAMBDAS_PRESENT
                 g->run( [=]{ partial_solve(new_board, first_potential_set); } );
+#else
+                g->run(PartialSolveBoard(new_board, first_potential_set));
+#endif
             }
         }
-	free(b);
+        free(b);
     }
     else {
-	free(b);
+        free(b);
     }
 }
 
@@ -242,6 +272,7 @@ int main(int argc, char *argv[]) {
     partial_solve(start_board, 0);
     g->wait();
     tick_count t1 = tick_count::now();
+    delete g;
 
     if (NSolutions == 1) {
         printf("Sudoku: Time to find first solution on %d threads: %6.6f seconds.\n", NThreads, (t1 - t0).seconds());

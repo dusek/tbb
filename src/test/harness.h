@@ -86,12 +86,8 @@ int TestMain ();
 
 #include <new>
 
-#if __LRB__
-    #include "harness_lrb.h"
-#else
-    #define __TBB_TEST_EXPORT
+    #define HARNESS_EXPORT
     #define REPORT_FATAL_ERROR REPORT
-#endif /* !__LRB__ */
 
 #if _WIN32||_WIN64
 #if _XBOX
@@ -133,13 +129,13 @@ void ReportError( const char* filename, int line, const char* expression, const 
 #endif
     if( ErrorExtraCall )
         (*ErrorExtraCall)();
-#if TBB_TERMINATE_ON_ASSERT
+#if HARNESS_TERMINATE_ON_ASSERT
     TerminateProcess(GetCurrentProcess(), 1);
-#elif TBB_EXIT_ON_ASSERT
+#elif HARNESS_EXIT_ON_ASSERT
     exit(1);
 #else
     abort();
-#endif /* TBB_EXIT_ON_ASSERT */
+#endif /* HARNESS_EXIT_ON_ASSERT */
 }
 //! Reports warnings issued by failed warning assertions
 void ReportWarning( const char* filename, int line, const char* expression, const char * message ) {
@@ -223,7 +219,7 @@ static void ParseCommandLine( int argc, char* argv[] ) {
 
 #if !HARNESS_CUSTOM_MAIN
 
-__TBB_TEST_EXPORT
+HARNESS_EXPORT
 #if HARNESS_NO_PARSE_COMMAND_LINE
 int main() {
 #else

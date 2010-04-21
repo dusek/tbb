@@ -40,19 +40,9 @@
 #include "harness_memory.h"
 #include "harness_concurrency_tracker.h"
 
-#if __LRB__
-#ifndef __RML_USE_XNMETASCHEDULER
-#define __RML_USE_XNMETASCHEDULER 1
-#endif
-#endif /* __LRB__ */
 
 //! Define TRIVIAL as 1 to test only a single client, no nesting, no extra threads.
-#if __RML_USE_XNMETASCHEDULER
-// Multiple connections do not work yet.
-#define TRIVIAL 1
-#else
 #define TRIVIAL 0
-#endif /* __RML_USE_XNMETASCHEDULER */
 
 //! Maximum number of clients 
 #if TRIVIAL 
@@ -225,10 +215,8 @@ protected:
         // Half of the stack is reserved for RSE, so test only remaining half.
         UseStackSpace( (my_stack_size-OverheadStackSize)/2 );
 #else
-#if ! __RML_USE_XNMETASCHEDULER
         // XNMetaScheduler does not expose API for changing stack size.
         UseStackSpace( my_stack_size-OverheadStackSize );
-#endif /* ! __RML_USE_XNMETASCHEDULER */
 #endif
         j.update(MyJob::idle,MyJob::busy);
         my_server->yield();
@@ -278,6 +266,18 @@ typename Client::job* ClientBase<Client>::create_one_job() {
     return &j;
 }
 
+struct warning_tracker {
+    tbb::atomic<int> n_more_than_available;
+    tbb::atomic<int> n_too_many_threads;
+    tbb::atomic<int> n_system_overload;
+    warning_tracker() {
+        n_more_than_available = 0;
+        n_too_many_threads = 0;
+        n_system_overload = 0;
+    }
+    bool all_set() { return n_more_than_available>0 && n_too_many_threads>0 && n_system_overload>0; }
+} tracker;
+
 class Checker {
 public:
     int default_concurrency;
@@ -287,6 +287,7 @@ public:
 
 void Checker::check_number_of_threads_delivered( int n_delivered, int n_requested, int n_extra ) const {
     ASSERT( default_concurrency>=0, NULL );
+    if( tracker.all_set() ) return;
     // Check that number of threads delivered is reasonable.
     int n_avail = default_concurrency;
     if( n_extra>0 )
@@ -299,12 +300,19 @@ void Checker::check_number_of_threads_delivered( int n_delivered, int n_requeste
     if( n_expected>n_avail )
         n_expected=n_avail;
     const char* msg = NULL;
-    if( n_delivered>n_avail ) 
+    if( n_delivered>n_avail ) {
+        if( ++tracker.n_more_than_available>1 )
+            return;
         msg = "server delivered more threads than were theoretically available";
-    else if( n_delivered>n_expected ) 
+    } else if( n_delivered>n_expected ) {
+        if( ++tracker.n_too_many_threads>1 )
+            return;
         msg = "server delivered more threads than expected";
-    else if( n_delivered<n_expected )
+    } else if( n_delivered<n_expected ) {
+        if( ++tracker.n_system_overload>1 )
+            return;
         msg = "server delivered fewer threads than ideal; or, the system is overloaded?";
+    }
     if( msg ) {
         REPORT("Warning: %s (n_delivered=%d n_avail=%d n_requested=%d n_extra=%d default_concurrency=%d)\n",
                msg, n_delivered, n_avail, n_requested, n_extra, default_concurrency );

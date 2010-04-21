@@ -34,7 +34,7 @@ namespace tbb {
 
 using namespace internal;
 
-static inline bool CAS(volatile uintptr &addr, uintptr newv, uintptr oldv) {
+static inline bool CAS(volatile uintptr_t &addr, uintptr_t newv, uintptr_t oldv) {
     return __TBB_CompareAndSwapW((volatile void *)&addr, (intptr_t)newv, (intptr_t)oldv) == (intptr_t)oldv;
 }
 

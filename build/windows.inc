@@ -90,7 +90,7 @@ RML.DEF = $(RML_SERVER_ROOT)/$(def_prefix)-rml-export.def
 RML.DLL = irml$(DEBUG_SUFFIX).$(DLL)
 RML.LIB = irml$(DEBUG_SUFFIX).$(LIBEXT)
 RML.RES = irml.res
-ifneq ($(runtime),vc7.1)
+ifneq ($(filter vc8 vc9,$(runtime)),)
 RML.MANIFEST = tbbmanifest.exe.manifest
 endif
 

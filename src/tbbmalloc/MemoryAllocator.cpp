@@ -2708,7 +2708,7 @@ extern "C" size_t scalable_msize(void* ptr)
         MALLOC_ASSERT(isRecognized(ptr), "Invalid pointer in scalable_msize detected.");
         if (isLargeObject(ptr)) {
             LargeMemoryBlock* lmb = ((LargeObjectHdr*)ptr - 1)->memoryBlock;
-            return lmb->unalignedSize-((uintptr_t)ptr-(uintptr_t)lmb);
+            return lmb->objectSize;
         } else {
             Block* block = (Block *)alignDown(ptr, blockSize);
 #if MALLOC_CHECK_RECURSION

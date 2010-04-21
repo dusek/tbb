@@ -120,7 +120,7 @@ test_tbb_header2.$(OBJ): test_tbb_header.cpp
 
 # Detecting "multiple definition" linker error using the test that covers the whole library
 test_tbb_header.$(TEST_EXT): test_tbb_header.$(OBJ) test_tbb_header2.$(OBJ) $(TBB.LIB)
-	$(CPLUS) $(OUTPUT_KEY)$@ $(CPLUS_FLAGS) $^ $(LINK_TBB.LIB) $(LIBS) $(LINK_FLAGS)
+	$(CPLUS) $(OUTPUT_KEY)$@ $(CPLUS_FLAGS) test_tbb_header.$(OBJ) test_tbb_header2.$(OBJ) $(LINK_TBB.LIB) $(LIBS) $(LINK_FLAGS)
 
 # These are in alphabetical order
 TEST_TBB_PLAIN.EXE = test_assembly.$(TEST_EXT)   \
@@ -236,7 +236,7 @@ test_tbb_plain: $(TEST_PREREQUISITE) $(TASK_CPP_DIRECTLY_INCLUDED) $(TEST_TBB_PL
 	$(run_cmd) ./test_concurrent_hash_map.$(TEST_EXT) $(args) 1:4
 	$(run_cmd) ./test_enumerable_thread_specific.$(TEST_EXT) $(args) 0:4
 	$(run_cmd) ./test_combinable.$(TEST_EXT) $(args) 0:4
-	$(run_cmd) ./test_model_plugin.$(TEST_EXT) $(args) 4
+    #	$(run_cmd) ./test_model_plugin.$(TEST_EXT) $(args) 4
 	$(run_cmd) ./test_eh_tasks.$(TEST_EXT) $(args) 2:4
 	$(run_cmd) ./test_eh_algorithms.$(TEST_EXT) $(args) 2:4
 	$(run_cmd) ./test_tbb_thread.$(TEST_EXT) $(args)

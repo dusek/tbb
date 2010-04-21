@@ -413,7 +413,7 @@ void concurrent_vector_base_v3::internal_assign( const concurrent_vector_base_v3
 }
 
 void* concurrent_vector_base_v3::internal_push_back( size_type element_size, size_type& index ) {
-    __TBB_ASSERT( sizeof(my_early_size)==sizeof(uintptr), NULL );
+    __TBB_ASSERT( sizeof(my_early_size)==sizeof(uintptr_t), NULL );
     size_type tmp = __TBB_FetchAndIncrementWacquire(&my_early_size);
     index = tmp;
     segment_index_t k_old = segment_index_of( tmp );

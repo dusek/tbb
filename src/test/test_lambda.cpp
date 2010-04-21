@@ -47,9 +47,6 @@ using namespace std;
 using namespace tbb;
 
 typedef pair<int,int> max_element_t;
-const int N = 1000;
-const int Grainsize = N/1000;
-int a[N];
 
 void f(int val, int *arr, int start, int stop) {
     for (int i=start; i<=stop; ++i) {
@@ -79,6 +76,9 @@ int Fib(int n) {
 
 int TestMain () {
 #if __TBB_LAMBDAS_PRESENT
+    const int N = 1000;
+    const int Grainsize = N/1000;
+    int a[N];
     ASSERT( MinThread>=1, "Error: Number of threads must be positive.\n");
 
     for(int p=MinThread; p<=MaxThread; ++p) {
@@ -183,7 +183,7 @@ int TestMain () {
 
         //test combinable
         REMARK("Testing combinable... ");
-        combinable<std::pair<int,int> > minmax_c([]() { return std::make_pair(a[0], a[0]); } );
+        combinable<std::pair<int,int> > minmax_c([&]() { return std::make_pair(a[0], a[0]); } );
 
         parallel_for(blocked_range<int>(0,N),
                      [&] (const blocked_range<int> &r) {
@@ -209,7 +209,7 @@ int TestMain () {
 
         //test enumerable_thread_specific
         REMARK("Testing enumerable_thread_specific... ");
-        enumerable_thread_specific< std::pair<int,int> > minmax_ets([]() { return std::make_pair(a[0], a[0]); } );
+        enumerable_thread_specific< std::pair<int,int> > minmax_ets([&]() { return std::make_pair(a[0], a[0]); } );
 
         parallel_for(blocked_range<int>(0,N),
                      [&] (const blocked_range<int> &r) {

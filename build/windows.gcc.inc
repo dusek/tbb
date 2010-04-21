@@ -34,12 +34,15 @@ LIBEXT = dll # MinGW allows linking with DLLs directly
 
 TBB.RES =
 MALLOC.RES =
+RML.RES =
 TBB.MANIFEST =
 MALLOC.MANIFEST =
+RML.MANIFEST =
 
 # TODO: do better when/if mingw64 support is added
 TBB.DEF = $(tbb_root)/src/tbb/lin32-tbb-export.def
 MALLOC.DEF = $(MALLOC_ROOT)/win-gcc-tbbmalloc-export.def
+RML.DEF = $(RML_SERVER_ROOT)/lin-rml-export.def
 
 LINK_TBB.LIB = $(TBB.LIB)
 
@@ -99,7 +102,7 @@ ifeq (ia32,$(arch))
 endif 
 
 # For examples
-UNIXMODE = 1
+export UNIXMODE = 1
 
 #------------------------------------------------------------------------------
 # End of command lines

@@ -26,7 +26,7 @@
     the GNU General Public License.
 */
 
-//We works on windows only
+// Works on windows only
 #ifdef _WIN32
 #define _CRT_SECURE_NO_DEPRECATE 1
 #define __TBB_NO_IMPLICIT_LINKAGE 1
@@ -191,7 +191,7 @@ size_t compareStrings( const char *str1, const char *str2 )
 {
    size_t str1Lentgh = strlen(str1);
    for (size_t i=0; i<str1Lentgh; i++){
-       if( str1[i] != '*' && str1[i] != str2[i] ) return NULL;
+       if( str1[i] != '*' && str1[i] != str2[i] ) return 0;
    }
    return str1Lentgh;
 }
@@ -237,7 +237,7 @@ UINT CheckOpcodes( const char ** opcodes, void *inpAddr )
             return (UINT)(result/2-1);
     }
     // TODO: to add more stuff to patterns
-    __TBB_ASSERT( NULL, "CheckOpcodes failed" );
+    __TBB_ASSERT( false, "CheckOpcodes failed" );
 
     // No matches found just do not store original calls
     return 0;
@@ -245,7 +245,7 @@ UINT CheckOpcodes( const char ** opcodes, void *inpAddr )
 
 // Insert jump relative instruction to the input address
 // RETURN: the size of the trampoline or 0 on failure
-static DWORD InsertTrampoline32(void *inpAddr, void *targetAddr, const char ** opcodes, FUNCPTR* storedAddr)
+static DWORD InsertTrampoline32(void *inpAddr, void *targetAddr, const char ** opcodes, void** storedAddr)
 {
     UINT opcodesNumber = SIZE_OF_RELJUMP;
     UINT_PTR srcAddr = Ptr2Addrint(inpAddr);
@@ -265,10 +265,10 @@ static DWORD InsertTrampoline32(void *inpAddr, void *targetAddr, const char ** o
             UINT_PTR strdAddr = memProvider.GetLocation(srcAddr);
             if (!strdAddr)
                 return 0;
-            *storedAddr = (FUNCPTR)Addrint2Ptr(strdAddr);
+            *storedAddr = Addrint2Ptr(strdAddr);
             // Set 'executable' flag for original instructions in the new place
             DWORD pageFlags = PAGE_EXECUTE_READWRITE;
-            if(!VirtualProtect(*storedAddr, MAX_PROBE_SIZE, pageFlags, &pageFlags)) return 0;
+            if (!VirtualProtect(*storedAddr, MAX_PROBE_SIZE, pageFlags, &pageFlags)) return 0;
             // Copy original instructions to the new place
             memcpy(*storedAddr, codePtr, opcodesNumber);
             // Set jump to the code after replacement
@@ -303,7 +303,7 @@ static DWORD InsertTrampoline32(void *inpAddr, void *targetAddr, const char ** o
 // 2  Put jump RIP relative indirect through the address in the close page
 // 3  Put the absolute address of the target in the allocated location
 // RETURN: the size of the trampoline or 0 on failure
-static DWORD InsertTrampoline64(void *inpAddr, void *targetAddr, const char ** opcodes, FUNCPTR* storedAddr)
+static DWORD InsertTrampoline64(void *inpAddr, void *targetAddr, const char ** opcodes, void** storedAddr)
 {
     UINT opcodesNumber = SIZE_OF_INDJUMP;
 
@@ -330,7 +330,7 @@ static DWORD InsertTrampoline64(void *inpAddr, void *targetAddr, const char ** o
             UINT_PTR strdAddr = memProvider.GetLocation(srcAddr);
             if (!strdAddr)
                 return 0;
-            *storedAddr = (FUNCPTR)Addrint2Ptr(strdAddr);
+            *storedAddr = Addrint2Ptr(strdAddr);
             // Set 'executable' flag for original instructions in the new place
             DWORD pageFlags = PAGE_EXECUTE_READWRITE;
             if (!VirtualProtect(*storedAddr, MAX_PROBE_SIZE, pageFlags, &pageFlags)) return 0;
@@ -368,7 +368,7 @@ static DWORD InsertTrampoline64(void *inpAddr, void *targetAddr, const char ** o
 // 3. Call InsertTrampoline32 or InsertTrampoline64
 // 4. Restore memory protection
 // RETURN: FALSE on failure, TRUE on success
-static bool InsertTrampoline(void *inpAddr, void *targetAddr, const char ** opcodes, FUNCPTR* origFunc)
+static bool InsertTrampoline(void *inpAddr, void *targetAddr, const char ** opcodes, void** origFunc)
 {
     DWORD probeSize;
     // Change page protection to EXECUTE+WRITE
@@ -425,7 +425,7 @@ FRR_TYPE ReplaceFunctionA(const char *dllName, const char *funcName, FUNCPTR new
         return FRR_NOFUNC;
     }
 
-    if (!InsertTrampoline((void*)inpFunc, (void*)newFunc, opcodes, origFunc)){
+    if (!InsertTrampoline((void*)inpFunc, (void*)newFunc, opcodes, (void**)origFunc)){
         // Failed to insert the trampoline to the target address
         return FRR_FAILED;
     }
@@ -465,7 +465,7 @@ FRR_TYPE ReplaceFunctionW(const wchar_t *dllName, const char *funcName, FUNCPTR 
         return FRR_NOFUNC;
     }
 
-    if (!InsertTrampoline((void*)inpFunc, (void*)newFunc, opcodes, origFunc)){
+    if (!InsertTrampoline((void*)inpFunc, (void*)newFunc, opcodes, (void**)origFunc)){
         // Failed to insert the trampoline to the target address
         return FRR_FAILED;
     }

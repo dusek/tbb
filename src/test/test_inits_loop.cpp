@@ -73,7 +73,7 @@ bool exec_test(const char *self) {
     return true;
 }
 
-__TBB_TEST_EXPORT
+HARNESS_EXPORT
 int main( int argc, char * argv[] ) {
     MinThread = 3000;
     ParseCommandLine( argc, argv );

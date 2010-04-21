@@ -26,8 +26,11 @@
     the GNU General Public License.
 */
 
+/* Some tests in this source file are based on PPL tests provided by Microsoft. */
+
 #define __TBB_EXTRA_DEBUG 1
 #include "tbb/concurrent_unordered_map.h"
+#include "tbb/parallel_for.h"
 #include "tbb/tick_count.h"
 #include <stdio.h>
 #include "harness.h"
@@ -405,8 +408,6 @@ void CheckRange( AtomicByte array[], int n ) {
         }
     }
 }
-
-#include "tbb/parallel_for.h"
 
 template<typename T>
 void test_concurrent(const char *tablename) {

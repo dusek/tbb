@@ -55,9 +55,6 @@
 
 #include <cstdarg>
 
-#if __LRB__
-#include "harness_lrb.h"
-#endif
 
 #if _MSC_VER
     #define snprintf _snprintf

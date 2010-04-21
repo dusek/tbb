@@ -26,12 +26,6 @@
     the GNU General Public License.
 */
 
-#if __LRB__
-#ifdef __RML_USE_XNMETASCHEDULER
-#undef __RML_USE_XNMETASCHEDULER
-#endif
-#define __RML_USE_XNMETASCHEDULER 0
-#endif /* __LRB__ */
 
 #include "rml_tbb.h"
 #include "../server/thread_monitor.h"
@@ -220,7 +214,7 @@ __RML_DECL_THREAD_ROUTINE private_worker::thread_routine( void* arg ) {
     XSetThreadProcessor(GetCurrentThread(), HWThreadIndex);
 #endif
     self->run();
-    return NULL;
+    return 0;
 }
 #if _MSC_VER && !defined(__INTEL_COMPILER)
     #pragma warning(pop)

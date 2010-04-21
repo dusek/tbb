@@ -174,12 +174,12 @@ void PrintExtraVersionInfo( const char* category, const char* description );
 //! A callback routine to print RML version information on stderr
 void PrintRMLVersionInfo( void* arg, const char* server_info );
 
-#if __SUNPRO_CC && defined(min)
+// For TBB compilation only; not to be used in public headers
+#if defined(min) || defined(max)
 #undef min
 #undef max
 #endif
 
-#ifndef min
 //! Utility template function returning lesser of the two values.
 /** Provided here to avoid including not strict safe <algorithm>.\n
     In case operands cause signed/unsigned or size mismatch warnings it is caller's
@@ -188,9 +188,7 @@ template<typename T1, typename T2>
 T1 min ( const T1& val1, const T2& val2 ) {
     return val1 < val2 ? val1 : val2;
 }
-#endif /* !min */
 
-#ifndef max
 //! Utility template function returning greater of the two values.
 /** Provided here to avoid including not strict safe <algorithm>.\n
     In case operands cause signed/unsigned or size mismatch warnings it is caller's
@@ -199,7 +197,6 @@ template<typename T1, typename T2>
 T1 max ( const T1& val1, const T2& val2 ) {
     return val1 < val2 ? val2 : val1;
 }
-#endif /* !max */
 
 //------------------------------------------------------------------------
 // FastRandom

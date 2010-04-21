@@ -506,7 +506,7 @@ void TestConstructors ()
     ASSERT( iter==src_queue.unsafe_end(), "different size?" );
 
 #if __TBB_THROW_ACROSS_MODULE_BOUNDARY_BROKEN || __TBB_PLACEMENT_NEW_EXCEPTION_SAFETY_BROKEN
-    REPORT("Warning: Part of the constructor test is skipped due to a known issue.\n");
+    REPORT("Known issue: part of the constructor test is skipped.\n");
 #elif TBB_USE_EXCEPTIONS
     k = 0;
 #if TBB_DEPRECATED==0
@@ -964,7 +964,7 @@ int TestMain () {
         }
     }
 #if __TBB_THROW_ACROSS_MODULE_BOUNDARY_BROKEN
-    REPORT("Warning: Exception safety test is skipped due to a known issue.\n");
+    REPORT("Known issue: exception safety test is skipped.\n");
 #elif TBB_USE_EXCEPTIONS
     TestExceptions();
 #endif /* TBB_USE_EXCEPTIONS */

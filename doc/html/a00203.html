@@ -1,6 +1,6 @@
 <!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
 <html><head><meta http-equiv="Content-Type" content="text/html;charset=iso-8859-1">
-<title>tbb::tbb_exception Class Reference</title>
+<title>tbb::task_scheduler_init Class Reference</title>
 <link href="doxygen.css" rel="stylesheet" type="text/css">
 <link href="tabs.css" rel="stylesheet" type="text/css">
 </head><body>
@@ -21,142 +21,138 @@
     <li><a href="functions.html"><span>Class&nbsp;Members</span></a></li>
   </ul></div>
 <div class="nav">
-<a class="el" href="a00264.html">tbb</a>::<a class="el" href="a00203.html">tbb_exception</a></div>
-<h1>tbb::tbb_exception Class Reference</h1><!-- doxytag: class="tbb::tbb_exception" -->Interface to be implemented by all exceptions TBB recognizes and propagates across the threads.  
+<a class="el" href="a00267.html">tbb</a>::<a class="el" href="a00203.html">task_scheduler_init</a></div>
+<h1>tbb::task_scheduler_init Class Reference<br>
+<small>
+[<a class="el" href="a00279.html">Task Scheduling</a>]</small>
+</h1><!-- doxytag: class="tbb::task_scheduler_init" -->Class representing reference to tbb scheduler.  
 <a href="#_details">More...</a>
 <p>
-<code>#include &lt;<a class="el" href="a00450.html">tbb_exception.h</a>&gt;</code>
+<code>#include &lt;<a class="el" href="a00443.html">task_scheduler_init.h</a>&gt;</code>
 <p>
-<p>Inheritance diagram for tbb::tbb_exception:
-<p><center><img src="a00203.png" usemap="#tbb::tbb_exception_map" border="0" alt=""></center>
-<map name="tbb::tbb_exception_map">
-<area href="a00150.html" alt="tbb::captured_exception" shape="rect" coords="0,56,248,80">
-<area href="a00168.html" alt="tbb::movable_exception< ExceptionData >" shape="rect" coords="258,56,506,80">
-</map>
-<a href="a00098.html">List of all members.</a><table border="0" cellpadding="0" cellspacing="0">
+<a href="a00084.html">List of all members.</a><table border="0" cellpadding="0" cellspacing="0">
 <tr><td></td></tr>
 <tr><td colspan="2"><br><h2>Public Member Functions</h2></td></tr>
-<tr><td class="memItemLeft" nowrap align="right" valign="top">virtual <a class="el" href="a00203.html">tbb_exception</a> *&nbsp;</td><td class="memItemRight" valign="bottom"><a class="el" href="a00203.html#3e3482bf264d4ca4dde046cd9c02c766">move</a> ()=0  throw ()</td></tr>
+<tr><td class="memItemLeft" nowrap align="right" valign="top">void __TBB_EXPORTED_METHOD&nbsp;</td><td class="memItemRight" valign="bottom"><a class="el" href="a00203.html#d476053cc712e572554823492a5229ce">initialize</a> (int number_of_threads=<a class="el" href="a00203.html#8f5988e2b0fbb2d533fcbb7f2583743f">automatic</a>)</td></tr>
 
-<tr><td class="mdescLeft">&nbsp;</td><td class="mdescRight">Creates and returns pointer to the deep copy of this exception object.  <a href="#3e3482bf264d4ca4dde046cd9c02c766"></a><br></td></tr>
-<tr><td class="memItemLeft" nowrap align="right" valign="top">virtual void&nbsp;</td><td class="memItemRight" valign="bottom"><a class="el" href="a00203.html#66c94938eca8bf88b76f3eccaaf215d8">destroy</a> ()=0  throw ()</td></tr>
+<tr><td class="mdescLeft">&nbsp;</td><td class="mdescRight">Ensure that scheduler exists for this thread.  <a href="#d476053cc712e572554823492a5229ce"></a><br></td></tr>
+<tr><td class="memItemLeft" nowrap align="right" valign="top">void __TBB_EXPORTED_METHOD&nbsp;</td><td class="memItemRight" valign="bottom"><a class="el" href="a00203.html#d5ed214a8bb53b0466ed91ff4734b9a3">initialize</a> (int number_of_threads, stack_size_type thread_stack_size)</td></tr>
 
-<tr><td class="mdescLeft">&nbsp;</td><td class="mdescRight">Destroys objects created by the <a class="el" href="a00203.html#3e3482bf264d4ca4dde046cd9c02c766">move()</a> method.  <a href="#66c94938eca8bf88b76f3eccaaf215d8"></a><br></td></tr>
-<tr><td class="memItemLeft" nowrap align="right" valign="top">virtual void&nbsp;</td><td class="memItemRight" valign="bottom"><a class="el" href="a00203.html#8588e07fa49692f4d734e4f2e4f048f4">throw_self</a> ()=0</td></tr>
+<tr><td class="mdescLeft">&nbsp;</td><td class="mdescRight">The overloaded method with stack size parameter.  <a href="#d5ed214a8bb53b0466ed91ff4734b9a3"></a><br></td></tr>
+<tr><td class="memItemLeft" nowrap align="right" valign="top"><a class="anchor" name="f73257e04cb7fb9bd5be2b635d9016f1"></a><!-- doxytag: member="tbb::task_scheduler_init::terminate" ref="f73257e04cb7fb9bd5be2b635d9016f1" args="()" -->
+void __TBB_EXPORTED_METHOD&nbsp;</td><td class="memItemRight" valign="bottom"><a class="el" href="a00203.html#f73257e04cb7fb9bd5be2b635d9016f1">terminate</a> ()</td></tr>
 
-<tr><td class="mdescLeft">&nbsp;</td><td class="mdescRight">Throws this exception object.  <a href="#8588e07fa49692f4d734e4f2e4f048f4"></a><br></td></tr>
-<tr><td class="memItemLeft" nowrap align="right" valign="top"><a class="anchor" name="d00f6497e552fee978a02bfcbebf46e2"></a><!-- doxytag: member="tbb::tbb_exception::name" ref="d00f6497e552fee978a02bfcbebf46e2" args="() const =0" -->
-virtual const char *&nbsp;</td><td class="memItemRight" valign="bottom"><a class="el" href="a00203.html#d00f6497e552fee978a02bfcbebf46e2">name</a> () const =0  throw ()</td></tr>
+<tr><td class="mdescLeft">&nbsp;</td><td class="mdescRight">Inverse of method initialize. <br></td></tr>
+<tr><td class="memItemLeft" nowrap align="right" valign="top"><a class="anchor" name="421600bf9bf9338bcf937063f2ff0e90"></a><!-- doxytag: member="tbb::task_scheduler_init::task_scheduler_init" ref="421600bf9bf9338bcf937063f2ff0e90" args="(int number_of_threads=automatic, stack_size_type thread_stack_size=0)" -->
+&nbsp;</td><td class="memItemRight" valign="bottom"><a class="el" href="a00203.html#421600bf9bf9338bcf937063f2ff0e90">task_scheduler_init</a> (int number_of_threads=<a class="el" href="a00203.html#8f5988e2b0fbb2d533fcbb7f2583743f">automatic</a>, stack_size_type thread_stack_size=0)</td></tr>
 
-<tr><td class="mdescLeft">&nbsp;</td><td class="mdescRight">Returns RTTI name of the originally intercepted exception. <br></td></tr>
-<tr><td class="memItemLeft" nowrap align="right" valign="top"><a class="anchor" name="e8157689ecb66bc6c72d3618bf3cc371"></a><!-- doxytag: member="tbb::tbb_exception::what" ref="e8157689ecb66bc6c72d3618bf3cc371" args="() const =0" -->
-virtual const char *&nbsp;</td><td class="memItemRight" valign="bottom"><a class="el" href="a00203.html#e8157689ecb66bc6c72d3618bf3cc371">what</a> () const =0  throw ()</td></tr>
+<tr><td class="mdescLeft">&nbsp;</td><td class="mdescRight">Shorthand for default constructor followed by call to intialize(number_of_threads). <br></td></tr>
+<tr><td class="memItemLeft" nowrap align="right" valign="top"><a class="anchor" name="4da6c86292d80c703a66c1f6f5299488"></a><!-- doxytag: member="tbb::task_scheduler_init::~task_scheduler_init" ref="4da6c86292d80c703a66c1f6f5299488" args="()" -->
+&nbsp;</td><td class="memItemRight" valign="bottom"><a class="el" href="a00203.html#4da6c86292d80c703a66c1f6f5299488">~task_scheduler_init</a> ()</td></tr>
 
-<tr><td class="mdescLeft">&nbsp;</td><td class="mdescRight">Returns the result of originally intercepted exception's <a class="el" href="a00203.html#e8157689ecb66bc6c72d3618bf3cc371">what()</a> method. <br></td></tr>
-<tr><td class="memItemLeft" nowrap align="right" valign="top">void&nbsp;</td><td class="memItemRight" valign="bottom"><a class="el" href="a00203.html#3f2da7f3d8a6e4c1df522af1213afb5a">operator delete</a> (void *p)</td></tr>
+<tr><td class="mdescLeft">&nbsp;</td><td class="mdescRight">Destroy scheduler for this thread if thread has no other live task_scheduler_inits. <br></td></tr>
+<tr><td class="memItemLeft" nowrap align="right" valign="top"><a class="anchor" name="12752282977029f23416642bc03e8b74"></a><!-- doxytag: member="tbb::task_scheduler_init::is_active" ref="12752282977029f23416642bc03e8b74" args="() const " -->
+bool&nbsp;</td><td class="memItemRight" valign="bottom"><a class="el" href="a00203.html#12752282977029f23416642bc03e8b74">is_active</a> () const </td></tr>
 
+<tr><td class="mdescLeft">&nbsp;</td><td class="mdescRight">Returns true if scheduler is active (initialized); false otherwise. <br></td></tr>
+<tr><td colspan="2"><br><h2>Static Public Member Functions</h2></td></tr>
+<tr><td class="memItemLeft" nowrap align="right" valign="top">static int __TBB_EXPORTED_FUNC&nbsp;</td><td class="memItemRight" valign="bottom"><a class="el" href="a00203.html#ba00714c33a41a3c2216f48613971cab">default_num_threads</a> ()</td></tr>
+
+<tr><td class="mdescLeft">&nbsp;</td><td class="mdescRight">Returns the number of threads tbb scheduler would create if initialized by default.  <a href="#ba00714c33a41a3c2216f48613971cab"></a><br></td></tr>
+<tr><td colspan="2"><br><h2>Static Public Attributes</h2></td></tr>
+<tr><td class="memItemLeft" nowrap align="right" valign="top"><a class="anchor" name="8f5988e2b0fbb2d533fcbb7f2583743f"></a><!-- doxytag: member="tbb::task_scheduler_init::automatic" ref="8f5988e2b0fbb2d533fcbb7f2583743f" args="" -->
+static const int&nbsp;</td><td class="memItemRight" valign="bottom"><a class="el" href="a00203.html#8f5988e2b0fbb2d533fcbb7f2583743f">automatic</a> = -1</td></tr>
+
+<tr><td class="mdescLeft">&nbsp;</td><td class="mdescRight">Typedef for number of threads that is automatic. <br></td></tr>
+<tr><td class="memItemLeft" nowrap align="right" valign="top"><a class="anchor" name="e6c860f1e559026ff3ef4599c0d6c514"></a><!-- doxytag: member="tbb::task_scheduler_init::deferred" ref="e6c860f1e559026ff3ef4599c0d6c514" args="" -->
+static const int&nbsp;</td><td class="memItemRight" valign="bottom"><a class="el" href="a00203.html#e6c860f1e559026ff3ef4599c0d6c514">deferred</a> = -2</td></tr>
+
+<tr><td class="mdescLeft">&nbsp;</td><td class="mdescRight">Argument to <a class="el" href="a00203.html#d476053cc712e572554823492a5229ce">initialize()</a> or constructor that causes initialization to be deferred. <br></td></tr>
 </table>
 <hr><a name="_details"></a><h2>Detailed Description</h2>
-Interface to be implemented by all exceptions TBB recognizes and propagates across the threads. 
+Class representing reference to tbb scheduler. 
 <p>
-If an unhandled exception of the type derived from <a class="el" href="a00203.html">tbb::tbb_exception</a> is intercepted by the TBB scheduler in one of the worker threads, it is delivered to and re-thrown in the root thread. The root thread is the thread that has started the outermost algorithm or root task sharing the same <a class="el" href="a00198.html">task_group_context</a> with the guilty algorithm/task (the one that threw the exception first).<p>
-Note: when documentation mentions workers with respect to exception handling, masters are implied as well, because they are completely equivalent in this context. Consequently a root thread can be master or worker thread.<p>
-NOTE: In case of nested algorithms or complex task hierarchies when the nested levels share (explicitly or by means of implicit inheritance) the task group context of the outermost level, the exception may be (re-)thrown multiple times (ultimately - in each worker on each nesting level) before reaching the root thread at the outermost level. IMPORTANT: if you intercept an exception derived from this class on a nested level, you must re-throw it in the catch block by means of the "throw;" operator.<p>
-TBB provides two implementations of this interface: <a class="el" href="a00150.html">tbb::captured_exception</a> and template class <a class="el" href="a00168.html">tbb::movable_exception</a>. See their declarations for more info. 
+A thread must construct a <a class="el" href="a00203.html">task_scheduler_init</a>, and keep it alive, during the time that it uses the services of class task. 
 <p>
 <hr><h2>Member Function Documentation</h2>
-<a class="anchor" name="66c94938eca8bf88b76f3eccaaf215d8"></a><!-- doxytag: member="tbb::tbb_exception::destroy" ref="66c94938eca8bf88b76f3eccaaf215d8" args="()=0" -->
+<a class="anchor" name="ba00714c33a41a3c2216f48613971cab"></a><!-- doxytag: member="tbb::task_scheduler_init::default_num_threads" ref="ba00714c33a41a3c2216f48613971cab" args="()" -->
 <div class="memitem">
 <div class="memproto">
       <table class="memname">
         <tr>
-          <td class="memname">virtual void tbb::tbb_exception::destroy           </td>
+          <td class="memname">static int __TBB_EXPORTED_FUNC tbb::task_scheduler_init::default_num_threads           </td>
           <td>(</td>
           <td class="paramname">          </td>
           <td>&nbsp;)&nbsp;</td>
-          <td width="100%">  throw ()<code> [pure virtual]</code></td>
+          <td width="100%"><code> [static]</code></td>
         </tr>
       </table>
 </div>
 <div class="memdoc">
 
 <p>
-Destroys objects created by the <a class="el" href="a00203.html#3e3482bf264d4ca4dde046cd9c02c766">move()</a> method. 
+Returns the number of threads tbb scheduler would create if initialized by default. 
 <p>
-Frees memory and calls destructor for this exception object. Can and must be used only on objects created by the move method. 
-<p>
-Implemented in <a class="el" href="a00150.html#93d875d3555502ff6f18513525de204c">tbb::captured_exception</a>, and <a class="el" href="a00168.html#7a46873119d9f85a7b0009c13e41a258">tbb::movable_exception&lt; ExceptionData &gt;</a>.
+Result returned by this method does not depend on whether the scheduler has already been initialized.<p>
+Because tbb 2.0 does not support blocking tasks yet, you may use this method to boost the number of threads in the tbb's internal pool, if your tasks are doing I/O operations. The optimal number of additional threads depends on how much time your tasks spend in the blocked state. 
 </div>
 </div><p>
-<a class="anchor" name="3e3482bf264d4ca4dde046cd9c02c766"></a><!-- doxytag: member="tbb::tbb_exception::move" ref="3e3482bf264d4ca4dde046cd9c02c766" args="()=0" -->
+<a class="anchor" name="d5ed214a8bb53b0466ed91ff4734b9a3"></a><!-- doxytag: member="tbb::task_scheduler_init::initialize" ref="d5ed214a8bb53b0466ed91ff4734b9a3" args="(int number_of_threads, stack_size_type thread_stack_size)" -->
 <div class="memitem">
 <div class="memproto">
       <table class="memname">
         <tr>
-          <td class="memname">virtual <a class="el" href="a00203.html">tbb_exception</a>* tbb::tbb_exception::move           </td>
+          <td class="memname">void __TBB_EXPORTED_METHOD tbb::task_scheduler_init::initialize           </td>
           <td>(</td>
-          <td class="paramname">          </td>
-          <td>&nbsp;)&nbsp;</td>
-          <td width="100%">  throw ()<code> [pure virtual]</code></td>
+          <td class="paramtype">int&nbsp;</td>
+          <td class="paramname"> <em>number_of_threads</em>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype">stack_size_type&nbsp;</td>
+          <td class="paramname"> <em>thread_stack_size</em></td><td>&nbsp;</td>
+        </tr>
+        <tr>
+          <td></td>
+          <td>)</td>
+          <td></td><td></td><td width="100%"></td>
         </tr>
       </table>
 </div>
 <div class="memdoc">
 
 <p>
-Creates and returns pointer to the deep copy of this exception object. 
+The overloaded method with stack size parameter. 
 <p>
-Move semantics is allowed. 
-<p>
-Implemented in <a class="el" href="a00150.html#837a50b8f6a800bda225c39d1699643f">tbb::captured_exception</a>, and <a class="el" href="a00168.html#1aea0ad179d6f0481fe7f3495f66adf9">tbb::movable_exception&lt; ExceptionData &gt;</a>.
+Overloading is necessary to preserve ABI compatibility 
 </div>
 </div><p>
-<a class="anchor" name="3f2da7f3d8a6e4c1df522af1213afb5a"></a><!-- doxytag: member="tbb::tbb_exception::operator delete" ref="3f2da7f3d8a6e4c1df522af1213afb5a" args="(void *p)" -->
+<a class="anchor" name="d476053cc712e572554823492a5229ce"></a><!-- doxytag: member="tbb::task_scheduler_init::initialize" ref="d476053cc712e572554823492a5229ce" args="(int number_of_threads=automatic)" -->
 <div class="memitem">
 <div class="memproto">
       <table class="memname">
         <tr>
-          <td class="memname">void tbb::tbb_exception::operator delete           </td>
+          <td class="memname">void __TBB_EXPORTED_METHOD tbb::task_scheduler_init::initialize           </td>
           <td>(</td>
-          <td class="paramtype">void *&nbsp;</td>
-          <td class="paramname"> <em>p</em>          </td>
+          <td class="paramtype">int&nbsp;</td>
+          <td class="paramname"> <em>number_of_threads</em> = <code><a class="el" href="a00203.html#8f5988e2b0fbb2d533fcbb7f2583743f">automatic</a></code>          </td>
           <td>&nbsp;)&nbsp;</td>
-          <td width="100%"><code> [inline]</code></td>
+          <td width="100%"></td>
         </tr>
       </table>
 </div>
 <div class="memdoc">
 
 <p>
-Operator delete is provided only to allow using existing smart pointers with TBB exception objects obtained as the result of applying <a class="el" href="a00203.html#3e3482bf264d4ca4dde046cd9c02c766">move()</a> operation on an exception thrown out of TBB scheduler.<p>
-When overriding method <a class="el" href="a00203.html#3e3482bf264d4ca4dde046cd9c02c766">move()</a> make sure to override operator delete as well if memory is allocated not by TBB's scalable allocator. 
-</div>
-</div><p>
-<a class="anchor" name="8588e07fa49692f4d734e4f2e4f048f4"></a><!-- doxytag: member="tbb::tbb_exception::throw_self" ref="8588e07fa49692f4d734e4f2e4f048f4" args="()=0" -->
-<div class="memitem">
-<div class="memproto">
-      <table class="memname">
-        <tr>
-          <td class="memname">virtual void tbb::tbb_exception::throw_self           </td>
-          <td>(</td>
-          <td class="paramname">          </td>
-          <td>&nbsp;)&nbsp;</td>
-          <td width="100%"><code> [pure virtual]</code></td>
-        </tr>
-      </table>
-</div>
-<div class="memdoc">
-
+Ensure that scheduler exists for this thread. 
 <p>
-Throws this exception object. 
-<p>
-Make sure that if you have several levels of derivation from this interface you implement or override this method on the most derived level. The implementation is as simple as "throw *this;". Failure to do this will result in exception of a base class type being thrown. 
-<p>
-Implemented in <a class="el" href="a00150.html#2dd1be66ab32fa27e0ddef5707fa67ef">tbb::captured_exception</a>, and <a class="el" href="a00168.html#17cffba35811c92b7e65d63506b69602">tbb::movable_exception&lt; ExceptionData &gt;</a>.
+A value of -1 lets tbb decide on the number of threads, which is typically the number of hardware threads. For production code, the default value of -1 should be used, particularly if the client code is mixed with third party clients that might also use tbb.<p>
+The number_of_threads is ignored if any other task_scheduler_inits currently exist. A thread may construct multiple task_scheduler_inits. Doing so does no harm because the underlying scheduler is reference counted. 
 </div>
 </div><p>
 <hr>The documentation for this class was generated from the following file:<ul>
-<li><a class="el" href="a00450.html">tbb_exception.h</a></ul>
+<li><a class="el" href="a00443.html">task_scheduler_init.h</a></ul>
 <hr>
 <p></p>
 Copyright &copy; 2005-2010 Intel Corporation.  All Rights Reserved.

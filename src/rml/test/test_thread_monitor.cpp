@@ -46,21 +46,6 @@ public:
     ThreadState() : request(-1), ack(-1), clock(0) {}
 };
 
-#if __RML_USE_XNMETASCHEDULER
-static XNERROR rml::internal::metaRunFunction( void* in_pPerThreadData ) {
-    ThreadState* self = static_cast<ThreadState*>(in_pPerThreadData);
-    (*(self->monitor.thread_routine_addr))( in_pPerThreadData );
-    return XN_SUCCESS;
-}
-
-static void rml::internal::xnSetupMonitor( 
-        XNHANDLE sched_handle_var, rml::internal::thread_monitor::thread_routine_type thread_routine_addr, 
-        void* arg, size_t /*stack_size*/ ) {
-    ThreadState* self = static_cast<ThreadState*>(arg);
-    self->monitor.sched_handle = sched_handle_var;
-    self->monitor.thread_routine_addr = thread_routine_addr;
-}
-#endif /* __RML_USE_XNMETASCHEDULER */
 
 void ThreadState::loop() {
     for(;;) {
@@ -93,9 +78,6 @@ const size_t MinStackSize = 1<<18;
 const size_t MaxStackSize = 1<<22;
 
 int TestMain () {
-#if __RML_USE_XNMETASCHEDULER
-    return Harness::Skipped; // The test doesn't work yet. The test can use more threads at a time than the default concurrency. It needs to be reworked.
-#else
     for( int p=MinThread; p<=MaxThread; ++p ) {
         ThreadState* t = new ThreadState[p];
         for( size_t stack_size = MinStackSize; stack_size<=MaxStackSize; stack_size*=2 ) {
@@ -134,5 +116,4 @@ int TestMain () {
     }
 
     return Harness::Done;
-#endif /* __RML_USE_XNMETASCHEDULER */
 }
