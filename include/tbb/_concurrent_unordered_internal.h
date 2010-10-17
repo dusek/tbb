@@ -50,7 +50,7 @@
     #pragma warning (pop)
 #endif
 
-#include "tbb_machine.h"
+#include "atomic.h"
 #include "tbb_exception.h"
 #include "tbb_allocator.h"
 
@@ -690,9 +690,11 @@ protected:
     // Constructors/Destructors
     concurrent_unordered_base(size_type n_of_buckets = initial_bucket_number,
         const hash_compare& hc = hash_compare(), const allocator_type& a = allocator_type())
-        : Traits(hc), my_number_of_buckets(n_of_buckets), my_solist(a),
+        : Traits(hc), my_solist(a),
           my_allocator(a), my_maximum_bucket_size((float) initial_bucket_load)
     {
+        __TBB_ASSERT( n_of_buckets, "number of buckets must be greater than 0");
+        my_number_of_buckets = 1<<__TBB_Log2((uintptr_t)n_of_buckets*2-1); // round up to power of 2
         internal_init();
     }
 
@@ -921,7 +923,7 @@ public:
     }
 
     std::pair<const_iterator, const_iterator> equal_range(const key_type& key) const {
-        return internal_equal_range(key);
+        return const_cast<self_type*>(this)->internal_equal_range(key);
     }
 
     // Bucket interface - for debugging 
@@ -1031,12 +1033,9 @@ public:
     // reflected next time this bucket is touched.
     void rehash(size_type buckets) {
         size_type current_buckets = my_number_of_buckets;
-
-        if (current_buckets > buckets)
+        if (current_buckets >= buckets)
             return;
-        else if ( (buckets & (buckets-1)) != 0 )
-            tbb::internal::throw_exception(tbb::internal::eid_invalid_buckets_number);
-        my_number_of_buckets = buckets;
+        my_number_of_buckets = 1<<__TBB_Log2((uintptr_t)buckets*2-1); // round up to power of 2
     }
 
 private:
@@ -1261,41 +1260,6 @@ private:
         return pairii_t(end(), end());
     }
 
-    // Return the [begin, end) pair of const iterators with the same key values.
-    // This operation makes sense only if mapping is many-to-one.
-    paircc_t internal_equal_range(const key_type& key) const
-    {
-        sokey_t order_key = (sokey_t) my_hash_compare(key);
-        size_type bucket = order_key % my_number_of_buckets;
-
-        // If bucket is empty, initialize it first
-        if (!is_initialized(bucket))
-            return paircc_t(end(), end());
-
-        order_key = split_order_key_regular(order_key);
-        raw_const_iterator end_it = my_solist.raw_end();
-
-        for (raw_const_iterator it = get_bucket(bucket); it != end_it; ++it)
-        {
-            if (solist_t::get_order_key(it) > order_key)
-            {
-                // There is no element with the given key
-                return paircc_t(end(), end());
-            }
-            else if (solist_t::get_order_key(it) == order_key && !my_hash_compare(get_key(*it), key))
-            {
-                const_iterator first = my_solist.get_iterator(it);
-                const_iterator last = first;
-
-                while( last != end() && !my_hash_compare(get_key(*last), key ) )
-                    ++last;
-                return paircc_t(first, last);
-            }
-        }
-
-        return paircc_t(end(), end());
-    }
-
     // Bucket APIs
     void init_bucket(size_type bucket)
     {
@@ -1399,11 +1363,11 @@ private:
     }
 
     // Shared variables
-    size_type                                                     my_number_of_buckets;       // Current table size
+    atomic<size_type>                                             my_number_of_buckets;       // Current table size
     solist_t                                                      my_solist;                  // List where all the elements are kept
     typename allocator_type::template rebind<raw_iterator>::other my_allocator;               // Allocator object for segments
     float                                                         my_maximum_bucket_size;     // Maximum size of the bucket
-    raw_iterator                                                 *my_buckets[pointers_per_table]; // The segment table
+    atomic<raw_iterator*>                                         my_buckets[pointers_per_table]; // The segment table
 };
 #if _MSC_VER
 #pragma warning(pop) // warning 4127 -- while (true) has a constant expression in it

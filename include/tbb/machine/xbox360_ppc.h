@@ -36,12 +36,12 @@
 #include "ppcintrinsics.h"
 
 #if _MSC_VER >= 1300
-extern "C" void _ReadWriteBarrier();
-#pragma intrinsic(_ReadWriteBarrier)
-#define __TBB_release_consistency_helper() _ReadWriteBarrier()
+extern "C" void _MemoryBarrier();
+#pragma intrinsic(_MemoryBarrier)
+#define __TBB_release_consistency_helper() _MemoryBarrier()
 #endif
 
-inline void __TBB_rel_acq_fence() { __lwsync(); }
+#define __TBB_full_memory_fence() __sync()
 
 #define __TBB_WORDSIZE 4
 #define __TBB_BIG_ENDIAN 1
@@ -80,6 +80,3 @@ inline void __TBB_machine_pause (__int32 delay )
 #define __TBB_CompareAndSwapW(P,V,C) __TBB_machine_cmpswp4(P,V,C)
 #define __TBB_Yield()  Sleep(0)
 #define __TBB_Pause(V) __TBB_machine_pause(V)
-#define __TBB_fence_for_acquire() __lwsync()
-#define __TBB_fence_for_release() __lwsync()
-

@@ -133,7 +133,7 @@ namespace interface4 {
         typedef bucket *segment_ptr_t;
         //! Segment pointers table type
         typedef segment_ptr_t segments_table_t[pointers_per_table];
-        //! Hash mask = sum of allocated segments sizes - 1
+        //! Hash mask = sum of allocated segment sizes - 1
         atomic<hashcode_t> my_mask;
         //! Segment pointers table. Also prevents false sharing between my_mask and my_size
         segments_table_t my_table;
@@ -410,10 +410,10 @@ namespace interface4 {
         hash_map_iterator& operator++();
         
         //! Post increment
-        Value* operator++(int) {
-            Value* result = &operator*();
+        hash_map_iterator operator++(int) {
+            hash_map_iterator old(*this);
             operator++();
-            return result;
+            return old;
         }
     };
 

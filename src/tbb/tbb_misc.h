@@ -48,7 +48,7 @@
 #elif defined(__APPLE__)
 #include <sys/types.h>
 #include <sys/sysctl.h>
-#elif defined(__FreeBSD__)
+#elif defined(__FreeBSD__) || defined(_AIX)
 #include <unistd.h>
 #endif
 
@@ -124,11 +124,11 @@ static inline int DetectNumberOfWorkers() {
 
 #endif /* !_XBOX */
 
-#elif defined(__linux__) || defined(__APPLE__) || defined(__FreeBSD__) || defined(__sun) 
+#elif defined(__linux__) || defined(__APPLE__) || defined(__FreeBSD__) || defined(__sun) || defined(_AIX)
 static inline int DetectNumberOfWorkers() {
     long number_of_workers;
 
-#if (defined(__FreeBSD__) || defined(__sun)) && defined(_SC_NPROCESSORS_ONLN) 
+#if (defined(__FreeBSD__) || defined(__sun) || defined(_AIX)) && defined(_SC_NPROCESSORS_ONLN) 
     number_of_workers = sysconf(_SC_NPROCESSORS_ONLN);
 
 // In theory, sysconf should work everywhere.

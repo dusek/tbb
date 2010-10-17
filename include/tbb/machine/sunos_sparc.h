@@ -40,8 +40,7 @@
 #define __TBB_BIG_ENDIAN 1
 
 #define __TBB_release_consistency_helper() __asm__ __volatile__ ("": : :"memory")
-
-inline void __TBB_rel_acq_fence() { __asm__ __volatile__("membar #LoadLoad|#LoadStore|#StoreStore|#StoreLoad": : : "memory"); }
+#define __TBB_full_memory_fence() __asm__ __volatile__("membar #LoadLoad|#LoadStore|#StoreStore|#StoreLoad": : : "memory")
 
 //--------------------------------------------------
 // Compare and swap
@@ -209,8 +208,8 @@ static inline bool __TBB_machine_trylockbyte(unsigned char &flag){
 //#define __TBB_FetchAndStore8(P,V)  __TBB_machine_fetchstore8(P,V)
 //#define __TBB_FetchAndStoreW(P,V)  __TBB_machine_fetchstore8(P,V)
 
-#define __TBB_Store8(P,V) (*P = V)
-#define __TBB_Load8(P)    (*P)
+#undef __TBB_Store8
+#undef __TBB_Load8
 
 #define __TBB_AtomicOR(P,V) __TBB_machine_or(P,V)
 #define __TBB_AtomicAND(P,V) __TBB_machine_and(P,V)

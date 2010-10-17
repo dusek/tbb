@@ -234,19 +234,19 @@ public:
     void cancel_wait( thread_context& thr );
 
     //! Notify one thread about the event
-    void notify_one() {__TBB_rel_acq_fence(); notify_one_relaxed();}
+    void notify_one() {__TBB_full_memory_fence(); notify_one_relaxed();}
  
     //! Notify one thread about the event. Relaxed version.
     void notify_one_relaxed();
 
     //! Notify all waiting threads of the event
-    void notify_all() {__TBB_rel_acq_fence(); notify_all_relaxed();}
+    void notify_all() {__TBB_full_memory_fence(); notify_all_relaxed();}
  
     //! Notify all waiting threads of the event; Relaxed version
     void notify_all_relaxed();
 
     //! Notify waiting threads of the event that satisfies the given predicate
-    template<typename P> void notify( const P& predicate ) {__TBB_rel_acq_fence();notify_relaxed( predicate );}
+    template<typename P> void notify( const P& predicate ) {__TBB_full_memory_fence(); notify_relaxed( predicate );}
  
     //! Notify waiting threads of the event that satisfies the given predicate; Relaxed version
     template<typename P> void notify_relaxed( const P& predicate );

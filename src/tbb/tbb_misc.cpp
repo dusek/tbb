@@ -128,7 +128,7 @@ void throw_exception_v4 ( exception_id eid ) {
     case eid_operation_not_permitted: DO_THROW( runtime_error, ("Operation not permitted") );
     case eid_condvar_wait_failed: DO_THROW( runtime_error, ("Wait on condition variable failed") );
     case eid_invalid_load_factor: DO_THROW( out_of_range, ("Invalid hash load factor") );
-    case eid_invalid_buckets_number: DO_THROW( out_of_range, ("Invalid number of buckets") );
+    case eid_reserved: DO_THROW( out_of_range, ("[backward compatibility] Invalid number of buckets") );
     case eid_invalid_swap: DO_THROW( invalid_argument, ("swap() is invalid on non-equal allocators") );
     case eid_reservation_length_error: DO_THROW( length_error, ("reservation size exceeds permitted max size") );
     case eid_invalid_key: DO_THROW( out_of_range, ("invalid key") );

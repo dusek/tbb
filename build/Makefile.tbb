@@ -96,6 +96,7 @@ TBB_CPLUS.OBJ = concurrent_hash_map.$(OBJ) \
 		arena.$(OBJ) \
 		scheduler.$(OBJ) \
 		observer_proxy.$(OBJ) \
+		tbb_statistics.$(OBJ) \
 		tbb_main.$(OBJ)
 
 # OLD/Legacy object files for backward binary compatibility

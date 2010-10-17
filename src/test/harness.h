@@ -331,15 +331,7 @@ private:
 #endif
     {
         NativeParallelForTask& self = *static_cast<NativeParallelForTask*>(object);
-#if TBB_USE_EXCEPTIONS
-        try {
-            (self.body)(self.index);
-        } catch(...) {
-            ASSERT( false, "uncaught exception" );
-        }
-#else /* !TBB_USE_EXCEPTIONS */
         (self.body)(self.index);
-#endif /* !TBB_USE_EXCEPTIONS */
         return 0;
     }
 };

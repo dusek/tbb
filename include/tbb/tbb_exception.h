@@ -94,7 +94,7 @@ enum exception_id {
     eid_operation_not_permitted,
     eid_condvar_wait_failed,
     eid_invalid_load_factor,
-    eid_invalid_buckets_number,
+    eid_reserved, // free slot for backward compatibility, can be reused.
     eid_invalid_swap,
     eid_reservation_length_error,
     eid_invalid_key,

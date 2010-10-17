@@ -258,7 +258,7 @@ struct AlignmentChecker {
 /** T is an integral type. */
 template<typename T>
 void TestAtomicInteger( const char* name ) {
-    REMARK("testing atomic<%s>\n",name);
+    REMARK("testing atomic<%s> (size=%d)\n",name,sizeof(tbb::atomic<T>));
 #if ( __linux__ && __TBB_x86_32 && __GNUC__==3 && __GNUC_MINOR__==3 ) || defined(__SUNPRO_CC)
     // gcc 3.3 has known problem for 32-bit Linux, so only warn if there is a problem.
     // SUNPRO_CC does have this problem as well
@@ -468,12 +468,8 @@ class ArrayElement {
 };
 
 int TestMain () {
-#if defined(__INTEL_COMPILER)||!defined(_MSC_VER)||_MSC_VER>=1400
     TestAtomicInteger<unsigned long long>("unsigned long long");
     TestAtomicInteger<long long>("long long");
-#else
-    REPORT("Known issue: atomic<64-bits> does not compile with VC 7.1\n");
-#endif /*defined(__INTEL_COMPILER)||!defined(_MSC_VER)||_MSC_VER>=1400 */
     TestAtomicInteger<unsigned long>("unsigned long");
     TestAtomicInteger<long>("long");
     TestAtomicInteger<unsigned int>("unsigned int");

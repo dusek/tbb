@@ -55,7 +55,7 @@
 #define EXT ".dylib"
 #elif __linux__
 #define EXT __TBB_STRING(.so.TBB_COMPATIBLE_INTERFACE_VERSION)
-#elif __FreeBSD__ || __sun
+#elif __FreeBSD__ || __sun || _AIX
 #define EXT ".so"
 #else
 #error Unknown OS

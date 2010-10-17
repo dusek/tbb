@@ -91,14 +91,14 @@ public:
         my_allocator( a )
     {
         for( ; begin != end; ++begin )
-            internal_push(&*begin);
+            this->internal_push(&*begin);
     }
     
     //! Copy constructor
     concurrent_queue( const concurrent_queue& src, const allocator_type& a = allocator_type()) : 
         internal::concurrent_queue_base_v3<T>(), my_allocator( a )
     {
-        assign( src );
+        this->assign( src );
     }
     
     //! Destroy queue
@@ -106,14 +106,14 @@ public:
 
     //! Enqueue an item at tail of queue.
     void push( const T& source ) {
-        internal_push( &source );
+        this->internal_push( &source );
     }
 
     //! Attempt to dequeue an item from head of queue.
     /** Does not wait for item to become available.
         Returns true if successful; false otherwise. */
     bool try_pop( T& result ) {
-        return internal_try_pop( &result );
+        return this->internal_try_pop( &result );
     }
 
     //! Return the number of items in the queue; thread unsafe

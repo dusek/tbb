@@ -120,3 +120,7 @@ version_string.tmp:
 	$(MAKE_VERSIONS)
 endif
 
+
+# Rules for generating a test DLL
+%_dll.$(OBJ): %.cpp
+	$(CPLUS) $(COMPILE_ONLY) $(OUTPUTOBJ_KEY)$@ $(CPLUS_FLAGS_NOSTRICT) $(PIC_KEY) $(DEFINE_KEY)_USRDLL $(INCLUDES) $<

@@ -121,7 +121,7 @@ static void (*padded_free_handler)( void* p ) = &dummy_padded_free;
 #define MALLOCLIB_NAME "libtbbmalloc" DEBUG_SUFFIX ".dylib"
 #elif __linux__
 #define MALLOCLIB_NAME "libtbbmalloc" DEBUG_SUFFIX  __TBB_STRING(.so.TBB_COMPATIBLE_INTERFACE_VERSION)
-#elif __FreeBSD__ || __sun
+#elif __FreeBSD__ || __sun || _AIX
 #define MALLOCLIB_NAME "libtbbmalloc" DEBUG_SUFFIX ".so"
 #else
 #error Unknown OS

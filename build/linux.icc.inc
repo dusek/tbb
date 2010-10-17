@@ -34,6 +34,7 @@ PIC_KEY = -fPIC
 WARNING_AS_ERROR_KEY = -Werror
 WARNING_KEY = -w1
 DYLIB_KEY = -shared
+EXPORT_KEY = -Wl,--version-script,
 LIBDL = -ldl
 export COMPILER_VERSION := ICC: $(shell icc -V </dev/null 2>&1 | grep 'Version')
 #TODO: autodetection of arch from COMPILER_VERSION!!
