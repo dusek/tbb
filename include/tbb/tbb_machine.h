@@ -68,6 +68,7 @@ extern "C" __declspec(dllimport) int __stdcall SwitchToThread( void );
 #elif __ia64__
 #include "machine/linux_ia64.h"
 #endif
+#include "machine/linux_common.h"
 
 #elif __APPLE__
 
@@ -78,6 +79,7 @@ extern "C" __declspec(dllimport) int __stdcall SwitchToThread( void );
 #elif __POWERPC__
 #include "machine/mac_ppc.h"
 #endif
+#include "machine/macos_common.h"
 
 #elif _AIX
 
@@ -94,6 +96,8 @@ extern "C" __declspec(dllimport) int __stdcall SwitchToThread( void );
 #elif __sparc
 #include "machine/sunos_sparc.h"
 #endif
+#include <sched.h>
+#define __TBB_Yield() sched_yield()
 
 #endif
 
@@ -572,7 +576,7 @@ inline void __TBB_Store8 (volatile void *ptr, int64_t value) {
 #ifndef __TBB_Load8
 inline int64_t __TBB_Load8 (const volatile void *ptr) {
     int64_t result = *(int64_t *)ptr;
-    result = __TBB_CompareAndSwap8((volatile void *)ptr,result,result);
+    result = __TBB_CompareAndSwap8(const_cast<volatile void *>(ptr),result,result);
     return result;
 }
 #endif
@@ -580,7 +584,7 @@ inline int64_t __TBB_Load8 (const volatile void *ptr) {
 template <typename T>
 struct __TBB_machine_load_store<T,8> {
     static inline T load_with_acquire(const volatile T& location) {
-        T to_return = __TBB_Load8((volatile void*)&location);
+        T to_return = (T)__TBB_Load8((volatile void*)&location);
         __TBB_release_consistency_helper();
         return to_return;
     }

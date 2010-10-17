@@ -30,9 +30,8 @@
 #error Do not include this file directly; include tbb_machine.h instead
 #endif
 
-#if !__MINGW32__
-#include "linux_common.h"
-#endif
+#include <stdint.h>
+#include <unistd.h>
 
 #define __TBB_WORDSIZE 4
 #define __TBB_BIG_ENDIAN 0

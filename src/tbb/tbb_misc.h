@@ -45,9 +45,6 @@
 #elif defined(__sun)
 #include <sys/sysinfo.h>
 #include <unistd.h>
-#elif defined(__APPLE__)
-#include <sys/types.h>
-#include <sys/sysctl.h>
 #elif defined(__FreeBSD__) || defined(_AIX)
 #include <unistd.h>
 #endif
@@ -65,10 +62,11 @@ const size_t MByte = 1<<20;
     const size_t ThreadStackSize = 4*MByte;
 #endif
 
-#if defined(__TBB_DetectNumberOfWorkers)
+#if defined(__TBB_DetectNumberOfWorkers) // covers Mac OS* and other platforms
 
 static inline int DetectNumberOfWorkers() {
-    return __TBB_DetectNumberOfWorkers(); 
+    int n = __TBB_DetectNumberOfWorkers(); 
+    return n>0? n: 1; // Fail safety strap
 }
 
 #else /* !__TBB_DetectNumberOfWorkers */
@@ -124,7 +122,7 @@ static inline int DetectNumberOfWorkers() {
 
 #endif /* !_XBOX */
 
-#elif defined(__linux__) || defined(__APPLE__) || defined(__FreeBSD__) || defined(__sun) || defined(_AIX)
+#elif defined(__linux__) || defined(__FreeBSD__) || defined(__sun) || defined(_AIX)
 static inline int DetectNumberOfWorkers() {
     long number_of_workers;
 
@@ -135,26 +133,16 @@ static inline int DetectNumberOfWorkers() {
 // But in practice, system-specific methods are more reliable
 #elif defined(__linux__)
     number_of_workers = get_nprocs();
-#elif defined(__APPLE__)
-    int name[2] = {CTL_HW, HW_AVAILCPU};
-    int ncpu;
-    size_t size = sizeof(ncpu);
-    sysctl( name, 2, &ncpu, &size, NULL, 0 );
-    number_of_workers = ncpu;
 #else
 #error DetectNumberOfWorkers: Method to detect the number of online CPUs is unknown
 #endif
 
 // Fail-safety strap
-    if ( number_of_workers < 1 ) {
-        number_of_workers = 1;
-    }
-    
-    return number_of_workers;
+    return number_of_workers>0? number_of_workers: 1;
 }
 
 #else
-#error DetectNumberOfWorkers: OS detection method is unknown
+#error DetectNumberOfWorkers: Method to detect the number of available CPUs is unknown
 #endif /* os kind */
 
 #endif /* !__TBB_DetectNumberOfWorkers */

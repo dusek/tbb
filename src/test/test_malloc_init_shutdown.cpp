@@ -29,6 +29,7 @@
 #include "tbb/scalable_allocator.h"
 #include "tbb/atomic.h"
 #include "tbb/aligned_space.h"
+#include "../tbb/tbb_assert_impl.h"
 
 #if _WIN64 && defined(_M_AMD64) && !__MINGW64__
 void __TBB_machine_pause(__int32 /*delay*/ ) {}

@@ -30,7 +30,8 @@
 #error Do not include this file directly; include tbb_machine.h instead
 #endif
 
-#include "linux_common.h"
+#include <stdint.h>
+#include <unistd.h>
 #include <ia64intrin.h>
 
 #define __TBB_WORDSIZE 8

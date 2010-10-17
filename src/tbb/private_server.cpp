@@ -26,7 +26,6 @@
     the GNU General Public License.
 */
 
-
 #include "rml_tbb.h"
 #include "../server/thread_monitor.h"
 #include "tbb/atomic.h"

@@ -33,8 +33,6 @@
 #include <stdint.h>
 #include <unistd.h>
 
-#include <sched.h> // sched_yield
-
 inline int32_t __TBB_machine_cmpswp4 (volatile void *ptr, int32_t value, int32_t comparand )
 {
     int32_t result;
@@ -80,6 +78,5 @@ inline int64_t __TBB_machine_cmpswp8 (volatile void *ptr, int64_t value, int64_t
 
 #define __TBB_CompareAndSwap4(P,V,C) __TBB_machine_cmpswp4(P,V,C)
 #define __TBB_CompareAndSwap8(P,V,C) __TBB_machine_cmpswp8(P,V,C)
-#define __TBB_Yield() sched_yield()
 #define __TBB_full_memory_fence() __asm__ __volatile__("sync": : :"memory")
 #define __TBB_release_consistency_helper() __asm__ __volatile__("lwsync": : :"memory")
